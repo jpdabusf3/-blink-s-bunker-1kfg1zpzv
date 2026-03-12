@@ -19213,6 +19213,16 @@ var CloudUpload = createLucideIcon("cloud-upload", [
 		key: "1quai1"
 	}]
 ]);
+var DollarSign = createLucideIcon("dollar-sign", [["line", {
+	x1: "12",
+	x2: "12",
+	y1: "2",
+	y2: "22",
+	key: "7eqyqh"
+}], ["path", {
+	d: "M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
+	key: "1b0p4s"
+}]]);
 var Download = createLucideIcon("download", [
 	["path", {
 		d: "M12 15V3",
@@ -27153,7 +27163,7 @@ var mockFactories = rawData.map((row, index) => {
 		region,
 		productLineAffinity: "Adsorventes",
 		capacity: Math.floor(Math.random() * 1e4) + 1e3,
-		potentialValue: Math.floor(Math.random() * 5e6) + 1e5,
+		potentialValue: 0,
 		status: isClient ? "Atendido" : "Prospeção",
 		lastInteraction: (/* @__PURE__ */ new Date(Date.now() - Math.random() * 30 * 864e5)).toISOString(),
 		funnelStage: isClient ? "Fechamento" : "Lead",
@@ -27236,16 +27246,20 @@ var AppContext = (0, import_react.createContext)({});
 var AppProvider = ({ children }) => {
 	const [isOnline, setIsOnline] = (0, import_react.useState)(navigator.onLine);
 	const [factories, setFactories] = (0, import_react.useState)(() => {
-		const saved = localStorage.getItem("blink_factories_v2");
+		const saved = localStorage.getItem("blink_factories_v3");
 		return saved ? JSON.parse(saved) : mockFactories;
 	});
 	const [orders, setOrders] = (0, import_react.useState)(() => {
-		const saved = localStorage.getItem("blink_orders_v2");
+		const saved = localStorage.getItem("blink_orders_v3");
 		return saved ? JSON.parse(saved) : mockOrders;
 	});
 	const [tasks, setTasks] = (0, import_react.useState)(() => {
-		const saved = localStorage.getItem("blink_tasks_v2");
+		const saved = localStorage.getItem("blink_tasks_v3");
 		return saved ? JSON.parse(saved) : mockTasks;
+	});
+	const [visits, setVisits] = (0, import_react.useState)(() => {
+		const saved = localStorage.getItem("blink_visits_v3");
+		return saved ? JSON.parse(saved) : [];
 	});
 	(0, import_react.useEffect)(() => {
 		const handleOnline = () => setIsOnline(true);
@@ -27258,14 +27272,17 @@ var AppProvider = ({ children }) => {
 		};
 	}, []);
 	(0, import_react.useEffect)(() => {
-		localStorage.setItem("blink_factories_v2", JSON.stringify(factories));
+		localStorage.setItem("blink_factories_v3", JSON.stringify(factories));
 	}, [factories]);
 	(0, import_react.useEffect)(() => {
-		localStorage.setItem("blink_orders_v2", JSON.stringify(orders));
+		localStorage.setItem("blink_orders_v3", JSON.stringify(orders));
 	}, [orders]);
 	(0, import_react.useEffect)(() => {
-		localStorage.setItem("blink_tasks_v2", JSON.stringify(tasks));
+		localStorage.setItem("blink_tasks_v3", JSON.stringify(tasks));
 	}, [tasks]);
+	(0, import_react.useEffect)(() => {
+		localStorage.setItem("blink_visits_v3", JSON.stringify(visits));
+	}, [visits]);
 	const addFactory = (data) => {
 		const newFactory = {
 			id: Math.random().toString(36).substr(2, 9),
@@ -27335,8 +27352,16 @@ var AppProvider = ({ children }) => {
 	const deleteTask = (id) => {
 		setTasks((prev) => prev.filter((t) => t.id !== id));
 	};
+	const addVisit = (data) => {
+		const newVisit = {
+			...data,
+			id: Math.random().toString(36).substr(2, 9)
+		};
+		setVisits((prev) => [newVisit, ...prev]);
+		if (data.potentialValue !== void 0) updateFactory(data.factoryId, { potentialValue: data.potentialValue });
+	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AppContext.Provider, {
-		"data-uid": "src/store/AppContext.tsx:132:5",
+		"data-uid": "src/store/AppContext.tsx:162:5",
 		"data-prohibitions": "[editContent]",
 		value: {
 			factories,
@@ -27345,13 +27370,16 @@ var AppProvider = ({ children }) => {
 			setOrders,
 			tasks,
 			setTasks,
+			visits,
+			setVisits,
 			isOnline,
 			addFactory,
 			updateFactory,
 			deleteFactory,
 			addTask,
 			updateTask,
-			deleteTask
+			deleteTask,
+			addVisit
 		},
 		children
 	});
@@ -58960,15 +58988,192 @@ function FactoryTasks({ factoryId }) {
 	});
 }
 //#endregion
+//#region src/components/ui/textarea.tsx
+var Textarea = import_react.forwardRef(({ className, ...props }, ref) => {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("textarea", {
+		"data-uid": "src/components/ui/textarea.tsx:10:7",
+		"data-prohibitions": "[editContent]",
+		className: cn$1("flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50", className),
+		ref,
+		...props
+	});
+});
+Textarea.displayName = "Textarea";
+//#endregion
+//#region src/components/FactoryVisits.tsx
+function FactoryVisits({ factoryId }) {
+	const { visits, addVisit } = useAppContext();
+	const [isAdding, setIsAdding] = (0, import_react.useState)(false);
+	const factoryVisits = visits.filter((v) => v.factoryId === factoryId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+	const handleSubmit = (e) => {
+		e.preventDefault();
+		const fd = new FormData(e.currentTarget);
+		addVisit({
+			factoryId,
+			date: fd.get("date"),
+			summary: fd.get("summary"),
+			potentialValue: Number(fd.get("potentialValue"))
+		});
+		setIsAdding(false);
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		"data-uid": "src/components/FactoryVisits.tsx:31:5",
+		"data-prohibitions": "[editContent]",
+		className: "space-y-4",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				"data-uid": "src/components/FactoryVisits.tsx:32:7",
+				"data-prohibitions": "[editContent]",
+				className: "flex justify-between items-center pb-2 border-b",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+					"data-uid": "src/components/FactoryVisits.tsx:33:9",
+					"data-prohibitions": "[]",
+					className: "text-sm font-medium",
+					children: "Resumo de Visitas"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+					"data-uid": "src/components/FactoryVisits.tsx:34:9",
+					"data-prohibitions": "[editContent]",
+					variant: "outline",
+					size: "sm",
+					onClick: () => setIsAdding(!isAdding),
+					children: isAdding ? "Cancelar" : "Registrar Visita"
+				})]
+			}),
+			isAdding && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
+				"data-uid": "src/components/FactoryVisits.tsx:40:9",
+				"data-prohibitions": "[]",
+				onSubmit: handleSubmit,
+				className: "bg-muted/30 p-4 rounded-lg border space-y-4",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						"data-uid": "src/components/FactoryVisits.tsx:41:11",
+						"data-prohibitions": "[]",
+						className: "space-y-2",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
+							"data-uid": "src/components/FactoryVisits.tsx:42:13",
+							"data-prohibitions": "[]",
+							children: "Data da Visita"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+							"data-uid": "src/components/FactoryVisits.tsx:43:13",
+							"data-prohibitions": "[editContent]",
+							type: "date",
+							name: "date",
+							defaultValue: (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
+							required: true
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						"data-uid": "src/components/FactoryVisits.tsx:50:11",
+						"data-prohibitions": "[]",
+						className: "space-y-2",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
+							"data-uid": "src/components/FactoryVisits.tsx:51:13",
+							"data-prohibitions": "[]",
+							children: "Resumo da Visita"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Textarea, {
+							"data-uid": "src/components/FactoryVisits.tsx:52:13",
+							"data-prohibitions": "[editContent]",
+							name: "summary",
+							placeholder: "Descreva os principais pontos discutidos...",
+							required: true
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						"data-uid": "src/components/FactoryVisits.tsx:58:11",
+						"data-prohibitions": "[]",
+						className: "space-y-2",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
+								"data-uid": "src/components/FactoryVisits.tsx:59:13",
+								"data-prohibitions": "[]",
+								children: "Novo Potencial Estimado (R$)"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+								"data-uid": "src/components/FactoryVisits.tsx:60:13",
+								"data-prohibitions": "[editContent]",
+								type: "number",
+								name: "potentialValue",
+								placeholder: "Ex: 50000",
+								min: "0",
+								step: "0.01",
+								required: true
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								"data-uid": "src/components/FactoryVisits.tsx:68:13",
+								"data-prohibitions": "[]",
+								className: "text-xs text-muted-foreground mt-1",
+								children: "Este valor atualizará o potencial atual da fábrica."
+							})
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+						"data-uid": "src/components/FactoryVisits.tsx:72:11",
+						"data-prohibitions": "[]",
+						type: "submit",
+						size: "sm",
+						className: "w-full sm:w-auto",
+						children: "Salvar Visita"
+					})
+				]
+			}),
+			factoryVisits.length === 0 && !isAdding && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				"data-uid": "src/components/FactoryVisits.tsx:79:9",
+				"data-prohibitions": "[]",
+				className: "text-sm text-muted-foreground text-center py-6",
+				children: "Nenhuma visita registrada para esta fábrica."
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				"data-uid": "src/components/FactoryVisits.tsx:84:7",
+				"data-prohibitions": "[editContent]",
+				className: "space-y-3",
+				children: factoryVisits.map((visit) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					"data-uid": "src/components/FactoryVisits.tsx:86:11",
+					"data-prohibitions": "[editContent]",
+					className: "p-4 border rounded-lg bg-card space-y-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						"data-uid": "src/components/FactoryVisits.tsx:87:13",
+						"data-prohibitions": "[editContent]",
+						className: "flex justify-between items-start",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							"data-uid": "src/components/FactoryVisits.tsx:88:15",
+							"data-prohibitions": "[editContent]",
+							className: "flex items-center gap-2 text-sm text-muted-foreground",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Calendar, {
+								"data-uid": "src/components/FactoryVisits.tsx:89:17",
+								"data-prohibitions": "[editContent]",
+								className: "w-4 h-4"
+							}), new Date(visit.date).toLocaleDateString("pt-BR")]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							"data-uid": "src/components/FactoryVisits.tsx:92:15",
+							"data-prohibitions": "[editContent]",
+							className: "flex items-center gap-1 text-sm font-medium text-primary",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DollarSign, {
+								"data-uid": "src/components/FactoryVisits.tsx:93:17",
+								"data-prohibitions": "[editContent]",
+								className: "w-4 h-4"
+							}), formatCurrency(visit.potentialValue)]
+						})]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						"data-uid": "src/components/FactoryVisits.tsx:97:13",
+						"data-prohibitions": "[editContent]",
+						className: "text-sm mt-2 whitespace-pre-wrap",
+						children: visit.summary
+					})]
+				}, visit.id))
+			})
+		]
+	});
+}
+//#endregion
 //#region src/pages/Cadastro.tsx
 var WhatsAppIcon = ({ className }) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
-	"data-uid": "src/pages/Cadastro.tsx:31:3",
+	"data-uid": "src/pages/Cadastro.tsx:32:3",
 	"data-prohibitions": "[editContent]",
 	viewBox: "0 0 24 24",
 	className,
 	fill: "currentColor",
 	children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", {
-		"data-uid": "src/pages/Cadastro.tsx:32:5",
+		"data-uid": "src/pages/Cadastro.tsx:33:5",
 		"data-prohibitions": "[editContent]",
 		d: "M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"
 	})
@@ -59014,50 +59219,50 @@ function Cadastro() {
 		window.open(`https://wa.me/?text=${encodedText}`, "_blank", "noopener,noreferrer");
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		"data-uid": "src/pages/Cadastro.tsx:90:5",
+		"data-uid": "src/pages/Cadastro.tsx:91:5",
 		"data-prohibitions": "[editContent]",
 		className: "space-y-6 animate-fade-in pb-10",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Cadastro.tsx:91:7",
+				"data-uid": "src/pages/Cadastro.tsx:92:7",
 				"data-prohibitions": "[]",
 				className: "flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Cadastro.tsx:92:9",
+					"data-uid": "src/pages/Cadastro.tsx:93:9",
 					"data-prohibitions": "[]",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-						"data-uid": "src/pages/Cadastro.tsx:93:11",
+						"data-uid": "src/pages/Cadastro.tsx:94:11",
 						"data-prohibitions": "[]",
 						className: "text-2xl font-bold tracking-tight",
 						children: "Cadastro de Fábricas"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						"data-uid": "src/pages/Cadastro.tsx:94:11",
+						"data-uid": "src/pages/Cadastro.tsx:95:11",
 						"data-prohibitions": "[]",
 						className: "text-muted-foreground text-sm",
 						children: "Gerencie o banco de dados de clientes e prospects."
 					})]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Cadastro.tsx:98:9",
+					"data-uid": "src/pages/Cadastro.tsx:99:9",
 					"data-prohibitions": "[]",
 					className: "flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-						"data-uid": "src/pages/Cadastro.tsx:99:11",
+						"data-uid": "src/pages/Cadastro.tsx:100:11",
 						"data-prohibitions": "[]",
 						onClick: handleWhatsAppShare,
 						className: "gap-2 shadow-sm bg-[#25D366] hover:bg-[#128C7E] text-white w-full sm:w-auto",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(WhatsAppIcon, {
-							"data-uid": "src/pages/Cadastro.tsx:103:13",
+							"data-uid": "src/pages/Cadastro.tsx:104:13",
 							"data-prohibitions": "[editContent]",
 							className: "w-5 h-5"
 						}), " Compartilhar (WhatsApp)"]
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-						"data-uid": "src/pages/Cadastro.tsx:105:11",
+						"data-uid": "src/pages/Cadastro.tsx:106:11",
 						"data-prohibitions": "[]",
 						variant: "outline",
 						onClick: () => window.print(),
 						className: "gap-2 shadow-sm w-full sm:w-auto",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Download, {
-							"data-uid": "src/pages/Cadastro.tsx:110:13",
+							"data-uid": "src/pages/Cadastro.tsx:111:13",
 							"data-prohibitions": "[editContent]",
 							className: "w-5 h-5 md:w-4 md:h-4"
 						}), " Exportar PDF"]
@@ -59065,20 +59270,20 @@ function Cadastro() {
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Cadastro.tsx:115:7",
+				"data-uid": "src/pages/Cadastro.tsx:116:7",
 				"data-prohibitions": "[editContent]",
 				className: "flex flex-col md:flex-row gap-3 bg-muted/30 p-3 rounded-lg border",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/pages/Cadastro.tsx:116:9",
+						"data-uid": "src/pages/Cadastro.tsx:117:9",
 						"data-prohibitions": "[]",
 						className: "relative flex-1",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Search, {
-							"data-uid": "src/pages/Cadastro.tsx:117:11",
+							"data-uid": "src/pages/Cadastro.tsx:118:11",
 							"data-prohibitions": "[editContent]",
 							className: "absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-							"data-uid": "src/pages/Cadastro.tsx:118:11",
+							"data-uid": "src/pages/Cadastro.tsx:119:11",
 							"data-prohibitions": "[editContent]",
 							placeholder: "Buscar fábrica, setor...",
 							value: search,
@@ -59087,43 +59292,43 @@ function Cadastro() {
 						})]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
-						"data-uid": "src/pages/Cadastro.tsx:125:9",
+						"data-uid": "src/pages/Cadastro.tsx:126:9",
 						"data-prohibitions": "[]",
 						value: priorityFilter,
 						onValueChange: setPriorityFilter,
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
-							"data-uid": "src/pages/Cadastro.tsx:126:11",
+							"data-uid": "src/pages/Cadastro.tsx:127:11",
 							"data-prohibitions": "[]",
 							className: "w-full md:w-[180px] bg-background",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
-								"data-uid": "src/pages/Cadastro.tsx:127:13",
+								"data-uid": "src/pages/Cadastro.tsx:128:13",
 								"data-prohibitions": "[editContent]",
 								placeholder: "Prioridade"
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, {
-							"data-uid": "src/pages/Cadastro.tsx:129:11",
+							"data-uid": "src/pages/Cadastro.tsx:130:11",
 							"data-prohibitions": "[]",
 							children: [
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-									"data-uid": "src/pages/Cadastro.tsx:130:13",
+									"data-uid": "src/pages/Cadastro.tsx:131:13",
 									"data-prohibitions": "[]",
 									value: "all",
 									children: "Todas Prioridades"
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-									"data-uid": "src/pages/Cadastro.tsx:131:13",
+									"data-uid": "src/pages/Cadastro.tsx:132:13",
 									"data-prohibitions": "[]",
 									value: "High",
 									children: "Alta Prioridade (Verde)"
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-									"data-uid": "src/pages/Cadastro.tsx:132:13",
+									"data-uid": "src/pages/Cadastro.tsx:133:13",
 									"data-prohibitions": "[]",
 									value: "Medium",
 									children: "Média Prioridade (Amarelo)"
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-									"data-uid": "src/pages/Cadastro.tsx:133:13",
+									"data-uid": "src/pages/Cadastro.tsx:134:13",
 									"data-prohibitions": "[]",
 									value: "Low",
 									children: "Baixa Prioridade (Vermelho)"
@@ -59132,29 +59337,29 @@ function Cadastro() {
 						})]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
-						"data-uid": "src/pages/Cadastro.tsx:136:9",
+						"data-uid": "src/pages/Cadastro.tsx:137:9",
 						"data-prohibitions": "[editContent]",
 						value: cityFilter,
 						onValueChange: setCityFilter,
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
-							"data-uid": "src/pages/Cadastro.tsx:137:11",
+							"data-uid": "src/pages/Cadastro.tsx:138:11",
 							"data-prohibitions": "[]",
 							className: "w-full md:w-[220px] bg-background",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
-								"data-uid": "src/pages/Cadastro.tsx:138:13",
+								"data-uid": "src/pages/Cadastro.tsx:139:13",
 								"data-prohibitions": "[editContent]",
 								placeholder: "Cidade"
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, {
-							"data-uid": "src/pages/Cadastro.tsx:140:11",
+							"data-uid": "src/pages/Cadastro.tsx:141:11",
 							"data-prohibitions": "[editContent]",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-								"data-uid": "src/pages/Cadastro.tsx:141:13",
+								"data-uid": "src/pages/Cadastro.tsx:142:13",
 								"data-prohibitions": "[]",
 								value: "all",
 								children: "Todas as Cidades"
 							}), uniqueCities.map((city) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-								"data-uid": "src/pages/Cadastro.tsx:143:15",
+								"data-uid": "src/pages/Cadastro.tsx:144:15",
 								"data-prohibitions": "[editContent]",
 								value: city,
 								children: city
@@ -59162,7 +59367,7 @@ function Cadastro() {
 						})]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-						"data-uid": "src/pages/Cadastro.tsx:149:9",
+						"data-uid": "src/pages/Cadastro.tsx:150:9",
 						"data-prohibitions": "[]",
 						variant: "outline",
 						size: "icon",
@@ -59170,7 +59375,7 @@ function Cadastro() {
 						title: "Exportar para Excel (CSV)",
 						className: "hidden md:flex bg-background shrink-0",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Download, {
-							"data-uid": "src/pages/Cadastro.tsx:156:11",
+							"data-uid": "src/pages/Cadastro.tsx:157:11",
 							"data-prohibitions": "[editContent]",
 							className: "w-4 h-4"
 						})
@@ -59178,52 +59383,52 @@ function Cadastro() {
 				]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				"data-uid": "src/pages/Cadastro.tsx:160:7",
+				"data-uid": "src/pages/Cadastro.tsx:162:7",
 				"data-prohibitions": "[editContent]",
-				className: "bg-card border rounded-lg overflow-hidden shadow-subtle",
+				className: "hidden md:block bg-card border rounded-lg overflow-hidden shadow-subtle",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Cadastro.tsx:161:9",
+					"data-uid": "src/pages/Cadastro.tsx:163:9",
 					"data-prohibitions": "[editContent]",
 					className: "overflow-x-auto",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Table, {
-						"data-uid": "src/pages/Cadastro.tsx:162:11",
+						"data-uid": "src/pages/Cadastro.tsx:164:11",
 						"data-prohibitions": "[editContent]",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHeader, {
-							"data-uid": "src/pages/Cadastro.tsx:163:13",
+							"data-uid": "src/pages/Cadastro.tsx:165:13",
 							"data-prohibitions": "[]",
 							className: "bg-muted/50",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableRow, {
-								"data-uid": "src/pages/Cadastro.tsx:164:15",
+								"data-uid": "src/pages/Cadastro.tsx:166:15",
 								"data-prohibitions": "[]",
 								children: [
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:165:17",
+										"data-uid": "src/pages/Cadastro.tsx:167:17",
 										"data-prohibitions": "[]",
 										children: "Fábrica"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:166:17",
+										"data-uid": "src/pages/Cadastro.tsx:168:17",
 										"data-prohibitions": "[]",
 										children: "Local"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:167:17",
+										"data-uid": "src/pages/Cadastro.tsx:169:17",
 										"data-prohibitions": "[]",
 										children: "Setor / Foco"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:168:17",
+										"data-uid": "src/pages/Cadastro.tsx:170:17",
 										"data-prohibitions": "[]",
 										children: "Prioridade"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:169:17",
+										"data-uid": "src/pages/Cadastro.tsx:171:17",
 										"data-prohibitions": "[]",
 										className: "text-right",
 										children: "Potencial"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:170:17",
+										"data-uid": "src/pages/Cadastro.tsx:172:17",
 										"data-prohibitions": "[]",
 										className: "text-center",
 										children: "Ações"
@@ -59231,60 +59436,60 @@ function Cadastro() {
 								]
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableBody, {
-							"data-uid": "src/pages/Cadastro.tsx:173:13",
+							"data-uid": "src/pages/Cadastro.tsx:175:13",
 							"data-prohibitions": "[editContent]",
 							children: [filtered.map((f) => {
 								const stale = isStale(f.lastInteraction);
 								return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableRow, {
-									"data-uid": "src/pages/Cadastro.tsx:177:19",
+									"data-uid": "src/pages/Cadastro.tsx:179:19",
 									"data-prohibitions": "[editContent]",
 									className: stale ? "bg-destructive/5" : "",
 									children: [
 										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:178:21",
+											"data-uid": "src/pages/Cadastro.tsx:180:21",
 											"data-prohibitions": "[editContent]",
 											className: "font-medium",
 											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:179:23",
+												"data-uid": "src/pages/Cadastro.tsx:181:23",
 												"data-prohibitions": "[editContent]",
 												className: "flex items-center gap-2",
 												children: [f.name, stale && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TriangleAlert, {
-													"data-uid": "src/pages/Cadastro.tsx:182:27",
+													"data-uid": "src/pages/Cadastro.tsx:184:27",
 													"data-prohibitions": "[editContent]",
 													className: "w-4 h-4 text-destructive",
 													title: "Sem interação há mais de 15 dias"
 												})]
 											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:188:23",
+												"data-uid": "src/pages/Cadastro.tsx:190:23",
 												"data-prohibitions": "[editContent]",
 												className: "text-xs text-muted-foreground mt-1",
 												children: f.operationTypes
 											})]
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:190:21",
+											"data-uid": "src/pages/Cadastro.tsx:192:21",
 											"data-prohibitions": "[editContent]",
 											children: [f.city, /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:192:23",
+												"data-uid": "src/pages/Cadastro.tsx:194:23",
 												"data-prohibitions": "[editContent]",
 												className: "text-xs text-muted-foreground mt-1",
 												children: f.region
 											})]
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:194:21",
+											"data-uid": "src/pages/Cadastro.tsx:196:21",
 											"data-prohibitions": "[editContent]",
 											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:195:23",
+												"data-uid": "src/pages/Cadastro.tsx:197:23",
 												"data-prohibitions": "[editContent]",
 												className: "font-medium",
 												children: f.sector || "-"
 											}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:196:23",
+												"data-uid": "src/pages/Cadastro.tsx:198:23",
 												"data-prohibitions": "[editContent]",
 												className: "text-xs text-muted-foreground mt-1",
 												children: ["Nível: ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-													"data-uid": "src/pages/Cadastro.tsx:197:32",
+													"data-uid": "src/pages/Cadastro.tsx:199:32",
 													"data-prohibitions": "[editContent]",
 													className: "font-bold",
 													children: f.focusLevel || "-"
@@ -59292,10 +59497,10 @@ function Cadastro() {
 											})]
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:200:21",
+											"data-uid": "src/pages/Cadastro.tsx:202:21",
 											"data-prohibitions": "[editContent]",
 											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Badge, {
-												"data-uid": "src/pages/Cadastro.tsx:201:23",
+												"data-uid": "src/pages/Cadastro.tsx:203:23",
 												"data-prohibitions": "[editContent]",
 												variant: "outline",
 												className: `rounded-full border-0 text-white ${f.priority === "High" ? "bg-green-600" : f.priority === "Medium" ? "bg-yellow-500" : "bg-red-600"}`,
@@ -59303,42 +59508,42 @@ function Cadastro() {
 											})
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:212:21",
+											"data-uid": "src/pages/Cadastro.tsx:214:21",
 											"data-prohibitions": "[editContent]",
 											className: "text-right font-semibold",
 											children: [formatCurrency(f.potentialValue), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:214:23",
+												"data-uid": "src/pages/Cadastro.tsx:216:23",
 												"data-prohibitions": "[editContent]",
 												className: "text-xs text-muted-foreground font-normal mt-1",
 												children: [f.capacity, " t/mês"]
 											})]
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:218:21",
+											"data-uid": "src/pages/Cadastro.tsx:220:21",
 											"data-prohibitions": "[]",
 											children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:219:23",
+												"data-uid": "src/pages/Cadastro.tsx:221:23",
 												"data-prohibitions": "[]",
 												className: "flex items-center justify-center gap-2",
 												children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-													"data-uid": "src/pages/Cadastro.tsx:220:25",
+													"data-uid": "src/pages/Cadastro.tsx:222:25",
 													"data-prohibitions": "[]",
 													variant: "ghost",
 													size: "icon",
 													onClick: () => setEditing(f),
 													children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pen, {
-														"data-uid": "src/pages/Cadastro.tsx:221:27",
+														"data-uid": "src/pages/Cadastro.tsx:223:27",
 														"data-prohibitions": "[editContent]",
 														className: "w-4 h-4 text-primary"
 													})
 												}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-													"data-uid": "src/pages/Cadastro.tsx:223:25",
+													"data-uid": "src/pages/Cadastro.tsx:225:25",
 													"data-prohibitions": "[]",
 													variant: "ghost",
 													size: "icon",
 													onClick: () => deleteFactory(f.id),
 													children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, {
-														"data-uid": "src/pages/Cadastro.tsx:224:27",
+														"data-uid": "src/pages/Cadastro.tsx:226:27",
 														"data-prohibitions": "[editContent]",
 														className: "w-4 h-4 text-destructive"
 													})
@@ -59348,10 +59553,10 @@ function Cadastro() {
 									]
 								}, f.id);
 							}), filtered.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableRow, {
-								"data-uid": "src/pages/Cadastro.tsx:232:17",
+								"data-uid": "src/pages/Cadastro.tsx:234:17",
 								"data-prohibitions": "[]",
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-									"data-uid": "src/pages/Cadastro.tsx:233:19",
+									"data-uid": "src/pages/Cadastro.tsx:235:19",
 									"data-prohibitions": "[]",
 									colSpan: 6,
 									className: "text-center h-24 text-muted-foreground",
@@ -59362,84 +59567,260 @@ function Cadastro() {
 					})
 				})
 			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				"data-uid": "src/pages/Cadastro.tsx:246:7",
+				"data-prohibitions": "[editContent]",
+				className: "grid grid-cols-1 gap-4 md:hidden",
+				children: [filtered.map((f) => {
+					const stale = isStale(f.lastInteraction);
+					return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						"data-uid": "src/pages/Cadastro.tsx:250:13",
+						"data-prohibitions": "[editContent]",
+						className: `bg-card border rounded-lg p-4 shadow-sm relative ${stale ? "border-destructive/30" : ""}`,
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								"data-uid": "src/pages/Cadastro.tsx:254:15",
+								"data-prohibitions": "[editContent]",
+								className: "flex justify-between items-start mb-2",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									"data-uid": "src/pages/Cadastro.tsx:255:17",
+									"data-prohibitions": "[editContent]",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										"data-uid": "src/pages/Cadastro.tsx:256:19",
+										"data-prohibitions": "[editContent]",
+										className: "flex items-center gap-2",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+											"data-uid": "src/pages/Cadastro.tsx:257:21",
+											"data-prohibitions": "[editContent]",
+											className: "font-semibold text-base",
+											children: f.name
+										}), stale && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TriangleAlert, {
+											"data-uid": "src/pages/Cadastro.tsx:258:31",
+											"data-prohibitions": "[editContent]",
+											className: "w-4 h-4 text-destructive"
+										})]
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+										"data-uid": "src/pages/Cadastro.tsx:260:19",
+										"data-prohibitions": "[editContent]",
+										className: "text-sm text-muted-foreground",
+										children: [
+											f.city,
+											" • ",
+											f.region
+										]
+									})]
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Badge, {
+									"data-uid": "src/pages/Cadastro.tsx:264:17",
+									"data-prohibitions": "[editContent]",
+									variant: "outline",
+									className: `rounded-full border-0 text-white ${f.priority === "High" ? "bg-green-600" : f.priority === "Medium" ? "bg-yellow-500" : "bg-red-600"}`,
+									children: f.priority === "High" ? "Alta" : f.priority === "Medium" ? "Média" : "Baixa"
+								})]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								"data-uid": "src/pages/Cadastro.tsx:272:15",
+								"data-prohibitions": "[editContent]",
+								className: "grid grid-cols-2 gap-y-2 text-sm mb-4",
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										"data-uid": "src/pages/Cadastro.tsx:273:17",
+										"data-prohibitions": "[editContent]",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											"data-uid": "src/pages/Cadastro.tsx:274:19",
+											"data-prohibitions": "[]",
+											className: "text-muted-foreground block text-xs",
+											children: "Setor"
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											"data-uid": "src/pages/Cadastro.tsx:275:19",
+											"data-prohibitions": "[editContent]",
+											className: "font-medium",
+											children: f.sector || "-"
+										})]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										"data-uid": "src/pages/Cadastro.tsx:277:17",
+										"data-prohibitions": "[editContent]",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											"data-uid": "src/pages/Cadastro.tsx:278:19",
+											"data-prohibitions": "[]",
+											className: "text-muted-foreground block text-xs",
+											children: "Foco"
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											"data-uid": "src/pages/Cadastro.tsx:279:19",
+											"data-prohibitions": "[editContent]",
+											className: "font-medium",
+											children: f.focusLevel || "-"
+										})]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										"data-uid": "src/pages/Cadastro.tsx:281:17",
+										"data-prohibitions": "[editContent]",
+										className: "col-span-2 bg-muted/30 p-2 rounded-md mt-1 border",
+										children: [
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												"data-uid": "src/pages/Cadastro.tsx:282:19",
+												"data-prohibitions": "[]",
+												className: "text-muted-foreground block text-xs mb-0.5",
+												children: "Potencial"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												"data-uid": "src/pages/Cadastro.tsx:283:19",
+												"data-prohibitions": "[editContent]",
+												className: "font-semibold text-primary",
+												children: formatCurrency(f.potentialValue)
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+												"data-uid": "src/pages/Cadastro.tsx:286:19",
+												"data-prohibitions": "[editContent]",
+												className: "text-xs text-muted-foreground ml-2",
+												children: [
+													"(",
+													f.capacity,
+													" t/mês)"
+												]
+											})
+										]
+									})
+								]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								"data-uid": "src/pages/Cadastro.tsx:290:15",
+								"data-prohibitions": "[]",
+								className: "flex justify-end gap-2 pt-2 border-t",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
+									"data-uid": "src/pages/Cadastro.tsx:291:17",
+									"data-prohibitions": "[]",
+									variant: "ghost",
+									size: "sm",
+									onClick: () => setEditing(f),
+									className: "gap-2",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pen, {
+										"data-uid": "src/pages/Cadastro.tsx:292:19",
+										"data-prohibitions": "[editContent]",
+										className: "w-4 h-4"
+									}), " Detalhes"]
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+									"data-uid": "src/pages/Cadastro.tsx:294:17",
+									"data-prohibitions": "[]",
+									variant: "ghost",
+									size: "sm",
+									onClick: () => deleteFactory(f.id),
+									className: "text-destructive hover:bg-destructive/10 hover:text-destructive",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, {
+										"data-uid": "src/pages/Cadastro.tsx:300:19",
+										"data-prohibitions": "[editContent]",
+										className: "w-4 h-4"
+									})
+								})]
+							})
+						]
+					}, f.id);
+				}), filtered.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					"data-uid": "src/pages/Cadastro.tsx:307:11",
+					"data-prohibitions": "[]",
+					className: "text-center p-8 text-muted-foreground border rounded-lg bg-card",
+					children: "Nenhuma fábrica encontrada."
+				})]
+			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Dialog, {
-				"data-uid": "src/pages/Cadastro.tsx:243:7",
+				"data-uid": "src/pages/Cadastro.tsx:313:7",
 				"data-prohibitions": "[editContent]",
 				open: !!editing,
 				onOpenChange: (open) => !open && setEditing(null),
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogContent, {
-					"data-uid": "src/pages/Cadastro.tsx:244:9",
+					"data-uid": "src/pages/Cadastro.tsx:314:9",
 					"data-prohibitions": "[editContent]",
 					className: "max-w-3xl max-h-[90vh] overflow-y-auto",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogHeader, {
-						"data-uid": "src/pages/Cadastro.tsx:245:11",
+						"data-uid": "src/pages/Cadastro.tsx:315:11",
 						"data-prohibitions": "[editContent]",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogTitle, {
-							"data-uid": "src/pages/Cadastro.tsx:246:13",
+							"data-uid": "src/pages/Cadastro.tsx:316:13",
 							"data-prohibitions": "[editContent]",
 							children: ["Fábrica: ", editing?.name]
 						})
 					}), editing && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Tabs, {
-						"data-uid": "src/pages/Cadastro.tsx:249:13",
+						"data-uid": "src/pages/Cadastro.tsx:319:13",
 						"data-prohibitions": "[]",
 						defaultValue: "dados",
 						className: "w-full mt-2",
 						children: [
 							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TabsList, {
-								"data-uid": "src/pages/Cadastro.tsx:250:15",
+								"data-uid": "src/pages/Cadastro.tsx:320:15",
 								"data-prohibitions": "[]",
-								className: "grid w-full grid-cols-3",
+								className: "grid w-full grid-cols-4",
 								children: [
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsTrigger, {
-										"data-uid": "src/pages/Cadastro.tsx:251:17",
+										"data-uid": "src/pages/Cadastro.tsx:321:17",
 										"data-prohibitions": "[]",
 										value: "dados",
+										className: "text-xs sm:text-sm",
 										children: "Cadastro"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsTrigger, {
-										"data-uid": "src/pages/Cadastro.tsx:252:17",
+										"data-uid": "src/pages/Cadastro.tsx:324:17",
+										"data-prohibitions": "[]",
+										value: "visits",
+										className: "text-xs sm:text-sm",
+										children: "Visitas"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsTrigger, {
+										"data-uid": "src/pages/Cadastro.tsx:327:17",
 										"data-prohibitions": "[]",
 										value: "docs",
+										className: "text-xs sm:text-sm",
 										children: "Documentos"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsTrigger, {
-										"data-uid": "src/pages/Cadastro.tsx:253:17",
+										"data-uid": "src/pages/Cadastro.tsx:330:17",
 										"data-prohibitions": "[]",
 										value: "tasks",
+										className: "text-xs sm:text-sm",
 										children: "Tarefas"
 									})
 								]
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsContent, {
-								"data-uid": "src/pages/Cadastro.tsx:255:15",
+								"data-uid": "src/pages/Cadastro.tsx:334:15",
 								"data-prohibitions": "[]",
 								value: "dados",
 								className: "pt-4 focus-visible:outline-none",
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FactoryForm, {
-									"data-uid": "src/pages/Cadastro.tsx:256:17",
+									"data-uid": "src/pages/Cadastro.tsx:335:17",
 									"data-prohibitions": "[editContent]",
 									factory: editing,
 									onSubmit: () => setEditing(null)
 								})
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsContent, {
-								"data-uid": "src/pages/Cadastro.tsx:258:15",
+								"data-uid": "src/pages/Cadastro.tsx:337:15",
+								"data-prohibitions": "[]",
+								value: "visits",
+								className: "pt-4 focus-visible:outline-none",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FactoryVisits, {
+									"data-uid": "src/pages/Cadastro.tsx:338:17",
+									"data-prohibitions": "[editContent]",
+									factoryId: editing.id
+								})
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsContent, {
+								"data-uid": "src/pages/Cadastro.tsx:340:15",
 								"data-prohibitions": "[]",
 								value: "docs",
 								className: "pt-4 focus-visible:outline-none",
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FactoryDocuments, {
-									"data-uid": "src/pages/Cadastro.tsx:259:17",
+									"data-uid": "src/pages/Cadastro.tsx:341:17",
 									"data-prohibitions": "[editContent]",
 									factory: editing
 								})
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsContent, {
-								"data-uid": "src/pages/Cadastro.tsx:261:15",
+								"data-uid": "src/pages/Cadastro.tsx:343:15",
 								"data-prohibitions": "[]",
 								value: "tasks",
 								className: "pt-4 focus-visible:outline-none",
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FactoryTasks, {
-									"data-uid": "src/pages/Cadastro.tsx:262:17",
+									"data-uid": "src/pages/Cadastro.tsx:344:17",
 									"data-prohibitions": "[editContent]",
 									factoryId: editing.id
 								})
@@ -59659,18 +60040,6 @@ function Funil() {
 		})]
 	});
 }
-//#endregion
-//#region src/components/ui/textarea.tsx
-var Textarea = import_react.forwardRef(({ className, ...props }, ref) => {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("textarea", {
-		"data-uid": "src/components/ui/textarea.tsx:9:7",
-		"data-prohibitions": "[editContent]",
-		className: cn$1("flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm", className),
-		ref,
-		...props
-	});
-});
-Textarea.displayName = "Textarea";
 //#endregion
 //#region ../../cache/modules/inteligencia-comercial-blink-4eb45/node_modules/.pnpm/@radix-ui+react-slider@1.3.6_@types+react-dom@19.2.3_@types+react@19.2.14__@types+react_c6a3fae91eb6750caf661d179680cb4a/node_modules/@radix-ui/react-slider/dist/index.mjs
 var PAGE_KEYS = ["PageUp", "PageDown"];
@@ -61053,4 +61422,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BrowserRouter, {
 }));
 //#endregion
 
-//# sourceMappingURL=index-CD1CbmCI.js.map
+//# sourceMappingURL=index-CMOeCfbb.js.map

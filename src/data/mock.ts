@@ -1,4 +1,4 @@
-import { Factory, Order, Task, Region, Priority } from '@/types'
+import { Factory, Order, Task, Region, Priority, Visit } from '@/types'
 
 const today = new Date()
 const getDates = () =>
@@ -132,7 +132,7 @@ export const mockFactories: Factory[] = rawData.map((row, index) => {
     region,
     productLineAffinity: 'Adsorventes',
     capacity: Math.floor(Math.random() * 10000) + 1000,
-    potentialValue: Math.floor(Math.random() * 5000000) + 100000,
+    potentialValue: 0,
     status: isClient ? 'Atendido' : 'Prospeção',
     lastInteraction: new Date(Date.now() - Math.random() * 30 * 86400000).toISOString(),
     funnelStage: isClient ? 'Fechamento' : 'Lead',

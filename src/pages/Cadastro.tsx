@@ -23,6 +23,7 @@ import {
 import { FactoryForm } from '@/components/FactoryForm'
 import { FactoryDocuments } from '@/components/FactoryDocuments'
 import { FactoryTasks } from '@/components/FactoryTasks'
+import { FactoryVisits } from '@/components/FactoryVisits'
 import { isStale, formatCurrency, exportToCSV } from '@/lib/utils'
 import { AlertTriangle, Search, Edit2, Trash2, Download } from 'lucide-react'
 import { Factory } from '@/types'
@@ -157,7 +158,8 @@ export default function Cadastro() {
         </Button>
       </div>
 
-      <div className="bg-card border rounded-lg overflow-hidden shadow-subtle">
+      {/* Desktop Table View */}
+      <div className="hidden md:block bg-card border rounded-lg overflow-hidden shadow-subtle">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader className="bg-muted/50">
@@ -240,6 +242,74 @@ export default function Cadastro() {
         </div>
       </div>
 
+      {/* Mobile Card View */}
+      <div className="grid grid-cols-1 gap-4 md:hidden">
+        {filtered.map((f) => {
+          const stale = isStale(f.lastInteraction)
+          return (
+            <div
+              key={f.id}
+              className={`bg-card border rounded-lg p-4 shadow-sm relative ${stale ? 'border-destructive/30' : ''}`}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-base">{f.name}</h3>
+                    {stale && <AlertTriangle className="w-4 h-4 text-destructive" />}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {f.city} • {f.region}
+                  </p>
+                </div>
+                <Badge
+                  variant="outline"
+                  className={`rounded-full border-0 text-white ${f.priority === 'High' ? 'bg-green-600' : f.priority === 'Medium' ? 'bg-yellow-500' : 'bg-red-600'}`}
+                >
+                  {f.priority === 'High' ? 'Alta' : f.priority === 'Medium' ? 'Média' : 'Baixa'}
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-2 gap-y-2 text-sm mb-4">
+                <div>
+                  <span className="text-muted-foreground block text-xs">Setor</span>
+                  <span className="font-medium">{f.sector || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-xs">Foco</span>
+                  <span className="font-medium">{f.focusLevel || '-'}</span>
+                </div>
+                <div className="col-span-2 bg-muted/30 p-2 rounded-md mt-1 border">
+                  <span className="text-muted-foreground block text-xs mb-0.5">Potencial</span>
+                  <span className="font-semibold text-primary">
+                    {formatCurrency(f.potentialValue)}
+                  </span>
+                  <span className="text-xs text-muted-foreground ml-2">({f.capacity} t/mês)</span>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <Button variant="ghost" size="sm" onClick={() => setEditing(f)} className="gap-2">
+                  <Edit2 className="w-4 h-4" /> Detalhes
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => deleteFactory(f.id)}
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )
+        })}
+        {filtered.length === 0 && (
+          <div className="text-center p-8 text-muted-foreground border rounded-lg bg-card">
+            Nenhuma fábrica encontrada.
+          </div>
+        )}
+      </div>
+
       <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -247,13 +317,25 @@ export default function Cadastro() {
           </DialogHeader>
           {editing && (
             <Tabs defaultValue="dados" className="w-full mt-2">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="dados">Cadastro</TabsTrigger>
-                <TabsTrigger value="docs">Documentos</TabsTrigger>
-                <TabsTrigger value="tasks">Tarefas</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="dados" className="text-xs sm:text-sm">
+                  Cadastro
+                </TabsTrigger>
+                <TabsTrigger value="visits" className="text-xs sm:text-sm">
+                  Visitas
+                </TabsTrigger>
+                <TabsTrigger value="docs" className="text-xs sm:text-sm">
+                  Documentos
+                </TabsTrigger>
+                <TabsTrigger value="tasks" className="text-xs sm:text-sm">
+                  Tarefas
+                </TabsTrigger>
               </TabsList>
               <TabsContent value="dados" className="pt-4 focus-visible:outline-none">
                 <FactoryForm factory={editing} onSubmit={() => setEditing(null)} />
+              </TabsContent>
+              <TabsContent value="visits" className="pt-4 focus-visible:outline-none">
+                <FactoryVisits factoryId={editing.id} />
               </TabsContent>
               <TabsContent value="docs" className="pt-4 focus-visible:outline-none">
                 <FactoryDocuments factory={editing} />

@@ -58,6 +58,14 @@ export interface Task {
   createdAt: string
 }
 
+export interface Visit {
+  id: string
+  factoryId: string
+  date: string
+  summary: string
+  potentialValue: number
+}
+
 export interface Factory {
   id: string
   name: string

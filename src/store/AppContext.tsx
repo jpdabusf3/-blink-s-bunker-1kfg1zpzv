@@ -1,14 +1,24 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  type ReactNode,
+  type Dispatch,
+  type SetStateAction,
+} from 'react'
 import { mockFactories, mockOrders, mockTasks } from '../data/mock'
-import type { Factory, Order, Task } from '../types'
+import type { Factory, Order, Task, Visit } from '../types'
 
 interface AppContextData {
   factories: Factory[]
-  setFactories: React.Dispatch<React.SetStateAction<Factory[]>>
+  setFactories: Dispatch<SetStateAction<Factory[]>>
   orders: Order[]
-  setOrders: React.Dispatch<React.SetStateAction<Order[]>>
+  setOrders: Dispatch<SetStateAction<Order[]>>
   tasks: Task[]
-  setTasks: React.Dispatch<React.SetStateAction<Task[]>>
+  setTasks: Dispatch<SetStateAction<Task[]>>
+  visits: Visit[]
+  setVisits: Dispatch<SetStateAction<Visit[]>>
   isOnline: boolean
   addFactory: (data: Partial<Factory>) => void
   updateFactory: (id: string, data: Partial<Factory>) => void
@@ -16,27 +26,32 @@ interface AppContextData {
   addTask: (data: Omit<Task, 'id' | 'createdAt'>) => void
   updateTask: (id: string, data: Partial<Task>) => void
   deleteTask: (id: string) => void
+  addVisit: (data: Omit<Visit, 'id'>) => void
 }
 
 export const AppContext = createContext<AppContextData>({} as AppContextData)
 
-export const AppProvider = ({ children }: { children: React.ReactNode }) => {
+export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine)
 
-  // Bumped local storage keys to v2 to ensure new dataset is loaded
   const [factories, setFactories] = useState<Factory[]>(() => {
-    const saved = localStorage.getItem('blink_factories_v2')
+    const saved = localStorage.getItem('blink_factories_v3')
     return saved ? JSON.parse(saved) : mockFactories
   })
 
   const [orders, setOrders] = useState<Order[]>(() => {
-    const saved = localStorage.getItem('blink_orders_v2')
+    const saved = localStorage.getItem('blink_orders_v3')
     return saved ? JSON.parse(saved) : mockOrders
   })
 
   const [tasks, setTasks] = useState<Task[]>(() => {
-    const saved = localStorage.getItem('blink_tasks_v2')
+    const saved = localStorage.getItem('blink_tasks_v3')
     return saved ? JSON.parse(saved) : mockTasks
+  })
+
+  const [visits, setVisits] = useState<Visit[]>(() => {
+    const saved = localStorage.getItem('blink_visits_v3')
+    return saved ? JSON.parse(saved) : []
   })
 
   useEffect(() => {
@@ -51,16 +66,20 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   }, [])
 
   useEffect(() => {
-    localStorage.setItem('blink_factories_v2', JSON.stringify(factories))
+    localStorage.setItem('blink_factories_v3', JSON.stringify(factories))
   }, [factories])
 
   useEffect(() => {
-    localStorage.setItem('blink_orders_v2', JSON.stringify(orders))
+    localStorage.setItem('blink_orders_v3', JSON.stringify(orders))
   }, [orders])
 
   useEffect(() => {
-    localStorage.setItem('blink_tasks_v2', JSON.stringify(tasks))
+    localStorage.setItem('blink_tasks_v3', JSON.stringify(tasks))
   }, [tasks])
+
+  useEffect(() => {
+    localStorage.setItem('blink_visits_v3', JSON.stringify(visits))
+  }, [visits])
 
   const addFactory = (data: Partial<Factory>) => {
     const newFactory: Factory = {
@@ -128,6 +147,17 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     setTasks((prev) => prev.filter((t) => t.id !== id))
   }
 
+  const addVisit = (data: Omit<Visit, 'id'>) => {
+    const newVisit: Visit = {
+      ...data,
+      id: Math.random().toString(36).substr(2, 9),
+    }
+    setVisits((prev) => [newVisit, ...prev])
+    if (data.potentialValue !== undefined) {
+      updateFactory(data.factoryId, { potentialValue: data.potentialValue })
+    }
+  }
+
   return (
     <AppContext.Provider
       value={{
@@ -137,6 +167,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         setOrders,
         tasks,
         setTasks,
+        visits,
+        setVisits,
         isOnline,
         addFactory,
         updateFactory,
@@ -144,6 +176,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         addTask,
         updateTask,
         deleteTask,
+        addVisit,
       }}
     >
       {children}
