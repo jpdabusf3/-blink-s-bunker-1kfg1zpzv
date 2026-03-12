@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState } from 'react'
-import { mockFactories } from '../data/mock'
-import type { Factory } from '../types'
+import { mockFactories, mockOrders } from '../data/mock'
+import type { Factory, Order } from '../types'
 
 interface AppContextData {
   factories: Factory[]
   setFactories: React.Dispatch<React.SetStateAction<Factory[]>>
+  orders: Order[]
+  setOrders: React.Dispatch<React.SetStateAction<Order[]>>
   addFactory: (data: Partial<Factory>) => void
   updateFactory: (id: string, data: Partial<Factory>) => void
   deleteFactory: (id: string) => void
@@ -14,6 +16,7 @@ export const AppContext = createContext<AppContextData>({} as AppContextData)
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [factories, setFactories] = useState<Factory[]>(mockFactories)
+  const [orders, setOrders] = useState<Order[]>(mockOrders)
 
   const addFactory = (data: Partial<Factory>) => {
     const newFactory: Factory = {
@@ -49,6 +52,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         urgency: 5,
         roi: 5,
       },
+      scoreHistory: data.scoreHistory || [{ date: new Date().toISOString(), score: 50 }],
     }
     setFactories((prev) => [newFactory, ...prev])
   }
@@ -63,7 +67,15 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AppContext.Provider
-      value={{ factories, setFactories, addFactory, updateFactory, deleteFactory }}
+      value={{
+        factories,
+        setFactories,
+        orders,
+        setOrders,
+        addFactory,
+        updateFactory,
+        deleteFactory,
+      }}
     >
       {children}
     </AppContext.Provider>

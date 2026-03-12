@@ -40,6 +40,21 @@ export interface Document {
   uploadedAt: string
 }
 
+export interface ScoreHistory {
+  date: string
+  score: number
+}
+
+export interface Order {
+  id: string
+  factoryId: string
+  product: string
+  quantity: number
+  unitValue: number
+  totalValue: number
+  orderDate: string
+}
+
 export interface Factory {
   id: string
   name: string
@@ -59,6 +74,7 @@ export interface Factory {
   winProbability: number
   deadline?: string
   documents?: Document[]
+  scoreHistory?: ScoreHistory[]
   swot: {
     strengths: string
     weaknesses: string

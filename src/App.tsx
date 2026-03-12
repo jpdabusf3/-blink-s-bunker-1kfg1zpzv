@@ -8,6 +8,7 @@ import Cadastro from './pages/Cadastro'
 import Funil from './pages/Funil'
 import SWOT from './pages/SWOT'
 import Matriz from './pages/Matriz'
+import Pedidos from './pages/Pedidos'
 import NotFound from './pages/NotFound'
 import Login from './pages/Login'
 import { AppProvider } from './store/AppContext'
@@ -31,6 +32,7 @@ const App = () => (
                 <Route path="/funil" element={<Funil />} />
                 <Route path="/swot" element={<SWOT />} />
                 <Route path="/matriz" element={<Matriz />} />
+                <Route path="/pedidos" element={<Pedidos />} />
               </Route>
             </Route>
 

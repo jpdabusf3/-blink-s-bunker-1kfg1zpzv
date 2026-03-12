@@ -1,4 +1,18 @@
-import { Factory } from '@/types'
+import { Factory, Order } from '@/types'
+
+const today = new Date()
+const getDates = () =>
+  Array.from({ length: 6 }).map((_, i) =>
+    new Date(today.getTime() - (5 - i) * 30 * 86400000).toISOString(),
+  )
+
+const scoreTrends = [
+  getDates().map((d, i) => ({ date: d, score: 50 + i * 5 })),
+  getDates().map((d, i) => ({ date: d, score: 60 + i * 2 })),
+  getDates().map((d, i) => ({ date: d, score: 40 + i * 8 })),
+  getDates().map((d, i) => ({ date: d, score: 30 + i * 3 })),
+  getDates().map((d, i) => ({ date: d, score: 70 + i * 4 })),
+]
 
 export const mockFactories: Factory[] = [
   {
@@ -28,6 +42,7 @@ export const mockFactories: Factory[] = [
         uploadedAt: new Date().toISOString(),
       },
     ],
+    scoreHistory: scoreTrends[0],
     swot: {
       strengths: 'Grande volume de compra, logística eficiente',
       weaknesses: 'Pagamento alongado',
@@ -64,6 +79,7 @@ export const mockFactories: Factory[] = [
     productInterests: 'Vitaminas',
     deadline: new Date(Date.now() - 2 * 86400000).toISOString(),
     documents: [],
+    scoreHistory: scoreTrends[1],
     swot: {
       strengths: 'Marca forte no norte',
       weaknesses: 'Instabilidade financeira recente',
@@ -100,6 +116,7 @@ export const mockFactories: Factory[] = [
         uploadedAt: new Date(Date.now() - 3 * 86400000).toISOString(),
       },
     ],
+    scoreHistory: scoreTrends[2],
     swot: {
       strengths: 'Alta adoção de tecnologia',
       weaknesses: 'Exigência extrema de prazos',
@@ -135,6 +152,7 @@ export const mockFactories: Factory[] = [
     operationTypes: 'Ração',
     productInterests: 'Conservantes',
     documents: [],
+    scoreHistory: scoreTrends[3],
     swot: {
       strengths: '',
       weaknesses: '',
@@ -163,6 +181,7 @@ export const mockFactories: Factory[] = [
     productInterests: 'Probióticos',
     deadline: new Date(Date.now() + 5 * 86400000).toISOString(),
     documents: [],
+    scoreHistory: scoreTrends[4],
     swot: {
       strengths: 'Equipe técnica qualificada',
       weaknesses: 'Volume inconstante de compras',
@@ -171,5 +190,53 @@ export const mockFactories: Factory[] = [
       generalAttractiveness: 75,
     },
     matrix: { financial: 8, technical: 9, fit: 8, openness: 9, competition: 5, urgency: 7, roi: 8 },
+  },
+]
+
+export const mockOrders: Order[] = [
+  {
+    id: 'o1',
+    factoryId: '1',
+    product: 'Blink Minerais+',
+    quantity: 50,
+    unitValue: 120,
+    totalValue: 6000,
+    orderDate: new Date(today.getTime() - 10 * 86400000).toISOString(),
+  },
+  {
+    id: 'o2',
+    factoryId: '1',
+    product: 'Blink Enzimas',
+    quantity: 20,
+    unitValue: 300,
+    totalValue: 6000,
+    orderDate: new Date(today.getTime() - 40 * 86400000).toISOString(),
+  },
+  {
+    id: 'o3',
+    factoryId: '3',
+    product: 'Blink Prebio',
+    quantity: 100,
+    unitValue: 80,
+    totalValue: 8000,
+    orderDate: new Date(today.getTime() - 5 * 86400000).toISOString(),
+  },
+  {
+    id: 'o4',
+    factoryId: '2',
+    product: 'Blink Adsorventes',
+    quantity: 200,
+    unitValue: 45,
+    totalValue: 9000,
+    orderDate: new Date(today.getTime() - 25 * 86400000).toISOString(),
+  },
+  {
+    id: 'o5',
+    factoryId: '5',
+    product: 'Blink Ingredientes',
+    quantity: 80,
+    unitValue: 150,
+    totalValue: 12000,
+    orderDate: new Date(today.getTime() - 2 * 86400000).toISOString(),
   },
 ]
