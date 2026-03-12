@@ -1,8 +1,9 @@
+import React, { useState, useEffect } from 'react'
 import { useAppContext } from '@/store/AppContext'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatCompactCurrency } from '@/lib/utils'
-import { Download } from 'lucide-react'
+import { Download, GripVertical } from 'lucide-react'
 import { MapCard } from '@/components/dashboard/MapCard'
 import { ScoreEvolutionCard } from '@/components/dashboard/ScoreEvolutionCard'
 import { DashboardCharts } from '@/components/dashboard/DashboardCharts'
@@ -14,8 +15,79 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
   </svg>
 )
 
+const DEFAULT_BLOCKS = ['metrics', 'maps', 'charts', 'list']
+
+function DraggableBlock({
+  id,
+  index,
+  moveBlock,
+  children,
+}: {
+  id: string
+  index: number
+  moveBlock: (f: number, t: number) => void
+  children: React.ReactNode
+}) {
+  const [isDraggable, setIsDraggable] = useState(false)
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('text/plain', index.toString())
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    const sourceIndex = parseInt(e.dataTransfer.getData('text/plain'), 10)
+    if (!isNaN(sourceIndex) && sourceIndex !== index) {
+      moveBlock(sourceIndex, index)
+    }
+    setIsDraggable(false)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  return (
+    <div
+      draggable={isDraggable}
+      onDragStart={handleDragStart}
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+      className="relative group transition-all"
+    >
+      <div
+        className="absolute -top-3 -left-3 p-1.5 bg-card border rounded-md shadow-sm cursor-grab opacity-0 group-hover:opacity-100 z-10 hidden sm:block hover:bg-accent hover:text-accent-foreground transition-colors"
+        onMouseEnter={() => setIsDraggable(true)}
+        onMouseLeave={() => setIsDraggable(false)}
+        title="Arrastar para reordenar"
+      >
+        <GripVertical className="w-4 h-4" />
+      </div>
+      {children}
+    </div>
+  )
+}
+
 export default function Index() {
   const { factories, tasks } = useAppContext()
+
+  const [blocks, setBlocks] = useState<string[]>(() => {
+    const saved = localStorage.getItem('blink_dashboard_order_v2')
+    return saved ? JSON.parse(saved) : DEFAULT_BLOCKS
+  })
+
+  useEffect(() => {
+    localStorage.setItem('blink_dashboard_order_v2', JSON.stringify(blocks))
+  }, [blocks])
+
+  const moveBlock = (fromIndex: number, toIndex: number) => {
+    const newBlocks = [...blocks]
+    const [moved] = newBlocks.splice(fromIndex, 1)
+    newBlocks.splice(toIndex, 0, moved)
+    setBlocks(newBlocks)
+  }
 
   const metrics = {
     revenue: factories.reduce((s, f) => s + f.potentialValue, 0),
@@ -57,9 +129,65 @@ export default function Index() {
     window.open(`https://wa.me/?text=${encodedText}`, '_blank', 'noopener,noreferrer')
   }
 
+  const renderBlock = (id: string) => {
+    switch (id) {
+      case 'metrics':
+        return (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 print:grid-cols-4 print:gap-4 print:mb-8">
+            <Card className="shadow-subtle text-center flex flex-col justify-center items-center p-4 print:border-none print:shadow-none print:bg-muted/10">
+              <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight">
+                Fábricas Mapeadas
+              </h3>
+              <div className="text-xl sm:text-3xl font-bold">{factories.length}</div>
+            </Card>
+            <Card className="shadow-subtle text-center flex flex-col justify-center items-center p-4 print:border-none print:shadow-none print:bg-muted/10">
+              <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight">
+                Ativas / Prospecção
+              </h3>
+              <div className="text-xl sm:text-3xl font-bold">
+                {metrics.active} / {metrics.prospect}
+              </div>
+            </Card>
+            <Card className="shadow-subtle text-center flex flex-col justify-center items-center p-4 print:border-none print:shadow-none print:bg-primary/5">
+              <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight">
+                Receita Potencial
+              </h3>
+              <div className="text-[12px] font-bold text-primary print:text-xl">
+                {formatCompactCurrency(metrics.revenue)}
+              </div>
+            </Card>
+            <Card className="shadow-subtle text-center flex flex-col justify-center items-center p-4 print:border-none print:shadow-none print:bg-accent/5">
+              <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight">
+                Forecast Ponderado
+              </h3>
+              <div className="text-[12px] font-bold text-accent print:text-xl">
+                {formatCompactCurrency(metrics.weighted)}
+              </div>
+            </Card>
+          </div>
+        )
+      case 'maps':
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-1">
+            <MapCard />
+            <ScoreEvolutionCard />
+          </div>
+        )
+      case 'charts':
+        return <DashboardCharts />
+      case 'list':
+        return (
+          <div className="grid grid-cols-1 gap-6 print:hidden">
+            <FactoryListCard />
+          </div>
+        )
+      default:
+        return null
+    }
+  }
+
   return (
     <div className="space-y-6 animate-fade-in pb-10 print:m-0 print:p-0 print:space-y-8">
-      {/* Print Header */}
       <div className="hidden print:block mb-8 border-b-2 border-primary pb-4">
         <h1 className="text-3xl font-bold text-primary mb-1">Relatório Executivo - MT</h1>
         <p className="text-muted-foreground text-sm">
@@ -86,48 +214,12 @@ export default function Index() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 print:grid-cols-4 print:gap-4 print:mb-8">
-        <Card className="shadow-subtle text-center flex flex-col justify-center items-center p-4 print:border-none print:shadow-none print:bg-muted/10">
-          <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight">
-            Fábricas Mapeadas
-          </h3>
-          <div className="text-xl sm:text-3xl font-bold">{factories.length}</div>
-        </Card>
-        <Card className="shadow-subtle text-center flex flex-col justify-center items-center p-4 print:border-none print:shadow-none print:bg-muted/10">
-          <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight">
-            Ativas / Prospecção
-          </h3>
-          <div className="text-xl sm:text-3xl font-bold">
-            {metrics.active} / {metrics.prospect}
-          </div>
-        </Card>
-        <Card className="shadow-subtle text-center flex flex-col justify-center items-center p-4 print:border-none print:shadow-none print:bg-primary/5">
-          <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight">
-            Receita Potencial
-          </h3>
-          <div className="text-[12px] font-bold text-primary print:text-xl">
-            {formatCompactCurrency(metrics.revenue)}
-          </div>
-        </Card>
-        <Card className="shadow-subtle text-center flex flex-col justify-center items-center p-4 print:border-none print:shadow-none print:bg-accent/5">
-          <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight">
-            Forecast Ponderado
-          </h3>
-          <div className="text-[12px] font-bold text-accent print:text-xl">
-            {formatCompactCurrency(metrics.weighted)}
-          </div>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-1">
-        <MapCard />
-        <ScoreEvolutionCard />
-      </div>
-
-      <DashboardCharts />
-
-      <div className="grid grid-cols-1 gap-6 print:hidden">
-        <FactoryListCard />
+      <div className="flex flex-col gap-6">
+        {blocks.map((blockId, index) => (
+          <DraggableBlock key={blockId} id={blockId} index={index} moveBlock={moveBlock}>
+            {renderBlock(blockId)}
+          </DraggableBlock>
+        ))}
       </div>
     </div>
   )

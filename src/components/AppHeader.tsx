@@ -1,4 +1,4 @@
-import { Bell, Plus, AlertTriangle, Calendar, WifiOff, CheckCircle2 } from 'lucide-react'
+import { Bell, Plus, AlertTriangle, Calendar, WifiOff, CheckCircle2, Moon, Sun } from 'lucide-react'
 import { Button } from './ui/button'
 import { useAppContext } from '@/store/AppContext'
 import { isStale, isApproachingDeadline, isPassedDeadline } from '@/lib/utils'
@@ -14,10 +14,12 @@ import { FactoryForm } from './FactoryForm'
 import { useState } from 'react'
 import { SidebarTrigger } from './ui/sidebar'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
+import { useTheme } from 'next-themes'
 
 export function AppHeader() {
   const { factories, tasks, isOnline } = useAppContext()
   const [open, setOpen] = useState(false)
+  const { theme, setTheme } = useTheme()
 
   const notifications = factories.flatMap((f) => {
     const notifs = []
@@ -108,6 +110,18 @@ export function AppHeader() {
       </div>
 
       <div className="flex items-center gap-4 lg:gap-6">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          title="Alternar Tema"
+          className="w-10 h-10 rounded-full"
+        >
+          <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-muted-foreground" />
+          <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 text-muted-foreground" />
+          <span className="sr-only">Alternar Tema</span>
+        </Button>
+
         <Popover>
           <PopoverTrigger asChild>
             <div

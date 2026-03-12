@@ -89,6 +89,10 @@ export interface Factory {
   deadline?: string
   documents?: Document[]
   scoreHistory?: ScoreHistory[]
+  coordinates?: {
+    lat: number
+    lng: number
+  }
   swot: {
     strengths: string
     weaknesses: string

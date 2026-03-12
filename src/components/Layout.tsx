@@ -2,11 +2,13 @@ import { SidebarProvider } from '@/components/ui/sidebar'
 import { AppSidebar } from './AppSidebar'
 import { AppHeader } from './AppHeader'
 import { AppBottomNav } from './AppBottomNav'
+import { GeofenceTracker } from './GeofenceTracker'
 import { Outlet } from 'react-router-dom'
 
 export default function Layout() {
   return (
     <SidebarProvider>
+      <GeofenceTracker />
       <div className="flex h-screen w-full overflow-hidden bg-background">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">

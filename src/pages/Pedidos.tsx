@@ -34,10 +34,12 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { useAppContext } from '@/store/AppContext'
 import { formatCurrency } from '@/lib/utils'
 import { OrderForm } from '@/components/OrderForm'
-import { Plus, Edit2, Trash2 } from 'lucide-react'
+import { Plus, Edit2, Trash2, Filter } from 'lucide-react'
 import { Order } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 
@@ -52,6 +54,10 @@ export default function Pedidos() {
   const [editingOrder, setEditingOrder] = useState<Order | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [productLine, setProductLine] = useState('all')
+
   useEffect(() => {
     if (isNewParam) {
       setIsNewDialogOpen(true)
@@ -65,8 +71,19 @@ export default function Pedidos() {
     if (factoryIdParam !== 'all') {
       res = res.filter((o) => o.factoryId === factoryIdParam)
     }
+    if (productLine !== 'all') {
+      res = res.filter((o) => o.line === productLine)
+    }
+    if (startDate) {
+      res = res.filter((o) => new Date(o.orderDate) >= new Date(startDate))
+    }
+    if (endDate) {
+      const end = new Date(endDate)
+      end.setHours(23, 59, 59, 999)
+      res = res.filter((o) => new Date(o.orderDate) <= end)
+    }
     return res.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime())
-  }, [orders, factoryIdParam])
+  }, [orders, factoryIdParam, productLine, startDate, endDate])
 
   const handleDelete = () => {
     if (deletingId) {
@@ -77,6 +94,13 @@ export default function Pedidos() {
         description: 'O pedido foi removido permanentemente do histórico.',
       })
     }
+  }
+
+  const clearFilters = () => {
+    setStartDate('')
+    setEndDate('')
+    setProductLine('all')
+    setSearchParams({})
   }
 
   return (
@@ -106,28 +130,68 @@ export default function Pedidos() {
         </Dialog>
       </div>
 
-      <Card className="shadow-subtle">
-        <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <CardTitle>Pedidos Realizados</CardTitle>
-            <CardDescription>Visualize e filtre por fábrica</CardDescription>
+      <Card className="shadow-subtle mb-6">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Filter className="w-5 h-5 text-primary" /> Filtros Avançados
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+          <div className="space-y-2">
+            <Label>Data Inicial</Label>
+            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </div>
-          <Select
-            value={factoryIdParam}
-            onValueChange={(val) => setSearchParams(val === 'all' ? {} : { factoryId: val })}
-          >
-            <SelectTrigger className="w-[280px]">
-              <SelectValue placeholder="Filtrar por fábrica" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as Fábricas</SelectItem>
-              {factories.map((f) => (
-                <SelectItem key={f.id} value={f.id}>
-                  {f.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            <Label>Data Final</Label>
+            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          </div>
+          <div className="space-y-2 lg:col-span-1">
+            <Label>Fábrica</Label>
+            <Select
+              value={factoryIdParam}
+              onValueChange={(val) => setSearchParams(val === 'all' ? {} : { factoryId: val })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Todas as Fábricas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Fábricas</SelectItem>
+                {factories.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Linha</Label>
+            <Select value={productLine} onValueChange={setProductLine}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todas as Linhas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Linhas</SelectItem>
+                {['Adsorventes', 'Prebióticos', 'Minerais Orgânicos', 'Blends', 'Ingredientes'].map(
+                  (l) => (
+                    <SelectItem key={l} value={l}>
+                      {l}
+                    </SelectItem>
+                  ),
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button variant="outline" onClick={clearFilters} className="w-full text-muted-foreground">
+            Limpar Filtros
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-subtle">
+        <CardHeader>
+          <CardTitle>Pedidos Realizados</CardTitle>
+          <CardDescription>Mostrando {filteredOrders.length} pedido(s)</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -148,7 +212,7 @@ export default function Pedidos() {
                 {filteredOrders.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center text-muted-foreground h-32">
-                      Nenhum pedido encontrado para o filtro selecionado.
+                      Nenhum pedido encontrado para os filtros selecionados.
                     </TableCell>
                   </TableRow>
                 )}
@@ -204,7 +268,6 @@ export default function Pedidos() {
         </CardContent>
       </Card>
 
-      {/* Edit Order Dialog */}
       <Dialog open={!!editingOrder} onOpenChange={(open) => !open && setEditingOrder(null)}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
@@ -216,7 +279,6 @@ export default function Pedidos() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deletingId} onOpenChange={(open) => !open && setDeletingId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

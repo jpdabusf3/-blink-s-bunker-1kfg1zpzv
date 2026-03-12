@@ -14,34 +14,37 @@ import Login from './pages/Login'
 import { AppProvider } from './store/AppContext'
 import { AuthProvider } from './store/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { ThemeProvider } from './components/ThemeProvider'
 
 const App = () => (
-  <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
-    <AuthProvider>
-      <AppProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <Routes>
-            <Route path="/login" element={<Login />} />
+  <ThemeProvider defaultTheme="system" storageKey="blink-theme" attribute="class">
+    <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
+      <AuthProvider>
+        <AppProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <Routes>
+              <Route path="/login" element={<Login />} />
 
-            <Route element={<ProtectedRoute />}>
-              <Route element={<Layout />}>
-                <Route path="/" element={<Index />} />
-                <Route path="/cadastro" element={<Cadastro />} />
-                <Route path="/funil" element={<Funil />} />
-                <Route path="/swot" element={<SWOT />} />
-                <Route path="/matriz" element={<Matriz />} />
-                <Route path="/pedidos" element={<Pedidos />} />
+              <Route element={<ProtectedRoute />}>
+                <Route element={<Layout />}>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/cadastro" element={<Cadastro />} />
+                  <Route path="/funil" element={<Funil />} />
+                  <Route path="/swot" element={<SWOT />} />
+                  <Route path="/matriz" element={<Matriz />} />
+                  <Route path="/pedidos" element={<Pedidos />} />
+                </Route>
               </Route>
-            </Route>
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </TooltipProvider>
-      </AppProvider>
-    </AuthProvider>
-  </BrowserRouter>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </TooltipProvider>
+        </AppProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  </ThemeProvider>
 )
 
 export default App
