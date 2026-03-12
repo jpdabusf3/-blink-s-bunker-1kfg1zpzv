@@ -1772,6 +1772,11 @@ body {
   border-top-color: transparent;
 }
 
+.bg-\[\#25D366\]{
+  --tw-bg-opacity: 1;
+  background-color: rgb(37 211 102 / var(--tw-bg-opacity, 1));
+}
+
 .bg-\[--color-bg\]{
   background-color: var(--color-bg);
 }
@@ -2664,6 +2669,11 @@ body {
 
 .hover\:border-input:hover{
   border-color: hsl(var(--input));
+}
+
+.hover\:bg-\[\#128C7E\]:hover{
+  --tw-bg-opacity: 1;
+  background-color: rgb(18 140 126 / var(--tw-bg-opacity, 1));
 }
 
 .hover\:bg-accent:hover{
