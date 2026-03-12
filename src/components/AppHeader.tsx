@@ -48,20 +48,26 @@ export function AppHeader() {
   })
 
   tasks.forEach((t) => {
-    if (!t.completed) {
+    if (!t.completed && t.dueDate) {
       const isOverdue = isPassedDeadline(t.dueDate)
-      const isHighPriority = t.priority === 'Alta'
+      const isApproaching = isApproachingDeadline(t.dueDate)
+      const factory = factories.find((f) => f.id === t.factoryId)
 
       if (isOverdue) {
-        const factory = factories.find((f) => f.id === t.factoryId)
         notifications.push({
           id: `task-overdue-${t.id}`,
           type: 'destructive',
           icon: CheckCircle2,
-          message: `Tarefa atrasada: ${t.description} (${factory?.name || 'Fábrica'})`,
+          message: `Atrasada [${t.type}]: ${t.description} (${factory?.name || 'Fábrica'})`,
         })
-      } else if (isHighPriority) {
-        const factory = factories.find((f) => f.id === t.factoryId)
+      } else if (isApproaching) {
+        notifications.push({
+          id: `task-approaching-${t.id}`,
+          type: 'warning',
+          icon: Calendar,
+          message: `Vence em breve [${t.type}]: ${t.description} (${factory?.name || 'Fábrica'})`,
+        })
+      } else if (t.priority === 'Alta') {
         notifications.push({
           id: `task-high-${t.id}`,
           type: 'warning',
@@ -69,6 +75,14 @@ export function AppHeader() {
           message: `Prioridade Alta: ${t.description} (${factory?.name || 'Fábrica'})`,
         })
       }
+    } else if (!t.completed && !t.dueDate && t.priority === 'Alta') {
+      const factory = factories.find((f) => f.id === t.factoryId)
+      notifications.push({
+        id: `task-high-${t.id}`,
+        type: 'warning',
+        icon: CheckCircle2,
+        message: `Prioridade Alta: ${t.description} (${factory?.name || 'Fábrica'})`,
+      })
     }
   })
 
@@ -97,10 +111,10 @@ export function AppHeader() {
         <Popover>
           <PopoverTrigger asChild>
             <div
-              className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-muted transition-colors cursor-pointer group"
+              className="relative flex items-center justify-center w-11 h-11 md:w-10 md:h-10 rounded-full hover:bg-muted transition-colors cursor-pointer group"
               title="Notificações"
             >
-              <Bell className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+              <Bell className="w-6 h-6 md:w-5 md:h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
               {notifCount > 0 && (
                 <span className="absolute top-1 right-1 bg-destructive text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-card">
                   {notifCount}
@@ -141,7 +155,7 @@ export function AppHeader() {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-2 shadow-sm">
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5 md:w-4 md:h-4" />
               <span className="hidden sm:inline">Nova Fábrica</span>
             </Button>
           </DialogTrigger>

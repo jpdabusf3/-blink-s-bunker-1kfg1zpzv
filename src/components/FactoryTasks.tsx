@@ -10,15 +10,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { TaskType, TaskPriority } from '@/types'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { Trash2, CalendarIcon, AlertCircle } from 'lucide-react'
-import { isPassedDeadline } from '@/lib/utils'
+import { Trash2, Calendar as CalendarIcon, AlertCircle } from 'lucide-react'
+import {
+  isPassedDeadline,
+  generateGoogleCalendarLink,
+  generateOutlookCalendarLink,
+} from '@/lib/utils'
 
 export function FactoryTasks({ factoryId }: { factoryId: string }) {
-  const { tasks, addTask, updateTask, deleteTask } = useAppContext()
+  const { tasks, factories, addTask, updateTask, deleteTask } = useAppContext()
   const [isAdding, setIsAdding] = useState(false)
+
+  const factory = factories.find((f) => f.id === factoryId)
+  const factoryName = factory?.name || 'Não informada'
 
   const factoryTasks = tasks
     .filter((t) => t.factoryId === factoryId)
@@ -111,7 +119,7 @@ export function FactoryTasks({ factoryId }: { factoryId: string }) {
               <Checkbox
                 checked={task.completed}
                 onCheckedChange={(checked) => updateTask(task.id, { completed: !!checked })}
-                className="mt-1"
+                className="mt-1 w-5 h-5 md:w-4 md:h-4"
               />
               <div className="flex-1 min-w-0">
                 <p
@@ -143,14 +151,55 @@ export function FactoryTasks({ factoryId }: { factoryId: string }) {
                   )}
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
-                onClick={() => deleteTask(task.id)}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
+              <div className="flex items-center gap-1 shrink-0">
+                {task.dueDate && !task.completed && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-primary"
+                      >
+                        <CalendarIcon className="w-4 h-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-48 p-2 flex flex-col gap-1">
+                      <a
+                        href={generateGoogleCalendarLink(
+                          `Blink: ${task.description}`,
+                          `Fábrica: ${factoryName}\nTipo: ${task.type}`,
+                          task.dueDate,
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm p-2.5 hover:bg-muted rounded-md transition-colors flex items-center gap-2"
+                      >
+                        Google Calendar
+                      </a>
+                      <a
+                        href={generateOutlookCalendarLink(
+                          `Blink: ${task.description}`,
+                          `Fábrica: ${factoryName}\nTipo: ${task.type}`,
+                          task.dueDate,
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm p-2.5 hover:bg-muted rounded-md transition-colors flex items-center gap-2"
+                      >
+                        Outlook / Apple
+                      </a>
+                    </PopoverContent>
+                  </Popover>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-destructive"
+                  onClick={() => deleteTask(task.id)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           )
         })}

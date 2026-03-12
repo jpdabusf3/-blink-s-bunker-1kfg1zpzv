@@ -31,56 +31,40 @@ export default function Index() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2 print:hidden">
         <h1 className="text-2xl font-bold tracking-tight">Visão Geral MT</h1>
         <Button size="sm" onClick={() => window.print()} className="gap-2 shadow-sm">
-          <Download className="w-4 h-4" /> Exportar Relatório PDF
+          <Download className="w-5 h-5 md:w-4 md:h-4" /> Exportar Relatório PDF
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-4 print:gap-4 print:mb-8">
-        <Card className="shadow-subtle text-center flex flex-col justify-center items-center print:border-none print:shadow-none print:bg-muted/10">
-          <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Fábricas Mapeadas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{factories.length}</div>
-          </CardContent>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 print:grid-cols-4 print:gap-4 print:mb-8">
+        <Card className="shadow-subtle text-center flex flex-col justify-center items-center p-4 print:border-none print:shadow-none print:bg-muted/10">
+          <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight">
+            Fábricas Mapeadas
+          </h3>
+          <div className="text-xl sm:text-3xl font-bold">{factories.length}</div>
         </Card>
-        <Card className="shadow-subtle text-center flex flex-col justify-center items-center print:border-none print:shadow-none print:bg-muted/10">
-          <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Ativas / Prospecção
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {metrics.active} / {metrics.prospect}
-            </div>
-          </CardContent>
+        <Card className="shadow-subtle text-center flex flex-col justify-center items-center p-4 print:border-none print:shadow-none print:bg-muted/10">
+          <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight">
+            Ativas / Prospecção
+          </h3>
+          <div className="text-xl sm:text-3xl font-bold">
+            {metrics.active} / {metrics.prospect}
+          </div>
         </Card>
-        <Card className="shadow-subtle text-center flex flex-col justify-center items-center print:border-none print:shadow-none print:bg-primary/5">
-          <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Receita Potencial
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-[12px] font-bold text-primary print:text-xl">
-              {formatCompactCurrency(metrics.revenue)}
-            </div>
-          </CardContent>
+        <Card className="shadow-subtle text-center flex flex-col justify-center items-center p-4 print:border-none print:shadow-none print:bg-primary/5">
+          <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight">
+            Receita Potencial
+          </h3>
+          <div className="text-[12px] font-bold text-primary print:text-xl">
+            {formatCompactCurrency(metrics.revenue)}
+          </div>
         </Card>
-        <Card className="shadow-subtle text-center flex flex-col justify-center items-center print:border-none print:shadow-none print:bg-accent/5">
-          <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Forecast Ponderado
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-[12px] font-bold text-accent print:text-xl">
-              {formatCompactCurrency(metrics.weighted)}
-            </div>
-          </CardContent>
+        <Card className="shadow-subtle text-center flex flex-col justify-center items-center p-4 print:border-none print:shadow-none print:bg-accent/5">
+          <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight">
+            Forecast Ponderado
+          </h3>
+          <div className="text-[12px] font-bold text-accent print:text-xl">
+            {formatCompactCurrency(metrics.weighted)}
+          </div>
         </Card>
       </div>
 

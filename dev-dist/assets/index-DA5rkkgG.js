@@ -20916,6 +20916,35 @@ function exportToCSV(filename, rows) {
 		document.body.removeChild(link);
 	}
 }
+function generateGoogleCalendarLink(title, description, dateStr) {
+	const text = encodeURIComponent(title);
+	const details = encodeURIComponent(description);
+	let dates = "";
+	if (dateStr) {
+		const d = new Date(dateStr);
+		const yyyy = d.getUTCFullYear();
+		const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+		const dd = String(d.getUTCDate()).padStart(2, "0");
+		const nextD = new Date(d);
+		nextD.setUTCDate(nextD.getUTCDate() + 1);
+		dates = `&dates=${yyyy}${mm}${dd}/${nextD.getUTCFullYear()}${String(nextD.getUTCMonth() + 1).padStart(2, "0")}${String(nextD.getUTCDate()).padStart(2, "0")}`;
+	}
+	return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&details=${details}${dates}`;
+}
+function generateOutlookCalendarLink(title, description, dateStr) {
+	const subject = encodeURIComponent(title);
+	const body = encodeURIComponent(description);
+	let startdt = "";
+	let enddt = "";
+	if (dateStr) {
+		const d = new Date(dateStr);
+		startdt = d.toISOString();
+		const nextD = new Date(d);
+		nextD.setUTCDate(nextD.getUTCDate() + 1);
+		enddt = nextD.toISOString();
+	}
+	return `https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent&subject=${subject}&body=${body}&startdt=${startdt}&enddt=${enddt}&allday=true`;
+}
 //#endregion
 //#region src/components/ui/toast.tsx
 var ToastProvider = Provider$1;
@@ -24566,10 +24595,10 @@ var buttonVariants = cva("inline-flex items-center justify-center gap-2 whitespa
 			link: "text-foreground underline-offset-4 hover:underline"
 		},
 		size: {
-			default: "h-10 px-4 py-2",
-			sm: "h-9 rounded-md px-3",
-			lg: "h-11 rounded-md px-8",
-			icon: "h-10 w-10"
+			default: "h-11 md:h-10 px-4 py-2",
+			sm: "h-10 md:h-9 rounded-md px-3",
+			lg: "h-12 md:h-11 rounded-md px-8",
+			icon: "h-11 w-11 md:h-10 md:w-10"
 		}
 	},
 	defaultVariants: {
@@ -28978,68 +29007,78 @@ function AppHeader() {
 		return notifs;
 	});
 	tasks.forEach((t) => {
-		if (!t.completed) {
+		if (!t.completed && t.dueDate) {
 			const isOverdue = isPassedDeadline(t.dueDate);
-			const isHighPriority = t.priority === "Alta";
-			if (isOverdue) {
-				const factory = factories.find((f) => f.id === t.factoryId);
-				notifications.push({
-					id: `task-overdue-${t.id}`,
-					type: "destructive",
-					icon: CircleCheck,
-					message: `Tarefa atrasada: ${t.description} (${factory?.name || "Fábrica"})`
-				});
-			} else if (isHighPriority) {
-				const factory = factories.find((f) => f.id === t.factoryId);
-				notifications.push({
-					id: `task-high-${t.id}`,
-					type: "warning",
-					icon: CircleCheck,
-					message: `Prioridade Alta: ${t.description} (${factory?.name || "Fábrica"})`
-				});
-			}
+			const isApproaching = isApproachingDeadline(t.dueDate);
+			const factory = factories.find((f) => f.id === t.factoryId);
+			if (isOverdue) notifications.push({
+				id: `task-overdue-${t.id}`,
+				type: "destructive",
+				icon: CircleCheck,
+				message: `Atrasada [${t.type}]: ${t.description} (${factory?.name || "Fábrica"})`
+			});
+			else if (isApproaching) notifications.push({
+				id: `task-approaching-${t.id}`,
+				type: "warning",
+				icon: Calendar,
+				message: `Vence em breve [${t.type}]: ${t.description} (${factory?.name || "Fábrica"})`
+			});
+			else if (t.priority === "Alta") notifications.push({
+				id: `task-high-${t.id}`,
+				type: "warning",
+				icon: CircleCheck,
+				message: `Prioridade Alta: ${t.description} (${factory?.name || "Fábrica"})`
+			});
+		} else if (!t.completed && !t.dueDate && t.priority === "Alta") {
+			const factory = factories.find((f) => f.id === t.factoryId);
+			notifications.push({
+				id: `task-high-${t.id}`,
+				type: "warning",
+				icon: CircleCheck,
+				message: `Prioridade Alta: ${t.description} (${factory?.name || "Fábrica"})`
+			});
 		}
 	});
 	const notifCount = notifications.length;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
-		"data-uid": "src/components/AppHeader.tsx:78:5",
+		"data-uid": "src/components/AppHeader.tsx:92:5",
 		"data-prohibitions": "[editContent]",
 		className: "h-16 border-b flex items-center justify-between px-4 lg:px-6 bg-card text-card-foreground shrink-0 shadow-sm z-10 sticky top-0 print:hidden",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			"data-uid": "src/components/AppHeader.tsx:79:7",
+			"data-uid": "src/components/AppHeader.tsx:93:7",
 			"data-prohibitions": "[editContent]",
 			className: "flex items-center gap-3",
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarTrigger, {
-					"data-uid": "src/components/AppHeader.tsx:80:9",
+					"data-uid": "src/components/AppHeader.tsx:94:9",
 					"data-prohibitions": "[editContent]",
 					className: "md:hidden"
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-					"data-uid": "src/components/AppHeader.tsx:81:9",
+					"data-uid": "src/components/AppHeader.tsx:95:9",
 					"data-prohibitions": "[]",
 					className: "font-semibold text-lg lg:text-xl text-primary hidden sm:block",
 					children: "Painel Executivo"
 				}),
 				!isOnline && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/AppHeader.tsx:85:11",
+					"data-uid": "src/components/AppHeader.tsx:99:11",
 					"data-prohibitions": "[]",
 					className: "flex items-center gap-1.5 text-[11px] font-medium text-orange-600 bg-orange-500/10 px-2.5 py-1 rounded-md ml-2",
 					title: "Sincronização pendente. Algumas funcionalidades podem estar limitadas.",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(WifiOff, {
-							"data-uid": "src/components/AppHeader.tsx:89:13",
+							"data-uid": "src/components/AppHeader.tsx:103:13",
 							"data-prohibitions": "[editContent]",
 							className: "w-3.5 h-3.5"
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							"data-uid": "src/components/AppHeader.tsx:90:13",
+							"data-uid": "src/components/AppHeader.tsx:104:13",
 							"data-prohibitions": "[]",
 							className: "hidden sm:inline",
 							children: "Offline (Modo Leitura)"
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							"data-uid": "src/components/AppHeader.tsx:91:13",
+							"data-uid": "src/components/AppHeader.tsx:105:13",
 							"data-prohibitions": "[]",
 							className: "sm:hidden",
 							children: "Offline"
@@ -29048,65 +29087,65 @@ function AppHeader() {
 				})
 			]
 		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			"data-uid": "src/components/AppHeader.tsx:96:7",
+			"data-uid": "src/components/AppHeader.tsx:110:7",
 			"data-prohibitions": "[editContent]",
 			className: "flex items-center gap-4 lg:gap-6",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Popover, {
-				"data-uid": "src/components/AppHeader.tsx:97:9",
+				"data-uid": "src/components/AppHeader.tsx:111:9",
 				"data-prohibitions": "[editContent]",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(PopoverTrigger, {
-					"data-uid": "src/components/AppHeader.tsx:98:11",
+					"data-uid": "src/components/AppHeader.tsx:112:11",
 					"data-prohibitions": "[editContent]",
 					asChild: true,
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/components/AppHeader.tsx:99:13",
+						"data-uid": "src/components/AppHeader.tsx:113:13",
 						"data-prohibitions": "[editContent]",
-						className: "relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-muted transition-colors cursor-pointer group",
+						className: "relative flex items-center justify-center w-11 h-11 md:w-10 md:h-10 rounded-full hover:bg-muted transition-colors cursor-pointer group",
 						title: "Notificações",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bell, {
-							"data-uid": "src/components/AppHeader.tsx:103:15",
+							"data-uid": "src/components/AppHeader.tsx:117:15",
 							"data-prohibitions": "[editContent]",
-							className: "w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors"
+							className: "w-6 h-6 md:w-5 md:h-5 text-muted-foreground group-hover:text-foreground transition-colors"
 						}), notifCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							"data-uid": "src/components/AppHeader.tsx:105:17",
+							"data-uid": "src/components/AppHeader.tsx:119:17",
 							"data-prohibitions": "[editContent]",
 							className: "absolute top-1 right-1 bg-destructive text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-card",
 							children: notifCount
 						})]
 					})
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(PopoverContent, {
-					"data-uid": "src/components/AppHeader.tsx:111:11",
+					"data-uid": "src/components/AppHeader.tsx:125:11",
 					"data-prohibitions": "[editContent]",
 					align: "end",
 					className: "w-80 p-4",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
-						"data-uid": "src/components/AppHeader.tsx:112:13",
+						"data-uid": "src/components/AppHeader.tsx:126:13",
 						"data-prohibitions": "[]",
 						className: "font-semibold mb-3 text-sm flex items-center gap-2",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bell, {
-							"data-uid": "src/components/AppHeader.tsx:113:15",
+							"data-uid": "src/components/AppHeader.tsx:127:15",
 							"data-prohibitions": "[editContent]",
 							className: "w-4 h-4"
 						}), " Notificações Recentes"]
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						"data-uid": "src/components/AppHeader.tsx:115:13",
+						"data-uid": "src/components/AppHeader.tsx:129:13",
 						"data-prohibitions": "[editContent]",
 						className: "space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar",
 						children: notifications.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							"data-uid": "src/components/AppHeader.tsx:117:17",
+							"data-uid": "src/components/AppHeader.tsx:131:17",
 							"data-prohibitions": "[]",
 							className: "text-sm text-muted-foreground p-2",
 							children: "Nenhuma pendência no momento."
 						}) : notifications.map((n) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/components/AppHeader.tsx:120:19",
+							"data-uid": "src/components/AppHeader.tsx:134:19",
 							"data-prohibitions": "[editContent]",
 							className: "p-3 border rounded-lg text-sm bg-muted/30 flex items-start gap-3",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(n.icon, {
-								"data-uid": "src/components/AppHeader.tsx:124:21",
+								"data-uid": "src/components/AppHeader.tsx:138:21",
 								"data-prohibitions": "[editContent]",
 								className: `w-4 h-4 shrink-0 mt-0.5 ${n.type === "destructive" ? "text-destructive" : n.type === "warning" ? "text-orange-500" : "text-primary"}`
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/components/AppHeader.tsx:133:21",
+								"data-uid": "src/components/AppHeader.tsx:147:21",
 								"data-prohibitions": "[editContent]",
 								className: "leading-tight",
 								children: n.message
@@ -29115,48 +29154,48 @@ function AppHeader() {
 					})]
 				})]
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Dialog, {
-				"data-uid": "src/components/AppHeader.tsx:141:9",
+				"data-uid": "src/components/AppHeader.tsx:155:9",
 				"data-prohibitions": "[]",
 				open,
 				onOpenChange: setOpen,
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogTrigger, {
-					"data-uid": "src/components/AppHeader.tsx:142:11",
+					"data-uid": "src/components/AppHeader.tsx:156:11",
 					"data-prohibitions": "[]",
 					asChild: true,
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-						"data-uid": "src/components/AppHeader.tsx:143:13",
+						"data-uid": "src/components/AppHeader.tsx:157:13",
 						"data-prohibitions": "[]",
 						size: "sm",
 						className: "gap-2 shadow-sm",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Plus, {
-							"data-uid": "src/components/AppHeader.tsx:144:15",
+							"data-uid": "src/components/AppHeader.tsx:158:15",
 							"data-prohibitions": "[editContent]",
-							className: "w-4 h-4"
+							className: "w-5 h-5 md:w-4 md:h-4"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							"data-uid": "src/components/AppHeader.tsx:145:15",
+							"data-uid": "src/components/AppHeader.tsx:159:15",
 							"data-prohibitions": "[]",
 							className: "hidden sm:inline",
 							children: "Nova Fábrica"
 						})]
 					})
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogContent, {
-					"data-uid": "src/components/AppHeader.tsx:148:11",
+					"data-uid": "src/components/AppHeader.tsx:162:11",
 					"data-prohibitions": "[]",
 					className: "max-w-2xl max-h-[90vh] overflow-y-auto",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogHeader, {
-						"data-uid": "src/components/AppHeader.tsx:149:13",
+						"data-uid": "src/components/AppHeader.tsx:163:13",
 						"data-prohibitions": "[]",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogTitle, {
-							"data-uid": "src/components/AppHeader.tsx:150:15",
+							"data-uid": "src/components/AppHeader.tsx:164:15",
 							"data-prohibitions": "[]",
 							children: "Cadastro Rápido"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogDescription, {
-							"data-uid": "src/components/AppHeader.tsx:151:15",
+							"data-uid": "src/components/AppHeader.tsx:165:15",
 							"data-prohibitions": "[]",
 							children: "Adicione uma nova fábrica ao pipeline."
 						})]
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FactoryForm, {
-						"data-uid": "src/components/AppHeader.tsx:153:13",
+						"data-uid": "src/components/AppHeader.tsx:167:13",
 						"data-prohibitions": "[editContent]",
 						onSubmit: () => setOpen(false)
 					})]
@@ -29166,35 +29205,106 @@ function AppHeader() {
 	});
 }
 //#endregion
+//#region src/components/AppBottomNav.tsx
+function AppBottomNav() {
+	const loc = useLocation();
+	const menu = [
+		{
+			name: "Início",
+			path: "/",
+			icon: House
+		},
+		{
+			name: "Fábricas",
+			path: "/cadastro",
+			icon: Building2
+		},
+		{
+			name: "Funil",
+			path: "/funil",
+			icon: ChartNoAxesColumn
+		},
+		{
+			name: "SWOT",
+			path: "/swot",
+			icon: Target
+		},
+		{
+			name: "Prioridade",
+			path: "/matriz",
+			icon: Grid3x3
+		}
+	];
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		"data-uid": "src/components/AppBottomNav.tsx:16:5",
+		"data-prohibitions": "[editContent]",
+		className: "md:hidden fixed bottom-0 left-0 right-0 h-[68px] bg-card border-t shadow-[0_-4px_20px_rgba(0,0,0,0.05)] flex items-center justify-around px-1 z-50 pb-[env(safe-area-inset-bottom)]",
+		children: menu.map((m) => {
+			const isActive = loc.pathname === m.path;
+			return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Link, {
+				"data-uid": "src/components/AppBottomNav.tsx:20:11",
+				"data-prohibitions": "[editContent]",
+				to: m.path,
+				className: cn$1("flex flex-col items-center justify-center w-full h-full gap-1 transition-colors relative", isActive ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"),
+				children: [
+					isActive && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						"data-uid": "src/components/AppBottomNav.tsx:29:15",
+						"data-prohibitions": "[editContent]",
+						className: "absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-b-md"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(m.icon, {
+						"data-uid": "src/components/AppBottomNav.tsx:31:13",
+						"data-prohibitions": "[editContent]",
+						className: cn$1("w-[22px] h-[22px]", isActive && "text-primary")
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						"data-uid": "src/components/AppBottomNav.tsx:32:13",
+						"data-prohibitions": "[editContent]",
+						className: "text-[10px] leading-none",
+						children: m.name
+					})
+				]
+			}, m.path);
+		})
+	});
+}
+//#endregion
 //#region src/components/Layout.tsx
 function Layout() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarProvider, {
-		"data-uid": "src/components/Layout.tsx:8:5",
+		"data-uid": "src/components/Layout.tsx:9:5",
 		"data-prohibitions": "[]",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			"data-uid": "src/components/Layout.tsx:9:7",
+			"data-uid": "src/components/Layout.tsx:10:7",
 			"data-prohibitions": "[]",
 			className: "flex h-screen w-full overflow-hidden bg-background",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(AppSidebar, {
-				"data-uid": "src/components/Layout.tsx:10:9",
-				"data-prohibitions": "[editContent]"
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/components/Layout.tsx:11:9",
-				"data-prohibitions": "[]",
-				className: "flex-1 flex flex-col min-w-0",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(AppHeader, {
-					"data-uid": "src/components/Layout.tsx:12:11",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(AppSidebar, {
+					"data-uid": "src/components/Layout.tsx:11:9",
 					"data-prohibitions": "[editContent]"
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("main", {
-					"data-uid": "src/components/Layout.tsx:13:11",
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					"data-uid": "src/components/Layout.tsx:12:9",
 					"data-prohibitions": "[]",
-					className: "flex-1 overflow-auto p-4 md:p-6 lg:p-8 relative",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Outlet, {
-						"data-uid": "src/components/Layout.tsx:14:13",
+					className: "flex-1 flex flex-col min-w-0",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(AppHeader, {
+						"data-uid": "src/components/Layout.tsx:13:11",
 						"data-prohibitions": "[editContent]"
-					})
-				})]
-			})]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("main", {
+						"data-uid": "src/components/Layout.tsx:14:11",
+						"data-prohibitions": "[]",
+						className: "flex-1 overflow-auto p-4 md:p-6 lg:p-8 relative pb-24 md:pb-8",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Outlet, {
+							"data-uid": "src/components/Layout.tsx:15:13",
+							"data-prohibitions": "[editContent]"
+						})
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(AppBottomNav, {
+					"data-uid": "src/components/Layout.tsx:18:9",
+					"data-prohibitions": "[editContent]"
+				})
+			]
 		})
 	});
 }
@@ -57169,143 +57279,107 @@ function Index() {
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Download, {
 						"data-uid": "src/pages/Index.tsx:34:11",
 						"data-prohibitions": "[editContent]",
-						className: "w-4 h-4"
+						className: "w-5 h-5 md:w-4 md:h-4"
 					}), " Exportar Relatório PDF"]
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				"data-uid": "src/pages/Index.tsx:38:7",
 				"data-prohibitions": "[editContent]",
-				className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-4 print:gap-4 print:mb-8",
+				className: "grid grid-cols-2 lg:grid-cols-4 gap-3 print:grid-cols-4 print:gap-4 print:mb-8",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
 						"data-uid": "src/pages/Index.tsx:39:9",
 						"data-prohibitions": "[editContent]",
-						className: "shadow-subtle text-center flex flex-col justify-center items-center print:border-none print:shadow-none print:bg-muted/10",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardHeader, {
+						className: "shadow-subtle text-center flex flex-col justify-center items-center p-4 print:border-none print:shadow-none print:bg-muted/10",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
 							"data-uid": "src/pages/Index.tsx:40:11",
 							"data-prohibitions": "[]",
-							className: "pb-2 pt-4",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
-								"data-uid": "src/pages/Index.tsx:41:13",
-								"data-prohibitions": "[]",
-								className: "text-sm font-medium text-muted-foreground",
-								children: "Fábricas Mapeadas"
-							})
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
-							"data-uid": "src/pages/Index.tsx:45:11",
+							className: "text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight",
+							children: "Fábricas Mapeadas"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							"data-uid": "src/pages/Index.tsx:43:11",
 							"data-prohibitions": "[editContent]",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								"data-uid": "src/pages/Index.tsx:46:13",
-								"data-prohibitions": "[editContent]",
-								className: "text-3xl font-bold",
-								children: factories.length
-							})
+							className: "text-xl sm:text-3xl font-bold",
+							children: factories.length
 						})]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-						"data-uid": "src/pages/Index.tsx:49:9",
+						"data-uid": "src/pages/Index.tsx:45:9",
 						"data-prohibitions": "[editContent]",
-						className: "shadow-subtle text-center flex flex-col justify-center items-center print:border-none print:shadow-none print:bg-muted/10",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardHeader, {
-							"data-uid": "src/pages/Index.tsx:50:11",
+						className: "shadow-subtle text-center flex flex-col justify-center items-center p-4 print:border-none print:shadow-none print:bg-muted/10",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+							"data-uid": "src/pages/Index.tsx:46:11",
 							"data-prohibitions": "[]",
-							className: "pb-2 pt-4",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
-								"data-uid": "src/pages/Index.tsx:51:13",
-								"data-prohibitions": "[]",
-								className: "text-sm font-medium text-muted-foreground",
-								children: "Ativas / Prospecção"
-							})
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
-							"data-uid": "src/pages/Index.tsx:55:11",
+							className: "text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight",
+							children: "Ativas / Prospecção"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							"data-uid": "src/pages/Index.tsx:49:11",
 							"data-prohibitions": "[editContent]",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								"data-uid": "src/pages/Index.tsx:56:13",
-								"data-prohibitions": "[editContent]",
-								className: "text-3xl font-bold",
-								children: [
-									metrics.active,
-									" / ",
-									metrics.prospect
-								]
-							})
+							className: "text-xl sm:text-3xl font-bold",
+							children: [
+								metrics.active,
+								" / ",
+								metrics.prospect
+							]
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
+						"data-uid": "src/pages/Index.tsx:53:9",
+						"data-prohibitions": "[editContent]",
+						className: "shadow-subtle text-center flex flex-col justify-center items-center p-4 print:border-none print:shadow-none print:bg-primary/5",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+							"data-uid": "src/pages/Index.tsx:54:11",
+							"data-prohibitions": "[]",
+							className: "text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight",
+							children: "Receita Potencial"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							"data-uid": "src/pages/Index.tsx:57:11",
+							"data-prohibitions": "[editContent]",
+							className: "text-[12px] font-bold text-primary print:text-xl",
+							children: formatCompactCurrency(metrics.revenue)
 						})]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
 						"data-uid": "src/pages/Index.tsx:61:9",
 						"data-prohibitions": "[editContent]",
-						className: "shadow-subtle text-center flex flex-col justify-center items-center print:border-none print:shadow-none print:bg-primary/5",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardHeader, {
+						className: "shadow-subtle text-center flex flex-col justify-center items-center p-4 print:border-none print:shadow-none print:bg-accent/5",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
 							"data-uid": "src/pages/Index.tsx:62:11",
 							"data-prohibitions": "[]",
-							className: "pb-2 pt-4",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
-								"data-uid": "src/pages/Index.tsx:63:13",
-								"data-prohibitions": "[]",
-								className: "text-sm font-medium text-muted-foreground",
-								children: "Receita Potencial"
-							})
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
-							"data-uid": "src/pages/Index.tsx:67:11",
+							className: "text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight",
+							children: "Forecast Ponderado"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							"data-uid": "src/pages/Index.tsx:65:11",
 							"data-prohibitions": "[editContent]",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								"data-uid": "src/pages/Index.tsx:68:13",
-								"data-prohibitions": "[editContent]",
-								className: "text-[12px] font-bold text-primary print:text-xl",
-								children: formatCompactCurrency(metrics.revenue)
-							})
-						})]
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-						"data-uid": "src/pages/Index.tsx:73:9",
-						"data-prohibitions": "[editContent]",
-						className: "shadow-subtle text-center flex flex-col justify-center items-center print:border-none print:shadow-none print:bg-accent/5",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardHeader, {
-							"data-uid": "src/pages/Index.tsx:74:11",
-							"data-prohibitions": "[]",
-							className: "pb-2 pt-4",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
-								"data-uid": "src/pages/Index.tsx:75:13",
-								"data-prohibitions": "[]",
-								className: "text-sm font-medium text-muted-foreground",
-								children: "Forecast Ponderado"
-							})
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
-							"data-uid": "src/pages/Index.tsx:79:11",
-							"data-prohibitions": "[editContent]",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								"data-uid": "src/pages/Index.tsx:80:13",
-								"data-prohibitions": "[editContent]",
-								className: "text-[12px] font-bold text-accent print:text-xl",
-								children: formatCompactCurrency(metrics.weighted)
-							})
+							className: "text-[12px] font-bold text-accent print:text-xl",
+							children: formatCompactCurrency(metrics.weighted)
 						})]
 					})
 				]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Index.tsx:87:7",
+				"data-uid": "src/pages/Index.tsx:71:7",
 				"data-prohibitions": "[]",
 				className: "grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-1",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MapCard, {
-					"data-uid": "src/pages/Index.tsx:88:9",
+					"data-uid": "src/pages/Index.tsx:72:9",
 					"data-prohibitions": "[editContent]"
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ScoreEvolutionCard, {
-					"data-uid": "src/pages/Index.tsx:89:9",
+					"data-uid": "src/pages/Index.tsx:73:9",
 					"data-prohibitions": "[editContent]"
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DashboardCharts, {
-				"data-uid": "src/pages/Index.tsx:92:7",
+				"data-uid": "src/pages/Index.tsx:76:7",
 				"data-prohibitions": "[editContent]"
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				"data-uid": "src/pages/Index.tsx:94:7",
+				"data-uid": "src/pages/Index.tsx:78:7",
 				"data-prohibitions": "[]",
 				className: "grid grid-cols-1 gap-6 print:hidden",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FactoryListCard, {
-					"data-uid": "src/pages/Index.tsx:95:9",
+					"data-uid": "src/pages/Index.tsx:79:9",
 					"data-prohibitions": "[editContent]"
 				})
 			})
@@ -58236,8 +58310,9 @@ Checkbox.displayName = Checkbox$1.displayName;
 //#endregion
 //#region src/components/FactoryTasks.tsx
 function FactoryTasks({ factoryId }) {
-	const { tasks, addTask, updateTask, deleteTask } = useAppContext();
+	const { tasks, factories, addTask, updateTask, deleteTask } = useAppContext();
 	const [isAdding, setIsAdding] = (0, import_react.useState)(false);
+	const factoryName = factories.find((f) => f.id === factoryId)?.name || "Não informada";
 	const factoryTasks = tasks.filter((t) => t.factoryId === factoryId).sort((a, b) => {
 		if (a.completed !== b.completed) return a.completed ? 1 : -1;
 		return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
@@ -58256,21 +58331,21 @@ function FactoryTasks({ factoryId }) {
 		setIsAdding(false);
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		"data-uid": "src/components/FactoryTasks.tsx:45:5",
+		"data-uid": "src/components/FactoryTasks.tsx:53:5",
 		"data-prohibitions": "[editContent]",
 		className: "space-y-4",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/components/FactoryTasks.tsx:46:7",
+				"data-uid": "src/components/FactoryTasks.tsx:54:7",
 				"data-prohibitions": "[editContent]",
 				className: "flex justify-between items-center pb-2 border-b",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-					"data-uid": "src/components/FactoryTasks.tsx:47:9",
+					"data-uid": "src/components/FactoryTasks.tsx:55:9",
 					"data-prohibitions": "[]",
 					className: "text-sm font-medium",
 					children: "To-Do List do Cliente"
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-					"data-uid": "src/components/FactoryTasks.tsx:48:9",
+					"data-uid": "src/components/FactoryTasks.tsx:56:9",
 					"data-prohibitions": "[editContent]",
 					variant: "outline",
 					size: "sm",
@@ -58279,25 +58354,25 @@ function FactoryTasks({ factoryId }) {
 				})]
 			}),
 			isAdding && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
-				"data-uid": "src/components/FactoryTasks.tsx:54:9",
+				"data-uid": "src/components/FactoryTasks.tsx:62:9",
 				"data-prohibitions": "[]",
 				onSubmit: handleSubmit,
 				className: "bg-muted/30 p-4 rounded-lg border space-y-4",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/FactoryTasks.tsx:55:11",
+					"data-uid": "src/components/FactoryTasks.tsx:63:11",
 					"data-prohibitions": "[]",
 					className: "grid grid-cols-1 sm:grid-cols-2 gap-4",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/components/FactoryTasks.tsx:56:13",
+							"data-uid": "src/components/FactoryTasks.tsx:64:13",
 							"data-prohibitions": "[]",
 							className: "space-y-2 sm:col-span-2",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-								"data-uid": "src/components/FactoryTasks.tsx:57:15",
+								"data-uid": "src/components/FactoryTasks.tsx:65:15",
 								"data-prohibitions": "[]",
 								children: "Descrição da Tarefa"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-								"data-uid": "src/components/FactoryTasks.tsx:58:15",
+								"data-uid": "src/components/FactoryTasks.tsx:66:15",
 								"data-prohibitions": "[editContent]",
 								name: "description",
 								placeholder: "Ex: Enviar proposta comercial...",
@@ -58305,44 +58380,44 @@ function FactoryTasks({ factoryId }) {
 							})]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/components/FactoryTasks.tsx:60:13",
+							"data-uid": "src/components/FactoryTasks.tsx:68:13",
 							"data-prohibitions": "[]",
 							className: "space-y-2",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-								"data-uid": "src/components/FactoryTasks.tsx:61:15",
+								"data-uid": "src/components/FactoryTasks.tsx:69:15",
 								"data-prohibitions": "[]",
 								children: "Tipo"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
-								"data-uid": "src/components/FactoryTasks.tsx:62:15",
+								"data-uid": "src/components/FactoryTasks.tsx:70:15",
 								"data-prohibitions": "[]",
 								name: "type",
 								defaultValue: "Enviar amostra",
 								required: true,
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
-									"data-uid": "src/components/FactoryTasks.tsx:63:17",
+									"data-uid": "src/components/FactoryTasks.tsx:71:17",
 									"data-prohibitions": "[]",
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
-										"data-uid": "src/components/FactoryTasks.tsx:64:19",
+										"data-uid": "src/components/FactoryTasks.tsx:72:19",
 										"data-prohibitions": "[editContent]"
 									})
 								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, {
-									"data-uid": "src/components/FactoryTasks.tsx:66:17",
+									"data-uid": "src/components/FactoryTasks.tsx:74:17",
 									"data-prohibitions": "[]",
 									children: [
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-											"data-uid": "src/components/FactoryTasks.tsx:67:19",
+											"data-uid": "src/components/FactoryTasks.tsx:75:19",
 											"data-prohibitions": "[]",
 											value: "Enviar amostra",
 											children: "Enviar amostra"
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-											"data-uid": "src/components/FactoryTasks.tsx:68:19",
+											"data-uid": "src/components/FactoryTasks.tsx:76:19",
 											"data-prohibitions": "[]",
 											value: "Ligar para Follow-up",
 											children: "Ligar para Follow-up"
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-											"data-uid": "src/components/FactoryTasks.tsx:69:19",
+											"data-uid": "src/components/FactoryTasks.tsx:77:19",
 											"data-prohibitions": "[]",
 											value: "Outra",
 											children: "Outra"
@@ -58352,44 +58427,44 @@ function FactoryTasks({ factoryId }) {
 							})]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/components/FactoryTasks.tsx:73:13",
+							"data-uid": "src/components/FactoryTasks.tsx:81:13",
 							"data-prohibitions": "[]",
 							className: "space-y-2",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-								"data-uid": "src/components/FactoryTasks.tsx:74:15",
+								"data-uid": "src/components/FactoryTasks.tsx:82:15",
 								"data-prohibitions": "[]",
 								children: "Prioridade"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
-								"data-uid": "src/components/FactoryTasks.tsx:75:15",
+								"data-uid": "src/components/FactoryTasks.tsx:83:15",
 								"data-prohibitions": "[]",
 								name: "priority",
 								defaultValue: "Média",
 								required: true,
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
-									"data-uid": "src/components/FactoryTasks.tsx:76:17",
+									"data-uid": "src/components/FactoryTasks.tsx:84:17",
 									"data-prohibitions": "[]",
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
-										"data-uid": "src/components/FactoryTasks.tsx:77:19",
+										"data-uid": "src/components/FactoryTasks.tsx:85:19",
 										"data-prohibitions": "[editContent]"
 									})
 								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, {
-									"data-uid": "src/components/FactoryTasks.tsx:79:17",
+									"data-uid": "src/components/FactoryTasks.tsx:87:17",
 									"data-prohibitions": "[]",
 									children: [
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-											"data-uid": "src/components/FactoryTasks.tsx:80:19",
+											"data-uid": "src/components/FactoryTasks.tsx:88:19",
 											"data-prohibitions": "[]",
 											value: "Baixa",
 											children: "Baixa"
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-											"data-uid": "src/components/FactoryTasks.tsx:81:19",
+											"data-uid": "src/components/FactoryTasks.tsx:89:19",
 											"data-prohibitions": "[]",
 											value: "Média",
 											children: "Média"
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-											"data-uid": "src/components/FactoryTasks.tsx:82:19",
+											"data-uid": "src/components/FactoryTasks.tsx:90:19",
 											"data-prohibitions": "[]",
 											value: "Alta",
 											children: "Alta"
@@ -58399,15 +58474,15 @@ function FactoryTasks({ factoryId }) {
 							})]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/components/FactoryTasks.tsx:86:13",
+							"data-uid": "src/components/FactoryTasks.tsx:94:13",
 							"data-prohibitions": "[]",
 							className: "space-y-2 sm:col-span-2",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-								"data-uid": "src/components/FactoryTasks.tsx:87:15",
+								"data-uid": "src/components/FactoryTasks.tsx:95:15",
 								"data-prohibitions": "[]",
 								children: "Data Limite (Opcional)"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-								"data-uid": "src/components/FactoryTasks.tsx:88:15",
+								"data-uid": "src/components/FactoryTasks.tsx:96:15",
 								"data-prohibitions": "[editContent]",
 								type: "date",
 								name: "dueDate"
@@ -58415,7 +58490,7 @@ function FactoryTasks({ factoryId }) {
 						})
 					]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-					"data-uid": "src/components/FactoryTasks.tsx:91:11",
+					"data-uid": "src/components/FactoryTasks.tsx:99:11",
 					"data-prohibitions": "[]",
 					type: "submit",
 					size: "sm",
@@ -58424,67 +58499,67 @@ function FactoryTasks({ factoryId }) {
 				})]
 			}),
 			factoryTasks.length === 0 && !isAdding && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				"data-uid": "src/components/FactoryTasks.tsx:98:9",
+				"data-uid": "src/components/FactoryTasks.tsx:106:9",
 				"data-prohibitions": "[]",
 				className: "text-sm text-muted-foreground text-center py-6",
 				children: "Nenhuma tarefa cadastrada para esta fábrica."
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				"data-uid": "src/components/FactoryTasks.tsx:103:7",
+				"data-uid": "src/components/FactoryTasks.tsx:111:7",
 				"data-prohibitions": "[editContent]",
 				className: "space-y-2",
 				children: factoryTasks.map((task) => {
 					const isOverdue = !task.completed && isPassedDeadline(task.dueDate);
 					return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/components/FactoryTasks.tsx:107:13",
+						"data-uid": "src/components/FactoryTasks.tsx:115:13",
 						"data-prohibitions": "[editContent]",
 						className: `flex items-start gap-3 p-3 border rounded-lg transition-colors ${task.completed ? "bg-muted/50 opacity-70" : "bg-card hover:bg-muted/30"}`,
 						children: [
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Checkbox, {
-								"data-uid": "src/components/FactoryTasks.tsx:111:15",
+								"data-uid": "src/components/FactoryTasks.tsx:119:15",
 								"data-prohibitions": "[editContent]",
 								checked: task.completed,
 								onCheckedChange: (checked) => updateTask(task.id, { completed: !!checked }),
-								className: "mt-1"
+								className: "mt-1 w-5 h-5 md:w-4 md:h-4"
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								"data-uid": "src/components/FactoryTasks.tsx:116:15",
+								"data-uid": "src/components/FactoryTasks.tsx:124:15",
 								"data-prohibitions": "[editContent]",
 								className: "flex-1 min-w-0",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-									"data-uid": "src/components/FactoryTasks.tsx:117:17",
+									"data-uid": "src/components/FactoryTasks.tsx:125:17",
 									"data-prohibitions": "[editContent]",
 									className: `text-sm font-medium ${task.completed ? "line-through text-muted-foreground" : ""}`,
 									children: task.description
 								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									"data-uid": "src/components/FactoryTasks.tsx:122:17",
+									"data-uid": "src/components/FactoryTasks.tsx:130:17",
 									"data-prohibitions": "[editContent]",
 									className: "flex flex-wrap items-center gap-2 mt-1.5",
 									children: [
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Badge, {
-											"data-uid": "src/components/FactoryTasks.tsx:123:19",
+											"data-uid": "src/components/FactoryTasks.tsx:131:19",
 											"data-prohibitions": "[editContent]",
 											variant: "outline",
 											className: "text-[10px] h-5",
 											children: task.type
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Badge, {
-											"data-uid": "src/components/FactoryTasks.tsx:126:19",
+											"data-uid": "src/components/FactoryTasks.tsx:134:19",
 											"data-prohibitions": "[editContent]",
 											variant: "secondary",
 											className: `text-[10px] h-5 ${task.priority === "Alta" && !task.completed ? "bg-orange-100 text-orange-700 hover:bg-orange-200" : ""}`,
 											children: task.priority
 										}),
 										task.dueDate && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-											"data-uid": "src/components/FactoryTasks.tsx:133:21",
+											"data-uid": "src/components/FactoryTasks.tsx:141:21",
 											"data-prohibitions": "[editContent]",
 											className: `text-[11px] flex items-center gap-1 ${isOverdue ? "text-destructive font-medium" : "text-muted-foreground"}`,
 											children: [isOverdue ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CircleAlert, {
-												"data-uid": "src/components/FactoryTasks.tsx:137:25",
+												"data-uid": "src/components/FactoryTasks.tsx:145:25",
 												"data-prohibitions": "[editContent]",
 												className: "w-3 h-3"
 											}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Calendar, {
-												"data-uid": "src/components/FactoryTasks.tsx:139:25",
+												"data-uid": "src/components/FactoryTasks.tsx:147:25",
 												"data-prohibitions": "[editContent]",
 												className: "w-3 h-3"
 											}), new Date(task.dueDate).toLocaleDateString("pt-BR")]
@@ -58492,18 +58567,65 @@ function FactoryTasks({ factoryId }) {
 									]
 								})]
 							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-								"data-uid": "src/components/FactoryTasks.tsx:146:15",
-								"data-prohibitions": "[]",
-								variant: "ghost",
-								size: "icon",
-								className: "h-8 w-8 text-muted-foreground hover:text-destructive shrink-0",
-								onClick: () => deleteTask(task.id),
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, {
-									"data-uid": "src/components/FactoryTasks.tsx:152:17",
-									"data-prohibitions": "[editContent]",
-									className: "w-4 h-4"
-								})
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								"data-uid": "src/components/FactoryTasks.tsx:154:15",
+								"data-prohibitions": "[editContent]",
+								className: "flex items-center gap-1 shrink-0",
+								children: [task.dueDate && !task.completed && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Popover, {
+									"data-uid": "src/components/FactoryTasks.tsx:156:19",
+									"data-prohibitions": "[]",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(PopoverTrigger, {
+										"data-uid": "src/components/FactoryTasks.tsx:157:21",
+										"data-prohibitions": "[]",
+										asChild: true,
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+											"data-uid": "src/components/FactoryTasks.tsx:158:23",
+											"data-prohibitions": "[]",
+											variant: "ghost",
+											size: "icon",
+											className: "text-muted-foreground hover:text-primary",
+											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Calendar, {
+												"data-uid": "src/components/FactoryTasks.tsx:163:25",
+												"data-prohibitions": "[editContent]",
+												className: "w-4 h-4"
+											})
+										})
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(PopoverContent, {
+										"data-uid": "src/components/FactoryTasks.tsx:166:21",
+										"data-prohibitions": "[]",
+										align: "end",
+										className: "w-48 p-2 flex flex-col gap-1",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
+											"data-uid": "src/components/FactoryTasks.tsx:167:23",
+											"data-prohibitions": "[]",
+											href: generateGoogleCalendarLink(`Blink: ${task.description}`, `Fábrica: ${factoryName}\nTipo: ${task.type}`, task.dueDate),
+											target: "_blank",
+											rel: "noopener noreferrer",
+											className: "text-sm p-2.5 hover:bg-muted rounded-md transition-colors flex items-center gap-2",
+											children: "Google Calendar"
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
+											"data-uid": "src/components/FactoryTasks.tsx:179:23",
+											"data-prohibitions": "[]",
+											href: generateOutlookCalendarLink(`Blink: ${task.description}`, `Fábrica: ${factoryName}\nTipo: ${task.type}`, task.dueDate),
+											target: "_blank",
+											rel: "noopener noreferrer",
+											className: "text-sm p-2.5 hover:bg-muted rounded-md transition-colors flex items-center gap-2",
+											children: "Outlook / Apple"
+										})]
+									})]
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+									"data-uid": "src/components/FactoryTasks.tsx:194:17",
+									"data-prohibitions": "[]",
+									variant: "ghost",
+									size: "icon",
+									className: "text-muted-foreground hover:text-destructive",
+									onClick: () => deleteTask(task.id),
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, {
+										"data-uid": "src/components/FactoryTasks.tsx:200:19",
+										"data-prohibitions": "[editContent]",
+										className: "w-4 h-4"
+									})
+								})]
 							})
 						]
 					}, task.id);
@@ -60465,4 +60587,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BrowserRouter, {
 }));
 //#endregion
 
-//# sourceMappingURL=index-BqxCCYRq.js.map
+//# sourceMappingURL=index-DA5rkkgG.js.map

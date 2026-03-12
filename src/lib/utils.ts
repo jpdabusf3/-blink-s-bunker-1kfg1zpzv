@@ -99,3 +99,43 @@ export function exportToCSV(filename: string, rows: any[]) {
     document.body.removeChild(link)
   }
 }
+
+export function generateGoogleCalendarLink(title: string, description: string, dateStr?: string) {
+  const text = encodeURIComponent(title)
+  const details = encodeURIComponent(description)
+
+  let dates = ''
+  if (dateStr) {
+    const d = new Date(dateStr)
+    const yyyy = d.getUTCFullYear()
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0')
+    const dd = String(d.getUTCDate()).padStart(2, '0')
+
+    const nextD = new Date(d)
+    nextD.setUTCDate(nextD.getUTCDate() + 1)
+    const nextYyyy = nextD.getUTCFullYear()
+    const nextMm = String(nextD.getUTCMonth() + 1).padStart(2, '0')
+    const nextDd = String(nextD.getUTCDate()).padStart(2, '0')
+
+    dates = `&dates=${yyyy}${mm}${dd}/${nextYyyy}${nextMm}${nextDd}`
+  }
+
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&details=${details}${dates}`
+}
+
+export function generateOutlookCalendarLink(title: string, description: string, dateStr?: string) {
+  const subject = encodeURIComponent(title)
+  const body = encodeURIComponent(description)
+
+  let startdt = ''
+  let enddt = ''
+  if (dateStr) {
+    const d = new Date(dateStr)
+    startdt = d.toISOString()
+    const nextD = new Date(d)
+    nextD.setUTCDate(nextD.getUTCDate() + 1)
+    enddt = nextD.toISOString()
+  }
+
+  return `https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent&subject=${subject}&body=${body}&startdt=${startdt}&enddt=${enddt}&allday=true`
+}
