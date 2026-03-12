@@ -18312,7 +18312,7 @@ function useControllableState({ prop, defaultProp, onChange = () => {}, caller }
 	}
 	return [value, import_react.useCallback((nextValue) => {
 		if (isControlled) {
-			const value2 = isFunction$22(nextValue) ? nextValue(prop) : nextValue;
+			const value2 = isFunction$23(nextValue) ? nextValue(prop) : nextValue;
 			if (value2 !== prop) onChangeRef.current?.(value2);
 		} else setUncontrolledProp(nextValue);
 	}, [
@@ -18341,7 +18341,7 @@ function useUncontrolledState({ defaultProp, onChange }) {
 		onChangeRef
 	];
 }
-function isFunction$22(value) {
+function isFunction$23(value) {
 	return typeof value === "function";
 }
 //#endregion
@@ -19159,6 +19159,37 @@ var ChevronUp = createLucideIcon("chevron-up", [["path", {
 	d: "m18 15-6-6-6 6",
 	key: "153udz"
 }]]);
+var CircleAlert = createLucideIcon("circle-alert", [
+	["circle", {
+		cx: "12",
+		cy: "12",
+		r: "10",
+		key: "1mglay"
+	}],
+	["line", {
+		x1: "12",
+		x2: "12",
+		y1: "8",
+		y2: "12",
+		key: "1pkeuh"
+	}],
+	["line", {
+		x1: "12",
+		x2: "12.01",
+		y1: "16",
+		y2: "16",
+		key: "4dfq90"
+	}]
+]);
+var CircleCheck = createLucideIcon("circle-check", [["circle", {
+	cx: "12",
+	cy: "12",
+	r: "10",
+	key: "1mglay"
+}], ["path", {
+	d: "m9 12 2 2 4-4",
+	key: "dzmm74"
+}]]);
 var Clock = createLucideIcon("clock", [["circle", {
 	cx: "12",
 	cy: "12",
@@ -19364,6 +19395,36 @@ var TriangleAlert = createLucideIcon("triangle-alert", [
 	["path", {
 		d: "M12 17h.01",
 		key: "p32p05"
+	}]
+]);
+var WifiOff = createLucideIcon("wifi-off", [
+	["path", {
+		d: "M12 20h.01",
+		key: "zekei9"
+	}],
+	["path", {
+		d: "M8.5 16.429a5 5 0 0 1 7 0",
+		key: "1bycff"
+	}],
+	["path", {
+		d: "M5 12.859a10 10 0 0 1 5.17-2.69",
+		key: "1dl1wf"
+	}],
+	["path", {
+		d: "M19 12.859a10 10 0 0 0-2.007-1.523",
+		key: "4k23kn"
+	}],
+	["path", {
+		d: "M2 8.82a15 15 0 0 1 4.177-2.643",
+		key: "1grhjp"
+	}],
+	["path", {
+		d: "M22 8.82a15 15 0 0 0-11.288-3.764",
+		key: "z3jwby"
+	}],
+	["path", {
+		d: "m2 2 20 20",
+		key: "1ooewy"
 	}]
 ]);
 var X = createLucideIcon("x", [["path", {
@@ -24012,11 +24073,11 @@ var Tooltip$2 = (props) => {
 	});
 };
 Tooltip$2.displayName = TOOLTIP_NAME;
-var TRIGGER_NAME$4 = "TooltipTrigger";
+var TRIGGER_NAME$5 = "TooltipTrigger";
 var TooltipTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeTooltip, ...triggerProps } = props;
-	const context = useTooltipContext(TRIGGER_NAME$4, __scopeTooltip);
-	const providerContext = useTooltipProviderContext(TRIGGER_NAME$4, __scopeTooltip);
+	const context = useTooltipContext(TRIGGER_NAME$5, __scopeTooltip);
+	const providerContext = useTooltipProviderContext(TRIGGER_NAME$5, __scopeTooltip);
 	const popperScope = usePopperScope$2(__scopeTooltip);
 	const composedRefs = useComposedRefs(forwardedRef, import_react.useRef(null), context.onTriggerChange);
 	const isPointerDownRef = import_react.useRef(false);
@@ -24057,7 +24118,7 @@ var TooltipTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-TooltipTrigger$1.displayName = TRIGGER_NAME$4;
+TooltipTrigger$1.displayName = TRIGGER_NAME$5;
 var PORTAL_NAME$3 = "TooltipPortal";
 var [PortalProvider$2, usePortalContext$2] = createTooltipContext(PORTAL_NAME$3, { forceMount: void 0 });
 var TooltipPortal = (props) => {
@@ -25680,23 +25741,23 @@ var Dialog$1 = (props) => {
 	});
 };
 Dialog$1.displayName = DIALOG_NAME;
-var TRIGGER_NAME$3 = "DialogTrigger";
+var TRIGGER_NAME$4 = "DialogTrigger";
 var DialogTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeDialog, ...triggerProps } = props;
-	const context = useDialogContext(TRIGGER_NAME$3, __scopeDialog);
+	const context = useDialogContext(TRIGGER_NAME$4, __scopeDialog);
 	const composedTriggerRef = useComposedRefs(forwardedRef, context.triggerRef);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.button, {
 		type: "button",
 		"aria-haspopup": "dialog",
 		"aria-expanded": context.open,
 		"aria-controls": context.contentId,
-		"data-state": getState$1(context.open),
+		"data-state": getState$2(context.open),
 		...triggerProps,
 		ref: composedTriggerRef,
 		onClick: composeEventHandlers(props.onClick, context.onOpenToggle)
 	});
 });
-DialogTrigger$1.displayName = TRIGGER_NAME$3;
+DialogTrigger$1.displayName = TRIGGER_NAME$4;
 var PORTAL_NAME$2 = "DialogPortal";
 var [PortalProvider$1, usePortalContext$1] = createDialogContext(PORTAL_NAME$2, { forceMount: void 0 });
 var DialogPortal$1 = (props) => {
@@ -25739,7 +25800,7 @@ var DialogOverlayImpl = import_react.forwardRef((props, forwardedRef) => {
 		allowPinchZoom: true,
 		shards: [context.contentRef],
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.div, {
-			"data-state": getState$1(context.open),
+			"data-state": getState$2(context.open),
 			...overlayProps,
 			ref: forwardedRef,
 			style: {
@@ -25838,7 +25899,7 @@ var DialogContentImpl = import_react.forwardRef((props, forwardedRef) => {
 			id: context.contentId,
 			"aria-describedby": context.descriptionId,
 			"aria-labelledby": context.titleId,
-			"data-state": getState$1(context.open),
+			"data-state": getState$2(context.open),
 			...contentProps,
 			ref: composedRefs,
 			onDismiss: () => context.onOpenChange(false)
@@ -25882,7 +25943,7 @@ var DialogClose$1 = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 DialogClose$1.displayName = CLOSE_NAME$1;
-function getState$1(open) {
+function getState$2(open) {
 	return open ? "open" : "closed";
 }
 var TITLE_WARNING_NAME = "DialogTitleWarning";
@@ -26914,12 +26975,61 @@ var mockOrders = [
 		orderDate: (/* @__PURE__ */ new Date(today.getTime() - 2 * 864e5)).toISOString()
 	}
 ];
+var mockTasks = [{
+	id: "t1",
+	factoryId: "2",
+	description: "Enviar kit de amostras de adsorventes",
+	type: "Enviar amostra",
+	priority: "Alta",
+	completed: false,
+	dueDate: new Date(today.getTime() + 2 * 864e5).toISOString(),
+	createdAt: (/* @__PURE__ */ new Date()).toISOString()
+}, {
+	id: "t2",
+	factoryId: "1",
+	description: "Confirmar recebimento da minuta",
+	type: "Ligar para Follow-up",
+	priority: "Média",
+	completed: true,
+	dueDate: (/* @__PURE__ */ new Date(today.getTime() - 1 * 864e5)).toISOString(),
+	createdAt: (/* @__PURE__ */ new Date(today.getTime() - 3 * 864e5)).toISOString()
+}];
 //#endregion
 //#region src/store/AppContext.tsx
 var AppContext = (0, import_react.createContext)({});
 var AppProvider = ({ children }) => {
-	const [factories, setFactories] = (0, import_react.useState)(mockFactories);
-	const [orders, setOrders] = (0, import_react.useState)(mockOrders);
+	const [isOnline, setIsOnline] = (0, import_react.useState)(navigator.onLine);
+	const [factories, setFactories] = (0, import_react.useState)(() => {
+		const saved = localStorage.getItem("blink_factories");
+		return saved ? JSON.parse(saved) : mockFactories;
+	});
+	const [orders, setOrders] = (0, import_react.useState)(() => {
+		const saved = localStorage.getItem("blink_orders");
+		return saved ? JSON.parse(saved) : mockOrders;
+	});
+	const [tasks, setTasks] = (0, import_react.useState)(() => {
+		const saved = localStorage.getItem("blink_tasks");
+		return saved ? JSON.parse(saved) : mockTasks;
+	});
+	(0, import_react.useEffect)(() => {
+		const handleOnline = () => setIsOnline(true);
+		const handleOffline = () => setIsOnline(false);
+		window.addEventListener("online", handleOnline);
+		window.addEventListener("offline", handleOffline);
+		return () => {
+			window.removeEventListener("online", handleOnline);
+			window.removeEventListener("offline", handleOffline);
+		};
+	}, []);
+	(0, import_react.useEffect)(() => {
+		localStorage.setItem("blink_factories", JSON.stringify(factories));
+	}, [factories]);
+	(0, import_react.useEffect)(() => {
+		localStorage.setItem("blink_orders", JSON.stringify(orders));
+	}, [orders]);
+	(0, import_react.useEffect)(() => {
+		localStorage.setItem("blink_tasks", JSON.stringify(tasks));
+	}, [tasks]);
 	const addFactory = (data) => {
 		const newFactory = {
 			id: Math.random().toString(36).substr(2, 9),
@@ -26970,17 +27080,40 @@ var AppProvider = ({ children }) => {
 	const deleteFactory = (id) => {
 		setFactories((prev) => prev.filter((f) => f.id !== id));
 	};
+	const addTask = (data) => {
+		const newTask = {
+			...data,
+			id: Math.random().toString(36).substr(2, 9),
+			createdAt: (/* @__PURE__ */ new Date()).toISOString()
+		};
+		setTasks((prev) => [newTask, ...prev]);
+	};
+	const updateTask = (id, data) => {
+		setTasks((prev) => prev.map((t) => t.id === id ? {
+			...t,
+			...data
+		} : t));
+	};
+	const deleteTask = (id) => {
+		setTasks((prev) => prev.filter((t) => t.id !== id));
+	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AppContext.Provider, {
-		"data-uid": "src/store/AppContext.tsx:69:5",
+		"data-uid": "src/store/AppContext.tsx:129:5",
 		"data-prohibitions": "[editContent]",
 		value: {
 			factories,
 			setFactories,
 			orders,
 			setOrders,
+			tasks,
+			setTasks,
+			isOnline,
 			addFactory,
 			updateFactory,
-			deleteFactory
+			deleteFactory,
+			addTask,
+			updateTask,
+			deleteTask
 		},
 		children
 	});
@@ -27202,11 +27335,11 @@ var Select$1 = (props) => {
 	});
 };
 Select$1.displayName = SELECT_NAME;
-var TRIGGER_NAME$2 = "SelectTrigger";
+var TRIGGER_NAME$3 = "SelectTrigger";
 var SelectTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeSelect, disabled = false, ...triggerProps } = props;
 	const popperScope = usePopperScope$1(__scopeSelect);
-	const context = useSelectContext(TRIGGER_NAME$2, __scopeSelect);
+	const context = useSelectContext(TRIGGER_NAME$3, __scopeSelect);
 	const isDisabled = context.disabled || disabled;
 	const composedRefs = useComposedRefs(forwardedRef, context.onTriggerChange);
 	const getItems = useCollection$2(__scopeSelect);
@@ -27268,7 +27401,7 @@ var SelectTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-SelectTrigger$1.displayName = TRIGGER_NAME$2;
+SelectTrigger$1.displayName = TRIGGER_NAME$3;
 var VALUE_NAME = "SelectValue";
 var SelectValue$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeSelect, className, style, children, placeholder = "", ...valueProps } = props;
@@ -27983,7 +28116,7 @@ var SelectArrow = import_react.forwardRef((props, forwardedRef) => {
 	}) : null;
 });
 SelectArrow.displayName = ARROW_NAME$1;
-var BUBBLE_INPUT_NAME$1 = "SelectBubbleInput";
+var BUBBLE_INPUT_NAME$2 = "SelectBubbleInput";
 var SelectBubbleInput = import_react.forwardRef(({ __scopeSelect, value, ...props }, forwardedRef) => {
 	const ref = import_react.useRef(null);
 	const composedRefs = useComposedRefs(forwardedRef, ref);
@@ -28009,7 +28142,7 @@ var SelectBubbleInput = import_react.forwardRef(({ __scopeSelect, value, ...prop
 		defaultValue: value
 	});
 });
-SelectBubbleInput.displayName = BUBBLE_INPUT_NAME$1;
+SelectBubbleInput.displayName = BUBBLE_INPUT_NAME$2;
 function shouldShowPlaceholder(value) {
 	return value === "" || value === void 0;
 }
@@ -28611,10 +28744,10 @@ var PopoverAnchor = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 PopoverAnchor.displayName = ANCHOR_NAME;
-var TRIGGER_NAME$1 = "PopoverTrigger";
+var TRIGGER_NAME$2 = "PopoverTrigger";
 var PopoverTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopePopover, ...triggerProps } = props;
-	const context = usePopoverContext(TRIGGER_NAME$1, __scopePopover);
+	const context = usePopoverContext(TRIGGER_NAME$2, __scopePopover);
 	const popperScope = usePopperScope(__scopePopover);
 	const composedTriggerRef = useComposedRefs(forwardedRef, context.triggerRef);
 	const trigger = /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.button, {
@@ -28622,7 +28755,7 @@ var PopoverTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 		"aria-haspopup": "dialog",
 		"aria-expanded": context.open,
 		"aria-controls": context.contentId,
-		"data-state": getState(context.open),
+		"data-state": getState$1(context.open),
 		...triggerProps,
 		ref: composedTriggerRef,
 		onClick: composeEventHandlers(props.onClick, context.onOpenToggle)
@@ -28633,7 +28766,7 @@ var PopoverTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 		children: trigger
 	});
 });
-PopoverTrigger$1.displayName = TRIGGER_NAME$1;
+PopoverTrigger$1.displayName = TRIGGER_NAME$2;
 var PORTAL_NAME = "PopoverPortal";
 var [PortalProvider, usePortalContext] = createPopoverContext(PORTAL_NAME, { forceMount: void 0 });
 var PopoverPortal = (props) => {
@@ -28751,7 +28884,7 @@ var PopoverContentImpl = import_react.forwardRef((props, forwardedRef) => {
 			onFocusOutside,
 			onDismiss: () => context.onOpenChange(false),
 			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Content$2, {
-				"data-state": getState(context.open),
+				"data-state": getState$1(context.open),
 				role: "dialog",
 				id: context.contentId,
 				...popperScope,
@@ -28792,7 +28925,7 @@ var PopoverArrow = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 PopoverArrow.displayName = ARROW_NAME;
-function getState(open) {
+function getState$1(open) {
 	return open ? "open" : "closed";
 }
 var Root2$1 = Popover$1;
@@ -28820,7 +28953,7 @@ PopoverContent.displayName = Content2.displayName;
 //#endregion
 //#region src/components/AppHeader.tsx
 function AppHeader() {
-	const { factories } = useAppContext();
+	const { factories, tasks, isOnline } = useAppContext();
 	const [open, setOpen] = (0, import_react.useState)(false);
 	const notifications = factories.flatMap((f) => {
 		const notifs = [];
@@ -28844,85 +28977,136 @@ function AppHeader() {
 		});
 		return notifs;
 	});
+	tasks.forEach((t) => {
+		if (!t.completed) {
+			const isOverdue = isPassedDeadline(t.dueDate);
+			const isHighPriority = t.priority === "Alta";
+			if (isOverdue) {
+				const factory = factories.find((f) => f.id === t.factoryId);
+				notifications.push({
+					id: `task-overdue-${t.id}`,
+					type: "destructive",
+					icon: CircleCheck,
+					message: `Tarefa atrasada: ${t.description} (${factory?.name || "Fábrica"})`
+				});
+			} else if (isHighPriority) {
+				const factory = factories.find((f) => f.id === t.factoryId);
+				notifications.push({
+					id: `task-high-${t.id}`,
+					type: "warning",
+					icon: CircleCheck,
+					message: `Prioridade Alta: ${t.description} (${factory?.name || "Fábrica"})`
+				});
+			}
+		}
+	});
 	const notifCount = notifications.length;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
-		"data-uid": "src/components/AppHeader.tsx:53:5",
+		"data-uid": "src/components/AppHeader.tsx:78:5",
 		"data-prohibitions": "[editContent]",
 		className: "h-16 border-b flex items-center justify-between px-4 lg:px-6 bg-card text-card-foreground shrink-0 shadow-sm z-10 sticky top-0 print:hidden",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			"data-uid": "src/components/AppHeader.tsx:54:7",
-			"data-prohibitions": "[]",
+			"data-uid": "src/components/AppHeader.tsx:79:7",
+			"data-prohibitions": "[editContent]",
 			className: "flex items-center gap-3",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarTrigger, {
-				"data-uid": "src/components/AppHeader.tsx:55:9",
-				"data-prohibitions": "[editContent]",
-				className: "md:hidden"
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-				"data-uid": "src/components/AppHeader.tsx:56:9",
-				"data-prohibitions": "[]",
-				className: "font-semibold text-lg lg:text-xl text-primary hidden sm:block",
-				children: "Painel Executivo"
-			})]
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarTrigger, {
+					"data-uid": "src/components/AppHeader.tsx:80:9",
+					"data-prohibitions": "[editContent]",
+					className: "md:hidden"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+					"data-uid": "src/components/AppHeader.tsx:81:9",
+					"data-prohibitions": "[]",
+					className: "font-semibold text-lg lg:text-xl text-primary hidden sm:block",
+					children: "Painel Executivo"
+				}),
+				!isOnline && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					"data-uid": "src/components/AppHeader.tsx:85:11",
+					"data-prohibitions": "[]",
+					className: "flex items-center gap-1.5 text-[11px] font-medium text-orange-600 bg-orange-500/10 px-2.5 py-1 rounded-md ml-2",
+					title: "Sincronização pendente. Algumas funcionalidades podem estar limitadas.",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(WifiOff, {
+							"data-uid": "src/components/AppHeader.tsx:89:13",
+							"data-prohibitions": "[editContent]",
+							className: "w-3.5 h-3.5"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							"data-uid": "src/components/AppHeader.tsx:90:13",
+							"data-prohibitions": "[]",
+							className: "hidden sm:inline",
+							children: "Offline (Modo Leitura)"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							"data-uid": "src/components/AppHeader.tsx:91:13",
+							"data-prohibitions": "[]",
+							className: "sm:hidden",
+							children: "Offline"
+						})
+					]
+				})
+			]
 		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			"data-uid": "src/components/AppHeader.tsx:61:7",
+			"data-uid": "src/components/AppHeader.tsx:96:7",
 			"data-prohibitions": "[editContent]",
 			className: "flex items-center gap-4 lg:gap-6",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Popover, {
-				"data-uid": "src/components/AppHeader.tsx:62:9",
+				"data-uid": "src/components/AppHeader.tsx:97:9",
 				"data-prohibitions": "[editContent]",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(PopoverTrigger, {
-					"data-uid": "src/components/AppHeader.tsx:63:11",
+					"data-uid": "src/components/AppHeader.tsx:98:11",
 					"data-prohibitions": "[editContent]",
 					asChild: true,
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/components/AppHeader.tsx:64:13",
+						"data-uid": "src/components/AppHeader.tsx:99:13",
 						"data-prohibitions": "[editContent]",
 						className: "relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-muted transition-colors cursor-pointer group",
 						title: "Notificações",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bell, {
-							"data-uid": "src/components/AppHeader.tsx:68:15",
+							"data-uid": "src/components/AppHeader.tsx:103:15",
 							"data-prohibitions": "[editContent]",
 							className: "w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors"
 						}), notifCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							"data-uid": "src/components/AppHeader.tsx:70:17",
+							"data-uid": "src/components/AppHeader.tsx:105:17",
 							"data-prohibitions": "[editContent]",
 							className: "absolute top-1 right-1 bg-destructive text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-card",
 							children: notifCount
 						})]
 					})
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(PopoverContent, {
-					"data-uid": "src/components/AppHeader.tsx:76:11",
+					"data-uid": "src/components/AppHeader.tsx:111:11",
 					"data-prohibitions": "[editContent]",
 					align: "end",
 					className: "w-80 p-4",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
-						"data-uid": "src/components/AppHeader.tsx:77:13",
+						"data-uid": "src/components/AppHeader.tsx:112:13",
 						"data-prohibitions": "[]",
 						className: "font-semibold mb-3 text-sm flex items-center gap-2",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bell, {
-							"data-uid": "src/components/AppHeader.tsx:78:15",
+							"data-uid": "src/components/AppHeader.tsx:113:15",
 							"data-prohibitions": "[editContent]",
 							className: "w-4 h-4"
 						}), " Notificações Recentes"]
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						"data-uid": "src/components/AppHeader.tsx:80:13",
+						"data-uid": "src/components/AppHeader.tsx:115:13",
 						"data-prohibitions": "[editContent]",
 						className: "space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar",
 						children: notifications.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							"data-uid": "src/components/AppHeader.tsx:82:17",
+							"data-uid": "src/components/AppHeader.tsx:117:17",
 							"data-prohibitions": "[]",
 							className: "text-sm text-muted-foreground p-2",
 							children: "Nenhuma pendência no momento."
 						}) : notifications.map((n) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/components/AppHeader.tsx:85:19",
+							"data-uid": "src/components/AppHeader.tsx:120:19",
 							"data-prohibitions": "[editContent]",
 							className: "p-3 border rounded-lg text-sm bg-muted/30 flex items-start gap-3",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(n.icon, {
-								"data-uid": "src/components/AppHeader.tsx:89:21",
+								"data-uid": "src/components/AppHeader.tsx:124:21",
 								"data-prohibitions": "[editContent]",
 								className: `w-4 h-4 shrink-0 mt-0.5 ${n.type === "destructive" ? "text-destructive" : n.type === "warning" ? "text-orange-500" : "text-primary"}`
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/components/AppHeader.tsx:98:21",
+								"data-uid": "src/components/AppHeader.tsx:133:21",
 								"data-prohibitions": "[editContent]",
 								className: "leading-tight",
 								children: n.message
@@ -28931,48 +29115,48 @@ function AppHeader() {
 					})]
 				})]
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Dialog, {
-				"data-uid": "src/components/AppHeader.tsx:106:9",
+				"data-uid": "src/components/AppHeader.tsx:141:9",
 				"data-prohibitions": "[]",
 				open,
 				onOpenChange: setOpen,
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogTrigger, {
-					"data-uid": "src/components/AppHeader.tsx:107:11",
+					"data-uid": "src/components/AppHeader.tsx:142:11",
 					"data-prohibitions": "[]",
 					asChild: true,
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-						"data-uid": "src/components/AppHeader.tsx:108:13",
+						"data-uid": "src/components/AppHeader.tsx:143:13",
 						"data-prohibitions": "[]",
 						size: "sm",
 						className: "gap-2 shadow-sm",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Plus, {
-							"data-uid": "src/components/AppHeader.tsx:109:15",
+							"data-uid": "src/components/AppHeader.tsx:144:15",
 							"data-prohibitions": "[editContent]",
 							className: "w-4 h-4"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							"data-uid": "src/components/AppHeader.tsx:110:15",
+							"data-uid": "src/components/AppHeader.tsx:145:15",
 							"data-prohibitions": "[]",
 							className: "hidden sm:inline",
 							children: "Nova Fábrica"
 						})]
 					})
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogContent, {
-					"data-uid": "src/components/AppHeader.tsx:113:11",
+					"data-uid": "src/components/AppHeader.tsx:148:11",
 					"data-prohibitions": "[]",
 					className: "max-w-2xl max-h-[90vh] overflow-y-auto",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogHeader, {
-						"data-uid": "src/components/AppHeader.tsx:114:13",
+						"data-uid": "src/components/AppHeader.tsx:149:13",
 						"data-prohibitions": "[]",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogTitle, {
-							"data-uid": "src/components/AppHeader.tsx:115:15",
+							"data-uid": "src/components/AppHeader.tsx:150:15",
 							"data-prohibitions": "[]",
 							children: "Cadastro Rápido"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogDescription, {
-							"data-uid": "src/components/AppHeader.tsx:116:15",
+							"data-uid": "src/components/AppHeader.tsx:151:15",
 							"data-prohibitions": "[]",
 							children: "Adicione uma nova fábrica ao pipeline."
 						})]
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FactoryForm, {
-						"data-uid": "src/components/AppHeader.tsx:118:13",
+						"data-uid": "src/components/AppHeader.tsx:153:13",
 						"data-prohibitions": "[editContent]",
 						onSubmit: () => setOpen(false)
 					})]
@@ -56074,7 +56258,7 @@ function MapCard() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
 		"data-uid": "src/components/dashboard/MapCard.tsx:26:5",
 		"data-prohibitions": "[editContent]",
-		className: "shadow-subtle",
+		className: "shadow-subtle print:hidden",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardHeader, {
 			"data-uid": "src/components/dashboard/MapCard.tsx:27:7",
 			"data-prohibitions": "[]",
@@ -56169,38 +56353,48 @@ function MapCard() {
 function ScoreEvolutionCard() {
 	const { factories } = useAppContext();
 	const [selectedId, setSelectedId] = (0, import_react.useState)(factories[0]?.id);
-	const data = factories.find((f) => f.id === selectedId)?.scoreHistory || [];
+	const factory = factories.find((f) => f.id === selectedId);
+	const data = factory?.scoreHistory || [];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
 		"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:22:5",
 		"data-prohibitions": "[editContent]",
-		className: "shadow-subtle",
+		className: "shadow-subtle print:break-inside-avoid print:col-span-2 print:shadow-none print:border",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
 			"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:23:7",
 			"data-prohibitions": "[editContent]",
 			className: "flex flex-row items-center justify-between pb-2",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:24:9",
-				"data-prohibitions": "[]",
-				children: "Evolução de Score"
+				"data-prohibitions": "[editContent]",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
+					"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:25:11",
+					"data-prohibitions": "[]",
+					children: "Evolução de Score"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:26:11",
+					"data-prohibitions": "[editContent]",
+					className: "hidden print:block text-sm text-muted-foreground mt-1 font-medium",
+					children: factory?.name
+				})]
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
-				"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:25:9",
+				"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:30:9",
 				"data-prohibitions": "[editContent]",
 				value: selectedId,
 				onValueChange: setSelectedId,
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
-					"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:26:11",
+					"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:31:11",
 					"data-prohibitions": "[]",
-					className: "w-[180px] h-8 text-xs",
+					className: "w-[180px] h-8 text-xs print:hidden",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
-						"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:27:13",
+						"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:32:13",
 						"data-prohibitions": "[editContent]",
 						placeholder: "Selecione..."
 					})
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectContent, {
-					"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:29:11",
+					"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:34:11",
 					"data-prohibitions": "[editContent]",
 					children: factories.map((f) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-						"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:31:15",
+						"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:36:15",
 						"data-prohibitions": "[editContent]",
 						value: f.id,
 						children: f.name
@@ -56208,11 +56402,11 @@ function ScoreEvolutionCard() {
 				})]
 			})]
 		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
-			"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:38:7",
+			"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:43:7",
 			"data-prohibitions": "[]",
 			className: "h-[280px]",
 			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChartContainer, {
-				"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:39:9",
+				"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:44:9",
 				"data-prohibitions": "[]",
 				config: { score: {
 					label: "Score Total",
@@ -56220,7 +56414,7 @@ function ScoreEvolutionCard() {
 				} },
 				className: "h-full w-full",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(LineChart, {
-					"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:43:11",
+					"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:48:11",
 					"data-prohibitions": "[]",
 					data,
 					margin: {
@@ -56231,14 +56425,14 @@ function ScoreEvolutionCard() {
 					},
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CartesianGrid, {
-							"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:44:13",
+							"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:49:13",
 							"data-prohibitions": "[editContent]",
 							strokeDasharray: "3 3",
 							vertical: false,
 							stroke: "hsl(var(--border))"
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(XAxis, {
-							"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:45:13",
+							"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:50:13",
 							"data-prohibitions": "[editContent]",
 							dataKey: "date",
 							tickFormatter: (v) => new Date(v).toLocaleDateString("pt-BR", { month: "short" }),
@@ -56250,7 +56444,7 @@ function ScoreEvolutionCard() {
 							tickLine: false
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(YAxis, {
-							"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:52:13",
+							"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:57:13",
 							"data-prohibitions": "[editContent]",
 							domain: [0, 100],
 							tick: {
@@ -56261,16 +56455,16 @@ function ScoreEvolutionCard() {
 							tickLine: false
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Tooltip, {
-							"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:58:13",
+							"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:63:13",
 							"data-prohibitions": "[editContent]",
 							content: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChartTooltipContent, {
-								"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:60:17",
+								"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:65:17",
 								"data-prohibitions": "[editContent]",
 								labelFormatter: (v) => new Date(v).toLocaleDateString("pt-BR")
 							})
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Line, {
-							"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:65:13",
+							"data-uid": "src/components/dashboard/ScoreEvolutionCard.tsx:70:13",
 							"data-prohibitions": "[editContent]",
 							type: "monotone",
 							dataKey: "score",
@@ -56336,12 +56530,12 @@ function DashboardCharts() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		"data-uid": "src/components/dashboard/DashboardCharts.tsx:58:5",
 		"data-prohibitions": "[editContent]",
-		className: "grid grid-cols-1 lg:grid-cols-2 gap-6",
+		className: "grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-2",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
 				"data-uid": "src/components/dashboard/DashboardCharts.tsx:59:7",
 				"data-prohibitions": "[]",
-				className: "shadow-subtle",
+				className: "shadow-subtle print:hidden",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
 					"data-uid": "src/components/dashboard/DashboardCharts.tsx:60:9",
 					"data-prohibitions": "[]",
@@ -56424,7 +56618,7 @@ function DashboardCharts() {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
 				"data-uid": "src/components/dashboard/DashboardCharts.tsx:86:7",
 				"data-prohibitions": "[editContent]",
-				className: "shadow-subtle",
+				className: "shadow-subtle print:hidden",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
 					"data-uid": "src/components/dashboard/DashboardCharts.tsx:87:9",
 					"data-prohibitions": "[]",
@@ -56483,18 +56677,18 @@ function DashboardCharts() {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
 				"data-uid": "src/components/dashboard/DashboardCharts.tsx:117:7",
 				"data-prohibitions": "[]",
-				className: "shadow-subtle",
+				className: "shadow-subtle print:break-inside-avoid print:shadow-none print:border",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
 					"data-uid": "src/components/dashboard/DashboardCharts.tsx:118:9",
 					"data-prohibitions": "[]",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
 						"data-uid": "src/components/dashboard/DashboardCharts.tsx:119:11",
 						"data-prohibitions": "[]",
-						children: "Top Volume (t/mês)"
+						children: "Ranking Volume de Compras (t/mês)"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardDescription, {
 						"data-uid": "src/components/dashboard/DashboardCharts.tsx:120:11",
 						"data-prohibitions": "[]",
-						children: "Maiores capacidades"
+						children: "Maiores capacidades do pipeline"
 					})]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
 					"data-uid": "src/components/dashboard/DashboardCharts.tsx:122:9",
@@ -56566,18 +56760,18 @@ function DashboardCharts() {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
 				"data-uid": "src/components/dashboard/DashboardCharts.tsx:144:7",
 				"data-prohibitions": "[]",
-				className: "shadow-subtle",
+				className: "shadow-subtle print:break-inside-avoid print:shadow-none print:border",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
 					"data-uid": "src/components/dashboard/DashboardCharts.tsx:145:9",
 					"data-prohibitions": "[]",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
 						"data-uid": "src/components/dashboard/DashboardCharts.tsx:146:11",
 						"data-prohibitions": "[]",
-						children: "Ranking Linhas de Produto"
+						children: "Ranking Produtos Mais Vendidos"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardDescription, {
 						"data-uid": "src/components/dashboard/DashboardCharts.tsx:147:11",
 						"data-prohibitions": "[]",
-						children: "Receita por tendência"
+						children: "Receita por tendência de linha"
 					})]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
 					"data-uid": "src/components/dashboard/DashboardCharts.tsx:149:9",
@@ -56732,7 +56926,7 @@ function FactoryListCard() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
 		"data-uid": "src/components/dashboard/FactoryListCard.tsx:34:5",
 		"data-prohibitions": "[editContent]",
-		className: "shadow-subtle lg:col-span-3",
+		className: "shadow-subtle lg:col-span-3 print:hidden",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
 			"data-uid": "src/components/dashboard/FactoryListCard.tsx:35:7",
 			"data-prohibitions": "[editContent]",
@@ -56939,55 +57133,70 @@ function Index() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		"data-uid": "src/pages/Index.tsx:22:5",
 		"data-prohibitions": "[editContent]",
-		className: "space-y-6 animate-fade-in pb-10",
+		className: "space-y-6 animate-fade-in pb-10 print:m-0 print:p-0 print:space-y-8",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Index.tsx:23:7",
-				"data-prohibitions": "[]",
-				className: "flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2",
+				"data-uid": "src/pages/Index.tsx:24:7",
+				"data-prohibitions": "[editContent]",
+				className: "hidden print:block mb-8 border-b-2 border-primary pb-4",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-					"data-uid": "src/pages/Index.tsx:24:9",
+					"data-uid": "src/pages/Index.tsx:25:9",
+					"data-prohibitions": "[]",
+					className: "text-3xl font-bold text-primary mb-1",
+					children: "Relatório Executivo - MT"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+					"data-uid": "src/pages/Index.tsx:26:9",
+					"data-prohibitions": "[editContent]",
+					className: "text-muted-foreground text-sm",
+					children: ["Inteligência Comercial Blink • Gerado em ", (/* @__PURE__ */ new Date()).toLocaleDateString("pt-BR")]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				"data-uid": "src/pages/Index.tsx:31:7",
+				"data-prohibitions": "[]",
+				className: "flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2 print:hidden",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+					"data-uid": "src/pages/Index.tsx:32:9",
 					"data-prohibitions": "[]",
 					className: "text-2xl font-bold tracking-tight",
 					children: "Visão Geral MT"
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-					"data-uid": "src/pages/Index.tsx:25:9",
+					"data-uid": "src/pages/Index.tsx:33:9",
 					"data-prohibitions": "[]",
-					variant: "outline",
 					size: "sm",
 					onClick: () => window.print(),
-					className: "gap-2 print:hidden shadow-sm",
+					className: "gap-2 shadow-sm",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Download, {
-						"data-uid": "src/pages/Index.tsx:31:11",
+						"data-uid": "src/pages/Index.tsx:34:11",
 						"data-prohibitions": "[editContent]",
 						className: "w-4 h-4"
 					}), " Exportar Relatório PDF"]
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Index.tsx:35:7",
+				"data-uid": "src/pages/Index.tsx:38:7",
 				"data-prohibitions": "[editContent]",
-				className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4",
+				className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-4 print:gap-4 print:mb-8",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-						"data-uid": "src/pages/Index.tsx:36:9",
+						"data-uid": "src/pages/Index.tsx:39:9",
 						"data-prohibitions": "[editContent]",
-						className: "shadow-subtle text-center flex flex-col justify-center items-center",
+						className: "shadow-subtle text-center flex flex-col justify-center items-center print:border-none print:shadow-none print:bg-muted/10",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardHeader, {
-							"data-uid": "src/pages/Index.tsx:37:11",
+							"data-uid": "src/pages/Index.tsx:40:11",
 							"data-prohibitions": "[]",
 							className: "pb-2 pt-4",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
-								"data-uid": "src/pages/Index.tsx:38:13",
+								"data-uid": "src/pages/Index.tsx:41:13",
 								"data-prohibitions": "[]",
 								className: "text-sm font-medium text-muted-foreground",
 								children: "Fábricas Mapeadas"
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
-							"data-uid": "src/pages/Index.tsx:42:11",
+							"data-uid": "src/pages/Index.tsx:45:11",
 							"data-prohibitions": "[editContent]",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								"data-uid": "src/pages/Index.tsx:43:13",
+								"data-uid": "src/pages/Index.tsx:46:13",
 								"data-prohibitions": "[editContent]",
 								className: "text-3xl font-bold",
 								children: factories.length
@@ -56995,24 +57204,24 @@ function Index() {
 						})]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-						"data-uid": "src/pages/Index.tsx:46:9",
+						"data-uid": "src/pages/Index.tsx:49:9",
 						"data-prohibitions": "[editContent]",
-						className: "shadow-subtle text-center flex flex-col justify-center items-center",
+						className: "shadow-subtle text-center flex flex-col justify-center items-center print:border-none print:shadow-none print:bg-muted/10",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardHeader, {
-							"data-uid": "src/pages/Index.tsx:47:11",
+							"data-uid": "src/pages/Index.tsx:50:11",
 							"data-prohibitions": "[]",
 							className: "pb-2 pt-4",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
-								"data-uid": "src/pages/Index.tsx:48:13",
+								"data-uid": "src/pages/Index.tsx:51:13",
 								"data-prohibitions": "[]",
 								className: "text-sm font-medium text-muted-foreground",
 								children: "Ativas / Prospecção"
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
-							"data-uid": "src/pages/Index.tsx:52:11",
+							"data-uid": "src/pages/Index.tsx:55:11",
 							"data-prohibitions": "[editContent]",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								"data-uid": "src/pages/Index.tsx:53:13",
+								"data-uid": "src/pages/Index.tsx:56:13",
 								"data-prohibitions": "[editContent]",
 								className: "text-3xl font-bold",
 								children: [
@@ -57024,51 +57233,51 @@ function Index() {
 						})]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-						"data-uid": "src/pages/Index.tsx:58:9",
+						"data-uid": "src/pages/Index.tsx:61:9",
 						"data-prohibitions": "[editContent]",
-						className: "shadow-subtle text-center flex flex-col justify-center items-center",
+						className: "shadow-subtle text-center flex flex-col justify-center items-center print:border-none print:shadow-none print:bg-primary/5",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardHeader, {
-							"data-uid": "src/pages/Index.tsx:59:11",
+							"data-uid": "src/pages/Index.tsx:62:11",
 							"data-prohibitions": "[]",
 							className: "pb-2 pt-4",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
-								"data-uid": "src/pages/Index.tsx:60:13",
+								"data-uid": "src/pages/Index.tsx:63:13",
 								"data-prohibitions": "[]",
 								className: "text-sm font-medium text-muted-foreground",
 								children: "Receita Potencial"
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
-							"data-uid": "src/pages/Index.tsx:64:11",
+							"data-uid": "src/pages/Index.tsx:67:11",
 							"data-prohibitions": "[editContent]",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								"data-uid": "src/pages/Index.tsx:65:13",
+								"data-uid": "src/pages/Index.tsx:68:13",
 								"data-prohibitions": "[editContent]",
-								className: "text-[12px] font-bold text-primary",
+								className: "text-[12px] font-bold text-primary print:text-xl",
 								children: formatCompactCurrency(metrics.revenue)
 							})
 						})]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-						"data-uid": "src/pages/Index.tsx:70:9",
+						"data-uid": "src/pages/Index.tsx:73:9",
 						"data-prohibitions": "[editContent]",
-						className: "shadow-subtle text-center flex flex-col justify-center items-center",
+						className: "shadow-subtle text-center flex flex-col justify-center items-center print:border-none print:shadow-none print:bg-accent/5",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardHeader, {
-							"data-uid": "src/pages/Index.tsx:71:11",
+							"data-uid": "src/pages/Index.tsx:74:11",
 							"data-prohibitions": "[]",
 							className: "pb-2 pt-4",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
-								"data-uid": "src/pages/Index.tsx:72:13",
+								"data-uid": "src/pages/Index.tsx:75:13",
 								"data-prohibitions": "[]",
 								className: "text-sm font-medium text-muted-foreground",
 								children: "Forecast Ponderado"
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
-							"data-uid": "src/pages/Index.tsx:76:11",
+							"data-uid": "src/pages/Index.tsx:79:11",
 							"data-prohibitions": "[editContent]",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								"data-uid": "src/pages/Index.tsx:77:13",
+								"data-uid": "src/pages/Index.tsx:80:13",
 								"data-prohibitions": "[editContent]",
-								className: "text-[12px] font-bold text-accent",
+								className: "text-[12px] font-bold text-accent print:text-xl",
 								children: formatCompactCurrency(metrics.weighted)
 							})
 						})]
@@ -57076,27 +57285,27 @@ function Index() {
 				]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Index.tsx:84:7",
+				"data-uid": "src/pages/Index.tsx:87:7",
 				"data-prohibitions": "[]",
-				className: "grid grid-cols-1 lg:grid-cols-2 gap-6",
+				className: "grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-1",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MapCard, {
-					"data-uid": "src/pages/Index.tsx:85:9",
+					"data-uid": "src/pages/Index.tsx:88:9",
 					"data-prohibitions": "[editContent]"
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ScoreEvolutionCard, {
-					"data-uid": "src/pages/Index.tsx:86:9",
+					"data-uid": "src/pages/Index.tsx:89:9",
 					"data-prohibitions": "[editContent]"
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DashboardCharts, {
-				"data-uid": "src/pages/Index.tsx:89:7",
+				"data-uid": "src/pages/Index.tsx:92:7",
 				"data-prohibitions": "[editContent]"
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				"data-uid": "src/pages/Index.tsx:91:7",
+				"data-uid": "src/pages/Index.tsx:94:7",
 				"data-prohibitions": "[]",
-				className: "grid grid-cols-1 gap-6 print:break-inside-avoid",
+				className: "grid grid-cols-1 gap-6 print:hidden",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FactoryListCard, {
-					"data-uid": "src/pages/Index.tsx:92:9",
+					"data-uid": "src/pages/Index.tsx:95:9",
 					"data-prohibitions": "[editContent]"
 				})
 			})
@@ -57358,10 +57567,10 @@ var TabsList$1 = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 TabsList$1.displayName = TAB_LIST_NAME;
-var TRIGGER_NAME = "TabsTrigger";
+var TRIGGER_NAME$1 = "TabsTrigger";
 var TabsTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeTabs, value, disabled = false, ...triggerProps } = props;
-	const context = useTabsContext(TRIGGER_NAME, __scopeTabs);
+	const context = useTabsContext(TRIGGER_NAME$1, __scopeTabs);
 	const rovingFocusGroupScope = useRovingFocusGroupScope(__scopeTabs);
 	const triggerId = makeTriggerId(context.baseId, value);
 	const contentId = makeContentId(context.baseId, value);
@@ -57396,7 +57605,7 @@ var TabsTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-TabsTrigger$1.displayName = TRIGGER_NAME;
+TabsTrigger$1.displayName = TRIGGER_NAME$1;
 var CONTENT_NAME = "TabsContent";
 var TabsContent$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeTabs, value, forceMount, children, ...contentProps } = props;
@@ -57564,10 +57773,10 @@ var Progress$1 = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 Progress$1.displayName = PROGRESS_NAME;
-var INDICATOR_NAME = "ProgressIndicator";
+var INDICATOR_NAME$1 = "ProgressIndicator";
 var ProgressIndicator = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeProgress, ...indicatorProps } = props;
-	const context = useProgressContext(INDICATOR_NAME, __scopeProgress);
+	const context = useProgressContext(INDICATOR_NAME$1, __scopeProgress);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive.div, {
 		"data-state": getProgressState(context.value, context.max),
 		"data-value": context.value ?? void 0,
@@ -57576,7 +57785,7 @@ var ProgressIndicator = import_react.forwardRef((props, forwardedRef) => {
 		ref: forwardedRef
 	});
 });
-ProgressIndicator.displayName = INDICATOR_NAME;
+ProgressIndicator.displayName = INDICATOR_NAME$1;
 function defaultGetValueLabel(value, max) {
 	return `${Math.round(value / max * 100)}%`;
 }
@@ -57832,6 +58041,478 @@ function FactoryDocuments({ factory }) {
 	});
 }
 //#endregion
+//#region ../../cache/modules/inteligencia-comercial-blink-4eb45/node_modules/.pnpm/@radix-ui+react-checkbox@1.3.3_@types+react-dom@19.2.3_@types+react@19.2.14__@types+rea_a9bfe74df417688e01ae6068318bf0dd/node_modules/@radix-ui/react-checkbox/dist/index.mjs
+var CHECKBOX_NAME = "Checkbox";
+var [createCheckboxContext, createCheckboxScope] = createContextScope$1(CHECKBOX_NAME);
+var [CheckboxProviderImpl, useCheckboxContext] = createCheckboxContext(CHECKBOX_NAME);
+function CheckboxProvider(props) {
+	const { __scopeCheckbox, checked: checkedProp, children, defaultChecked, disabled, form, name, onCheckedChange, required, value = "on", internal_do_not_use_render } = props;
+	const [checked, setChecked] = useControllableState({
+		prop: checkedProp,
+		defaultProp: defaultChecked ?? false,
+		onChange: onCheckedChange,
+		caller: CHECKBOX_NAME
+	});
+	const [control, setControl] = import_react.useState(null);
+	const [bubbleInput, setBubbleInput] = import_react.useState(null);
+	const hasConsumerStoppedPropagationRef = import_react.useRef(false);
+	const isFormControl = control ? !!form || !!control.closest("form") : true;
+	const context = {
+		checked,
+		disabled,
+		setChecked,
+		control,
+		setControl,
+		name,
+		form,
+		value,
+		hasConsumerStoppedPropagationRef,
+		required,
+		defaultChecked: isIndeterminate(defaultChecked) ? false : defaultChecked,
+		isFormControl,
+		bubbleInput,
+		setBubbleInput
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CheckboxProviderImpl, {
+		scope: __scopeCheckbox,
+		...context,
+		children: isFunction(internal_do_not_use_render) ? internal_do_not_use_render(context) : children
+	});
+}
+var TRIGGER_NAME = "CheckboxTrigger";
+var CheckboxTrigger = import_react.forwardRef(({ __scopeCheckbox, onKeyDown, onClick, ...checkboxProps }, forwardedRef) => {
+	const { control, value, disabled, checked, required, setControl, setChecked, hasConsumerStoppedPropagationRef, isFormControl, bubbleInput } = useCheckboxContext(TRIGGER_NAME, __scopeCheckbox);
+	const composedRefs = useComposedRefs(forwardedRef, setControl);
+	const initialCheckedStateRef = import_react.useRef(checked);
+	import_react.useEffect(() => {
+		const form = control?.form;
+		if (form) {
+			const reset = () => setChecked(initialCheckedStateRef.current);
+			form.addEventListener("reset", reset);
+			return () => form.removeEventListener("reset", reset);
+		}
+	}, [control, setChecked]);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.button, {
+		type: "button",
+		role: "checkbox",
+		"aria-checked": isIndeterminate(checked) ? "mixed" : checked,
+		"aria-required": required,
+		"data-state": getState(checked),
+		"data-disabled": disabled ? "" : void 0,
+		disabled,
+		value,
+		...checkboxProps,
+		ref: composedRefs,
+		onKeyDown: composeEventHandlers(onKeyDown, (event) => {
+			if (event.key === "Enter") event.preventDefault();
+		}),
+		onClick: composeEventHandlers(onClick, (event) => {
+			setChecked((prevChecked) => isIndeterminate(prevChecked) ? true : !prevChecked);
+			if (bubbleInput && isFormControl) {
+				hasConsumerStoppedPropagationRef.current = event.isPropagationStopped();
+				if (!hasConsumerStoppedPropagationRef.current) event.stopPropagation();
+			}
+		})
+	});
+});
+CheckboxTrigger.displayName = TRIGGER_NAME;
+var Checkbox$1 = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopeCheckbox, name, checked, defaultChecked, required, disabled, value, onCheckedChange, form, ...checkboxProps } = props;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CheckboxProvider, {
+		__scopeCheckbox,
+		checked,
+		defaultChecked,
+		disabled,
+		required,
+		onCheckedChange,
+		name,
+		form,
+		value,
+		internal_do_not_use_render: ({ isFormControl }) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CheckboxTrigger, {
+			...checkboxProps,
+			ref: forwardedRef,
+			__scopeCheckbox
+		}), isFormControl && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CheckboxBubbleInput, { __scopeCheckbox })] })
+	});
+});
+Checkbox$1.displayName = CHECKBOX_NAME;
+var INDICATOR_NAME = "CheckboxIndicator";
+var CheckboxIndicator = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopeCheckbox, forceMount, ...indicatorProps } = props;
+	const context = useCheckboxContext(INDICATOR_NAME, __scopeCheckbox);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Presence, {
+		present: forceMount || isIndeterminate(context.checked) || context.checked === true,
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.span, {
+			"data-state": getState(context.checked),
+			"data-disabled": context.disabled ? "" : void 0,
+			...indicatorProps,
+			ref: forwardedRef,
+			style: {
+				pointerEvents: "none",
+				...props.style
+			}
+		})
+	});
+});
+CheckboxIndicator.displayName = INDICATOR_NAME;
+var BUBBLE_INPUT_NAME$1 = "CheckboxBubbleInput";
+var CheckboxBubbleInput = import_react.forwardRef(({ __scopeCheckbox, ...props }, forwardedRef) => {
+	const { control, hasConsumerStoppedPropagationRef, checked, defaultChecked, required, disabled, name, value, form, bubbleInput, setBubbleInput } = useCheckboxContext(BUBBLE_INPUT_NAME$1, __scopeCheckbox);
+	const composedRefs = useComposedRefs(forwardedRef, setBubbleInput);
+	const prevChecked = usePrevious(checked);
+	const controlSize = useSize(control);
+	import_react.useEffect(() => {
+		const input = bubbleInput;
+		if (!input) return;
+		const inputProto = window.HTMLInputElement.prototype;
+		const setChecked = Object.getOwnPropertyDescriptor(inputProto, "checked").set;
+		const bubbles = !hasConsumerStoppedPropagationRef.current;
+		if (prevChecked !== checked && setChecked) {
+			const event = new Event("click", { bubbles });
+			input.indeterminate = isIndeterminate(checked);
+			setChecked.call(input, isIndeterminate(checked) ? false : checked);
+			input.dispatchEvent(event);
+		}
+	}, [
+		bubbleInput,
+		prevChecked,
+		checked,
+		hasConsumerStoppedPropagationRef
+	]);
+	const defaultCheckedRef = import_react.useRef(isIndeterminate(checked) ? false : checked);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.input, {
+		type: "checkbox",
+		"aria-hidden": true,
+		defaultChecked: defaultChecked ?? defaultCheckedRef.current,
+		required,
+		disabled,
+		name,
+		value,
+		form,
+		...props,
+		tabIndex: -1,
+		ref: composedRefs,
+		style: {
+			...props.style,
+			...controlSize,
+			position: "absolute",
+			pointerEvents: "none",
+			opacity: 0,
+			margin: 0,
+			transform: "translateX(-100%)"
+		}
+	});
+});
+CheckboxBubbleInput.displayName = BUBBLE_INPUT_NAME$1;
+function isFunction(value) {
+	return typeof value === "function";
+}
+function isIndeterminate(checked) {
+	return checked === "indeterminate";
+}
+function getState(checked) {
+	return isIndeterminate(checked) ? "indeterminate" : checked ? "checked" : "unchecked";
+}
+//#endregion
+//#region src/components/ui/checkbox.tsx
+var Checkbox = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Checkbox$1, {
+	"data-uid": "src/components/ui/checkbox.tsx:12:3",
+	"data-prohibitions": "[editContent]",
+	ref,
+	className: cn$1("peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground", className),
+	...props,
+	children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CheckboxIndicator, {
+		"data-uid": "src/components/ui/checkbox.tsx:20:5",
+		"data-prohibitions": "[editContent]",
+		className: cn$1("flex items-center justify-center text-current"),
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Check, {
+			"data-uid": "src/components/ui/checkbox.tsx:21:7",
+			"data-prohibitions": "[editContent]",
+			className: "h-4 w-4"
+		})
+	})
+}));
+Checkbox.displayName = Checkbox$1.displayName;
+//#endregion
+//#region src/components/FactoryTasks.tsx
+function FactoryTasks({ factoryId }) {
+	const { tasks, addTask, updateTask, deleteTask } = useAppContext();
+	const [isAdding, setIsAdding] = (0, import_react.useState)(false);
+	const factoryTasks = tasks.filter((t) => t.factoryId === factoryId).sort((a, b) => {
+		if (a.completed !== b.completed) return a.completed ? 1 : -1;
+		return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+	});
+	const handleSubmit = (e) => {
+		e.preventDefault();
+		const fd = new FormData(e.currentTarget);
+		addTask({
+			factoryId,
+			description: fd.get("description"),
+			type: fd.get("type"),
+			priority: fd.get("priority"),
+			dueDate: fd.get("dueDate") || void 0,
+			completed: false
+		});
+		setIsAdding(false);
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		"data-uid": "src/components/FactoryTasks.tsx:45:5",
+		"data-prohibitions": "[editContent]",
+		className: "space-y-4",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				"data-uid": "src/components/FactoryTasks.tsx:46:7",
+				"data-prohibitions": "[editContent]",
+				className: "flex justify-between items-center pb-2 border-b",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+					"data-uid": "src/components/FactoryTasks.tsx:47:9",
+					"data-prohibitions": "[]",
+					className: "text-sm font-medium",
+					children: "To-Do List do Cliente"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+					"data-uid": "src/components/FactoryTasks.tsx:48:9",
+					"data-prohibitions": "[editContent]",
+					variant: "outline",
+					size: "sm",
+					onClick: () => setIsAdding(!isAdding),
+					children: isAdding ? "Cancelar" : "Nova Tarefa"
+				})]
+			}),
+			isAdding && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
+				"data-uid": "src/components/FactoryTasks.tsx:54:9",
+				"data-prohibitions": "[]",
+				onSubmit: handleSubmit,
+				className: "bg-muted/30 p-4 rounded-lg border space-y-4",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					"data-uid": "src/components/FactoryTasks.tsx:55:11",
+					"data-prohibitions": "[]",
+					className: "grid grid-cols-1 sm:grid-cols-2 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							"data-uid": "src/components/FactoryTasks.tsx:56:13",
+							"data-prohibitions": "[]",
+							className: "space-y-2 sm:col-span-2",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
+								"data-uid": "src/components/FactoryTasks.tsx:57:15",
+								"data-prohibitions": "[]",
+								children: "Descrição da Tarefa"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+								"data-uid": "src/components/FactoryTasks.tsx:58:15",
+								"data-prohibitions": "[editContent]",
+								name: "description",
+								placeholder: "Ex: Enviar proposta comercial...",
+								required: true
+							})]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							"data-uid": "src/components/FactoryTasks.tsx:60:13",
+							"data-prohibitions": "[]",
+							className: "space-y-2",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
+								"data-uid": "src/components/FactoryTasks.tsx:61:15",
+								"data-prohibitions": "[]",
+								children: "Tipo"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
+								"data-uid": "src/components/FactoryTasks.tsx:62:15",
+								"data-prohibitions": "[]",
+								name: "type",
+								defaultValue: "Enviar amostra",
+								required: true,
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
+									"data-uid": "src/components/FactoryTasks.tsx:63:17",
+									"data-prohibitions": "[]",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
+										"data-uid": "src/components/FactoryTasks.tsx:64:19",
+										"data-prohibitions": "[editContent]"
+									})
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, {
+									"data-uid": "src/components/FactoryTasks.tsx:66:17",
+									"data-prohibitions": "[]",
+									children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+											"data-uid": "src/components/FactoryTasks.tsx:67:19",
+											"data-prohibitions": "[]",
+											value: "Enviar amostra",
+											children: "Enviar amostra"
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+											"data-uid": "src/components/FactoryTasks.tsx:68:19",
+											"data-prohibitions": "[]",
+											value: "Ligar para Follow-up",
+											children: "Ligar para Follow-up"
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+											"data-uid": "src/components/FactoryTasks.tsx:69:19",
+											"data-prohibitions": "[]",
+											value: "Outra",
+											children: "Outra"
+										})
+									]
+								})]
+							})]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							"data-uid": "src/components/FactoryTasks.tsx:73:13",
+							"data-prohibitions": "[]",
+							className: "space-y-2",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
+								"data-uid": "src/components/FactoryTasks.tsx:74:15",
+								"data-prohibitions": "[]",
+								children: "Prioridade"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
+								"data-uid": "src/components/FactoryTasks.tsx:75:15",
+								"data-prohibitions": "[]",
+								name: "priority",
+								defaultValue: "Média",
+								required: true,
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
+									"data-uid": "src/components/FactoryTasks.tsx:76:17",
+									"data-prohibitions": "[]",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
+										"data-uid": "src/components/FactoryTasks.tsx:77:19",
+										"data-prohibitions": "[editContent]"
+									})
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, {
+									"data-uid": "src/components/FactoryTasks.tsx:79:17",
+									"data-prohibitions": "[]",
+									children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+											"data-uid": "src/components/FactoryTasks.tsx:80:19",
+											"data-prohibitions": "[]",
+											value: "Baixa",
+											children: "Baixa"
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+											"data-uid": "src/components/FactoryTasks.tsx:81:19",
+											"data-prohibitions": "[]",
+											value: "Média",
+											children: "Média"
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+											"data-uid": "src/components/FactoryTasks.tsx:82:19",
+											"data-prohibitions": "[]",
+											value: "Alta",
+											children: "Alta"
+										})
+									]
+								})]
+							})]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							"data-uid": "src/components/FactoryTasks.tsx:86:13",
+							"data-prohibitions": "[]",
+							className: "space-y-2 sm:col-span-2",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
+								"data-uid": "src/components/FactoryTasks.tsx:87:15",
+								"data-prohibitions": "[]",
+								children: "Data Limite (Opcional)"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+								"data-uid": "src/components/FactoryTasks.tsx:88:15",
+								"data-prohibitions": "[editContent]",
+								type: "date",
+								name: "dueDate"
+							})]
+						})
+					]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+					"data-uid": "src/components/FactoryTasks.tsx:91:11",
+					"data-prohibitions": "[]",
+					type: "submit",
+					size: "sm",
+					className: "w-full sm:w-auto",
+					children: "Salvar Tarefa"
+				})]
+			}),
+			factoryTasks.length === 0 && !isAdding && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				"data-uid": "src/components/FactoryTasks.tsx:98:9",
+				"data-prohibitions": "[]",
+				className: "text-sm text-muted-foreground text-center py-6",
+				children: "Nenhuma tarefa cadastrada para esta fábrica."
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				"data-uid": "src/components/FactoryTasks.tsx:103:7",
+				"data-prohibitions": "[editContent]",
+				className: "space-y-2",
+				children: factoryTasks.map((task) => {
+					const isOverdue = !task.completed && isPassedDeadline(task.dueDate);
+					return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						"data-uid": "src/components/FactoryTasks.tsx:107:13",
+						"data-prohibitions": "[editContent]",
+						className: `flex items-start gap-3 p-3 border rounded-lg transition-colors ${task.completed ? "bg-muted/50 opacity-70" : "bg-card hover:bg-muted/30"}`,
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Checkbox, {
+								"data-uid": "src/components/FactoryTasks.tsx:111:15",
+								"data-prohibitions": "[editContent]",
+								checked: task.completed,
+								onCheckedChange: (checked) => updateTask(task.id, { completed: !!checked }),
+								className: "mt-1"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								"data-uid": "src/components/FactoryTasks.tsx:116:15",
+								"data-prohibitions": "[editContent]",
+								className: "flex-1 min-w-0",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									"data-uid": "src/components/FactoryTasks.tsx:117:17",
+									"data-prohibitions": "[editContent]",
+									className: `text-sm font-medium ${task.completed ? "line-through text-muted-foreground" : ""}`,
+									children: task.description
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									"data-uid": "src/components/FactoryTasks.tsx:122:17",
+									"data-prohibitions": "[editContent]",
+									className: "flex flex-wrap items-center gap-2 mt-1.5",
+									children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Badge, {
+											"data-uid": "src/components/FactoryTasks.tsx:123:19",
+											"data-prohibitions": "[editContent]",
+											variant: "outline",
+											className: "text-[10px] h-5",
+											children: task.type
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Badge, {
+											"data-uid": "src/components/FactoryTasks.tsx:126:19",
+											"data-prohibitions": "[editContent]",
+											variant: "secondary",
+											className: `text-[10px] h-5 ${task.priority === "Alta" && !task.completed ? "bg-orange-100 text-orange-700 hover:bg-orange-200" : ""}`,
+											children: task.priority
+										}),
+										task.dueDate && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+											"data-uid": "src/components/FactoryTasks.tsx:133:21",
+											"data-prohibitions": "[editContent]",
+											className: `text-[11px] flex items-center gap-1 ${isOverdue ? "text-destructive font-medium" : "text-muted-foreground"}`,
+											children: [isOverdue ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CircleAlert, {
+												"data-uid": "src/components/FactoryTasks.tsx:137:25",
+												"data-prohibitions": "[editContent]",
+												className: "w-3 h-3"
+											}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Calendar, {
+												"data-uid": "src/components/FactoryTasks.tsx:139:25",
+												"data-prohibitions": "[editContent]",
+												className: "w-3 h-3"
+											}), new Date(task.dueDate).toLocaleDateString("pt-BR")]
+										})
+									]
+								})]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+								"data-uid": "src/components/FactoryTasks.tsx:146:15",
+								"data-prohibitions": "[]",
+								variant: "ghost",
+								size: "icon",
+								className: "h-8 w-8 text-muted-foreground hover:text-destructive shrink-0",
+								onClick: () => deleteTask(task.id),
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, {
+									"data-uid": "src/components/FactoryTasks.tsx:152:17",
+									"data-prohibitions": "[editContent]",
+									className: "w-4 h-4"
+								})
+							})
+						]
+					}, task.id);
+				})
+			})
+		]
+	});
+}
+//#endregion
 //#region src/pages/Cadastro.tsx
 function Cadastro() {
 	const { factories, deleteFactory } = useAppContext();
@@ -57856,42 +58537,42 @@ function Cadastro() {
 		})));
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		"data-uid": "src/pages/Cadastro.tsx:55:5",
+		"data-uid": "src/pages/Cadastro.tsx:56:5",
 		"data-prohibitions": "[editContent]",
 		className: "space-y-6 animate-fade-in pb-10",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Cadastro.tsx:56:7",
+				"data-uid": "src/pages/Cadastro.tsx:57:7",
 				"data-prohibitions": "[]",
 				className: "flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Cadastro.tsx:57:9",
+					"data-uid": "src/pages/Cadastro.tsx:58:9",
 					"data-prohibitions": "[]",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-						"data-uid": "src/pages/Cadastro.tsx:58:11",
+						"data-uid": "src/pages/Cadastro.tsx:59:11",
 						"data-prohibitions": "[]",
 						className: "text-2xl font-bold tracking-tight",
 						children: "Cadastro de Fábricas"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						"data-uid": "src/pages/Cadastro.tsx:59:11",
+						"data-uid": "src/pages/Cadastro.tsx:60:11",
 						"data-prohibitions": "[]",
 						className: "text-muted-foreground text-sm",
 						children: "Gerencie o banco de dados de clientes e prospects."
 					})]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Cadastro.tsx:63:9",
+					"data-uid": "src/pages/Cadastro.tsx:64:9",
 					"data-prohibitions": "[]",
 					className: "flex items-center gap-2 w-full sm:w-auto",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/pages/Cadastro.tsx:64:11",
+						"data-uid": "src/pages/Cadastro.tsx:65:11",
 						"data-prohibitions": "[]",
 						className: "relative w-full sm:w-72",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Search, {
-							"data-uid": "src/pages/Cadastro.tsx:65:13",
+							"data-uid": "src/pages/Cadastro.tsx:66:13",
 							"data-prohibitions": "[editContent]",
 							className: "absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-							"data-uid": "src/pages/Cadastro.tsx:66:13",
+							"data-uid": "src/pages/Cadastro.tsx:67:13",
 							"data-prohibitions": "[editContent]",
 							placeholder: "Buscar fábrica, cidade ou setor...",
 							value: search,
@@ -57899,14 +58580,14 @@ function Cadastro() {
 							className: "pl-9"
 						})]
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-						"data-uid": "src/pages/Cadastro.tsx:73:11",
+						"data-uid": "src/pages/Cadastro.tsx:74:11",
 						"data-prohibitions": "[]",
 						variant: "outline",
 						size: "icon",
 						onClick: handleExport,
 						title: "Exportar para Excel (CSV)",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Download, {
-							"data-uid": "src/pages/Cadastro.tsx:79:13",
+							"data-uid": "src/pages/Cadastro.tsx:80:13",
 							"data-prohibitions": "[editContent]",
 							className: "w-4 h-4"
 						})
@@ -57914,52 +58595,52 @@ function Cadastro() {
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				"data-uid": "src/pages/Cadastro.tsx:84:7",
+				"data-uid": "src/pages/Cadastro.tsx:85:7",
 				"data-prohibitions": "[editContent]",
 				className: "bg-card border rounded-lg overflow-hidden shadow-subtle",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Cadastro.tsx:85:9",
+					"data-uid": "src/pages/Cadastro.tsx:86:9",
 					"data-prohibitions": "[editContent]",
 					className: "overflow-x-auto",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Table, {
-						"data-uid": "src/pages/Cadastro.tsx:86:11",
+						"data-uid": "src/pages/Cadastro.tsx:87:11",
 						"data-prohibitions": "[editContent]",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHeader, {
-							"data-uid": "src/pages/Cadastro.tsx:87:13",
+							"data-uid": "src/pages/Cadastro.tsx:88:13",
 							"data-prohibitions": "[]",
 							className: "bg-muted/50",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableRow, {
-								"data-uid": "src/pages/Cadastro.tsx:88:15",
+								"data-uid": "src/pages/Cadastro.tsx:89:15",
 								"data-prohibitions": "[]",
 								children: [
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:89:17",
+										"data-uid": "src/pages/Cadastro.tsx:90:17",
 										"data-prohibitions": "[]",
 										children: "Fábrica"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:90:17",
+										"data-uid": "src/pages/Cadastro.tsx:91:17",
 										"data-prohibitions": "[]",
 										children: "Local"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:91:17",
+										"data-uid": "src/pages/Cadastro.tsx:92:17",
 										"data-prohibitions": "[]",
 										children: "Setor / Linha"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:92:17",
+										"data-uid": "src/pages/Cadastro.tsx:93:17",
 										"data-prohibitions": "[]",
 										children: "Status"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:93:17",
+										"data-uid": "src/pages/Cadastro.tsx:94:17",
 										"data-prohibitions": "[]",
 										className: "text-right",
 										children: "Potencial"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:94:17",
+										"data-uid": "src/pages/Cadastro.tsx:95:17",
 										"data-prohibitions": "[]",
 										className: "text-center",
 										children: "Ações"
@@ -57967,66 +58648,66 @@ function Cadastro() {
 								]
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableBody, {
-							"data-uid": "src/pages/Cadastro.tsx:97:13",
+							"data-uid": "src/pages/Cadastro.tsx:98:13",
 							"data-prohibitions": "[editContent]",
 							children: [filtered.map((f) => {
 								const stale = isStale(f.lastInteraction);
 								return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableRow, {
-									"data-uid": "src/pages/Cadastro.tsx:101:19",
+									"data-uid": "src/pages/Cadastro.tsx:102:19",
 									"data-prohibitions": "[editContent]",
 									className: stale ? "bg-destructive/5" : "",
 									children: [
 										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:102:21",
+											"data-uid": "src/pages/Cadastro.tsx:103:21",
 											"data-prohibitions": "[editContent]",
 											className: "font-medium",
 											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:103:23",
+												"data-uid": "src/pages/Cadastro.tsx:104:23",
 												"data-prohibitions": "[editContent]",
 												className: "flex items-center gap-2",
 												children: [f.name, stale && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TriangleAlert, {
-													"data-uid": "src/pages/Cadastro.tsx:106:27",
+													"data-uid": "src/pages/Cadastro.tsx:107:27",
 													"data-prohibitions": "[editContent]",
 													className: "w-4 h-4 text-destructive",
 													title: "Sem interação há mais de 15 dias"
 												})]
 											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:112:23",
+												"data-uid": "src/pages/Cadastro.tsx:113:23",
 												"data-prohibitions": "[editContent]",
 												className: "text-xs text-muted-foreground mt-1",
 												children: f.operationTypes
 											})]
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:114:21",
+											"data-uid": "src/pages/Cadastro.tsx:115:21",
 											"data-prohibitions": "[editContent]",
 											children: [f.city, /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:116:23",
+												"data-uid": "src/pages/Cadastro.tsx:117:23",
 												"data-prohibitions": "[editContent]",
 												className: "text-xs text-muted-foreground mt-1",
 												children: f.region
 											})]
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:118:21",
+											"data-uid": "src/pages/Cadastro.tsx:119:21",
 											"data-prohibitions": "[editContent]",
 											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:119:23",
+												"data-uid": "src/pages/Cadastro.tsx:120:23",
 												"data-prohibitions": "[editContent]",
 												className: "font-medium",
 												children: f.sector || "-"
 											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:120:23",
+												"data-uid": "src/pages/Cadastro.tsx:121:23",
 												"data-prohibitions": "[editContent]",
 												className: "text-xs text-muted-foreground mt-1",
 												children: f.productLineAffinity || "-"
 											})]
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:124:21",
+											"data-uid": "src/pages/Cadastro.tsx:125:21",
 											"data-prohibitions": "[editContent]",
 											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Badge, {
-												"data-uid": "src/pages/Cadastro.tsx:125:23",
+												"data-uid": "src/pages/Cadastro.tsx:126:23",
 												"data-prohibitions": "[editContent]",
 												variant: f.status === "Atendido" ? "default" : f.status === "Prospeção" ? "secondary" : "outline",
 												className: "rounded-full",
@@ -58034,42 +58715,42 @@ function Cadastro() {
 											})
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:138:21",
+											"data-uid": "src/pages/Cadastro.tsx:139:21",
 											"data-prohibitions": "[editContent]",
 											className: "text-right font-semibold",
 											children: [formatCurrency(f.potentialValue), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:140:23",
+												"data-uid": "src/pages/Cadastro.tsx:141:23",
 												"data-prohibitions": "[editContent]",
 												className: "text-xs text-muted-foreground font-normal mt-1",
 												children: [f.capacity, " t/mês"]
 											})]
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:144:21",
+											"data-uid": "src/pages/Cadastro.tsx:145:21",
 											"data-prohibitions": "[]",
 											children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:145:23",
+												"data-uid": "src/pages/Cadastro.tsx:146:23",
 												"data-prohibitions": "[]",
 												className: "flex items-center justify-center gap-2",
 												children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-													"data-uid": "src/pages/Cadastro.tsx:146:25",
+													"data-uid": "src/pages/Cadastro.tsx:147:25",
 													"data-prohibitions": "[]",
 													variant: "ghost",
 													size: "icon",
 													onClick: () => setEditing(f),
 													children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pen, {
-														"data-uid": "src/pages/Cadastro.tsx:147:27",
+														"data-uid": "src/pages/Cadastro.tsx:148:27",
 														"data-prohibitions": "[editContent]",
 														className: "w-4 h-4 text-primary"
 													})
 												}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-													"data-uid": "src/pages/Cadastro.tsx:149:25",
+													"data-uid": "src/pages/Cadastro.tsx:150:25",
 													"data-prohibitions": "[]",
 													variant: "ghost",
 													size: "icon",
 													onClick: () => deleteFactory(f.id),
 													children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, {
-														"data-uid": "src/pages/Cadastro.tsx:150:27",
+														"data-uid": "src/pages/Cadastro.tsx:151:27",
 														"data-prohibitions": "[editContent]",
 														className: "w-4 h-4 text-destructive"
 													})
@@ -58079,10 +58760,10 @@ function Cadastro() {
 									]
 								}, f.id);
 							}), filtered.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableRow, {
-								"data-uid": "src/pages/Cadastro.tsx:158:17",
+								"data-uid": "src/pages/Cadastro.tsx:159:17",
 								"data-prohibitions": "[]",
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-									"data-uid": "src/pages/Cadastro.tsx:159:19",
+									"data-uid": "src/pages/Cadastro.tsx:160:19",
 									"data-prohibitions": "[]",
 									colSpan: 6,
 									className: "text-center h-24 text-muted-foreground",
@@ -58094,65 +58775,85 @@ function Cadastro() {
 				})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Dialog, {
-				"data-uid": "src/pages/Cadastro.tsx:169:7",
+				"data-uid": "src/pages/Cadastro.tsx:170:7",
 				"data-prohibitions": "[editContent]",
 				open: !!editing,
 				onOpenChange: (open) => !open && setEditing(null),
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogContent, {
-					"data-uid": "src/pages/Cadastro.tsx:170:9",
+					"data-uid": "src/pages/Cadastro.tsx:171:9",
 					"data-prohibitions": "[editContent]",
 					className: "max-w-3xl max-h-[90vh] overflow-y-auto",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogHeader, {
-						"data-uid": "src/pages/Cadastro.tsx:171:11",
+						"data-uid": "src/pages/Cadastro.tsx:172:11",
 						"data-prohibitions": "[editContent]",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogTitle, {
-							"data-uid": "src/pages/Cadastro.tsx:172:13",
+							"data-uid": "src/pages/Cadastro.tsx:173:13",
 							"data-prohibitions": "[editContent]",
 							children: ["Fábrica: ", editing?.name]
 						})
 					}), editing && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Tabs, {
-						"data-uid": "src/pages/Cadastro.tsx:175:13",
+						"data-uid": "src/pages/Cadastro.tsx:176:13",
 						"data-prohibitions": "[]",
 						defaultValue: "dados",
 						className: "w-full mt-2",
 						children: [
 							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TabsList, {
-								"data-uid": "src/pages/Cadastro.tsx:176:15",
+								"data-uid": "src/pages/Cadastro.tsx:177:15",
 								"data-prohibitions": "[]",
-								className: "grid w-full grid-cols-2",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsTrigger, {
-									"data-uid": "src/pages/Cadastro.tsx:177:17",
-									"data-prohibitions": "[]",
-									value: "dados",
-									children: "Dados Cadastrais"
-								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsTrigger, {
-									"data-uid": "src/pages/Cadastro.tsx:178:17",
-									"data-prohibitions": "[]",
-									value: "docs",
-									children: "Documentos e Anexos"
-								})]
+								className: "grid w-full grid-cols-3",
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsTrigger, {
+										"data-uid": "src/pages/Cadastro.tsx:178:17",
+										"data-prohibitions": "[]",
+										value: "dados",
+										children: "Cadastro"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsTrigger, {
+										"data-uid": "src/pages/Cadastro.tsx:179:17",
+										"data-prohibitions": "[]",
+										value: "docs",
+										children: "Documentos"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsTrigger, {
+										"data-uid": "src/pages/Cadastro.tsx:180:17",
+										"data-prohibitions": "[]",
+										value: "tasks",
+										children: "Tarefas"
+									})
+								]
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsContent, {
-								"data-uid": "src/pages/Cadastro.tsx:180:15",
+								"data-uid": "src/pages/Cadastro.tsx:182:15",
 								"data-prohibitions": "[]",
 								value: "dados",
 								className: "pt-4 focus-visible:outline-none",
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FactoryForm, {
-									"data-uid": "src/pages/Cadastro.tsx:181:17",
+									"data-uid": "src/pages/Cadastro.tsx:183:17",
 									"data-prohibitions": "[editContent]",
 									factory: editing,
 									onSubmit: () => setEditing(null)
 								})
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsContent, {
-								"data-uid": "src/pages/Cadastro.tsx:183:15",
+								"data-uid": "src/pages/Cadastro.tsx:185:15",
 								"data-prohibitions": "[]",
 								value: "docs",
 								className: "pt-4 focus-visible:outline-none",
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FactoryDocuments, {
-									"data-uid": "src/pages/Cadastro.tsx:184:17",
+									"data-uid": "src/pages/Cadastro.tsx:186:17",
 									"data-prohibitions": "[editContent]",
 									factory: editing
+								})
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsContent, {
+								"data-uid": "src/pages/Cadastro.tsx:188:15",
+								"data-prohibitions": "[]",
+								value: "tasks",
+								className: "pt-4 focus-visible:outline-none",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FactoryTasks, {
+									"data-uid": "src/pages/Cadastro.tsx:189:17",
+									"data-prohibitions": "[editContent]",
+									factoryId: editing.id
 								})
 							})
 						]
@@ -59764,4 +60465,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BrowserRouter, {
 }));
 //#endregion
 
-//# sourceMappingURL=index-DctH3Fz-.js.map
+//# sourceMappingURL=index-BqxCCYRq.js.map

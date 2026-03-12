@@ -31,7 +31,7 @@ export function FactoryListCard() {
   })
 
   return (
-    <Card className="shadow-subtle lg:col-span-3">
+    <Card className="shadow-subtle lg:col-span-3 print:hidden">
       <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <CardTitle>Lista de Fábricas</CardTitle>
         <div className="flex gap-2">

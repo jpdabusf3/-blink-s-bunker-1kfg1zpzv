@@ -55,6 +55,20 @@ export interface Order {
   orderDate: string
 }
 
+export type TaskType = 'Enviar amostra' | 'Ligar para Follow-up' | 'Outra'
+export type TaskPriority = 'Baixa' | 'Média' | 'Alta'
+
+export interface Task {
+  id: string
+  factoryId: string
+  description: string
+  type: TaskType
+  dueDate?: string
+  completed: boolean
+  priority: TaskPriority
+  createdAt: string
+}
+
 export interface Factory {
   id: string
   name: string

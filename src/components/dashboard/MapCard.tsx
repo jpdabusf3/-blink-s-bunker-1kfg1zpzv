@@ -23,7 +23,7 @@ export function MapCard() {
   })
 
   return (
-    <Card className="shadow-subtle">
+    <Card className="shadow-subtle print:hidden">
       <CardHeader>
         <CardTitle>Mapa Geográfico (MT)</CardTitle>
       </CardHeader>

@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { FactoryForm } from '@/components/FactoryForm'
 import { FactoryDocuments } from '@/components/FactoryDocuments'
+import { FactoryTasks } from '@/components/FactoryTasks'
 import { isStale, formatCurrency, exportToCSV } from '@/lib/utils'
 import { AlertTriangle, Search, Edit2, Trash2, Download } from 'lucide-react'
 import { Factory } from '@/types'
@@ -173,15 +174,19 @@ export default function Cadastro() {
           </DialogHeader>
           {editing && (
             <Tabs defaultValue="dados" className="w-full mt-2">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="dados">Dados Cadastrais</TabsTrigger>
-                <TabsTrigger value="docs">Documentos e Anexos</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="dados">Cadastro</TabsTrigger>
+                <TabsTrigger value="docs">Documentos</TabsTrigger>
+                <TabsTrigger value="tasks">Tarefas</TabsTrigger>
               </TabsList>
               <TabsContent value="dados" className="pt-4 focus-visible:outline-none">
                 <FactoryForm factory={editing} onSubmit={() => setEditing(null)} />
               </TabsContent>
               <TabsContent value="docs" className="pt-4 focus-visible:outline-none">
                 <FactoryDocuments factory={editing} />
+              </TabsContent>
+              <TabsContent value="tasks" className="pt-4 focus-visible:outline-none">
+                <FactoryTasks factoryId={editing.id} />
               </TabsContent>
             </Tabs>
           )}

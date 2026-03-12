@@ -19,21 +19,24 @@ export default function Index() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in pb-10">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+    <div className="space-y-6 animate-fade-in pb-10 print:m-0 print:p-0 print:space-y-8">
+      {/* Print Header */}
+      <div className="hidden print:block mb-8 border-b-2 border-primary pb-4">
+        <h1 className="text-3xl font-bold text-primary mb-1">Relatório Executivo - MT</h1>
+        <p className="text-muted-foreground text-sm">
+          Inteligência Comercial Blink • Gerado em {new Date().toLocaleDateString('pt-BR')}
+        </p>
+      </div>
+
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2 print:hidden">
         <h1 className="text-2xl font-bold tracking-tight">Visão Geral MT</h1>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => window.print()}
-          className="gap-2 print:hidden shadow-sm"
-        >
+        <Button size="sm" onClick={() => window.print()} className="gap-2 shadow-sm">
           <Download className="w-4 h-4" /> Exportar Relatório PDF
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="shadow-subtle text-center flex flex-col justify-center items-center">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-4 print:gap-4 print:mb-8">
+        <Card className="shadow-subtle text-center flex flex-col justify-center items-center print:border-none print:shadow-none print:bg-muted/10">
           <CardHeader className="pb-2 pt-4">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Fábricas Mapeadas
@@ -43,7 +46,7 @@ export default function Index() {
             <div className="text-3xl font-bold">{factories.length}</div>
           </CardContent>
         </Card>
-        <Card className="shadow-subtle text-center flex flex-col justify-center items-center">
+        <Card className="shadow-subtle text-center flex flex-col justify-center items-center print:border-none print:shadow-none print:bg-muted/10">
           <CardHeader className="pb-2 pt-4">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Ativas / Prospecção
@@ -55,40 +58,40 @@ export default function Index() {
             </div>
           </CardContent>
         </Card>
-        <Card className="shadow-subtle text-center flex flex-col justify-center items-center">
+        <Card className="shadow-subtle text-center flex flex-col justify-center items-center print:border-none print:shadow-none print:bg-primary/5">
           <CardHeader className="pb-2 pt-4">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Receita Potencial
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-[12px] font-bold text-primary">
+            <div className="text-[12px] font-bold text-primary print:text-xl">
               {formatCompactCurrency(metrics.revenue)}
             </div>
           </CardContent>
         </Card>
-        <Card className="shadow-subtle text-center flex flex-col justify-center items-center">
+        <Card className="shadow-subtle text-center flex flex-col justify-center items-center print:border-none print:shadow-none print:bg-accent/5">
           <CardHeader className="pb-2 pt-4">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Forecast Ponderado
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-[12px] font-bold text-accent">
+            <div className="text-[12px] font-bold text-accent print:text-xl">
               {formatCompactCurrency(metrics.weighted)}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-1">
         <MapCard />
         <ScoreEvolutionCard />
       </div>
 
       <DashboardCharts />
 
-      <div className="grid grid-cols-1 gap-6 print:break-inside-avoid">
+      <div className="grid grid-cols-1 gap-6 print:hidden">
         <FactoryListCard />
       </div>
     </div>

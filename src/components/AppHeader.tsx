@@ -1,4 +1,4 @@
-import { Bell, Plus, AlertTriangle, Calendar } from 'lucide-react'
+import { Bell, Plus, AlertTriangle, Calendar, WifiOff, CheckCircle2 } from 'lucide-react'
 import { Button } from './ui/button'
 import { useAppContext } from '@/store/AppContext'
 import { isStale, isApproachingDeadline, isPassedDeadline } from '@/lib/utils'
@@ -16,7 +16,7 @@ import { SidebarTrigger } from './ui/sidebar'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 
 export function AppHeader() {
-  const { factories } = useAppContext()
+  const { factories, tasks, isOnline } = useAppContext()
   const [open, setOpen] = useState(false)
 
   const notifications = factories.flatMap((f) => {
@@ -47,6 +47,31 @@ export function AppHeader() {
     return notifs
   })
 
+  tasks.forEach((t) => {
+    if (!t.completed) {
+      const isOverdue = isPassedDeadline(t.dueDate)
+      const isHighPriority = t.priority === 'Alta'
+
+      if (isOverdue) {
+        const factory = factories.find((f) => f.id === t.factoryId)
+        notifications.push({
+          id: `task-overdue-${t.id}`,
+          type: 'destructive',
+          icon: CheckCircle2,
+          message: `Tarefa atrasada: ${t.description} (${factory?.name || 'Fábrica'})`,
+        })
+      } else if (isHighPriority) {
+        const factory = factories.find((f) => f.id === t.factoryId)
+        notifications.push({
+          id: `task-high-${t.id}`,
+          type: 'warning',
+          icon: CheckCircle2,
+          message: `Prioridade Alta: ${t.description} (${factory?.name || 'Fábrica'})`,
+        })
+      }
+    }
+  })
+
   const notifCount = notifications.length
 
   return (
@@ -56,6 +81,16 @@ export function AppHeader() {
         <h1 className="font-semibold text-lg lg:text-xl text-primary hidden sm:block">
           Painel Executivo
         </h1>
+        {!isOnline && (
+          <div
+            className="flex items-center gap-1.5 text-[11px] font-medium text-orange-600 bg-orange-500/10 px-2.5 py-1 rounded-md ml-2"
+            title="Sincronização pendente. Algumas funcionalidades podem estar limitadas."
+          >
+            <WifiOff className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Offline (Modo Leitura)</span>
+            <span className="sm:hidden">Offline</span>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-4 lg:gap-6">

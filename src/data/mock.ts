@@ -1,4 +1,4 @@
-import { Factory, Order } from '@/types'
+import { Factory, Order, Task } from '@/types'
 
 const today = new Date()
 const getDates = () =>
@@ -238,5 +238,28 @@ export const mockOrders: Order[] = [
     unitValue: 150,
     totalValue: 12000,
     orderDate: new Date(today.getTime() - 2 * 86400000).toISOString(),
+  },
+]
+
+export const mockTasks: Task[] = [
+  {
+    id: 't1',
+    factoryId: '2',
+    description: 'Enviar kit de amostras de adsorventes',
+    type: 'Enviar amostra',
+    priority: 'Alta',
+    completed: false,
+    dueDate: new Date(today.getTime() + 2 * 86400000).toISOString(),
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 't2',
+    factoryId: '1',
+    description: 'Confirmar recebimento da minuta',
+    type: 'Ligar para Follow-up',
+    priority: 'Média',
+    completed: true,
+    dueDate: new Date(today.getTime() - 1 * 86400000).toISOString(),
+    createdAt: new Date(today.getTime() - 3 * 86400000).toISOString(),
   },
 ]

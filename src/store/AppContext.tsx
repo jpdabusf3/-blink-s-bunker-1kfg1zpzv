@@ -1,22 +1,65 @@
-import React, { createContext, useContext, useState } from 'react'
-import { mockFactories, mockOrders } from '../data/mock'
-import type { Factory, Order } from '../types'
+import React, { createContext, useContext, useState, useEffect } from 'react'
+import { mockFactories, mockOrders, mockTasks } from '../data/mock'
+import type { Factory, Order, Task } from '../types'
 
 interface AppContextData {
   factories: Factory[]
   setFactories: React.Dispatch<React.SetStateAction<Factory[]>>
   orders: Order[]
   setOrders: React.Dispatch<React.SetStateAction<Order[]>>
+  tasks: Task[]
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>
+  isOnline: boolean
   addFactory: (data: Partial<Factory>) => void
   updateFactory: (id: string, data: Partial<Factory>) => void
   deleteFactory: (id: string) => void
+  addTask: (data: Omit<Task, 'id' | 'createdAt'>) => void
+  updateTask: (id: string, data: Partial<Task>) => void
+  deleteTask: (id: string) => void
 }
 
 export const AppContext = createContext<AppContextData>({} as AppContextData)
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
-  const [factories, setFactories] = useState<Factory[]>(mockFactories)
-  const [orders, setOrders] = useState<Order[]>(mockOrders)
+  const [isOnline, setIsOnline] = useState(navigator.onLine)
+
+  const [factories, setFactories] = useState<Factory[]>(() => {
+    const saved = localStorage.getItem('blink_factories')
+    return saved ? JSON.parse(saved) : mockFactories
+  })
+
+  const [orders, setOrders] = useState<Order[]>(() => {
+    const saved = localStorage.getItem('blink_orders')
+    return saved ? JSON.parse(saved) : mockOrders
+  })
+
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    const saved = localStorage.getItem('blink_tasks')
+    return saved ? JSON.parse(saved) : mockTasks
+  })
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('blink_factories', JSON.stringify(factories))
+  }, [factories])
+
+  useEffect(() => {
+    localStorage.setItem('blink_orders', JSON.stringify(orders))
+  }, [orders])
+
+  useEffect(() => {
+    localStorage.setItem('blink_tasks', JSON.stringify(tasks))
+  }, [tasks])
 
   const addFactory = (data: Partial<Factory>) => {
     const newFactory: Factory = {
@@ -65,6 +108,23 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     setFactories((prev) => prev.filter((f) => f.id !== id))
   }
 
+  const addTask = (data: Omit<Task, 'id' | 'createdAt'>) => {
+    const newTask: Task = {
+      ...data,
+      id: Math.random().toString(36).substr(2, 9),
+      createdAt: new Date().toISOString(),
+    }
+    setTasks((prev) => [newTask, ...prev])
+  }
+
+  const updateTask = (id: string, data: Partial<Task>) => {
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...data } : t)))
+  }
+
+  const deleteTask = (id: string) => {
+    setTasks((prev) => prev.filter((t) => t.id !== id))
+  }
+
   return (
     <AppContext.Provider
       value={{
@@ -72,9 +132,15 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         setFactories,
         orders,
         setOrders,
+        tasks,
+        setTasks,
+        isOnline,
         addFactory,
         updateFactory,
         deleteFactory,
+        addTask,
+        updateTask,
+        deleteTask,
       }}
     >
       {children}

@@ -55,8 +55,8 @@ export function DashboardCharts() {
     .sort((a, b) => b.value - a.value)
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <Card className="shadow-subtle">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-2">
+      <Card className="shadow-subtle print:hidden">
         <CardHeader>
           <CardTitle>Funil de Vendas</CardTitle>
           <CardDescription>Valor por estágio</CardDescription>
@@ -83,7 +83,7 @@ export function DashboardCharts() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-subtle">
+      <Card className="shadow-subtle print:hidden">
         <CardHeader>
           <CardTitle>Distribuição Regional</CardTitle>
           <CardDescription>Potencial financeiro</CardDescription>
@@ -114,10 +114,10 @@ export function DashboardCharts() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-subtle">
+      <Card className="shadow-subtle print:break-inside-avoid print:shadow-none print:border">
         <CardHeader>
-          <CardTitle>Top Volume (t/mês)</CardTitle>
-          <CardDescription>Maiores capacidades</CardDescription>
+          <CardTitle>Ranking Volume de Compras (t/mês)</CardTitle>
+          <CardDescription>Maiores capacidades do pipeline</CardDescription>
         </CardHeader>
         <CardContent className="h-[280px]">
           <ChartContainer
@@ -141,10 +141,10 @@ export function DashboardCharts() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-subtle">
+      <Card className="shadow-subtle print:break-inside-avoid print:shadow-none print:border">
         <CardHeader>
-          <CardTitle>Ranking Linhas de Produto</CardTitle>
-          <CardDescription>Receita por tendência</CardDescription>
+          <CardTitle>Ranking Produtos Mais Vendidos</CardTitle>
+          <CardDescription>Receita por tendência de linha</CardDescription>
         </CardHeader>
         <CardContent className="h-[280px]">
           <ChartContainer

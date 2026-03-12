@@ -19,11 +19,16 @@ export function ScoreEvolutionCard() {
   const data = factory?.scoreHistory || []
 
   return (
-    <Card className="shadow-subtle">
+    <Card className="shadow-subtle print:break-inside-avoid print:col-span-2 print:shadow-none print:border">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle>Evolução de Score</CardTitle>
+        <div>
+          <CardTitle>Evolução de Score</CardTitle>
+          <span className="hidden print:block text-sm text-muted-foreground mt-1 font-medium">
+            {factory?.name}
+          </span>
+        </div>
         <Select value={selectedId} onValueChange={setSelectedId}>
-          <SelectTrigger className="w-[180px] h-8 text-xs">
+          <SelectTrigger className="w-[180px] h-8 text-xs print:hidden">
             <SelectValue placeholder="Selecione..." />
           </SelectTrigger>
           <SelectContent>
