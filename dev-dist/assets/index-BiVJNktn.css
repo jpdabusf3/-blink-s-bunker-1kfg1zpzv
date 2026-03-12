@@ -645,6 +645,10 @@ body {
   visibility: hidden;
 }
 
+.collapse{
+  visibility: collapse;
+}
+
 .fixed{
   position: fixed;
 }
@@ -2875,6 +2879,10 @@ body {
   background-color: rgb(254 215 170 / var(--tw-bg-opacity, 1));
 }
 
+.hover\:bg-primary\/5:hover{
+  background-color: hsl(var(--primary) / 0.05);
+}
+
 .hover\:bg-primary\/80:hover{
   background-color: hsl(var(--primary) / 0.8);
 }
@@ -4061,6 +4069,10 @@ body {
     grid-column: span 1 / span 1;
   }
 
+  .lg\:col-span-2{
+    grid-column: span 2 / span 2;
+  }
+
   .lg\:col-span-3{
     grid-column: span 3 / span 3;
   }
@@ -4077,8 +4089,8 @@ body {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .lg\:grid-cols-5{
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+  .lg\:grid-cols-6{
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   .lg\:flex-row{

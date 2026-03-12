@@ -17,6 +17,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -38,8 +44,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAppContext } from '@/store/AppContext'
 import { formatCurrency } from '@/lib/utils'
+import { exportOrdersToExcel, exportOrdersToPDF } from '@/lib/exportUtils'
 import { OrderForm } from '@/components/OrderForm'
-import { Plus, Edit2, Trash2, Filter } from 'lucide-react'
+import { Plus, Edit2, Trash2, Filter, Download } from 'lucide-react'
 import { Order } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 
@@ -103,6 +110,42 @@ export default function Pedidos() {
     setSearchParams({})
   }
 
+  const handleExportExcel = () => {
+    if (filteredOrders.length === 0) {
+      toast({
+        title: 'Nenhum dado',
+        description: 'Não há pedidos para exportar com os filtros atuais.',
+        variant: 'destructive',
+      })
+      return
+    }
+    exportOrdersToExcel(filteredOrders, factories)
+  }
+
+  const handleExportPDF = () => {
+    if (filteredOrders.length === 0) {
+      toast({
+        title: 'Nenhum dado',
+        description: 'Não há pedidos para exportar com os filtros atuais.',
+        variant: 'destructive',
+      })
+      return
+    }
+    const success = exportOrdersToPDF(filteredOrders, factories, {
+      factoryIdParam,
+      productLine,
+      startDate,
+      endDate,
+    })
+    if (!success) {
+      toast({
+        title: 'Aviso',
+        description: 'Desbloqueie os pop-ups para gerar o PDF.',
+        variant: 'destructive',
+      })
+    }
+  }
+
   return (
     <div className="space-y-6 animate-fade-in pb-10">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -136,12 +179,12 @@ export default function Pedidos() {
             <Filter className="w-5 h-5 text-primary" /> Filtros Avançados
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-          <div className="space-y-2">
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
+          <div className="space-y-2 lg:col-span-1">
             <Label>Data Inicial</Label>
             <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 lg:col-span-1">
             <Label>Data Final</Label>
             <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </div>
@@ -152,10 +195,10 @@ export default function Pedidos() {
               onValueChange={(val) => setSearchParams(val === 'all' ? {} : { factoryId: val })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Todas as Fábricas" />
+                <SelectValue placeholder="Todas" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas as Fábricas</SelectItem>
+                <SelectItem value="all">Todas</SelectItem>
                 {factories.map((f) => (
                   <SelectItem key={f.id} value={f.id}>
                     {f.name}
@@ -164,14 +207,14 @@ export default function Pedidos() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 lg:col-span-1">
             <Label>Linha</Label>
             <Select value={productLine} onValueChange={setProductLine}>
               <SelectTrigger>
-                <SelectValue placeholder="Todas as Linhas" />
+                <SelectValue placeholder="Todas" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas as Linhas</SelectItem>
+                <SelectItem value="all">Todas</SelectItem>
                 {['Adsorventes', 'Prebióticos', 'Minerais Orgânicos', 'Blends', 'Ingredientes'].map(
                   (l) => (
                     <SelectItem key={l} value={l}>
@@ -182,9 +225,29 @@ export default function Pedidos() {
               </SelectContent>
             </Select>
           </div>
-          <Button variant="outline" onClick={clearFilters} className="w-full text-muted-foreground">
-            Limpar Filtros
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 lg:col-span-2 w-full">
+            <Button
+              variant="outline"
+              onClick={clearFilters}
+              className="w-full text-muted-foreground"
+            >
+              Limpar Filtros
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 text-primary border-primary/20 hover:bg-primary/5"
+                >
+                  <Download className="w-4 h-4" /> Exportar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportPDF}>Exportar como PDF</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportExcel}>Exportar como Excel</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </CardContent>
       </Card>
 
