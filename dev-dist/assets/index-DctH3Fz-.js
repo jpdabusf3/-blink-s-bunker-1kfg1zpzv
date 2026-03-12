@@ -20811,6 +20811,16 @@ function formatCurrency(value) {
 		maximumFractionDigits: 2
 	}).format(value);
 }
+function formatCompactCurrency(value) {
+	const isNegative = value < 0;
+	const absValue = Math.abs(value);
+	let formatted = "";
+	if (absValue >= 1e9) formatted = `R$ ${(absValue / 1e9).toFixed(1).replace(".", ",").replace(",0", "")}B`;
+	else if (absValue >= 1e6) formatted = `R$ ${(absValue / 1e6).toFixed(1).replace(".", ",").replace(",0", "")}M`;
+	else if (absValue >= 1e3) formatted = `R$ ${(absValue / 1e3).toFixed(1).replace(".", ",").replace(",0", "")}k`;
+	else return formatCurrency(value);
+	return isNegative ? `-${formatted}` : formatted;
+}
 function getMatrixScore(matrix) {
 	const vals = Object.values(matrix);
 	const sum = vals.reduce((a, b) => a + b, 0);
@@ -57033,60 +57043,60 @@ function Index() {
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 								"data-uid": "src/pages/Index.tsx:65:13",
 								"data-prohibitions": "[editContent]",
-								className: "text-3xl font-bold text-primary",
-								children: formatCurrency(metrics.revenue)
+								className: "text-[12px] font-bold text-primary",
+								children: formatCompactCurrency(metrics.revenue)
 							})
 						})]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-						"data-uid": "src/pages/Index.tsx:68:9",
+						"data-uid": "src/pages/Index.tsx:70:9",
 						"data-prohibitions": "[editContent]",
 						className: "shadow-subtle text-center flex flex-col justify-center items-center",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardHeader, {
-							"data-uid": "src/pages/Index.tsx:69:11",
+							"data-uid": "src/pages/Index.tsx:71:11",
 							"data-prohibitions": "[]",
 							className: "pb-2 pt-4",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
-								"data-uid": "src/pages/Index.tsx:70:13",
+								"data-uid": "src/pages/Index.tsx:72:13",
 								"data-prohibitions": "[]",
 								className: "text-sm font-medium text-muted-foreground",
 								children: "Forecast Ponderado"
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
-							"data-uid": "src/pages/Index.tsx:74:11",
+							"data-uid": "src/pages/Index.tsx:76:11",
 							"data-prohibitions": "[editContent]",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								"data-uid": "src/pages/Index.tsx:75:13",
+								"data-uid": "src/pages/Index.tsx:77:13",
 								"data-prohibitions": "[editContent]",
-								className: "text-3xl font-bold text-accent",
-								children: formatCurrency(metrics.weighted)
+								className: "text-[12px] font-bold text-accent",
+								children: formatCompactCurrency(metrics.weighted)
 							})
 						})]
 					})
 				]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Index.tsx:80:7",
+				"data-uid": "src/pages/Index.tsx:84:7",
 				"data-prohibitions": "[]",
 				className: "grid grid-cols-1 lg:grid-cols-2 gap-6",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MapCard, {
-					"data-uid": "src/pages/Index.tsx:81:9",
+					"data-uid": "src/pages/Index.tsx:85:9",
 					"data-prohibitions": "[editContent]"
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ScoreEvolutionCard, {
-					"data-uid": "src/pages/Index.tsx:82:9",
+					"data-uid": "src/pages/Index.tsx:86:9",
 					"data-prohibitions": "[editContent]"
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DashboardCharts, {
-				"data-uid": "src/pages/Index.tsx:85:7",
+				"data-uid": "src/pages/Index.tsx:89:7",
 				"data-prohibitions": "[editContent]"
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				"data-uid": "src/pages/Index.tsx:87:7",
+				"data-uid": "src/pages/Index.tsx:91:7",
 				"data-prohibitions": "[]",
 				className: "grid grid-cols-1 gap-6 print:break-inside-avoid",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FactoryListCard, {
-					"data-uid": "src/pages/Index.tsx:88:9",
+					"data-uid": "src/pages/Index.tsx:92:9",
 					"data-prohibitions": "[editContent]"
 				})
 			})
@@ -59754,4 +59764,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BrowserRouter, {
 }));
 //#endregion
 
-//# sourceMappingURL=index-DUrRo_pc.js.map
+//# sourceMappingURL=index-DctH3Fz-.js.map

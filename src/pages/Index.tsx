@@ -1,7 +1,7 @@
 import { useAppContext } from '@/store/AppContext'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { formatCurrency } from '@/lib/utils'
+import { formatCompactCurrency } from '@/lib/utils'
 import { Download } from 'lucide-react'
 import { MapCard } from '@/components/dashboard/MapCard'
 import { ScoreEvolutionCard } from '@/components/dashboard/ScoreEvolutionCard'
@@ -62,7 +62,9 @@ export default function Index() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">{formatCurrency(metrics.revenue)}</div>
+            <div className="text-[12px] font-bold text-primary">
+              {formatCompactCurrency(metrics.revenue)}
+            </div>
           </CardContent>
         </Card>
         <Card className="shadow-subtle text-center flex flex-col justify-center items-center">
@@ -72,7 +74,9 @@ export default function Index() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-accent">{formatCurrency(metrics.weighted)}</div>
+            <div className="text-[12px] font-bold text-accent">
+              {formatCompactCurrency(metrics.weighted)}
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -34,6 +34,24 @@ export function formatCurrency(value: number) {
   }).format(value)
 }
 
+export function formatCompactCurrency(value: number) {
+  const isNegative = value < 0
+  const absValue = Math.abs(value)
+  let formatted = ''
+
+  if (absValue >= 1e9) {
+    formatted = `R$ ${(absValue / 1e9).toFixed(1).replace('.', ',').replace(',0', '')}B`
+  } else if (absValue >= 1e6) {
+    formatted = `R$ ${(absValue / 1e6).toFixed(1).replace('.', ',').replace(',0', '')}M`
+  } else if (absValue >= 1e3) {
+    formatted = `R$ ${(absValue / 1e3).toFixed(1).replace('.', ',').replace(',0', '')}k`
+  } else {
+    return formatCurrency(value)
+  }
+
+  return isNegative ? `-${formatted}` : formatted
+}
+
 export function getMatrixScore(matrix: Factory['matrix']) {
   const vals = Object.values(matrix) as number[]
   const sum = vals.reduce((a, b) => a + b, 0)
