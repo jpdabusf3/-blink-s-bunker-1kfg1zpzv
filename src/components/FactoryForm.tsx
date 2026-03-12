@@ -1,5 +1,5 @@
 import React from 'react'
-import { Factory, Region, Status, FunnelStage } from '@/types'
+import { Factory, Region, Status, FunnelStage, Sector, ProductLine } from '@/types'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -30,6 +30,8 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
       name: fd.get('name') as string,
       city: fd.get('city') as string,
       region: fd.get('region') as Region,
+      sector: fd.get('sector') as Sector,
+      productLineAffinity: fd.get('productLineAffinity') as ProductLine,
       capacity: Number(fd.get('capacity')),
       potentialValue: Number(fd.get('potentialValue')),
       status: fd.get('status') as Status,
@@ -60,7 +62,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
         </div>
         <div className="space-y-2">
           <Label>Região</Label>
-          <Select name="region" defaultValue={factory?.region || 'Norte'}>
+          <Select name="region" defaultValue={factory?.region || 'Norte'} required>
             <SelectTrigger>
               <SelectValue placeholder="Selecione" />
             </SelectTrigger>
@@ -75,7 +77,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
         </div>
         <div className="space-y-2">
           <Label>Status</Label>
-          <Select name="status" defaultValue={factory?.status || 'Prospeção'}>
+          <Select name="status" defaultValue={factory?.status || 'Prospeção'} required>
             <SelectTrigger>
               <SelectValue placeholder="Selecione" />
             </SelectTrigger>
@@ -85,6 +87,54 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
                   {s}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Setor de Atuação</Label>
+          <Select name="sector" defaultValue={factory?.sector || 'Bovinos em Geral'} required>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              {[
+                'Aves',
+                'Suínos',
+                'PET',
+                'Aqua',
+                'Bovinos de Corte',
+                'Bovinos de Leite',
+                'Bovinos em Geral',
+                'Equinos',
+                'Monogástricos',
+                'Ruminantes',
+                'Multiespécie',
+              ].map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Tendência de Linha (Blink)</Label>
+          <Select
+            name="productLineAffinity"
+            defaultValue={factory?.productLineAffinity || 'Adsorventes'}
+            required
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              {['Adsorventes', 'Prebióticos', 'Minerais Orgânicos', 'Blends', 'Ingredientes'].map(
+                (s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ),
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -103,7 +153,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
         </div>
         <div className="space-y-2">
           <Label>Estágio no Funil</Label>
-          <Select name="funnelStage" defaultValue={factory?.funnelStage || 'Lead'}>
+          <Select name="funnelStage" defaultValue={factory?.funnelStage || 'Lead'} required>
             <SelectTrigger>
               <SelectValue placeholder="Selecione" />
             </SelectTrigger>

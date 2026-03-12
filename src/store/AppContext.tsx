@@ -21,6 +21,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       name: data.name || '',
       city: data.city || '',
       region: data.region || 'Norte',
+      sector: data.sector || 'Bovinos em Geral',
+      productLineAffinity: data.productLineAffinity || 'Adsorventes',
       capacity: data.capacity || 0,
       potentialValue: data.potentialValue || 0,
       status: data.status || 'Prospeção',

@@ -27,7 +27,9 @@ export default function Cadastro() {
   const filtered = factories.filter(
     (f) =>
       f.name.toLowerCase().includes(search.toLowerCase()) ||
-      f.city.toLowerCase().includes(search.toLowerCase()),
+      f.city.toLowerCase().includes(search.toLowerCase()) ||
+      f.sector?.toLowerCase().includes(search.toLowerCase()) ||
+      f.productLineAffinity?.toLowerCase().includes(search.toLowerCase()),
   )
 
   const handleExport = () => {
@@ -35,6 +37,8 @@ export default function Cadastro() {
       Nome: f.name,
       Cidade: f.city,
       Região: f.region,
+      Setor: f.sector || '',
+      'Linha Blink': f.productLineAffinity || '',
       Status: f.status,
       'Capacidade (t/mês)': f.capacity,
       'Potencial (R$)': f.potentialValue,
@@ -60,7 +64,7 @@ export default function Cadastro() {
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar fábrica ou cidade..."
+              placeholder="Buscar fábrica, cidade ou setor..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -84,6 +88,7 @@ export default function Cadastro() {
               <TableRow>
                 <TableHead>Fábrica</TableHead>
                 <TableHead>Local</TableHead>
+                <TableHead>Setor / Linha</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Potencial</TableHead>
                 <TableHead className="text-center">Ações</TableHead>
@@ -109,6 +114,12 @@ export default function Cadastro() {
                     <TableCell>
                       {f.city}
                       <div className="text-xs text-muted-foreground mt-1">{f.region}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium">{f.sector || '-'}</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {f.productLineAffinity || '-'}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -145,7 +156,7 @@ export default function Cadastro() {
               })}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
                     Nenhuma fábrica encontrada.
                   </TableCell>
                 </TableRow>

@@ -12,6 +12,26 @@ export type FunnelStage =
   | 'Pós-venda'
   | 'Perda'
 
+export type Sector =
+  | 'Aves'
+  | 'Suínos'
+  | 'PET'
+  | 'Aqua'
+  | 'Bovinos de Corte'
+  | 'Bovinos de Leite'
+  | 'Bovinos em Geral'
+  | 'Equinos'
+  | 'Monogástricos'
+  | 'Ruminantes'
+  | 'Multiespécie'
+
+export type ProductLine =
+  | 'Adsorventes'
+  | 'Prebióticos'
+  | 'Minerais Orgânicos'
+  | 'Blends'
+  | 'Ingredientes'
+
 export interface Document {
   id: string
   name: string
@@ -25,6 +45,8 @@ export interface Factory {
   name: string
   city: string
   region: Region
+  sector?: Sector
+  productLineAffinity?: ProductLine
   capacity: number
   potentialValue: number
   status: Status

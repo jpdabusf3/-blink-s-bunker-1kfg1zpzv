@@ -17,19 +17,22 @@ import {
 export default function Index() {
   const { factories } = useAppContext()
 
-  const totalRevenue = factories.reduce((sum, f) => sum + f.potentialValue, 0)
-  const weightedRevenue = factories.reduce(
-    (sum, f) => sum + f.potentialValue * (f.winProbability / 100),
-    0,
-  )
-  const activeCount = factories.filter((f) => f.status === 'Atendido').length
-  const prospectCount = factories.filter((f) => f.status === 'Prospeção').length
+  const metrics = {
+    revenue: factories.reduce((s, f) => s + f.potentialValue, 0),
+    weighted: factories.reduce((s, f) => s + f.potentialValue * (f.winProbability / 100), 0),
+    active: factories.filter((f) => f.status === 'Atendido').length,
+    prospect: factories.filter((f) => f.status === 'Prospeção').length,
+  }
 
   const topFactories = [...factories]
     .sort((a, b) => b.potentialValue - a.potentialValue)
     .slice(0, 5)
+  const topVolume = [...factories]
+    .sort((a, b) => b.capacity - a.capacity)
+    .slice(0, 10)
+    .map((f) => ({ name: f.name.substring(0, 15), value: f.capacity }))
 
-  const stages = [
+  const funnelData = [
     'Lead',
     'Primeiro Contato',
     'Diagnóstico Técnico',
@@ -39,13 +42,12 @@ export default function Index() {
     'Negociação',
     'Fechamento',
   ]
-  const funnelData = stages
-    .map((stage) => {
-      const val = factories
+    .map((stage) => ({
+      stage: stage.split(' ')[0],
+      value: factories
         .filter((f) => f.funnelStage === stage)
-        .reduce((s, f) => s + f.potentialValue, 0)
-      return { stage: stage.split(' ')[0], value: val }
-    })
+        .reduce((s, f) => s + f.potentialValue, 0),
+    }))
     .filter((d) => d.value > 0)
 
   const regionData = ['Norte', 'Sul', 'Leste', 'Oeste', 'Médio-Norte']
@@ -54,6 +56,16 @@ export default function Index() {
       value: factories.filter((f) => f.region === region).reduce((s, f) => s + f.potentialValue, 0),
     }))
     .filter((d) => d.value > 0)
+
+  const productData = ['Adsorventes', 'Prebióticos', 'Minerais Orgânicos', 'Blends', 'Ingredientes']
+    .map((line) => ({
+      name: line,
+      value: factories
+        .filter((f) => f.productLineAffinity === line)
+        .reduce((s, f) => s + f.potentialValue, 0),
+    }))
+    .filter((d) => d.value > 0)
+    .sort((a, b) => b.value - a.value)
 
   const COLORS = [
     'hsl(var(--chart-1))',
@@ -78,57 +90,40 @@ export default function Index() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="shadow-subtle">
-          <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Fábricas Mapeadas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{factories.length}</div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-subtle">
-          <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Ativas / Prospecção
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {activeCount} <span className="text-muted-foreground text-xl">/ {prospectCount}</span>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-subtle">
-          <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Receita Potencial
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-primary">{formatCurrency(totalRevenue)}</div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-subtle">
-          <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Forecast Ponderado
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-accent">{formatCurrency(weightedRevenue)}</div>
-          </CardContent>
-        </Card>
+        {[
+          { title: 'Fábricas Mapeadas', val: factories.length },
+          { title: 'Ativas / Prospecção', val: `${metrics.active} / ${metrics.prospect}` },
+          {
+            title: 'Receita Potencial',
+            val: formatCurrency(metrics.revenue),
+            color: 'text-primary',
+          },
+          {
+            title: 'Forecast Ponderado',
+            val: formatCurrency(metrics.weighted),
+            color: 'text-accent',
+          },
+        ].map((kpi) => (
+          <Card key={kpi.title} className="shadow-subtle">
+            <CardHeader className="pb-2 pt-4">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {kpi.title}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className={`text-3xl font-bold ${kpi.color || ''}`}>{kpi.val}</div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="shadow-subtle">
           <CardHeader>
             <CardTitle>Funil de Vendas</CardTitle>
-            <CardDescription>Valor acumulado por estágio</CardDescription>
+            <CardDescription>Valor por estágio</CardDescription>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="h-[280px]">
             <ChartContainer
               config={{ value: { label: 'Valor (R$)', color: 'hsl(var(--primary))' } }}
               className="h-full w-full"
@@ -161,9 +156,9 @@ export default function Index() {
         <Card className="shadow-subtle">
           <CardHeader>
             <CardTitle>Distribuição Regional</CardTitle>
-            <CardDescription>Potencial financeiro por território</CardDescription>
+            <CardDescription>Potencial financeiro</CardDescription>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="h-[280px]">
             <ChartContainer
               config={{ value: { label: 'Valor', color: 'hsl(var(--primary))' } }}
               className="h-full w-full"
@@ -179,12 +174,80 @@ export default function Index() {
                   nameKey="name"
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                 >
-                  {regionData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  {regionData.map((_, idx) => (
+                    <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip content={<ChartTooltipContent />} />
               </PieChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-subtle">
+          <CardHeader>
+            <CardTitle>Top 10 Volume (t/mês)</CardTitle>
+            <CardDescription>Maiores capacidades produtivas</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[280px]">
+            <ChartContainer
+              config={{ value: { label: 'Capacidade', color: 'hsl(var(--chart-3))' } }}
+              className="h-full w-full"
+            >
+              <BarChart data={topVolume} layout="vertical" margin={{ left: 10, right: 20 }}>
+                <XAxis type="number" hide />
+                <YAxis
+                  dataKey="name"
+                  type="category"
+                  width={100}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                />
+                <Tooltip
+                  content={<ChartTooltipContent />}
+                  cursor={{ fill: 'hsl(var(--muted)/0.5)' }}
+                />
+                <Bar
+                  dataKey="value"
+                  fill="hsl(var(--chart-3))"
+                  radius={[0, 4, 4, 0]}
+                  barSize={20}
+                />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-subtle">
+          <CardHeader>
+            <CardTitle>Ranking Linhas de Produto</CardTitle>
+            <CardDescription>Receita por tendência de linha Blink</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[280px]">
+            <ChartContainer
+              config={{ value: { label: 'Receita (R$)', color: 'hsl(var(--chart-4))' } }}
+              className="h-full w-full"
+            >
+              <BarChart data={productData} margin={{ left: 10, right: 10, top: 10, bottom: 20 }}>
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                />
+                <YAxis hide />
+                <Tooltip
+                  content={<ChartTooltipContent />}
+                  cursor={{ fill: 'hsl(var(--muted)/0.5)' }}
+                />
+                <Bar
+                  dataKey="value"
+                  fill="hsl(var(--chart-4))"
+                  radius={[4, 4, 0, 0]}
+                  barSize={32}
+                />
+              </BarChart>
             </ChartContainer>
           </CardContent>
         </Card>
