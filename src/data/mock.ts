@@ -1,4 +1,4 @@
-import { Factory, Order, Task } from '@/types'
+import { Factory, Order, Task, Region, Priority } from '@/types'
 
 const today = new Date()
 const getDates = () =>
@@ -14,189 +14,158 @@ const scoreTrends = [
   getDates().map((d, i) => ({ date: d, score: 70 + i * 4 })),
 ]
 
-export const mockFactories: Factory[] = [
-  {
-    id: '1',
-    name: 'Agro Nutri Rondonópolis',
-    city: 'Rondonópolis',
-    region: 'Sul',
-    sector: 'Bovinos de Corte',
-    productLineAffinity: 'Minerais Orgânicos',
-    capacity: 15000,
-    potentialValue: 2500000,
-    status: 'Atendido',
-    lastInteraction: new Date().toISOString(),
-    funnelStage: 'Fechamento',
-    winProbability: 90,
-    contactName: 'Carlos Mendonça',
-    contactPhone: '66 9999-0000',
-    operationTypes: 'Confinamento, Ração',
-    productInterests: 'Aditivos de performance, Enzimas',
-    deadline: new Date(Date.now() + 3 * 86400000).toISOString(),
-    documents: [
-      {
-        id: 'doc-1',
-        name: 'Contrato_Minuta_v2.pdf',
-        url: '#',
-        size: 1250000,
-        uploadedAt: new Date().toISOString(),
-      },
-    ],
-    scoreHistory: scoreTrends[0],
-    swot: {
-      strengths: 'Grande volume de compra, logística eficiente',
-      weaknesses: 'Pagamento alongado',
-      opportunities: 'Expansão de linha para aves',
-      threats: 'Forte concorrência local',
-      generalAttractiveness: 90,
-    },
-    matrix: {
-      financial: 10,
-      technical: 9,
-      fit: 9,
-      openness: 8,
-      competition: 7,
-      urgency: 8,
-      roi: 9,
-    },
-  },
-  {
-    id: '2',
-    name: 'Boiadeiro Rações',
-    city: 'Sinop',
-    region: 'Norte',
-    sector: 'Bovinos em Geral',
+const rawData: Array<[string, number | string, string, string, Priority]> = [
+  ['Adames', 3, 'Pontes e Lacerda', 'Ruminantes', 'Medium'],
+  ['AGRO ZOO NUTRIÇÃO ANIMAL', 3, 'Juscimeira', 'Ruminantes', 'Medium'],
+  ['Agroceres Multimix', 1, 'Rondonópolis', 'Ruminantes', 'Low'],
+  ['Agronortena', 5, 'Sinop, Mato Grosso', 'Ruminantes', 'High'],
+  ['AgroPantanal', 1, 'Poconé', 'Ruminantes, Pet', 'Low'],
+  ['Agrovale', 1, 'Nova Marilândia', 'Ruminantes', 'Low'],
+  ['AgroVida', 1, 'Primavera do Leste', 'Ruminantes', 'Low'],
+  ['Big Sal', 1, 'Nova Mutum', 'Ruminantes', 'Low'],
+  ['COPERPHÓS NUTRIÇÃO ANIMAL', 3, 'Rondonópolis', 'Ruminantes', 'Medium'],
+  ['Fortuna Nutrição Animal', 5, 'Nova Canaã, Bahia', 'Ruminantes', 'High'],
+  ['Fortuna Nutripontes', 5, 'Pontes e Lacerda', 'Ruminantes', 'High'],
+  ['Fortuna Sansão', 5, 'Castanheira, Mato Grosso', 'Ruminantes', 'High'],
+  ['GP - COMERCIO DE CEREAIS E NUTRICAO ANIMAL', 1, 'Alta Floresta', '', 'Low'],
+  ['Ideal Pork/Excelencia', 4, 'Nova Mutum', 'Ruminantes', 'High'],
+  ['Kodyak Nutrição Animal', 1, 'Lucas do Rio Verde', 'Ruminantes', 'Low'],
+  ['Multitrato', 5, 'Matupá', 'Ruminantes', 'High'],
+  ['Neonutra nutrição e saúde animal', 3, 'Cuiabá', 'Ruminantes', 'Medium'],
+  ['Nutrali', 3, 'Sinop, Mato Grosso', 'Ruminantes', 'Medium'],
+  ['Nutribarra', 3, 'Barra do Bugres', 'Ruminantes', 'Medium'],
+  ['Nutribio', 5, 'Sinop, Mato Grosso', 'Ruminantes', 'High'],
+  ['Nutribras', 4, 'Cuiabá', 'Aves/Suínos, Pet', 'High'],
+  ['Nutrideal', 5, 'Cuiabá', 'Ruminantes', 'High'],
+  ['NutriMARQUES', 3, "Mirassol d'Oeste", 'Ruminantes', 'Medium'],
+  ['GRANJA ZIANE', 3, 'Tangará da Serra', 'Ruminantes', 'Medium'],
+  ['Nutrinorte', 5, 'Nova Santa Helena', 'Ruminantes', 'High'],
+  ['OVOS TANGARÁ', 3, 'Tangará da Serra', 'Aves/Suínos', 'Medium'],
+  ['NutriBase', 5, 'Rondonópolis', 'Ruminantes', 'High'],
+  ['NutriVig - Nutrição Animal', 3, 'Sapezal', 'Muitiespecies', 'Medium'],
+  ['Planutre', 5, 'Várzea Grande, Mato Grosso', 'Ruminantes', 'High'],
+  ['Rações Bom Tempo', 3, 'Cáceres, Mato Grosso', 'Ruminantes', 'Medium'],
+  ['Rações Centro', 3, 'Diamantino', '', 'Medium'],
+  ['Rações Sorriso', 5, 'Sorriso', 'Ruminantes', 'High'],
+  ['Radar Mix Nutrição Animal', 3, 'Tangará da Serra', 'Ruminantes', 'Medium'],
+  ['Rebanho', 5, 'São José dos Quatro Marcos', 'Ruminantes', 'High'],
+  ['Rico', 3, 'Cuiabá', 'Ruminantes', 'Medium'],
+  ['Sansal', 3, 'Barra do Bugres', 'Ruminantes', 'Medium'],
+  ['Zootec Nutrição Animal', 5, 'Rondonópolis', '', 'High'],
+  ['SUPREMAX /GRA |ZOOTEC', 5, 'Tangará da Serra', 'Ruminantes', 'High'],
+  ['VIDAN NUTRICAO ANIMAL', 1, 'Várzea Grande, Mato Grosso', '', 'Low'],
+  ['Nelore Nutrição Animal', 3, 'Colíder', '', 'Medium'],
+  ['MJ Nutrição Animal', 3, 'Rondonópolis', '', 'Medium'],
+  ['Nutripura', 5, 'Rondonópolis', '', 'High'],
+  ['Arojo', 5, 'Pontes e Lacerda', '', 'High'],
+  ['Nutrivale', 1, 'Pontes e Lacerda', '', 'Low'],
+  ['Dorum', 1, 'Alta Floresta', '', 'Low'],
+  ['Matsuda', 3, 'Cuiabá', '', 'Medium'],
+  ['Sal Gado', 5, 'Alta Floresta', '', 'High'],
+  ['Qualinutri', 'Cliente', 'Juara', 'Ruminantes', 'High'],
+  ['VB Alimentos', 2, 'Jaciara', 'PET', 'Low'],
+  ['CONFRESA NUTRIÇÃO ANIMAL', 3, 'Confresa', 'Ruminantes', 'Medium'],
+  ['Nutrix Pet Food', 5, 'Nova Marilândia', 'PET', 'High'],
+  ['Marombi', 5, 'Sorriso', 'Aves', 'High'],
+]
+
+function getRegionForCity(city: string): Region {
+  const c = city.toLowerCase()
+  if (
+    c.includes('sinop') ||
+    c.includes('alta floresta') ||
+    c.includes('matupá') ||
+    c.includes('colíder') ||
+    c.includes('juara') ||
+    c.includes('castanheira') ||
+    c.includes('santa helena')
+  )
+    return 'Norte'
+  if (
+    c.includes('rondonópolis') ||
+    c.includes('juscimeira') ||
+    c.includes('jaciara') ||
+    c.includes('cuiabá') ||
+    c.includes('várzea grande') ||
+    c.includes('poconé')
+  )
+    return 'Sul'
+  if (
+    c.includes('tangará') ||
+    c.includes('barra do bugres') ||
+    c.includes('nova mutum') ||
+    c.includes('lucas') ||
+    c.includes('sorriso') ||
+    c.includes('diamantino') ||
+    c.includes('nova marilândia')
+  )
+    return 'Médio-Norte'
+  if (
+    c.includes('pontes e lacerda') ||
+    c.includes('cáceres') ||
+    c.includes('mirassol') ||
+    c.includes('são josé') ||
+    c.includes('sapezal')
+  )
+    return 'Oeste'
+  if (c.includes('primavera') || c.includes('confresa') || c.includes('canaã')) return 'Leste'
+  return 'Norte'
+}
+
+export const mockFactories: Factory[] = rawData.map((row, index) => {
+  const id = (index + 1).toString()
+  const name = row[0]
+  const focusLevel = row[1]
+  const city = row[2]
+  const sector = row[3] || 'Geral'
+  const priority = row[4]
+  const region = getRegionForCity(city)
+  const isClient = focusLevel === 'Cliente'
+
+  return {
+    id,
+    name,
+    focusLevel,
+    city,
+    sector,
+    priority,
+    region,
     productLineAffinity: 'Adsorventes',
-    capacity: 8000,
-    potentialValue: 1200000,
-    status: 'Prospeção',
-    lastInteraction: new Date(Date.now() - 20 * 86400000).toISOString(),
-    funnelStage: 'Apresentação',
-    winProbability: 40,
-    contactName: 'João Silva',
-    contactPhone: '66 9888-1111',
-    operationTypes: 'Premix',
-    productInterests: 'Vitaminas',
-    deadline: new Date(Date.now() - 2 * 86400000).toISOString(),
-    documents: [],
-    scoreHistory: scoreTrends[1],
-    swot: {
-      strengths: 'Marca forte no norte',
-      weaknesses: 'Instabilidade financeira recente',
-      opportunities: 'Abertura para testes técnicos',
-      threats: 'Concorrente X com contrato vigente',
-      generalAttractiveness: 60,
-    },
-    matrix: { financial: 7, technical: 8, fit: 6, openness: 5, competition: 4, urgency: 5, roi: 6 },
-  },
-  {
-    id: '3',
-    name: 'Cerrado Suplementos',
-    city: 'Lucas do Rio Verde',
-    region: 'Médio-Norte',
-    sector: 'Aves',
-    productLineAffinity: 'Prebióticos',
-    capacity: 20000,
-    potentialValue: 3800000,
-    status: 'Atendido',
-    lastInteraction: new Date(Date.now() - 5 * 86400000).toISOString(),
-    funnelStage: 'Negociação',
-    winProbability: 75,
-    contactName: 'Mariana Costa',
-    contactPhone: '65 9777-2222',
-    operationTypes: 'Núcleo, Ração',
-    productInterests: 'Leveduras, Minerais',
-    deadline: new Date(Date.now() + 15 * 86400000).toISOString(),
-    documents: [
-      {
-        id: 'doc-2',
-        name: 'Analise_Tecnica.xlsx',
-        url: '#',
-        size: 450000,
-        uploadedAt: new Date(Date.now() - 3 * 86400000).toISOString(),
-      },
-    ],
-    scoreHistory: scoreTrends[2],
-    swot: {
-      strengths: 'Alta adoção de tecnologia',
-      weaknesses: 'Exigência extrema de prazos',
-      opportunities: 'Desenvolvimento de produtos exclusivos',
-      threats: 'Preços agressivos de importados',
-      generalAttractiveness: 85,
-    },
-    matrix: {
-      financial: 10,
-      technical: 10,
-      fit: 8,
-      openness: 7,
-      competition: 6,
-      urgency: 8,
-      roi: 9,
-    },
-  },
-  {
-    id: '4',
-    name: 'Nutrimax Tangará',
-    city: 'Tangará da Serra',
-    region: 'Oeste',
-    sector: 'Suínos',
-    productLineAffinity: 'Blends',
-    capacity: 5000,
-    potentialValue: 800000,
-    status: 'Não atendido',
-    lastInteraction: new Date(Date.now() - 45 * 86400000).toISOString(),
-    funnelStage: 'Lead',
-    winProbability: 10,
-    contactName: 'Roberto Alves',
-    contactPhone: '65 9666-3333',
+    capacity: Math.floor(Math.random() * 10000) + 1000,
+    potentialValue: Math.floor(Math.random() * 5000000) + 100000,
+    status: isClient ? 'Atendido' : 'Prospeção',
+    lastInteraction: new Date(Date.now() - Math.random() * 30 * 86400000).toISOString(),
+    funnelStage: isClient ? 'Fechamento' : 'Lead',
+    winProbability: priority === 'High' ? 80 : priority === 'Medium' ? 50 : 20,
+    contactName: 'Contato ' + name.split(' ')[0],
+    contactPhone: '65 9999-0000',
     operationTypes: 'Ração',
-    productInterests: 'Conservantes',
+    productInterests: sector,
     documents: [],
-    scoreHistory: scoreTrends[3],
+    scoreHistory: scoreTrends[index % 5],
     swot: {
       strengths: '',
       weaknesses: '',
       opportunities: '',
       threats: '',
-      generalAttractiveness: 30,
+      generalAttractiveness: priority === 'High' ? 90 : priority === 'Medium' ? 60 : 30,
     },
-    matrix: { financial: 5, technical: 5, fit: 5, openness: 3, competition: 8, urgency: 2, roi: 5 },
-  },
-  {
-    id: '5',
-    name: 'Primavera Saúde Animal',
-    city: 'Primavera do Leste',
-    region: 'Leste',
-    sector: 'Multiespécie',
-    productLineAffinity: 'Ingredientes',
-    capacity: 12000,
-    potentialValue: 1900000,
-    status: 'Prospeção',
-    lastInteraction: new Date(Date.now() - 2 * 86400000).toISOString(),
-    funnelStage: 'Teste/Trial',
-    winProbability: 60,
-    contactName: 'Ana Souza',
-    contactPhone: '66 9555-4444',
-    operationTypes: 'Premix, Núcleo',
-    productInterests: 'Probióticos',
-    deadline: new Date(Date.now() + 5 * 86400000).toISOString(),
-    documents: [],
-    scoreHistory: scoreTrends[4],
-    swot: {
-      strengths: 'Equipe técnica qualificada',
-      weaknesses: 'Volume inconstante de compras',
-      opportunities: 'Substituição de fornecedor atual em crise',
-      threats: 'Demora nas decisões gerenciais',
-      generalAttractiveness: 75,
+    matrix: {
+      financial: priority === 'High' ? 9 : 5,
+      technical: priority === 'High' ? 8 : 5,
+      fit: priority === 'High' ? 9 : 5,
+      openness: 5,
+      competition: 5,
+      urgency: 5,
+      roi: priority === 'High' ? 8 : 5,
     },
-    matrix: { financial: 8, technical: 9, fit: 8, openness: 9, competition: 5, urgency: 7, roi: 8 },
-  },
-]
+  }
+})
 
 export const mockOrders: Order[] = [
   {
     id: 'o1',
-    factoryId: '1',
+    factoryId: '4', // Agronortena
     product: 'Blink Minerais+',
     quantity: 50,
     unitValue: 120,
@@ -205,7 +174,7 @@ export const mockOrders: Order[] = [
   },
   {
     id: 'o2',
-    factoryId: '1',
+    factoryId: '4',
     product: 'Blink Enzimas',
     quantity: 20,
     unitValue: 300,
@@ -214,37 +183,19 @@ export const mockOrders: Order[] = [
   },
   {
     id: 'o3',
-    factoryId: '3',
+    factoryId: '48', // Qualinutri
     product: 'Blink Prebio',
     quantity: 100,
     unitValue: 80,
     totalValue: 8000,
     orderDate: new Date(today.getTime() - 5 * 86400000).toISOString(),
   },
-  {
-    id: 'o4',
-    factoryId: '2',
-    product: 'Blink Adsorventes',
-    quantity: 200,
-    unitValue: 45,
-    totalValue: 9000,
-    orderDate: new Date(today.getTime() - 25 * 86400000).toISOString(),
-  },
-  {
-    id: 'o5',
-    factoryId: '5',
-    product: 'Blink Ingredientes',
-    quantity: 80,
-    unitValue: 150,
-    totalValue: 12000,
-    orderDate: new Date(today.getTime() - 2 * 86400000).toISOString(),
-  },
 ]
 
 export const mockTasks: Task[] = [
   {
     id: 't1',
-    factoryId: '2',
+    factoryId: '1', // Adames
     description: 'Enviar kit de amostras de adsorventes',
     type: 'Enviar amostra',
     priority: 'Alta',
@@ -254,7 +205,7 @@ export const mockTasks: Task[] = [
   },
   {
     id: 't2',
-    factoryId: '1',
+    factoryId: '48', // Qualinutri
     description: 'Confirmar recebimento da minuta',
     type: 'Ligar para Follow-up',
     priority: 'Média',

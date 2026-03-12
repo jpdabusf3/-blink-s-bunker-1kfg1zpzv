@@ -1,5 +1,5 @@
 import React from 'react'
-import { Factory, Region, Status, FunnelStage, Sector, ProductLine } from '@/types'
+import { Factory, Region, Status, FunnelStage, ProductLine, Priority } from '@/types'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -25,12 +25,16 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
     const fd = new FormData(e.currentTarget)
 
     const deadlineValue = fd.get('deadline') as string
+    const focusValue = fd.get('focusLevel') as string
+    const finalFocus = isNaN(Number(focusValue)) ? focusValue : Number(focusValue)
 
     const data: Partial<Factory> = {
       name: fd.get('name') as string,
       city: fd.get('city') as string,
       region: fd.get('region') as Region,
-      sector: fd.get('sector') as Sector,
+      sector: fd.get('sector') as string,
+      priority: fd.get('priority') as Priority,
+      focusLevel: finalFocus,
       productLineAffinity: fd.get('productLineAffinity') as ProductLine,
       capacity: Number(fd.get('capacity')),
       potentialValue: Number(fd.get('potentialValue')),
@@ -76,6 +80,28 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
           </Select>
         </div>
         <div className="space-y-2">
+          <Label>Prioridade</Label>
+          <Select name="priority" defaultValue={factory?.priority || 'Medium'} required>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="High">Alta (Verde)</SelectItem>
+              <SelectItem value="Medium">Média (Amarelo)</SelectItem>
+              <SelectItem value="Low">Baixa (Vermelho)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Nível de Foco (1-5 ou 'Cliente')</Label>
+          <Input
+            name="focusLevel"
+            defaultValue={factory?.focusLevel?.toString()}
+            placeholder="Ex: 5 ou Cliente"
+            required
+          />
+        </div>
+        <div className="space-y-2">
           <Label>Status</Label>
           <Select name="status" defaultValue={factory?.status || 'Prospeção'} required>
             <SelectTrigger>
@@ -91,24 +117,24 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>Setor de Atuação</Label>
-          <Select name="sector" defaultValue={factory?.sector || 'Bovinos em Geral'} required>
+          <Label>Setor de Atuação (Especialidades)</Label>
+          <Select name="sector" defaultValue={factory?.sector || 'Ruminantes'} required>
             <SelectTrigger>
               <SelectValue placeholder="Selecione" />
             </SelectTrigger>
             <SelectContent>
               {[
                 'Aves',
-                'Suínos',
-                'PET',
-                'Aqua',
+                'Aves/Suínos',
+                'Aves/Suínos, Pet',
                 'Bovinos de Corte',
                 'Bovinos de Leite',
-                'Bovinos em Geral',
-                'Equinos',
-                'Monogástricos',
+                'Geral',
+                'Muitiespecies',
+                'PET',
                 'Ruminantes',
-                'Multiespécie',
+                'Ruminantes, Pet',
+                'Suínos',
               ].map((s) => (
                 <SelectItem key={s} value={s}>
                   {s}

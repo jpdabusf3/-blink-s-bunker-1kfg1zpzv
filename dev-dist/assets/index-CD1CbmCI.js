@@ -26759,208 +26759,433 @@ var scoreTrends = [
 		score: 70 + i * 4
 	}))
 ];
-var mockFactories = [
-	{
-		id: "1",
-		name: "Agro Nutri Rondonópolis",
-		city: "Rondonópolis",
-		region: "Sul",
-		sector: "Bovinos de Corte",
-		productLineAffinity: "Minerais Orgânicos",
-		capacity: 15e3,
-		potentialValue: 25e5,
-		status: "Atendido",
-		lastInteraction: (/* @__PURE__ */ new Date()).toISOString(),
-		funnelStage: "Fechamento",
-		winProbability: 90,
-		contactName: "Carlos Mendonça",
-		contactPhone: "66 9999-0000",
-		operationTypes: "Confinamento, Ração",
-		productInterests: "Aditivos de performance, Enzimas",
-		deadline: new Date(Date.now() + 3 * 864e5).toISOString(),
-		documents: [{
-			id: "doc-1",
-			name: "Contrato_Minuta_v2.pdf",
-			url: "#",
-			size: 125e4,
-			uploadedAt: (/* @__PURE__ */ new Date()).toISOString()
-		}],
-		scoreHistory: scoreTrends[0],
-		swot: {
-			strengths: "Grande volume de compra, logística eficiente",
-			weaknesses: "Pagamento alongado",
-			opportunities: "Expansão de linha para aves",
-			threats: "Forte concorrência local",
-			generalAttractiveness: 90
-		},
-		matrix: {
-			financial: 10,
-			technical: 9,
-			fit: 9,
-			openness: 8,
-			competition: 7,
-			urgency: 8,
-			roi: 9
-		}
-	},
-	{
-		id: "2",
-		name: "Boiadeiro Rações",
-		city: "Sinop",
-		region: "Norte",
-		sector: "Bovinos em Geral",
+var rawData = [
+	[
+		"Adames",
+		3,
+		"Pontes e Lacerda",
+		"Ruminantes",
+		"Medium"
+	],
+	[
+		"AGRO ZOO NUTRIÇÃO ANIMAL",
+		3,
+		"Juscimeira",
+		"Ruminantes",
+		"Medium"
+	],
+	[
+		"Agroceres Multimix",
+		1,
+		"Rondonópolis",
+		"Ruminantes",
+		"Low"
+	],
+	[
+		"Agronortena",
+		5,
+		"Sinop, Mato Grosso",
+		"Ruminantes",
+		"High"
+	],
+	[
+		"AgroPantanal",
+		1,
+		"Poconé",
+		"Ruminantes, Pet",
+		"Low"
+	],
+	[
+		"Agrovale",
+		1,
+		"Nova Marilândia",
+		"Ruminantes",
+		"Low"
+	],
+	[
+		"AgroVida",
+		1,
+		"Primavera do Leste",
+		"Ruminantes",
+		"Low"
+	],
+	[
+		"Big Sal",
+		1,
+		"Nova Mutum",
+		"Ruminantes",
+		"Low"
+	],
+	[
+		"COPERPHÓS NUTRIÇÃO ANIMAL",
+		3,
+		"Rondonópolis",
+		"Ruminantes",
+		"Medium"
+	],
+	[
+		"Fortuna Nutrição Animal",
+		5,
+		"Nova Canaã, Bahia",
+		"Ruminantes",
+		"High"
+	],
+	[
+		"Fortuna Nutripontes",
+		5,
+		"Pontes e Lacerda",
+		"Ruminantes",
+		"High"
+	],
+	[
+		"Fortuna Sansão",
+		5,
+		"Castanheira, Mato Grosso",
+		"Ruminantes",
+		"High"
+	],
+	[
+		"GP - COMERCIO DE CEREAIS E NUTRICAO ANIMAL",
+		1,
+		"Alta Floresta",
+		"",
+		"Low"
+	],
+	[
+		"Ideal Pork/Excelencia",
+		4,
+		"Nova Mutum",
+		"Ruminantes",
+		"High"
+	],
+	[
+		"Kodyak Nutrição Animal",
+		1,
+		"Lucas do Rio Verde",
+		"Ruminantes",
+		"Low"
+	],
+	[
+		"Multitrato",
+		5,
+		"Matupá",
+		"Ruminantes",
+		"High"
+	],
+	[
+		"Neonutra nutrição e saúde animal",
+		3,
+		"Cuiabá",
+		"Ruminantes",
+		"Medium"
+	],
+	[
+		"Nutrali",
+		3,
+		"Sinop, Mato Grosso",
+		"Ruminantes",
+		"Medium"
+	],
+	[
+		"Nutribarra",
+		3,
+		"Barra do Bugres",
+		"Ruminantes",
+		"Medium"
+	],
+	[
+		"Nutribio",
+		5,
+		"Sinop, Mato Grosso",
+		"Ruminantes",
+		"High"
+	],
+	[
+		"Nutribras",
+		4,
+		"Cuiabá",
+		"Aves/Suínos, Pet",
+		"High"
+	],
+	[
+		"Nutrideal",
+		5,
+		"Cuiabá",
+		"Ruminantes",
+		"High"
+	],
+	[
+		"NutriMARQUES",
+		3,
+		"Mirassol d'Oeste",
+		"Ruminantes",
+		"Medium"
+	],
+	[
+		"GRANJA ZIANE",
+		3,
+		"Tangará da Serra",
+		"Ruminantes",
+		"Medium"
+	],
+	[
+		"Nutrinorte",
+		5,
+		"Nova Santa Helena",
+		"Ruminantes",
+		"High"
+	],
+	[
+		"OVOS TANGARÁ",
+		3,
+		"Tangará da Serra",
+		"Aves/Suínos",
+		"Medium"
+	],
+	[
+		"NutriBase",
+		5,
+		"Rondonópolis",
+		"Ruminantes",
+		"High"
+	],
+	[
+		"NutriVig - Nutrição Animal",
+		3,
+		"Sapezal",
+		"Muitiespecies",
+		"Medium"
+	],
+	[
+		"Planutre",
+		5,
+		"Várzea Grande, Mato Grosso",
+		"Ruminantes",
+		"High"
+	],
+	[
+		"Rações Bom Tempo",
+		3,
+		"Cáceres, Mato Grosso",
+		"Ruminantes",
+		"Medium"
+	],
+	[
+		"Rações Centro",
+		3,
+		"Diamantino",
+		"",
+		"Medium"
+	],
+	[
+		"Rações Sorriso",
+		5,
+		"Sorriso",
+		"Ruminantes",
+		"High"
+	],
+	[
+		"Radar Mix Nutrição Animal",
+		3,
+		"Tangará da Serra",
+		"Ruminantes",
+		"Medium"
+	],
+	[
+		"Rebanho",
+		5,
+		"São José dos Quatro Marcos",
+		"Ruminantes",
+		"High"
+	],
+	[
+		"Rico",
+		3,
+		"Cuiabá",
+		"Ruminantes",
+		"Medium"
+	],
+	[
+		"Sansal",
+		3,
+		"Barra do Bugres",
+		"Ruminantes",
+		"Medium"
+	],
+	[
+		"Zootec Nutrição Animal",
+		5,
+		"Rondonópolis",
+		"",
+		"High"
+	],
+	[
+		"SUPREMAX /GRA |ZOOTEC",
+		5,
+		"Tangará da Serra",
+		"Ruminantes",
+		"High"
+	],
+	[
+		"VIDAN NUTRICAO ANIMAL",
+		1,
+		"Várzea Grande, Mato Grosso",
+		"",
+		"Low"
+	],
+	[
+		"Nelore Nutrição Animal",
+		3,
+		"Colíder",
+		"",
+		"Medium"
+	],
+	[
+		"MJ Nutrição Animal",
+		3,
+		"Rondonópolis",
+		"",
+		"Medium"
+	],
+	[
+		"Nutripura",
+		5,
+		"Rondonópolis",
+		"",
+		"High"
+	],
+	[
+		"Arojo",
+		5,
+		"Pontes e Lacerda",
+		"",
+		"High"
+	],
+	[
+		"Nutrivale",
+		1,
+		"Pontes e Lacerda",
+		"",
+		"Low"
+	],
+	[
+		"Dorum",
+		1,
+		"Alta Floresta",
+		"",
+		"Low"
+	],
+	[
+		"Matsuda",
+		3,
+		"Cuiabá",
+		"",
+		"Medium"
+	],
+	[
+		"Sal Gado",
+		5,
+		"Alta Floresta",
+		"",
+		"High"
+	],
+	[
+		"Qualinutri",
+		"Cliente",
+		"Juara",
+		"Ruminantes",
+		"High"
+	],
+	[
+		"VB Alimentos",
+		2,
+		"Jaciara",
+		"PET",
+		"Low"
+	],
+	[
+		"CONFRESA NUTRIÇÃO ANIMAL",
+		3,
+		"Confresa",
+		"Ruminantes",
+		"Medium"
+	],
+	[
+		"Nutrix Pet Food",
+		5,
+		"Nova Marilândia",
+		"PET",
+		"High"
+	],
+	[
+		"Marombi",
+		5,
+		"Sorriso",
+		"Aves",
+		"High"
+	]
+];
+function getRegionForCity(city) {
+	const c = city.toLowerCase();
+	if (c.includes("sinop") || c.includes("alta floresta") || c.includes("matupá") || c.includes("colíder") || c.includes("juara") || c.includes("castanheira") || c.includes("santa helena")) return "Norte";
+	if (c.includes("rondonópolis") || c.includes("juscimeira") || c.includes("jaciara") || c.includes("cuiabá") || c.includes("várzea grande") || c.includes("poconé")) return "Sul";
+	if (c.includes("tangará") || c.includes("barra do bugres") || c.includes("nova mutum") || c.includes("lucas") || c.includes("sorriso") || c.includes("diamantino") || c.includes("nova marilândia")) return "Médio-Norte";
+	if (c.includes("pontes e lacerda") || c.includes("cáceres") || c.includes("mirassol") || c.includes("são josé") || c.includes("sapezal")) return "Oeste";
+	if (c.includes("primavera") || c.includes("confresa") || c.includes("canaã")) return "Leste";
+	return "Norte";
+}
+var mockFactories = rawData.map((row, index) => {
+	const id = (index + 1).toString();
+	const name = row[0];
+	const focusLevel = row[1];
+	const city = row[2];
+	const sector = row[3] || "Geral";
+	const priority = row[4];
+	const region = getRegionForCity(city);
+	const isClient = focusLevel === "Cliente";
+	return {
+		id,
+		name,
+		focusLevel,
+		city,
+		sector,
+		priority,
+		region,
 		productLineAffinity: "Adsorventes",
-		capacity: 8e3,
-		potentialValue: 12e5,
-		status: "Prospeção",
-		lastInteraction: (/* @__PURE__ */ new Date(Date.now() - 20 * 864e5)).toISOString(),
-		funnelStage: "Apresentação",
-		winProbability: 40,
-		contactName: "João Silva",
-		contactPhone: "66 9888-1111",
-		operationTypes: "Premix",
-		productInterests: "Vitaminas",
-		deadline: (/* @__PURE__ */ new Date(Date.now() - 2 * 864e5)).toISOString(),
-		documents: [],
-		scoreHistory: scoreTrends[1],
-		swot: {
-			strengths: "Marca forte no norte",
-			weaknesses: "Instabilidade financeira recente",
-			opportunities: "Abertura para testes técnicos",
-			threats: "Concorrente X com contrato vigente",
-			generalAttractiveness: 60
-		},
-		matrix: {
-			financial: 7,
-			technical: 8,
-			fit: 6,
-			openness: 5,
-			competition: 4,
-			urgency: 5,
-			roi: 6
-		}
-	},
-	{
-		id: "3",
-		name: "Cerrado Suplementos",
-		city: "Lucas do Rio Verde",
-		region: "Médio-Norte",
-		sector: "Aves",
-		productLineAffinity: "Prebióticos",
-		capacity: 2e4,
-		potentialValue: 38e5,
-		status: "Atendido",
-		lastInteraction: (/* @__PURE__ */ new Date(Date.now() - 5 * 864e5)).toISOString(),
-		funnelStage: "Negociação",
-		winProbability: 75,
-		contactName: "Mariana Costa",
-		contactPhone: "65 9777-2222",
-		operationTypes: "Núcleo, Ração",
-		productInterests: "Leveduras, Minerais",
-		deadline: new Date(Date.now() + 15 * 864e5).toISOString(),
-		documents: [{
-			id: "doc-2",
-			name: "Analise_Tecnica.xlsx",
-			url: "#",
-			size: 45e4,
-			uploadedAt: (/* @__PURE__ */ new Date(Date.now() - 3 * 864e5)).toISOString()
-		}],
-		scoreHistory: scoreTrends[2],
-		swot: {
-			strengths: "Alta adoção de tecnologia",
-			weaknesses: "Exigência extrema de prazos",
-			opportunities: "Desenvolvimento de produtos exclusivos",
-			threats: "Preços agressivos de importados",
-			generalAttractiveness: 85
-		},
-		matrix: {
-			financial: 10,
-			technical: 10,
-			fit: 8,
-			openness: 7,
-			competition: 6,
-			urgency: 8,
-			roi: 9
-		}
-	},
-	{
-		id: "4",
-		name: "Nutrimax Tangará",
-		city: "Tangará da Serra",
-		region: "Oeste",
-		sector: "Suínos",
-		productLineAffinity: "Blends",
-		capacity: 5e3,
-		potentialValue: 8e5,
-		status: "Não atendido",
-		lastInteraction: (/* @__PURE__ */ new Date(Date.now() - 45 * 864e5)).toISOString(),
-		funnelStage: "Lead",
-		winProbability: 10,
-		contactName: "Roberto Alves",
-		contactPhone: "65 9666-3333",
+		capacity: Math.floor(Math.random() * 1e4) + 1e3,
+		potentialValue: Math.floor(Math.random() * 5e6) + 1e5,
+		status: isClient ? "Atendido" : "Prospeção",
+		lastInteraction: (/* @__PURE__ */ new Date(Date.now() - Math.random() * 30 * 864e5)).toISOString(),
+		funnelStage: isClient ? "Fechamento" : "Lead",
+		winProbability: priority === "High" ? 80 : priority === "Medium" ? 50 : 20,
+		contactName: "Contato " + name.split(" ")[0],
+		contactPhone: "65 9999-0000",
 		operationTypes: "Ração",
-		productInterests: "Conservantes",
+		productInterests: sector,
 		documents: [],
-		scoreHistory: scoreTrends[3],
+		scoreHistory: scoreTrends[index % 5],
 		swot: {
 			strengths: "",
 			weaknesses: "",
 			opportunities: "",
 			threats: "",
-			generalAttractiveness: 30
+			generalAttractiveness: priority === "High" ? 90 : priority === "Medium" ? 60 : 30
 		},
 		matrix: {
-			financial: 5,
-			technical: 5,
-			fit: 5,
-			openness: 3,
-			competition: 8,
-			urgency: 2,
-			roi: 5
-		}
-	},
-	{
-		id: "5",
-		name: "Primavera Saúde Animal",
-		city: "Primavera do Leste",
-		region: "Leste",
-		sector: "Multiespécie",
-		productLineAffinity: "Ingredientes",
-		capacity: 12e3,
-		potentialValue: 19e5,
-		status: "Prospeção",
-		lastInteraction: (/* @__PURE__ */ new Date(Date.now() - 2 * 864e5)).toISOString(),
-		funnelStage: "Teste/Trial",
-		winProbability: 60,
-		contactName: "Ana Souza",
-		contactPhone: "66 9555-4444",
-		operationTypes: "Premix, Núcleo",
-		productInterests: "Probióticos",
-		deadline: new Date(Date.now() + 5 * 864e5).toISOString(),
-		documents: [],
-		scoreHistory: scoreTrends[4],
-		swot: {
-			strengths: "Equipe técnica qualificada",
-			weaknesses: "Volume inconstante de compras",
-			opportunities: "Substituição de fornecedor atual em crise",
-			threats: "Demora nas decisões gerenciais",
-			generalAttractiveness: 75
-		},
-		matrix: {
-			financial: 8,
-			technical: 9,
-			fit: 8,
-			openness: 9,
+			financial: priority === "High" ? 9 : 5,
+			technical: priority === "High" ? 8 : 5,
+			fit: priority === "High" ? 9 : 5,
+			openness: 5,
 			competition: 5,
-			urgency: 7,
-			roi: 8
+			urgency: 5,
+			roi: priority === "High" ? 8 : 5
 		}
-	}
-];
+	};
+});
 var mockOrders = [
 	{
 		id: "o1",
-		factoryId: "1",
+		factoryId: "4",
 		product: "Blink Minerais+",
 		quantity: 50,
 		unitValue: 120,
@@ -26969,7 +27194,7 @@ var mockOrders = [
 	},
 	{
 		id: "o2",
-		factoryId: "1",
+		factoryId: "4",
 		product: "Blink Enzimas",
 		quantity: 20,
 		unitValue: 300,
@@ -26978,35 +27203,17 @@ var mockOrders = [
 	},
 	{
 		id: "o3",
-		factoryId: "3",
+		factoryId: "48",
 		product: "Blink Prebio",
 		quantity: 100,
 		unitValue: 80,
 		totalValue: 8e3,
 		orderDate: (/* @__PURE__ */ new Date(today.getTime() - 5 * 864e5)).toISOString()
-	},
-	{
-		id: "o4",
-		factoryId: "2",
-		product: "Blink Adsorventes",
-		quantity: 200,
-		unitValue: 45,
-		totalValue: 9e3,
-		orderDate: (/* @__PURE__ */ new Date(today.getTime() - 25 * 864e5)).toISOString()
-	},
-	{
-		id: "o5",
-		factoryId: "5",
-		product: "Blink Ingredientes",
-		quantity: 80,
-		unitValue: 150,
-		totalValue: 12e3,
-		orderDate: (/* @__PURE__ */ new Date(today.getTime() - 2 * 864e5)).toISOString()
 	}
 ];
 var mockTasks = [{
 	id: "t1",
-	factoryId: "2",
+	factoryId: "1",
 	description: "Enviar kit de amostras de adsorventes",
 	type: "Enviar amostra",
 	priority: "Alta",
@@ -27015,7 +27222,7 @@ var mockTasks = [{
 	createdAt: (/* @__PURE__ */ new Date()).toISOString()
 }, {
 	id: "t2",
-	factoryId: "1",
+	factoryId: "48",
 	description: "Confirmar recebimento da minuta",
 	type: "Ligar para Follow-up",
 	priority: "Média",
@@ -27029,15 +27236,15 @@ var AppContext = (0, import_react.createContext)({});
 var AppProvider = ({ children }) => {
 	const [isOnline, setIsOnline] = (0, import_react.useState)(navigator.onLine);
 	const [factories, setFactories] = (0, import_react.useState)(() => {
-		const saved = localStorage.getItem("blink_factories");
+		const saved = localStorage.getItem("blink_factories_v2");
 		return saved ? JSON.parse(saved) : mockFactories;
 	});
 	const [orders, setOrders] = (0, import_react.useState)(() => {
-		const saved = localStorage.getItem("blink_orders");
+		const saved = localStorage.getItem("blink_orders_v2");
 		return saved ? JSON.parse(saved) : mockOrders;
 	});
 	const [tasks, setTasks] = (0, import_react.useState)(() => {
-		const saved = localStorage.getItem("blink_tasks");
+		const saved = localStorage.getItem("blink_tasks_v2");
 		return saved ? JSON.parse(saved) : mockTasks;
 	});
 	(0, import_react.useEffect)(() => {
@@ -27051,13 +27258,13 @@ var AppProvider = ({ children }) => {
 		};
 	}, []);
 	(0, import_react.useEffect)(() => {
-		localStorage.setItem("blink_factories", JSON.stringify(factories));
+		localStorage.setItem("blink_factories_v2", JSON.stringify(factories));
 	}, [factories]);
 	(0, import_react.useEffect)(() => {
-		localStorage.setItem("blink_orders", JSON.stringify(orders));
+		localStorage.setItem("blink_orders_v2", JSON.stringify(orders));
 	}, [orders]);
 	(0, import_react.useEffect)(() => {
-		localStorage.setItem("blink_tasks", JSON.stringify(tasks));
+		localStorage.setItem("blink_tasks_v2", JSON.stringify(tasks));
 	}, [tasks]);
 	const addFactory = (data) => {
 		const newFactory = {
@@ -27070,6 +27277,8 @@ var AppProvider = ({ children }) => {
 			capacity: data.capacity || 0,
 			potentialValue: data.potentialValue || 0,
 			status: data.status || "Prospeção",
+			priority: data.priority || "Medium",
+			focusLevel: data.focusLevel || 3,
 			lastInteraction: data.lastInteraction || (/* @__PURE__ */ new Date()).toISOString(),
 			funnelStage: data.funnelStage || "Lead",
 			winProbability: data.winProbability || 10,
@@ -27127,7 +27336,7 @@ var AppProvider = ({ children }) => {
 		setTasks((prev) => prev.filter((t) => t.id !== id));
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AppContext.Provider, {
-		"data-uid": "src/store/AppContext.tsx:129:5",
+		"data-uid": "src/store/AppContext.tsx:132:5",
 		"data-prohibitions": "[editContent]",
 		value: {
 			factories,
@@ -28353,11 +28562,15 @@ function FactoryForm({ factory, onSubmit }) {
 		e.preventDefault();
 		const fd = new FormData(e.currentTarget);
 		const deadlineValue = fd.get("deadline");
+		const focusValue = fd.get("focusLevel");
+		const finalFocus = isNaN(Number(focusValue)) ? focusValue : Number(focusValue);
 		const data = {
 			name: fd.get("name"),
 			city: fd.get("city"),
 			region: fd.get("region"),
 			sector: fd.get("sector"),
+			priority: fd.get("priority"),
+			focusLevel: finalFocus,
 			productLineAffinity: fd.get("productLineAffinity"),
 			capacity: Number(fd.get("capacity")),
 			potentialValue: Number(fd.get("potentialValue")),
@@ -28372,31 +28585,15 @@ function FactoryForm({ factory, onSubmit }) {
 		onSubmit();
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
-		"data-uid": "src/components/FactoryForm.tsx:53:5",
+		"data-uid": "src/components/FactoryForm.tsx:57:5",
 		"data-prohibitions": "[editContent]",
 		onSubmit: handleSubmit,
 		className: "space-y-6 mt-4",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			"data-uid": "src/components/FactoryForm.tsx:54:7",
+			"data-uid": "src/components/FactoryForm.tsx:58:7",
 			"data-prohibitions": "[editContent]",
 			className: "grid grid-cols-1 md:grid-cols-2 gap-4",
 			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/FactoryForm.tsx:55:9",
-					"data-prohibitions": "[]",
-					className: "space-y-2",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-						"data-uid": "src/components/FactoryForm.tsx:56:11",
-						"data-prohibitions": "[]",
-						children: "Nome da Fábrica"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-						"data-uid": "src/components/FactoryForm.tsx:57:11",
-						"data-prohibitions": "[editContent]",
-						name: "name",
-						defaultValue: factory?.name,
-						required: true
-					})]
-				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					"data-uid": "src/components/FactoryForm.tsx:59:9",
 					"data-prohibitions": "[]",
@@ -28404,9 +28601,25 @@ function FactoryForm({ factory, onSubmit }) {
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
 						"data-uid": "src/components/FactoryForm.tsx:60:11",
 						"data-prohibitions": "[]",
-						children: "Cidade"
+						children: "Nome da Fábrica"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
 						"data-uid": "src/components/FactoryForm.tsx:61:11",
+						"data-prohibitions": "[editContent]",
+						name: "name",
+						defaultValue: factory?.name,
+						required: true
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					"data-uid": "src/components/FactoryForm.tsx:63:9",
+					"data-prohibitions": "[]",
+					className: "space-y-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
+						"data-uid": "src/components/FactoryForm.tsx:64:11",
+						"data-prohibitions": "[]",
+						children: "Cidade"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+						"data-uid": "src/components/FactoryForm.tsx:65:11",
 						"data-prohibitions": "[editContent]",
 						name: "city",
 						defaultValue: factory?.city,
@@ -28414,29 +28627,29 @@ function FactoryForm({ factory, onSubmit }) {
 					})]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/FactoryForm.tsx:63:9",
+					"data-uid": "src/components/FactoryForm.tsx:67:9",
 					"data-prohibitions": "[editContent]",
 					className: "space-y-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-						"data-uid": "src/components/FactoryForm.tsx:64:11",
+						"data-uid": "src/components/FactoryForm.tsx:68:11",
 						"data-prohibitions": "[]",
 						children: "Região"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
-						"data-uid": "src/components/FactoryForm.tsx:65:11",
+						"data-uid": "src/components/FactoryForm.tsx:69:11",
 						"data-prohibitions": "[editContent]",
 						name: "region",
 						defaultValue: factory?.region || "Norte",
 						required: true,
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
-							"data-uid": "src/components/FactoryForm.tsx:66:13",
+							"data-uid": "src/components/FactoryForm.tsx:70:13",
 							"data-prohibitions": "[]",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
-								"data-uid": "src/components/FactoryForm.tsx:67:15",
+								"data-uid": "src/components/FactoryForm.tsx:71:15",
 								"data-prohibitions": "[editContent]",
 								placeholder: "Selecione"
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectContent, {
-							"data-uid": "src/components/FactoryForm.tsx:69:13",
+							"data-uid": "src/components/FactoryForm.tsx:73:13",
 							"data-prohibitions": "[editContent]",
 							children: [
 								"Norte",
@@ -28445,7 +28658,7 @@ function FactoryForm({ factory, onSubmit }) {
 								"Oeste",
 								"Médio-Norte"
 							].map((r) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-								"data-uid": "src/components/FactoryForm.tsx:71:17",
+								"data-uid": "src/components/FactoryForm.tsx:75:17",
 								"data-prohibitions": "[editContent]",
 								value: r,
 								children: r
@@ -28454,36 +28667,101 @@ function FactoryForm({ factory, onSubmit }) {
 					})]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/FactoryForm.tsx:78:9",
+					"data-uid": "src/components/FactoryForm.tsx:82:9",
+					"data-prohibitions": "[]",
+					className: "space-y-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
+						"data-uid": "src/components/FactoryForm.tsx:83:11",
+						"data-prohibitions": "[]",
+						children: "Prioridade"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
+						"data-uid": "src/components/FactoryForm.tsx:84:11",
+						"data-prohibitions": "[]",
+						name: "priority",
+						defaultValue: factory?.priority || "Medium",
+						required: true,
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
+							"data-uid": "src/components/FactoryForm.tsx:85:13",
+							"data-prohibitions": "[]",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
+								"data-uid": "src/components/FactoryForm.tsx:86:15",
+								"data-prohibitions": "[editContent]",
+								placeholder: "Selecione"
+							})
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, {
+							"data-uid": "src/components/FactoryForm.tsx:88:13",
+							"data-prohibitions": "[]",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+									"data-uid": "src/components/FactoryForm.tsx:89:15",
+									"data-prohibitions": "[]",
+									value: "High",
+									children: "Alta (Verde)"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+									"data-uid": "src/components/FactoryForm.tsx:90:15",
+									"data-prohibitions": "[]",
+									value: "Medium",
+									children: "Média (Amarelo)"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+									"data-uid": "src/components/FactoryForm.tsx:91:15",
+									"data-prohibitions": "[]",
+									value: "Low",
+									children: "Baixa (Vermelho)"
+								})
+							]
+						})]
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					"data-uid": "src/components/FactoryForm.tsx:95:9",
+					"data-prohibitions": "[]",
+					className: "space-y-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
+						"data-uid": "src/components/FactoryForm.tsx:96:11",
+						"data-prohibitions": "[]",
+						children: "Nível de Foco (1-5 ou 'Cliente')"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+						"data-uid": "src/components/FactoryForm.tsx:97:11",
+						"data-prohibitions": "[editContent]",
+						name: "focusLevel",
+						defaultValue: factory?.focusLevel?.toString(),
+						placeholder: "Ex: 5 ou Cliente",
+						required: true
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					"data-uid": "src/components/FactoryForm.tsx:104:9",
 					"data-prohibitions": "[editContent]",
 					className: "space-y-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-						"data-uid": "src/components/FactoryForm.tsx:79:11",
+						"data-uid": "src/components/FactoryForm.tsx:105:11",
 						"data-prohibitions": "[]",
 						children: "Status"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
-						"data-uid": "src/components/FactoryForm.tsx:80:11",
+						"data-uid": "src/components/FactoryForm.tsx:106:11",
 						"data-prohibitions": "[editContent]",
 						name: "status",
 						defaultValue: factory?.status || "Prospeção",
 						required: true,
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
-							"data-uid": "src/components/FactoryForm.tsx:81:13",
+							"data-uid": "src/components/FactoryForm.tsx:107:13",
 							"data-prohibitions": "[]",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
-								"data-uid": "src/components/FactoryForm.tsx:82:15",
+								"data-uid": "src/components/FactoryForm.tsx:108:15",
 								"data-prohibitions": "[editContent]",
 								placeholder: "Selecione"
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectContent, {
-							"data-uid": "src/components/FactoryForm.tsx:84:13",
+							"data-uid": "src/components/FactoryForm.tsx:110:13",
 							"data-prohibitions": "[editContent]",
 							children: [
 								"Atendido",
 								"Não atendido",
 								"Prospeção"
 							].map((s) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-								"data-uid": "src/components/FactoryForm.tsx:86:17",
+								"data-uid": "src/components/FactoryForm.tsx:112:17",
 								"data-prohibitions": "[editContent]",
 								value: s,
 								children: s
@@ -28492,44 +28770,44 @@ function FactoryForm({ factory, onSubmit }) {
 					})]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/FactoryForm.tsx:93:9",
+					"data-uid": "src/components/FactoryForm.tsx:119:9",
 					"data-prohibitions": "[editContent]",
 					className: "space-y-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-						"data-uid": "src/components/FactoryForm.tsx:94:11",
+						"data-uid": "src/components/FactoryForm.tsx:120:11",
 						"data-prohibitions": "[]",
-						children: "Setor de Atuação"
+						children: "Setor de Atuação (Especialidades)"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
-						"data-uid": "src/components/FactoryForm.tsx:95:11",
+						"data-uid": "src/components/FactoryForm.tsx:121:11",
 						"data-prohibitions": "[editContent]",
 						name: "sector",
-						defaultValue: factory?.sector || "Bovinos em Geral",
+						defaultValue: factory?.sector || "Ruminantes",
 						required: true,
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
-							"data-uid": "src/components/FactoryForm.tsx:96:13",
+							"data-uid": "src/components/FactoryForm.tsx:122:13",
 							"data-prohibitions": "[]",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
-								"data-uid": "src/components/FactoryForm.tsx:97:15",
+								"data-uid": "src/components/FactoryForm.tsx:123:15",
 								"data-prohibitions": "[editContent]",
 								placeholder: "Selecione"
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectContent, {
-							"data-uid": "src/components/FactoryForm.tsx:99:13",
+							"data-uid": "src/components/FactoryForm.tsx:125:13",
 							"data-prohibitions": "[editContent]",
 							children: [
 								"Aves",
-								"Suínos",
-								"PET",
-								"Aqua",
+								"Aves/Suínos",
+								"Aves/Suínos, Pet",
 								"Bovinos de Corte",
 								"Bovinos de Leite",
-								"Bovinos em Geral",
-								"Equinos",
-								"Monogástricos",
+								"Geral",
+								"Muitiespecies",
+								"PET",
 								"Ruminantes",
-								"Multiespécie"
+								"Ruminantes, Pet",
+								"Suínos"
 							].map((s) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-								"data-uid": "src/components/FactoryForm.tsx:113:17",
+								"data-uid": "src/components/FactoryForm.tsx:139:17",
 								"data-prohibitions": "[editContent]",
 								value: s,
 								children: s
@@ -28538,29 +28816,29 @@ function FactoryForm({ factory, onSubmit }) {
 					})]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/FactoryForm.tsx:120:9",
+					"data-uid": "src/components/FactoryForm.tsx:146:9",
 					"data-prohibitions": "[editContent]",
 					className: "space-y-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-						"data-uid": "src/components/FactoryForm.tsx:121:11",
+						"data-uid": "src/components/FactoryForm.tsx:147:11",
 						"data-prohibitions": "[]",
 						children: "Tendência de Linha (Blink)"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
-						"data-uid": "src/components/FactoryForm.tsx:122:11",
+						"data-uid": "src/components/FactoryForm.tsx:148:11",
 						"data-prohibitions": "[editContent]",
 						name: "productLineAffinity",
 						defaultValue: factory?.productLineAffinity || "Adsorventes",
 						required: true,
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
-							"data-uid": "src/components/FactoryForm.tsx:127:13",
+							"data-uid": "src/components/FactoryForm.tsx:153:13",
 							"data-prohibitions": "[]",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
-								"data-uid": "src/components/FactoryForm.tsx:128:15",
+								"data-uid": "src/components/FactoryForm.tsx:154:15",
 								"data-prohibitions": "[editContent]",
 								placeholder: "Selecione"
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectContent, {
-							"data-uid": "src/components/FactoryForm.tsx:130:13",
+							"data-uid": "src/components/FactoryForm.tsx:156:13",
 							"data-prohibitions": "[editContent]",
 							children: [
 								"Adsorventes",
@@ -28569,7 +28847,7 @@ function FactoryForm({ factory, onSubmit }) {
 								"Blends",
 								"Ingredientes"
 							].map((s) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-								"data-uid": "src/components/FactoryForm.tsx:133:19",
+								"data-uid": "src/components/FactoryForm.tsx:159:19",
 								"data-prohibitions": "[editContent]",
 								value: s,
 								children: s
@@ -28578,15 +28856,15 @@ function FactoryForm({ factory, onSubmit }) {
 					})]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/FactoryForm.tsx:141:9",
+					"data-uid": "src/components/FactoryForm.tsx:167:9",
 					"data-prohibitions": "[]",
 					className: "space-y-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-						"data-uid": "src/components/FactoryForm.tsx:142:11",
+						"data-uid": "src/components/FactoryForm.tsx:168:11",
 						"data-prohibitions": "[]",
 						children: "Capacidade (ton/mês)"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-						"data-uid": "src/components/FactoryForm.tsx:143:11",
+						"data-uid": "src/components/FactoryForm.tsx:169:11",
 						"data-prohibitions": "[editContent]",
 						type: "number",
 						name: "capacity",
@@ -28595,15 +28873,15 @@ function FactoryForm({ factory, onSubmit }) {
 					})]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/FactoryForm.tsx:145:9",
+					"data-uid": "src/components/FactoryForm.tsx:171:9",
 					"data-prohibitions": "[]",
 					className: "space-y-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-						"data-uid": "src/components/FactoryForm.tsx:146:11",
+						"data-uid": "src/components/FactoryForm.tsx:172:11",
 						"data-prohibitions": "[]",
 						children: "Potencial (R$)"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-						"data-uid": "src/components/FactoryForm.tsx:147:11",
+						"data-uid": "src/components/FactoryForm.tsx:173:11",
 						"data-prohibitions": "[editContent]",
 						type: "number",
 						name: "potentialValue",
@@ -28612,29 +28890,29 @@ function FactoryForm({ factory, onSubmit }) {
 					})]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/FactoryForm.tsx:154:9",
+					"data-uid": "src/components/FactoryForm.tsx:180:9",
 					"data-prohibitions": "[editContent]",
 					className: "space-y-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-						"data-uid": "src/components/FactoryForm.tsx:155:11",
+						"data-uid": "src/components/FactoryForm.tsx:181:11",
 						"data-prohibitions": "[]",
 						children: "Estágio no Funil"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
-						"data-uid": "src/components/FactoryForm.tsx:156:11",
+						"data-uid": "src/components/FactoryForm.tsx:182:11",
 						"data-prohibitions": "[editContent]",
 						name: "funnelStage",
 						defaultValue: factory?.funnelStage || "Lead",
 						required: true,
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
-							"data-uid": "src/components/FactoryForm.tsx:157:13",
+							"data-uid": "src/components/FactoryForm.tsx:183:13",
 							"data-prohibitions": "[]",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
-								"data-uid": "src/components/FactoryForm.tsx:158:15",
+								"data-uid": "src/components/FactoryForm.tsx:184:15",
 								"data-prohibitions": "[editContent]",
 								placeholder: "Selecione"
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectContent, {
-							"data-uid": "src/components/FactoryForm.tsx:160:13",
+							"data-uid": "src/components/FactoryForm.tsx:186:13",
 							"data-prohibitions": "[editContent]",
 							children: [
 								"Lead",
@@ -28648,7 +28926,7 @@ function FactoryForm({ factory, onSubmit }) {
 								"Pós-venda",
 								"Perda"
 							].map((s) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-								"data-uid": "src/components/FactoryForm.tsx:173:17",
+								"data-uid": "src/components/FactoryForm.tsx:199:17",
 								"data-prohibitions": "[editContent]",
 								value: s,
 								children: s
@@ -28657,15 +28935,15 @@ function FactoryForm({ factory, onSubmit }) {
 					})]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/FactoryForm.tsx:180:9",
+					"data-uid": "src/components/FactoryForm.tsx:206:9",
 					"data-prohibitions": "[]",
 					className: "space-y-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-						"data-uid": "src/components/FactoryForm.tsx:181:11",
+						"data-uid": "src/components/FactoryForm.tsx:207:11",
 						"data-prohibitions": "[]",
 						children: "Probabilidade (%)"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-						"data-uid": "src/components/FactoryForm.tsx:182:11",
+						"data-uid": "src/components/FactoryForm.tsx:208:11",
 						"data-prohibitions": "[editContent]",
 						type: "number",
 						name: "winProbability",
@@ -28676,24 +28954,24 @@ function FactoryForm({ factory, onSubmit }) {
 					})]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/FactoryForm.tsx:191:9",
+					"data-uid": "src/components/FactoryForm.tsx:217:9",
 					"data-prohibitions": "[]",
 					className: "space-y-2 md:col-span-2",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-							"data-uid": "src/components/FactoryForm.tsx:192:11",
+							"data-uid": "src/components/FactoryForm.tsx:218:11",
 							"data-prohibitions": "[]",
 							children: "Prazo Limite de Negociação"
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-							"data-uid": "src/components/FactoryForm.tsx:193:11",
+							"data-uid": "src/components/FactoryForm.tsx:219:11",
 							"data-prohibitions": "[editContent]",
 							type: "date",
 							name: "deadline",
 							defaultValue: factory?.deadline ? factory.deadline.split("T")[0] : ""
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							"data-uid": "src/components/FactoryForm.tsx:198:11",
+							"data-uid": "src/components/FactoryForm.tsx:224:11",
 							"data-prohibitions": "[]",
 							className: "text-xs text-muted-foreground mt-1",
 							children: "Será gerado um alerta quando o prazo estiver próximo do fim."
@@ -28702,18 +28980,18 @@ function FactoryForm({ factory, onSubmit }) {
 				})
 			]
 		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			"data-uid": "src/components/FactoryForm.tsx:203:7",
+			"data-uid": "src/components/FactoryForm.tsx:229:7",
 			"data-prohibitions": "[]",
 			className: "flex justify-end gap-2",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-				"data-uid": "src/components/FactoryForm.tsx:204:9",
+				"data-uid": "src/components/FactoryForm.tsx:230:9",
 				"data-prohibitions": "[]",
 				type: "button",
 				variant: "outline",
 				onClick: onSubmit,
 				children: "Cancelar"
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-				"data-uid": "src/components/FactoryForm.tsx:207:9",
+				"data-uid": "src/components/FactoryForm.tsx:233:9",
 				"data-prohibitions": "[]",
 				type: "submit",
 				children: "Salvar Fábrica"
@@ -57232,7 +57510,7 @@ function FactoryListCard() {
 }
 //#endregion
 //#region src/pages/Index.tsx
-var WhatsAppIcon = ({ className }) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
+var WhatsAppIcon$1 = ({ className }) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
 	"data-uid": "src/pages/Index.tsx:12:3",
 	"data-prohibitions": "[editContent]",
 	viewBox: "0 0 24 24",
@@ -57311,7 +57589,7 @@ function Index() {
 						"data-prohibitions": "[]",
 						onClick: handleWhatsAppShare,
 						className: "gap-2 shadow-sm bg-[#25D366] hover:bg-[#128C7E] text-white w-full sm:w-auto",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(WhatsAppIcon, {
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(WhatsAppIcon$1, {
 							"data-uid": "src/pages/Index.tsx:77:13",
 							"data-prohibitions": "[editContent]",
 							className: "w-5 h-5"
@@ -58683,133 +58961,269 @@ function FactoryTasks({ factoryId }) {
 }
 //#endregion
 //#region src/pages/Cadastro.tsx
+var WhatsAppIcon = ({ className }) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
+	"data-uid": "src/pages/Cadastro.tsx:31:3",
+	"data-prohibitions": "[editContent]",
+	viewBox: "0 0 24 24",
+	className,
+	fill: "currentColor",
+	children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", {
+		"data-uid": "src/pages/Cadastro.tsx:32:5",
+		"data-prohibitions": "[editContent]",
+		d: "M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"
+	})
+});
 function Cadastro() {
 	const { factories, deleteFactory } = useAppContext();
 	const [search, setSearch] = (0, import_react.useState)("");
+	const [priorityFilter, setPriorityFilter] = (0, import_react.useState)("all");
+	const [cityFilter, setCityFilter] = (0, import_react.useState)("all");
 	const [editing, setEditing] = (0, import_react.useState)(null);
-	const filtered = factories.filter((f) => f.name.toLowerCase().includes(search.toLowerCase()) || f.city.toLowerCase().includes(search.toLowerCase()) || f.sector?.toLowerCase().includes(search.toLowerCase()) || f.productLineAffinity?.toLowerCase().includes(search.toLowerCase()));
+	const uniqueCities = Array.from(new Set(factories.map((f) => f.city))).sort();
+	const filtered = factories.filter((f) => {
+		const matchesSearch = f.name.toLowerCase().includes(search.toLowerCase()) || f.city.toLowerCase().includes(search.toLowerCase()) || f.sector?.toLowerCase().includes(search.toLowerCase());
+		const matchesPriority = priorityFilter === "all" || f.priority === priorityFilter;
+		const matchesCity = cityFilter === "all" || f.city === cityFilter;
+		return matchesSearch && matchesPriority && matchesCity;
+	});
 	const handleExport = () => {
 		exportToCSV("cadastro-fabricas.csv", filtered.map((f) => ({
 			Nome: f.name,
 			Cidade: f.city,
 			Região: f.region,
+			"Nível Foco": f.focusLevel || "",
+			Prioridade: f.priority || "",
 			Setor: f.sector || "",
 			"Linha Blink": f.productLineAffinity || "",
 			Status: f.status,
 			"Capacidade (t/mês)": f.capacity,
 			"Potencial (R$)": f.potentialValue,
 			"Estágio Funil": f.funnelStage,
-			"Probabilidade (%)": f.winProbability,
 			Contato: f.contactName,
-			Telefone: f.contactPhone,
-			"Prazo Negociação": f.deadline ? new Date(f.deadline).toLocaleDateString("pt-BR") : ""
+			Telefone: f.contactPhone
 		})));
 	};
+	const handleWhatsAppShare = () => {
+		let text = "*Lista de Fábricas Filtrada*\n\n";
+		filtered.slice(0, 30).forEach((f) => {
+			const priorityLabel = f.priority === "High" ? "🟢 Alta" : f.priority === "Medium" ? "🟡 Média" : "🔴 Baixa";
+			text += `- ${f.name} (${f.city}) | Nível: ${f.focusLevel} | ${priorityLabel}\n`;
+		});
+		if (filtered.length > 30) text += `\n... e mais ${filtered.length - 30} empresas.`;
+		const encodedText = encodeURIComponent(text);
+		window.open(`https://wa.me/?text=${encodedText}`, "_blank", "noopener,noreferrer");
+	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		"data-uid": "src/pages/Cadastro.tsx:56:5",
+		"data-uid": "src/pages/Cadastro.tsx:90:5",
 		"data-prohibitions": "[editContent]",
 		className: "space-y-6 animate-fade-in pb-10",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Cadastro.tsx:57:7",
+				"data-uid": "src/pages/Cadastro.tsx:91:7",
 				"data-prohibitions": "[]",
-				className: "flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4",
+				className: "flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Cadastro.tsx:58:9",
+					"data-uid": "src/pages/Cadastro.tsx:92:9",
 					"data-prohibitions": "[]",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-						"data-uid": "src/pages/Cadastro.tsx:59:11",
+						"data-uid": "src/pages/Cadastro.tsx:93:11",
 						"data-prohibitions": "[]",
 						className: "text-2xl font-bold tracking-tight",
 						children: "Cadastro de Fábricas"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						"data-uid": "src/pages/Cadastro.tsx:60:11",
+						"data-uid": "src/pages/Cadastro.tsx:94:11",
 						"data-prohibitions": "[]",
 						className: "text-muted-foreground text-sm",
 						children: "Gerencie o banco de dados de clientes e prospects."
 					})]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Cadastro.tsx:64:9",
+					"data-uid": "src/pages/Cadastro.tsx:98:9",
 					"data-prohibitions": "[]",
-					className: "flex items-center gap-2 w-full sm:w-auto",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/pages/Cadastro.tsx:65:11",
+					className: "flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
+						"data-uid": "src/pages/Cadastro.tsx:99:11",
 						"data-prohibitions": "[]",
-						className: "relative w-full sm:w-72",
+						onClick: handleWhatsAppShare,
+						className: "gap-2 shadow-sm bg-[#25D366] hover:bg-[#128C7E] text-white w-full sm:w-auto",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(WhatsAppIcon, {
+							"data-uid": "src/pages/Cadastro.tsx:103:13",
+							"data-prohibitions": "[editContent]",
+							className: "w-5 h-5"
+						}), " Compartilhar (WhatsApp)"]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
+						"data-uid": "src/pages/Cadastro.tsx:105:11",
+						"data-prohibitions": "[]",
+						variant: "outline",
+						onClick: () => window.print(),
+						className: "gap-2 shadow-sm w-full sm:w-auto",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Download, {
+							"data-uid": "src/pages/Cadastro.tsx:110:13",
+							"data-prohibitions": "[editContent]",
+							className: "w-5 h-5 md:w-4 md:h-4"
+						}), " Exportar PDF"]
+					})]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				"data-uid": "src/pages/Cadastro.tsx:115:7",
+				"data-prohibitions": "[editContent]",
+				className: "flex flex-col md:flex-row gap-3 bg-muted/30 p-3 rounded-lg border",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						"data-uid": "src/pages/Cadastro.tsx:116:9",
+						"data-prohibitions": "[]",
+						className: "relative flex-1",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Search, {
-							"data-uid": "src/pages/Cadastro.tsx:66:13",
+							"data-uid": "src/pages/Cadastro.tsx:117:11",
 							"data-prohibitions": "[editContent]",
 							className: "absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-							"data-uid": "src/pages/Cadastro.tsx:67:13",
+							"data-uid": "src/pages/Cadastro.tsx:118:11",
 							"data-prohibitions": "[editContent]",
-							placeholder: "Buscar fábrica, cidade ou setor...",
+							placeholder: "Buscar fábrica, setor...",
 							value: search,
 							onChange: (e) => setSearch(e.target.value),
-							className: "pl-9"
+							className: "pl-9 bg-background"
 						})]
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-						"data-uid": "src/pages/Cadastro.tsx:74:11",
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
+						"data-uid": "src/pages/Cadastro.tsx:125:9",
+						"data-prohibitions": "[]",
+						value: priorityFilter,
+						onValueChange: setPriorityFilter,
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
+							"data-uid": "src/pages/Cadastro.tsx:126:11",
+							"data-prohibitions": "[]",
+							className: "w-full md:w-[180px] bg-background",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
+								"data-uid": "src/pages/Cadastro.tsx:127:13",
+								"data-prohibitions": "[editContent]",
+								placeholder: "Prioridade"
+							})
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, {
+							"data-uid": "src/pages/Cadastro.tsx:129:11",
+							"data-prohibitions": "[]",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+									"data-uid": "src/pages/Cadastro.tsx:130:13",
+									"data-prohibitions": "[]",
+									value: "all",
+									children: "Todas Prioridades"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+									"data-uid": "src/pages/Cadastro.tsx:131:13",
+									"data-prohibitions": "[]",
+									value: "High",
+									children: "Alta Prioridade (Verde)"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+									"data-uid": "src/pages/Cadastro.tsx:132:13",
+									"data-prohibitions": "[]",
+									value: "Medium",
+									children: "Média Prioridade (Amarelo)"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+									"data-uid": "src/pages/Cadastro.tsx:133:13",
+									"data-prohibitions": "[]",
+									value: "Low",
+									children: "Baixa Prioridade (Vermelho)"
+								})
+							]
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
+						"data-uid": "src/pages/Cadastro.tsx:136:9",
+						"data-prohibitions": "[editContent]",
+						value: cityFilter,
+						onValueChange: setCityFilter,
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
+							"data-uid": "src/pages/Cadastro.tsx:137:11",
+							"data-prohibitions": "[]",
+							className: "w-full md:w-[220px] bg-background",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
+								"data-uid": "src/pages/Cadastro.tsx:138:13",
+								"data-prohibitions": "[editContent]",
+								placeholder: "Cidade"
+							})
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, {
+							"data-uid": "src/pages/Cadastro.tsx:140:11",
+							"data-prohibitions": "[editContent]",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+								"data-uid": "src/pages/Cadastro.tsx:141:13",
+								"data-prohibitions": "[]",
+								value: "all",
+								children: "Todas as Cidades"
+							}), uniqueCities.map((city) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+								"data-uid": "src/pages/Cadastro.tsx:143:15",
+								"data-prohibitions": "[editContent]",
+								value: city,
+								children: city
+							}, city))]
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+						"data-uid": "src/pages/Cadastro.tsx:149:9",
 						"data-prohibitions": "[]",
 						variant: "outline",
 						size: "icon",
 						onClick: handleExport,
 						title: "Exportar para Excel (CSV)",
+						className: "hidden md:flex bg-background shrink-0",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Download, {
-							"data-uid": "src/pages/Cadastro.tsx:80:13",
+							"data-uid": "src/pages/Cadastro.tsx:156:11",
 							"data-prohibitions": "[editContent]",
 							className: "w-4 h-4"
 						})
-					})]
-				})]
+					})
+				]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				"data-uid": "src/pages/Cadastro.tsx:85:7",
+				"data-uid": "src/pages/Cadastro.tsx:160:7",
 				"data-prohibitions": "[editContent]",
 				className: "bg-card border rounded-lg overflow-hidden shadow-subtle",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Cadastro.tsx:86:9",
+					"data-uid": "src/pages/Cadastro.tsx:161:9",
 					"data-prohibitions": "[editContent]",
 					className: "overflow-x-auto",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Table, {
-						"data-uid": "src/pages/Cadastro.tsx:87:11",
+						"data-uid": "src/pages/Cadastro.tsx:162:11",
 						"data-prohibitions": "[editContent]",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHeader, {
-							"data-uid": "src/pages/Cadastro.tsx:88:13",
+							"data-uid": "src/pages/Cadastro.tsx:163:13",
 							"data-prohibitions": "[]",
 							className: "bg-muted/50",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableRow, {
-								"data-uid": "src/pages/Cadastro.tsx:89:15",
+								"data-uid": "src/pages/Cadastro.tsx:164:15",
 								"data-prohibitions": "[]",
 								children: [
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:90:17",
+										"data-uid": "src/pages/Cadastro.tsx:165:17",
 										"data-prohibitions": "[]",
 										children: "Fábrica"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:91:17",
+										"data-uid": "src/pages/Cadastro.tsx:166:17",
 										"data-prohibitions": "[]",
 										children: "Local"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:92:17",
+										"data-uid": "src/pages/Cadastro.tsx:167:17",
 										"data-prohibitions": "[]",
-										children: "Setor / Linha"
+										children: "Setor / Foco"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:93:17",
+										"data-uid": "src/pages/Cadastro.tsx:168:17",
 										"data-prohibitions": "[]",
-										children: "Status"
+										children: "Prioridade"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:94:17",
+										"data-uid": "src/pages/Cadastro.tsx:169:17",
 										"data-prohibitions": "[]",
 										className: "text-right",
 										children: "Potencial"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:95:17",
+										"data-uid": "src/pages/Cadastro.tsx:170:17",
 										"data-prohibitions": "[]",
 										className: "text-center",
 										children: "Ações"
@@ -58817,109 +59231,114 @@ function Cadastro() {
 								]
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableBody, {
-							"data-uid": "src/pages/Cadastro.tsx:98:13",
+							"data-uid": "src/pages/Cadastro.tsx:173:13",
 							"data-prohibitions": "[editContent]",
 							children: [filtered.map((f) => {
 								const stale = isStale(f.lastInteraction);
 								return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableRow, {
-									"data-uid": "src/pages/Cadastro.tsx:102:19",
+									"data-uid": "src/pages/Cadastro.tsx:177:19",
 									"data-prohibitions": "[editContent]",
 									className: stale ? "bg-destructive/5" : "",
 									children: [
 										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:103:21",
+											"data-uid": "src/pages/Cadastro.tsx:178:21",
 											"data-prohibitions": "[editContent]",
 											className: "font-medium",
 											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:104:23",
+												"data-uid": "src/pages/Cadastro.tsx:179:23",
 												"data-prohibitions": "[editContent]",
 												className: "flex items-center gap-2",
 												children: [f.name, stale && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TriangleAlert, {
-													"data-uid": "src/pages/Cadastro.tsx:107:27",
+													"data-uid": "src/pages/Cadastro.tsx:182:27",
 													"data-prohibitions": "[editContent]",
 													className: "w-4 h-4 text-destructive",
 													title: "Sem interação há mais de 15 dias"
 												})]
 											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:113:23",
+												"data-uid": "src/pages/Cadastro.tsx:188:23",
 												"data-prohibitions": "[editContent]",
 												className: "text-xs text-muted-foreground mt-1",
 												children: f.operationTypes
 											})]
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:115:21",
+											"data-uid": "src/pages/Cadastro.tsx:190:21",
 											"data-prohibitions": "[editContent]",
 											children: [f.city, /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:117:23",
+												"data-uid": "src/pages/Cadastro.tsx:192:23",
 												"data-prohibitions": "[editContent]",
 												className: "text-xs text-muted-foreground mt-1",
 												children: f.region
 											})]
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:119:21",
+											"data-uid": "src/pages/Cadastro.tsx:194:21",
 											"data-prohibitions": "[editContent]",
 											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:120:23",
+												"data-uid": "src/pages/Cadastro.tsx:195:23",
 												"data-prohibitions": "[editContent]",
 												className: "font-medium",
 												children: f.sector || "-"
-											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:121:23",
+											}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+												"data-uid": "src/pages/Cadastro.tsx:196:23",
 												"data-prohibitions": "[editContent]",
 												className: "text-xs text-muted-foreground mt-1",
-												children: f.productLineAffinity || "-"
+												children: ["Nível: ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+													"data-uid": "src/pages/Cadastro.tsx:197:32",
+													"data-prohibitions": "[editContent]",
+													className: "font-bold",
+													children: f.focusLevel || "-"
+												})]
 											})]
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:125:21",
+											"data-uid": "src/pages/Cadastro.tsx:200:21",
 											"data-prohibitions": "[editContent]",
 											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Badge, {
-												"data-uid": "src/pages/Cadastro.tsx:126:23",
+												"data-uid": "src/pages/Cadastro.tsx:201:23",
 												"data-prohibitions": "[editContent]",
-												variant: f.status === "Atendido" ? "default" : f.status === "Prospeção" ? "secondary" : "outline",
-												className: "rounded-full",
-												children: f.status
+												variant: "outline",
+												className: `rounded-full border-0 text-white ${f.priority === "High" ? "bg-green-600" : f.priority === "Medium" ? "bg-yellow-500" : "bg-red-600"}`,
+												children: f.priority === "High" ? "Alta" : f.priority === "Medium" ? "Média" : "Baixa"
 											})
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:139:21",
+											"data-uid": "src/pages/Cadastro.tsx:212:21",
 											"data-prohibitions": "[editContent]",
 											className: "text-right font-semibold",
 											children: [formatCurrency(f.potentialValue), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:141:23",
+												"data-uid": "src/pages/Cadastro.tsx:214:23",
 												"data-prohibitions": "[editContent]",
 												className: "text-xs text-muted-foreground font-normal mt-1",
 												children: [f.capacity, " t/mês"]
 											})]
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:145:21",
+											"data-uid": "src/pages/Cadastro.tsx:218:21",
 											"data-prohibitions": "[]",
 											children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:146:23",
+												"data-uid": "src/pages/Cadastro.tsx:219:23",
 												"data-prohibitions": "[]",
 												className: "flex items-center justify-center gap-2",
 												children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-													"data-uid": "src/pages/Cadastro.tsx:147:25",
+													"data-uid": "src/pages/Cadastro.tsx:220:25",
 													"data-prohibitions": "[]",
 													variant: "ghost",
 													size: "icon",
 													onClick: () => setEditing(f),
 													children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pen, {
-														"data-uid": "src/pages/Cadastro.tsx:148:27",
+														"data-uid": "src/pages/Cadastro.tsx:221:27",
 														"data-prohibitions": "[editContent]",
 														className: "w-4 h-4 text-primary"
 													})
 												}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-													"data-uid": "src/pages/Cadastro.tsx:150:25",
+													"data-uid": "src/pages/Cadastro.tsx:223:25",
 													"data-prohibitions": "[]",
 													variant: "ghost",
 													size: "icon",
 													onClick: () => deleteFactory(f.id),
 													children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, {
-														"data-uid": "src/pages/Cadastro.tsx:151:27",
+														"data-uid": "src/pages/Cadastro.tsx:224:27",
 														"data-prohibitions": "[editContent]",
 														className: "w-4 h-4 text-destructive"
 													})
@@ -58929,10 +59348,10 @@ function Cadastro() {
 									]
 								}, f.id);
 							}), filtered.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableRow, {
-								"data-uid": "src/pages/Cadastro.tsx:159:17",
+								"data-uid": "src/pages/Cadastro.tsx:232:17",
 								"data-prohibitions": "[]",
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-									"data-uid": "src/pages/Cadastro.tsx:160:19",
+									"data-uid": "src/pages/Cadastro.tsx:233:19",
 									"data-prohibitions": "[]",
 									colSpan: 6,
 									className: "text-center h-24 text-muted-foreground",
@@ -58944,47 +59363,47 @@ function Cadastro() {
 				})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Dialog, {
-				"data-uid": "src/pages/Cadastro.tsx:170:7",
+				"data-uid": "src/pages/Cadastro.tsx:243:7",
 				"data-prohibitions": "[editContent]",
 				open: !!editing,
 				onOpenChange: (open) => !open && setEditing(null),
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogContent, {
-					"data-uid": "src/pages/Cadastro.tsx:171:9",
+					"data-uid": "src/pages/Cadastro.tsx:244:9",
 					"data-prohibitions": "[editContent]",
 					className: "max-w-3xl max-h-[90vh] overflow-y-auto",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogHeader, {
-						"data-uid": "src/pages/Cadastro.tsx:172:11",
+						"data-uid": "src/pages/Cadastro.tsx:245:11",
 						"data-prohibitions": "[editContent]",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogTitle, {
-							"data-uid": "src/pages/Cadastro.tsx:173:13",
+							"data-uid": "src/pages/Cadastro.tsx:246:13",
 							"data-prohibitions": "[editContent]",
 							children: ["Fábrica: ", editing?.name]
 						})
 					}), editing && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Tabs, {
-						"data-uid": "src/pages/Cadastro.tsx:176:13",
+						"data-uid": "src/pages/Cadastro.tsx:249:13",
 						"data-prohibitions": "[]",
 						defaultValue: "dados",
 						className: "w-full mt-2",
 						children: [
 							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TabsList, {
-								"data-uid": "src/pages/Cadastro.tsx:177:15",
+								"data-uid": "src/pages/Cadastro.tsx:250:15",
 								"data-prohibitions": "[]",
 								className: "grid w-full grid-cols-3",
 								children: [
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsTrigger, {
-										"data-uid": "src/pages/Cadastro.tsx:178:17",
+										"data-uid": "src/pages/Cadastro.tsx:251:17",
 										"data-prohibitions": "[]",
 										value: "dados",
 										children: "Cadastro"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsTrigger, {
-										"data-uid": "src/pages/Cadastro.tsx:179:17",
+										"data-uid": "src/pages/Cadastro.tsx:252:17",
 										"data-prohibitions": "[]",
 										value: "docs",
 										children: "Documentos"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsTrigger, {
-										"data-uid": "src/pages/Cadastro.tsx:180:17",
+										"data-uid": "src/pages/Cadastro.tsx:253:17",
 										"data-prohibitions": "[]",
 										value: "tasks",
 										children: "Tarefas"
@@ -58992,35 +59411,35 @@ function Cadastro() {
 								]
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsContent, {
-								"data-uid": "src/pages/Cadastro.tsx:182:15",
+								"data-uid": "src/pages/Cadastro.tsx:255:15",
 								"data-prohibitions": "[]",
 								value: "dados",
 								className: "pt-4 focus-visible:outline-none",
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FactoryForm, {
-									"data-uid": "src/pages/Cadastro.tsx:183:17",
+									"data-uid": "src/pages/Cadastro.tsx:256:17",
 									"data-prohibitions": "[editContent]",
 									factory: editing,
 									onSubmit: () => setEditing(null)
 								})
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsContent, {
-								"data-uid": "src/pages/Cadastro.tsx:185:15",
+								"data-uid": "src/pages/Cadastro.tsx:258:15",
 								"data-prohibitions": "[]",
 								value: "docs",
 								className: "pt-4 focus-visible:outline-none",
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FactoryDocuments, {
-									"data-uid": "src/pages/Cadastro.tsx:186:17",
+									"data-uid": "src/pages/Cadastro.tsx:259:17",
 									"data-prohibitions": "[editContent]",
 									factory: editing
 								})
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsContent, {
-								"data-uid": "src/pages/Cadastro.tsx:188:15",
+								"data-uid": "src/pages/Cadastro.tsx:261:15",
 								"data-prohibitions": "[]",
 								value: "tasks",
 								className: "pt-4 focus-visible:outline-none",
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FactoryTasks, {
-									"data-uid": "src/pages/Cadastro.tsx:189:17",
+									"data-uid": "src/pages/Cadastro.tsx:262:17",
 									"data-prohibitions": "[editContent]",
 									factoryId: editing.id
 								})
@@ -60634,4 +61053,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BrowserRouter, {
 }));
 //#endregion
 
-//# sourceMappingURL=index-2JaLGku1.js.map
+//# sourceMappingURL=index-CD1CbmCI.js.map

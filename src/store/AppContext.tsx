@@ -23,18 +23,19 @@ export const AppContext = createContext<AppContextData>({} as AppContextData)
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine)
 
+  // Bumped local storage keys to v2 to ensure new dataset is loaded
   const [factories, setFactories] = useState<Factory[]>(() => {
-    const saved = localStorage.getItem('blink_factories')
+    const saved = localStorage.getItem('blink_factories_v2')
     return saved ? JSON.parse(saved) : mockFactories
   })
 
   const [orders, setOrders] = useState<Order[]>(() => {
-    const saved = localStorage.getItem('blink_orders')
+    const saved = localStorage.getItem('blink_orders_v2')
     return saved ? JSON.parse(saved) : mockOrders
   })
 
   const [tasks, setTasks] = useState<Task[]>(() => {
-    const saved = localStorage.getItem('blink_tasks')
+    const saved = localStorage.getItem('blink_tasks_v2')
     return saved ? JSON.parse(saved) : mockTasks
   })
 
@@ -50,15 +51,15 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   }, [])
 
   useEffect(() => {
-    localStorage.setItem('blink_factories', JSON.stringify(factories))
+    localStorage.setItem('blink_factories_v2', JSON.stringify(factories))
   }, [factories])
 
   useEffect(() => {
-    localStorage.setItem('blink_orders', JSON.stringify(orders))
+    localStorage.setItem('blink_orders_v2', JSON.stringify(orders))
   }, [orders])
 
   useEffect(() => {
-    localStorage.setItem('blink_tasks', JSON.stringify(tasks))
+    localStorage.setItem('blink_tasks_v2', JSON.stringify(tasks))
   }, [tasks])
 
   const addFactory = (data: Partial<Factory>) => {
@@ -72,6 +73,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       capacity: data.capacity || 0,
       potentialValue: data.potentialValue || 0,
       status: data.status || 'Prospeção',
+      priority: data.priority || 'Medium',
+      focusLevel: data.focusLevel || 3,
       lastInteraction: data.lastInteraction || new Date().toISOString(),
       funnelStage: data.funnelStage || 'Lead',
       winProbability: data.winProbability || 10,
