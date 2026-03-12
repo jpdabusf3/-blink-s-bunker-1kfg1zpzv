@@ -38,6 +38,7 @@ export interface Order {
   id: string
   factoryId: string
   product: string
+  line?: ProductLine | string
   quantity: number
   unitValue: number
   totalValue: number

@@ -106,14 +106,32 @@ export function FactoryListCard() {
                     </TableCell>
                     <TableCell className="text-right">
                       {lastOrder ? (
-                        <Link
-                          to={`/pedidos?factoryId=${f.id}`}
-                          className="text-primary hover:text-primary/80 hover:underline font-medium transition-colors"
-                        >
-                          {new Date(lastOrder.orderDate).toLocaleDateString('pt-BR')}
-                        </Link>
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            to={`/pedidos?factoryId=${f.id}`}
+                            className="text-primary hover:text-primary/80 hover:underline font-medium transition-colors whitespace-nowrap"
+                          >
+                            {new Date(lastOrder.orderDate).toLocaleDateString('pt-BR')}
+                          </Link>
+                          <Link
+                            to={`/pedidos?factoryId=${f.id}&new=true`}
+                            className="text-[10px] bg-secondary hover:bg-secondary/80 text-secondary-foreground px-2 py-1 rounded transition-colors whitespace-nowrap"
+                          >
+                            + Pedido
+                          </Link>
+                        </div>
                       ) : (
-                        <span className="text-muted-foreground text-sm">Sem compras</span>
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-muted-foreground text-sm whitespace-nowrap">
+                            Sem compras
+                          </span>
+                          <Link
+                            to={`/pedidos?factoryId=${f.id}&new=true`}
+                            className="text-[10px] bg-secondary hover:bg-secondary/80 text-secondary-foreground px-2 py-1 rounded transition-colors whitespace-nowrap"
+                          >
+                            + Pedido
+                          </Link>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>

@@ -1614,6 +1614,10 @@ body {
   overflow-wrap: break-word;
 }
 
+.rounded{
+  border-radius: 0.25rem;
+}
+
 .rounded-\[2px\]{
   border-radius: 2px;
 }
@@ -3738,6 +3742,10 @@ body {
 
   .sm\:w-auto{
     width: auto;
+  }
+
+  .sm\:max-w-\[600px\]{
+    max-width: 600px;
   }
 
   .sm\:max-w-sm{
