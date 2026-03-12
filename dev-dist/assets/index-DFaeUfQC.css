@@ -891,6 +891,10 @@ body {
   display: block;
 }
 
+.inline-block{
+  display: inline-block;
+}
+
 .flex{
   display: flex;
 }
@@ -1861,6 +1865,11 @@ body {
 
 .bg-foreground{
   background-color: hsl(var(--foreground));
+}
+
+.bg-green-500{
+  --tw-bg-opacity: 1;
+  background-color: rgb(34 197 94 / var(--tw-bg-opacity, 1));
 }
 
 .bg-green-600{

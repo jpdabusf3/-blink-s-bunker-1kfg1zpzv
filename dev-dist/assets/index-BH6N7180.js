@@ -18177,7 +18177,7 @@ var Branch = DismissableLayerBranch;
 var useLayoutEffect2 = globalThis?.document ? import_react.useLayoutEffect : () => {};
 //#endregion
 //#region ../../cache/modules/inteligencia-comercial-blink-4eb45/node_modules/.pnpm/@radix-ui+react-portal@1.1.9_@types+react-dom@19.2.3_@types+react@19.2.14__@types+react_7668895bec2444446faa4e0f4eb5244b/node_modules/@radix-ui/react-portal/dist/index.mjs
-var PORTAL_NAME$4 = "Portal";
+var PORTAL_NAME$5 = "Portal";
 var Portal$3 = import_react.forwardRef((props, forwardedRef) => {
 	const { container: containerProp, ...portalProps } = props;
 	const [mounted, setMounted] = import_react.useState(false);
@@ -18188,7 +18188,7 @@ var Portal$3 = import_react.forwardRef((props, forwardedRef) => {
 		ref: forwardedRef
 	}), container) : null;
 });
-Portal$3.displayName = PORTAL_NAME$4;
+Portal$3.displayName = PORTAL_NAME$5;
 //#endregion
 //#region ../../cache/modules/inteligencia-comercial-blink-4eb45/node_modules/.pnpm/@radix-ui+react-presence@1.1.5_@types+react-dom@19.2.3_@types+react@19.2.14__@types+rea_c01c26c80b5ab5e3ecefbda6eca51ad1/node_modules/@radix-ui/react-presence/dist/index.mjs
 function useStateMachine(initialState, machine) {
@@ -18773,7 +18773,7 @@ var ToastAnnounce = (props) => {
 		})
 	});
 };
-var TITLE_NAME$1 = "ToastTitle";
+var TITLE_NAME$2 = "ToastTitle";
 var ToastTitle$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeToast, ...titleProps } = props;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.div, {
@@ -18781,8 +18781,8 @@ var ToastTitle$1 = import_react.forwardRef((props, forwardedRef) => {
 		ref: forwardedRef
 	});
 });
-ToastTitle$1.displayName = TITLE_NAME$1;
-var DESCRIPTION_NAME$1 = "ToastDescription";
+ToastTitle$1.displayName = TITLE_NAME$2;
+var DESCRIPTION_NAME$2 = "ToastDescription";
 var ToastDescription$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeToast, ...descriptionProps } = props;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.div, {
@@ -18790,12 +18790,12 @@ var ToastDescription$1 = import_react.forwardRef((props, forwardedRef) => {
 		ref: forwardedRef
 	});
 });
-ToastDescription$1.displayName = DESCRIPTION_NAME$1;
-var ACTION_NAME = "ToastAction";
+ToastDescription$1.displayName = DESCRIPTION_NAME$2;
+var ACTION_NAME$1 = "ToastAction";
 var ToastAction$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { altText, ...actionProps } = props;
 	if (!altText.trim()) {
-		console.error(`Invalid prop \`altText\` supplied to \`${ACTION_NAME}\`. Expected non-empty \`string\`.`);
+		console.error(`Invalid prop \`altText\` supplied to \`${ACTION_NAME$1}\`. Expected non-empty \`string\`.`);
 		return null;
 	}
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToastAnnounceExclude, {
@@ -18807,7 +18807,7 @@ var ToastAction$1 = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-ToastAction$1.displayName = ACTION_NAME;
+ToastAction$1.displayName = ACTION_NAME$1;
 var CLOSE_NAME$2 = "ToastClose";
 var ToastClose$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeToast, ...closeProps } = props;
@@ -18900,10 +18900,10 @@ function focusFirst$2(candidates) {
 }
 var Provider$1 = ToastProvider$1;
 var Viewport$1 = ToastViewport$1;
-var Root2$4 = Toast$2;
+var Root2$5 = Toast$2;
 var Title$1 = ToastTitle$1;
 var Description$1 = ToastDescription$1;
-var Action = ToastAction$1;
+var Action$1 = ToastAction$1;
 var Close$1 = ToastClose$1;
 //#endregion
 //#region ../../cache/modules/inteligencia-comercial-blink-4eb45/node_modules/.pnpm/clsx@2.1.1/node_modules/clsx/dist/clsx.mjs
@@ -19351,6 +19351,24 @@ var Search = createLucideIcon("search", [["path", {
 	r: "8",
 	key: "4ej97u"
 }]]);
+var ShoppingCart = createLucideIcon("shopping-cart", [
+	["circle", {
+		cx: "8",
+		cy: "21",
+		r: "1",
+		key: "jimo8o"
+	}],
+	["circle", {
+		cx: "19",
+		cy: "21",
+		r: "1",
+		key: "13723u"
+	}],
+	["path", {
+		d: "M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12",
+		key: "9zh506"
+	}]
+]);
 var Target = createLucideIcon("target", [
 	["circle", {
 		cx: "12",
@@ -20974,7 +20992,7 @@ var toastVariants = cva("group pointer-events-auto relative flex w-full items-ce
 	defaultVariants: { variant: "default" }
 });
 var Toast$1 = import_react.forwardRef(({ className, variant, ...props }, ref) => {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root2$4, {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root2$5, {
 		"data-uid": "src/components/ui/toast.tsx:47:5",
 		"data-prohibitions": "[editContent]",
 		ref,
@@ -20982,15 +21000,15 @@ var Toast$1 = import_react.forwardRef(({ className, variant, ...props }, ref) =>
 		...props
 	});
 });
-Toast$1.displayName = Root2$4.displayName;
-var ToastAction = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Action, {
+Toast$1.displayName = Root2$5.displayName;
+var ToastAction = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Action$1, {
 	"data-uid": "src/components/ui/toast.tsx:60:3",
 	"data-prohibitions": "[editContent]",
 	ref,
 	className: cn$1("inline-flex h-8 shrink-0 items-center justify-center rounded-md border bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 group-[.destructive]:border-muted/40 group-[.destructive]:hover:border-destructive/30 group-[.destructive]:hover:bg-destructive group-[.destructive]:hover:text-destructive-foreground group-[.destructive]:focus:ring-destructive", className),
 	...props
 }));
-ToastAction.displayName = Action.displayName;
+ToastAction.displayName = Action$1.displayName;
 var ToastClose = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Close$1, {
 	"data-uid": "src/components/ui/toast.tsx:75:3",
 	"data-prohibitions": "[editContent]",
@@ -23779,11 +23797,11 @@ var PopperAnchor = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 PopperAnchor.displayName = ANCHOR_NAME$1;
-var CONTENT_NAME$5 = "PopperContent";
-var [PopperContentProvider, useContentContext] = createPopperContext(CONTENT_NAME$5);
+var CONTENT_NAME$6 = "PopperContent";
+var [PopperContentProvider, useContentContext] = createPopperContext(CONTENT_NAME$6);
 var PopperContent = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopePopper, side = "bottom", sideOffset = 0, align = "center", alignOffset = 0, arrowPadding = 0, avoidCollisions = true, collisionBoundary = [], collisionPadding: collisionPaddingProp = 0, sticky = "partial", hideWhenDetached = false, updatePositionStrategy = "optimized", onPlaced, ...contentProps } = props;
-	const context = usePopperContext(CONTENT_NAME$5, __scopePopper);
+	const context = usePopperContext(CONTENT_NAME$6, __scopePopper);
 	const [content, setContent] = import_react.useState(null);
 	const composedRefs = useComposedRefs(forwardedRef, (node) => setContent(node));
 	const [arrow$4, setArrow] = import_react.useState(null);
@@ -23896,7 +23914,7 @@ var PopperContent = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-PopperContent.displayName = CONTENT_NAME$5;
+PopperContent.displayName = CONTENT_NAME$6;
 var ARROW_NAME$3 = "PopperArrow";
 var OPPOSITE_SIDE = {
 	top: "bottom",
@@ -23984,7 +24002,7 @@ function getSideAndAlignFromPlacement(placement) {
 	const [side, align = "center"] = placement.split("-");
 	return [side, align];
 }
-var Root2$3 = Popper;
+var Root2$4 = Popper;
 var Anchor = PopperAnchor;
 var Content$2 = PopperContent;
 var Arrow = PopperArrow;
@@ -24080,7 +24098,7 @@ var Tooltip$2 = (props) => {
 			}
 		};
 	}, []);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root2$3, {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root2$4, {
 		...popperScope,
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TooltipContextProvider, {
 			scope: __scopeTooltip,
@@ -24112,11 +24130,11 @@ var Tooltip$2 = (props) => {
 	});
 };
 Tooltip$2.displayName = TOOLTIP_NAME;
-var TRIGGER_NAME$5 = "TooltipTrigger";
+var TRIGGER_NAME$6 = "TooltipTrigger";
 var TooltipTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeTooltip, ...triggerProps } = props;
-	const context = useTooltipContext(TRIGGER_NAME$5, __scopeTooltip);
-	const providerContext = useTooltipProviderContext(TRIGGER_NAME$5, __scopeTooltip);
+	const context = useTooltipContext(TRIGGER_NAME$6, __scopeTooltip);
+	const providerContext = useTooltipProviderContext(TRIGGER_NAME$6, __scopeTooltip);
 	const popperScope = usePopperScope$2(__scopeTooltip);
 	const composedRefs = useComposedRefs(forwardedRef, import_react.useRef(null), context.onTriggerChange);
 	const isPointerDownRef = import_react.useRef(false);
@@ -24157,12 +24175,12 @@ var TooltipTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-TooltipTrigger$1.displayName = TRIGGER_NAME$5;
-var PORTAL_NAME$3 = "TooltipPortal";
-var [PortalProvider$2, usePortalContext$2] = createTooltipContext(PORTAL_NAME$3, { forceMount: void 0 });
+TooltipTrigger$1.displayName = TRIGGER_NAME$6;
+var PORTAL_NAME$4 = "TooltipPortal";
+var [PortalProvider$2, usePortalContext$2] = createTooltipContext(PORTAL_NAME$4, { forceMount: void 0 });
 var TooltipPortal = (props) => {
 	const { __scopeTooltip, forceMount, children, container } = props;
-	const context = useTooltipContext(PORTAL_NAME$3, __scopeTooltip);
+	const context = useTooltipContext(PORTAL_NAME$4, __scopeTooltip);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PortalProvider$2, {
 		scope: __scopeTooltip,
 		forceMount,
@@ -24176,12 +24194,12 @@ var TooltipPortal = (props) => {
 		})
 	});
 };
-TooltipPortal.displayName = PORTAL_NAME$3;
-var CONTENT_NAME$4 = "TooltipContent";
+TooltipPortal.displayName = PORTAL_NAME$4;
+var CONTENT_NAME$5 = "TooltipContent";
 var TooltipContent$1 = import_react.forwardRef((props, forwardedRef) => {
-	const portalContext = usePortalContext$2(CONTENT_NAME$4, props.__scopeTooltip);
+	const portalContext = usePortalContext$2(CONTENT_NAME$5, props.__scopeTooltip);
 	const { forceMount = portalContext.forceMount, side = "top", ...contentProps } = props;
-	const context = useTooltipContext(CONTENT_NAME$4, props.__scopeTooltip);
+	const context = useTooltipContext(CONTENT_NAME$5, props.__scopeTooltip);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Presence, {
 		present: forceMount || context.open,
 		children: context.disableHoverableContent ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TooltipContentImpl, {
@@ -24196,8 +24214,8 @@ var TooltipContent$1 = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 var TooltipContentHoverable = import_react.forwardRef((props, forwardedRef) => {
-	const context = useTooltipContext(CONTENT_NAME$4, props.__scopeTooltip);
-	const providerContext = useTooltipProviderContext(CONTENT_NAME$4, props.__scopeTooltip);
+	const context = useTooltipContext(CONTENT_NAME$5, props.__scopeTooltip);
+	const providerContext = useTooltipProviderContext(CONTENT_NAME$5, props.__scopeTooltip);
 	const ref = import_react.useRef(null);
 	const composedRefs = useComposedRefs(forwardedRef, ref);
 	const [pointerGraceArea, setPointerGraceArea] = import_react.useState(null);
@@ -24271,10 +24289,10 @@ var TooltipContentHoverable = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 var [VisuallyHiddenContentContextProvider, useVisuallyHiddenContentContext] = createTooltipContext(TOOLTIP_NAME, { isInside: false });
-var Slottable = /* @__PURE__ */ createSlottable("TooltipContent");
+var Slottable$1 = /* @__PURE__ */ createSlottable("TooltipContent");
 var TooltipContentImpl = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeTooltip, children, "aria-label": ariaLabel, onEscapeKeyDown, onPointerDownOutside, ...contentProps } = props;
-	const context = useTooltipContext(CONTENT_NAME$4, __scopeTooltip);
+	const context = useTooltipContext(CONTENT_NAME$5, __scopeTooltip);
 	const popperScope = usePopperScope$2(__scopeTooltip);
 	const { onClose } = context;
 	import_react.useEffect(() => {
@@ -24310,7 +24328,7 @@ var TooltipContentImpl = import_react.forwardRef((props, forwardedRef) => {
 				"--radix-tooltip-trigger-width": "var(--radix-popper-anchor-width)",
 				"--radix-tooltip-trigger-height": "var(--radix-popper-anchor-height)"
 			},
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Slottable, { children }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VisuallyHiddenContentContextProvider, {
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Slottable$1, { children }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VisuallyHiddenContentContextProvider, {
 				scope: __scopeTooltip,
 				isInside: true,
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root$7, {
@@ -24322,7 +24340,7 @@ var TooltipContentImpl = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-TooltipContent$1.displayName = CONTENT_NAME$4;
+TooltipContent$1.displayName = CONTENT_NAME$5;
 var ARROW_NAME$2 = "TooltipArrow";
 var TooltipArrow = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeTooltip, ...arrowProps } = props;
@@ -24467,13 +24485,13 @@ function getHullPresorted(points) {
 var Provider = TooltipProvider$1;
 var Root3 = Tooltip$2;
 var Trigger$4 = TooltipTrigger$1;
-var Content2$2 = TooltipContent$1;
+var Content2$3 = TooltipContent$1;
 //#endregion
 //#region src/components/ui/tooltip.tsx
 var TooltipProvider = Provider;
 var Tooltip$1 = Root3;
 var TooltipTrigger = Trigger$4;
-var TooltipContent = import_react.forwardRef(({ className, sideOffset = 4, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Content2$2, {
+var TooltipContent = import_react.forwardRef(({ className, sideOffset = 4, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Content2$3, {
 	"data-uid": "src/components/ui/tooltip.tsx:17:3",
 	"data-prohibitions": "[editContent]",
 	ref,
@@ -24481,7 +24499,7 @@ var TooltipContent = import_react.forwardRef(({ className, sideOffset = 4, ...pr
 	className: cn$1("z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-tooltip-content-transform-origin]", className),
 	...props
 }));
-TooltipContent.displayName = Content2$2.displayName;
+TooltipContent.displayName = Content2$3.displayName;
 //#endregion
 //#region ../../cache/modules/inteligencia-comercial-blink-4eb45/node_modules/.pnpm/@radix-ui+react-slot@1.2.4_@types+react@19.2.14_react@19.2.4/node_modules/@radix-ui/react-slot/dist/index.mjs
 var REACT_LAZY_TYPE = Symbol.for("react.lazy");
@@ -25780,10 +25798,10 @@ var Dialog$1 = (props) => {
 	});
 };
 Dialog$1.displayName = DIALOG_NAME;
-var TRIGGER_NAME$4 = "DialogTrigger";
+var TRIGGER_NAME$5 = "DialogTrigger";
 var DialogTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeDialog, ...triggerProps } = props;
-	const context = useDialogContext(TRIGGER_NAME$4, __scopeDialog);
+	const context = useDialogContext(TRIGGER_NAME$5, __scopeDialog);
 	const composedTriggerRef = useComposedRefs(forwardedRef, context.triggerRef);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.button, {
 		type: "button",
@@ -25796,12 +25814,12 @@ var DialogTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 		onClick: composeEventHandlers(props.onClick, context.onOpenToggle)
 	});
 });
-DialogTrigger$1.displayName = TRIGGER_NAME$4;
-var PORTAL_NAME$2 = "DialogPortal";
-var [PortalProvider$1, usePortalContext$1] = createDialogContext(PORTAL_NAME$2, { forceMount: void 0 });
+DialogTrigger$1.displayName = TRIGGER_NAME$5;
+var PORTAL_NAME$3 = "DialogPortal";
+var [PortalProvider$1, usePortalContext$1] = createDialogContext(PORTAL_NAME$3, { forceMount: void 0 });
 var DialogPortal$1 = (props) => {
 	const { __scopeDialog, forceMount, children, container } = props;
-	const context = useDialogContext(PORTAL_NAME$2, __scopeDialog);
+	const context = useDialogContext(PORTAL_NAME$3, __scopeDialog);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PortalProvider$1, {
 		scope: __scopeDialog,
 		forceMount,
@@ -25815,12 +25833,12 @@ var DialogPortal$1 = (props) => {
 		}))
 	});
 };
-DialogPortal$1.displayName = PORTAL_NAME$2;
-var OVERLAY_NAME = "DialogOverlay";
+DialogPortal$1.displayName = PORTAL_NAME$3;
+var OVERLAY_NAME$1 = "DialogOverlay";
 var DialogOverlay$1 = import_react.forwardRef((props, forwardedRef) => {
-	const portalContext = usePortalContext$1(OVERLAY_NAME, props.__scopeDialog);
+	const portalContext = usePortalContext$1(OVERLAY_NAME$1, props.__scopeDialog);
 	const { forceMount = portalContext.forceMount, ...overlayProps } = props;
-	const context = useDialogContext(OVERLAY_NAME, props.__scopeDialog);
+	const context = useDialogContext(OVERLAY_NAME$1, props.__scopeDialog);
 	return context.modal ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Presence, {
 		present: forceMount || context.open,
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogOverlayImpl, {
@@ -25829,11 +25847,11 @@ var DialogOverlay$1 = import_react.forwardRef((props, forwardedRef) => {
 		})
 	}) : null;
 });
-DialogOverlay$1.displayName = OVERLAY_NAME;
+DialogOverlay$1.displayName = OVERLAY_NAME$1;
 var Slot$2 = /* @__PURE__ */ createSlot$1("DialogOverlay.RemoveScroll");
 var DialogOverlayImpl = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeDialog, ...overlayProps } = props;
-	const context = useDialogContext(OVERLAY_NAME, __scopeDialog);
+	const context = useDialogContext(OVERLAY_NAME$1, __scopeDialog);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ReactRemoveScroll, {
 		as: Slot$2,
 		allowPinchZoom: true,
@@ -25849,11 +25867,11 @@ var DialogOverlayImpl = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-var CONTENT_NAME$3 = "DialogContent";
+var CONTENT_NAME$4 = "DialogContent";
 var DialogContent$1 = import_react.forwardRef((props, forwardedRef) => {
-	const portalContext = usePortalContext$1(CONTENT_NAME$3, props.__scopeDialog);
+	const portalContext = usePortalContext$1(CONTENT_NAME$4, props.__scopeDialog);
 	const { forceMount = portalContext.forceMount, ...contentProps } = props;
-	const context = useDialogContext(CONTENT_NAME$3, props.__scopeDialog);
+	const context = useDialogContext(CONTENT_NAME$4, props.__scopeDialog);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Presence, {
 		present: forceMount || context.open,
 		children: context.modal ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogContentModal, {
@@ -25865,9 +25883,9 @@ var DialogContent$1 = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-DialogContent$1.displayName = CONTENT_NAME$3;
+DialogContent$1.displayName = CONTENT_NAME$4;
 var DialogContentModal = import_react.forwardRef((props, forwardedRef) => {
-	const context = useDialogContext(CONTENT_NAME$3, props.__scopeDialog);
+	const context = useDialogContext(CONTENT_NAME$4, props.__scopeDialog);
 	const contentRef = import_react.useRef(null);
 	const composedRefs = useComposedRefs(forwardedRef, context.contentRef, contentRef);
 	import_react.useEffect(() => {
@@ -25892,7 +25910,7 @@ var DialogContentModal = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 var DialogContentNonModal = import_react.forwardRef((props, forwardedRef) => {
-	const context = useDialogContext(CONTENT_NAME$3, props.__scopeDialog);
+	const context = useDialogContext(CONTENT_NAME$4, props.__scopeDialog);
 	const hasInteractedOutsideRef = import_react.useRef(false);
 	const hasPointerDownOutsideRef = import_react.useRef(false);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogContentImpl, {
@@ -25923,7 +25941,7 @@ var DialogContentNonModal = import_react.forwardRef((props, forwardedRef) => {
 });
 var DialogContentImpl = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeDialog, trapFocus, onOpenAutoFocus, onCloseAutoFocus, ...contentProps } = props;
-	const context = useDialogContext(CONTENT_NAME$3, __scopeDialog);
+	const context = useDialogContext(CONTENT_NAME$4, __scopeDialog);
 	const contentRef = import_react.useRef(null);
 	const composedRefs = useComposedRefs(forwardedRef, contentRef);
 	useFocusGuards();
@@ -25943,33 +25961,33 @@ var DialogContentImpl = import_react.forwardRef((props, forwardedRef) => {
 			ref: composedRefs,
 			onDismiss: () => context.onOpenChange(false)
 		})
-	}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TitleWarning, { titleId: context.titleId }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DescriptionWarning, {
+	}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TitleWarning, { titleId: context.titleId }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DescriptionWarning$1, {
 		contentRef,
 		descriptionId: context.descriptionId
 	})] })] });
 });
-var TITLE_NAME = "DialogTitle";
+var TITLE_NAME$1 = "DialogTitle";
 var DialogTitle$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeDialog, ...titleProps } = props;
-	const context = useDialogContext(TITLE_NAME, __scopeDialog);
+	const context = useDialogContext(TITLE_NAME$1, __scopeDialog);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.h2, {
 		id: context.titleId,
 		...titleProps,
 		ref: forwardedRef
 	});
 });
-DialogTitle$1.displayName = TITLE_NAME;
-var DESCRIPTION_NAME = "DialogDescription";
+DialogTitle$1.displayName = TITLE_NAME$1;
+var DESCRIPTION_NAME$1 = "DialogDescription";
 var DialogDescription$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeDialog, ...descriptionProps } = props;
-	const context = useDialogContext(DESCRIPTION_NAME, __scopeDialog);
+	const context = useDialogContext(DESCRIPTION_NAME$1, __scopeDialog);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.p, {
 		id: context.descriptionId,
 		...descriptionProps,
 		ref: forwardedRef
 	});
 });
-DialogDescription$1.displayName = DESCRIPTION_NAME;
+DialogDescription$1.displayName = DESCRIPTION_NAME$1;
 var CLOSE_NAME$1 = "DialogClose";
 var DialogClose$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeDialog, ...closeProps } = props;
@@ -25987,8 +26005,8 @@ function getState$2(open) {
 }
 var TITLE_WARNING_NAME = "DialogTitleWarning";
 var [WarningProvider, useWarningContext] = createContext2(TITLE_WARNING_NAME, {
-	contentName: CONTENT_NAME$3,
-	titleName: TITLE_NAME,
+	contentName: CONTENT_NAME$4,
+	titleName: TITLE_NAME$1,
 	docsSlug: "dialog"
 });
 var TitleWarning = ({ titleId }) => {
@@ -26006,7 +26024,7 @@ For more information, see https://radix-ui.com/primitives/docs/components/${titl
 	return null;
 };
 var DESCRIPTION_WARNING_NAME = "DialogDescriptionWarning";
-var DescriptionWarning = ({ contentRef, descriptionId }) => {
+var DescriptionWarning$1 = ({ contentRef, descriptionId }) => {
 	const MESSAGE = `Warning: Missing \`Description\` or \`aria-describedby={undefined}\` for {${useWarningContext(DESCRIPTION_WARNING_NAME).contentName}}.`;
 	import_react.useEffect(() => {
 		const describedById = contentRef.current?.getAttribute("aria-describedby");
@@ -26632,6 +26650,11 @@ function AppSidebar() {
 			icon: ChartNoAxesColumn
 		},
 		{
+			name: "Histórico de Pedidos",
+			path: "/pedidos",
+			icon: ShoppingCart
+		},
+		{
 			name: "Matriz SWOT",
 			path: "/swot",
 			icon: Target
@@ -26643,30 +26666,30 @@ function AppSidebar() {
 		}
 	];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Sidebar, {
-		"data-uid": "src/components/AppSidebar.tsx:25:5",
+		"data-uid": "src/components/AppSidebar.tsx:26:5",
 		"data-prohibitions": "[editContent]",
 		collapsible: "icon",
 		className: "border-r border-border shadow-sm print:hidden",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarHeader, {
-				"data-uid": "src/components/AppSidebar.tsx:26:7",
+				"data-uid": "src/components/AppSidebar.tsx:27:7",
 				"data-prohibitions": "[]",
 				className: "p-4 border-b flex items-center justify-center",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/AppSidebar.tsx:27:9",
+					"data-uid": "src/components/AppSidebar.tsx:28:9",
 					"data-prohibitions": "[]",
 					className: "flex items-center gap-2 overflow-hidden px-1",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						"data-uid": "src/components/AppSidebar.tsx:28:11",
+						"data-uid": "src/components/AppSidebar.tsx:29:11",
 						"data-prohibitions": "[]",
 						className: "bg-primary p-1.5 rounded-lg shrink-0",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Target, {
-							"data-uid": "src/components/AppSidebar.tsx:29:13",
+							"data-uid": "src/components/AppSidebar.tsx:30:13",
 							"data-prohibitions": "[editContent]",
 							className: "w-5 h-5 text-primary-foreground"
 						})
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-						"data-uid": "src/components/AppSidebar.tsx:31:11",
+						"data-uid": "src/components/AppSidebar.tsx:32:11",
 						"data-prohibitions": "[]",
 						className: "text-lg font-bold text-foreground truncate group-data-[collapsible=icon]:hidden",
 						children: "Blink Biotech"
@@ -26674,33 +26697,33 @@ function AppSidebar() {
 				})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarContent, {
-				"data-uid": "src/components/AppSidebar.tsx:36:7",
+				"data-uid": "src/components/AppSidebar.tsx:37:7",
 				"data-prohibitions": "[editContent]",
 				className: "p-2 pt-4 flex-1",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenu, {
-					"data-uid": "src/components/AppSidebar.tsx:37:9",
+					"data-uid": "src/components/AppSidebar.tsx:38:9",
 					"data-prohibitions": "[editContent]",
 					className: "gap-2",
 					children: menu.map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuItem, {
-						"data-uid": "src/components/AppSidebar.tsx:39:13",
+						"data-uid": "src/components/AppSidebar.tsx:40:13",
 						"data-prohibitions": "[editContent]",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuButton, {
-							"data-uid": "src/components/AppSidebar.tsx:40:15",
+							"data-uid": "src/components/AppSidebar.tsx:41:15",
 							"data-prohibitions": "[editContent]",
 							asChild: true,
 							isActive: loc.pathname === m.path,
 							className: "h-10 px-3 data-[active=true]:bg-primary/10 data-[active=true]:text-primary font-medium transition-all",
 							tooltip: m.name,
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Link, {
-								"data-uid": "src/components/AppSidebar.tsx:46:17",
+								"data-uid": "src/components/AppSidebar.tsx:47:17",
 								"data-prohibitions": "[editContent]",
 								to: m.path,
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(m.icon, {
-									"data-uid": "src/components/AppSidebar.tsx:47:19",
+									"data-uid": "src/components/AppSidebar.tsx:48:19",
 									"data-prohibitions": "[editContent]",
 									className: "w-5 h-5"
 								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									"data-uid": "src/components/AppSidebar.tsx:48:19",
+									"data-uid": "src/components/AppSidebar.tsx:49:19",
 									"data-prohibitions": "[editContent]",
 									className: "group-data-[collapsible=icon]:hidden",
 									children: m.name
@@ -26711,27 +26734,27 @@ function AppSidebar() {
 				})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				"data-uid": "src/components/AppSidebar.tsx:55:7",
+				"data-uid": "src/components/AppSidebar.tsx:56:7",
 				"data-prohibitions": "[]",
 				className: "p-2 border-t mt-auto",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenu, {
-					"data-uid": "src/components/AppSidebar.tsx:56:9",
+					"data-uid": "src/components/AppSidebar.tsx:57:9",
 					"data-prohibitions": "[]",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuItem, {
-						"data-uid": "src/components/AppSidebar.tsx:57:11",
+						"data-uid": "src/components/AppSidebar.tsx:58:11",
 						"data-prohibitions": "[]",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SidebarMenuButton, {
-							"data-uid": "src/components/AppSidebar.tsx:58:13",
+							"data-uid": "src/components/AppSidebar.tsx:59:13",
 							"data-prohibitions": "[]",
 							onClick: logout,
 							tooltip: "Sair",
 							className: "h-10 px-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(LogOut, {
-								"data-uid": "src/components/AppSidebar.tsx:63:15",
+								"data-uid": "src/components/AppSidebar.tsx:64:15",
 								"data-prohibitions": "[editContent]",
 								className: "w-5 h-5"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/components/AppSidebar.tsx:64:15",
+								"data-uid": "src/components/AppSidebar.tsx:65:15",
 								"data-prohibitions": "[]",
 								className: "group-data-[collapsible=icon]:hidden font-medium",
 								children: "Sair da Conta"
@@ -27369,8 +27392,24 @@ var AppProvider = ({ children }) => {
 		};
 		setOrders((prev) => [newOrder, ...prev]);
 	};
+	const updateOrder = (id, data) => {
+		setOrders((prev) => prev.map((o) => {
+			if (o.id === id) {
+				const updated = {
+					...o,
+					...data
+				};
+				updated.totalValue = updated.quantity * updated.unitValue;
+				return updated;
+			}
+			return o;
+		}));
+	};
+	const deleteOrder = (id) => {
+		setOrders((prev) => prev.filter((o) => o.id !== id));
+	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AppContext.Provider, {
-		"data-uid": "src/store/AppContext.tsx:173:5",
+		"data-uid": "src/store/AppContext.tsx:192:5",
 		"data-prohibitions": "[editContent]",
 		value: {
 			factories,
@@ -27389,7 +27428,9 @@ var AppProvider = ({ children }) => {
 			updateTask,
 			deleteTask,
 			addVisit,
-			addOrder
+			addOrder,
+			updateOrder,
+			deleteOrder
 		},
 		children
 	});
@@ -27560,7 +27601,7 @@ var Select$1 = (props) => {
 	const isFormControl = trigger ? form || !!trigger.closest("form") : true;
 	const [nativeOptionsSet, setNativeOptionsSet] = import_react.useState(/* @__PURE__ */ new Set());
 	const nativeSelectKey = Array.from(nativeOptionsSet).map((option) => option.props.value).join(";");
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root2$3, {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root2$4, {
 		...popperScope,
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectProvider, {
 			required,
@@ -27611,11 +27652,11 @@ var Select$1 = (props) => {
 	});
 };
 Select$1.displayName = SELECT_NAME;
-var TRIGGER_NAME$3 = "SelectTrigger";
+var TRIGGER_NAME$4 = "SelectTrigger";
 var SelectTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeSelect, disabled = false, ...triggerProps } = props;
 	const popperScope = usePopperScope$1(__scopeSelect);
-	const context = useSelectContext(TRIGGER_NAME$3, __scopeSelect);
+	const context = useSelectContext(TRIGGER_NAME$4, __scopeSelect);
 	const isDisabled = context.disabled || disabled;
 	const composedRefs = useComposedRefs(forwardedRef, context.onTriggerChange);
 	const getItems = useCollection$2(__scopeSelect);
@@ -27677,7 +27718,7 @@ var SelectTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-SelectTrigger$1.displayName = TRIGGER_NAME$3;
+SelectTrigger$1.displayName = TRIGGER_NAME$4;
 var VALUE_NAME = "SelectValue";
 var SelectValue$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeSelect, className, style, children, placeholder = "", ...valueProps } = props;
@@ -27707,17 +27748,17 @@ var SelectIcon = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 SelectIcon.displayName = ICON_NAME;
-var PORTAL_NAME$1 = "SelectPortal";
+var PORTAL_NAME$2 = "SelectPortal";
 var SelectPortal = (props) => {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Portal$3, {
 		asChild: true,
 		...props
 	});
 };
-SelectPortal.displayName = PORTAL_NAME$1;
-var CONTENT_NAME$2 = "SelectContent";
+SelectPortal.displayName = PORTAL_NAME$2;
+var CONTENT_NAME$3 = "SelectContent";
 var SelectContent$1 = import_react.forwardRef((props, forwardedRef) => {
-	const context = useSelectContext(CONTENT_NAME$2, props.__scopeSelect);
+	const context = useSelectContext(CONTENT_NAME$3, props.__scopeSelect);
 	const [fragment, setFragment] = import_react.useState();
 	useLayoutEffect2(() => {
 		setFragment(new DocumentFragment());
@@ -27737,14 +27778,14 @@ var SelectContent$1 = import_react.forwardRef((props, forwardedRef) => {
 		ref: forwardedRef
 	});
 });
-SelectContent$1.displayName = CONTENT_NAME$2;
+SelectContent$1.displayName = CONTENT_NAME$3;
 var CONTENT_MARGIN = 10;
-var [SelectContentProvider, useSelectContentContext] = createSelectContext(CONTENT_NAME$2);
+var [SelectContentProvider, useSelectContentContext] = createSelectContext(CONTENT_NAME$3);
 var CONTENT_IMPL_NAME = "SelectContentImpl";
 var Slot$1 = /* @__PURE__ */ createSlot$1("SelectContent.RemoveScroll");
 var SelectContentImpl = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeSelect, position = "item-aligned", onCloseAutoFocus, onEscapeKeyDown, onPointerDownOutside, side, sideOffset, align, alignOffset, arrowPadding, collisionBoundary, collisionPadding, sticky, hideWhenDetached, avoidCollisions, ...contentProps } = props;
-	const context = useSelectContext(CONTENT_NAME$2, __scopeSelect);
+	const context = useSelectContext(CONTENT_NAME$3, __scopeSelect);
 	const [content, setContent] = import_react.useState(null);
 	const [viewport, setViewport] = import_react.useState(null);
 	const composedRefs = useComposedRefs(forwardedRef, (node) => setContent(node));
@@ -27934,8 +27975,8 @@ SelectContentImpl.displayName = CONTENT_IMPL_NAME;
 var ITEM_ALIGNED_POSITION_NAME = "SelectItemAlignedPosition";
 var SelectItemAlignedPosition = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeSelect, onPlaced, ...popperProps } = props;
-	const context = useSelectContext(CONTENT_NAME$2, __scopeSelect);
-	const contentContext = useSelectContentContext(CONTENT_NAME$2, __scopeSelect);
+	const context = useSelectContext(CONTENT_NAME$3, __scopeSelect);
+	const contentContext = useSelectContentContext(CONTENT_NAME$3, __scopeSelect);
 	const [contentWrapper, setContentWrapper] = import_react.useState(null);
 	const [content, setContent] = import_react.useState(null);
 	const composedRefs = useComposedRefs(forwardedRef, (node) => setContent(node));
@@ -28079,7 +28120,7 @@ var SelectPopperPosition = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 SelectPopperPosition.displayName = POPPER_POSITION_NAME;
-var [SelectViewportProvider, useSelectViewportContext] = createSelectContext(CONTENT_NAME$2, {});
+var [SelectViewportProvider, useSelectViewportContext] = createSelectContext(CONTENT_NAME$3, {});
 var VIEWPORT_NAME = "SelectViewport";
 var SelectViewport = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeSelect, nonce, ...viewportProps } = props;
@@ -28459,12 +28500,12 @@ function findNextItem(items, search, currentItem) {
 function wrapArray$1(array, startIndex) {
 	return array.map((_, index) => array[(startIndex + index) % array.length]);
 }
-var Root2$2 = Select$1;
+var Root2$3 = Select$1;
 var Trigger$2 = SelectTrigger$1;
 var Value = SelectValue$1;
 var Icon = SelectIcon;
 var Portal$1 = SelectPortal;
-var Content2$1 = SelectContent$1;
+var Content2$2 = SelectContent$1;
 var Viewport = SelectViewport;
 var Label$1 = SelectLabel$1;
 var Item$1 = SelectItem$1;
@@ -28475,7 +28516,7 @@ var ScrollDownButton = SelectScrollDownButton$1;
 var Separator = SelectSeparator$1;
 //#endregion
 //#region src/components/ui/select.tsx
-var Select = Root2$2;
+var Select = Root2$3;
 var SelectValue = Value;
 var SelectTrigger = import_react.forwardRef(({ className, children, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Trigger$2, {
 	"data-uid": "src/components/ui/select.tsx:18:3",
@@ -28524,7 +28565,7 @@ SelectScrollDownButton.displayName = ScrollDownButton.displayName;
 var SelectContent = import_react.forwardRef(({ className, children, position = "popper", ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Portal$1, {
 	"data-uid": "src/components/ui/select.tsx:66:3",
 	"data-prohibitions": "[editContent]",
-	children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Content2$1, {
+	children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Content2$2, {
 		"data-uid": "src/components/ui/select.tsx:67:5",
 		"data-prohibitions": "[editContent]",
 		ref,
@@ -28549,7 +28590,7 @@ var SelectContent = import_react.forwardRef(({ className, children, position = "
 		]
 	})
 }));
-SelectContent.displayName = Content2$1.displayName;
+SelectContent.displayName = Content2$2.displayName;
 var SelectLabel = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$1, {
 	"data-uid": "src/components/ui/select.tsx:98:3",
 	"data-prohibitions": "[editContent]",
@@ -29054,7 +29095,7 @@ var Popover$1 = (props) => {
 		onChange: onOpenChange,
 		caller: POPOVER_NAME
 	});
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root2$3, {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root2$4, {
 		...popperScope,
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PopoverProvider, {
 			scope: __scopePopover,
@@ -29089,10 +29130,10 @@ var PopoverAnchor = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 PopoverAnchor.displayName = ANCHOR_NAME;
-var TRIGGER_NAME$2 = "PopoverTrigger";
+var TRIGGER_NAME$3 = "PopoverTrigger";
 var PopoverTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopePopover, ...triggerProps } = props;
-	const context = usePopoverContext(TRIGGER_NAME$2, __scopePopover);
+	const context = usePopoverContext(TRIGGER_NAME$3, __scopePopover);
 	const popperScope = usePopperScope(__scopePopover);
 	const composedTriggerRef = useComposedRefs(forwardedRef, context.triggerRef);
 	const trigger = /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.button, {
@@ -29111,12 +29152,12 @@ var PopoverTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 		children: trigger
 	});
 });
-PopoverTrigger$1.displayName = TRIGGER_NAME$2;
-var PORTAL_NAME = "PopoverPortal";
-var [PortalProvider, usePortalContext] = createPopoverContext(PORTAL_NAME, { forceMount: void 0 });
+PopoverTrigger$1.displayName = TRIGGER_NAME$3;
+var PORTAL_NAME$1 = "PopoverPortal";
+var [PortalProvider, usePortalContext] = createPopoverContext(PORTAL_NAME$1, { forceMount: void 0 });
 var PopoverPortal = (props) => {
 	const { __scopePopover, forceMount, children, container } = props;
-	const context = usePopoverContext(PORTAL_NAME, __scopePopover);
+	const context = usePopoverContext(PORTAL_NAME$1, __scopePopover);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PortalProvider, {
 		scope: __scopePopover,
 		forceMount,
@@ -29130,12 +29171,12 @@ var PopoverPortal = (props) => {
 		})
 	});
 };
-PopoverPortal.displayName = PORTAL_NAME;
-var CONTENT_NAME$1 = "PopoverContent";
+PopoverPortal.displayName = PORTAL_NAME$1;
+var CONTENT_NAME$2 = "PopoverContent";
 var PopoverContent$1 = import_react.forwardRef((props, forwardedRef) => {
-	const portalContext = usePortalContext(CONTENT_NAME$1, props.__scopePopover);
+	const portalContext = usePortalContext(CONTENT_NAME$2, props.__scopePopover);
 	const { forceMount = portalContext.forceMount, ...contentProps } = props;
-	const context = usePopoverContext(CONTENT_NAME$1, props.__scopePopover);
+	const context = usePopoverContext(CONTENT_NAME$2, props.__scopePopover);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Presence, {
 		present: forceMount || context.open,
 		children: context.modal ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PopoverContentModal, {
@@ -29147,10 +29188,10 @@ var PopoverContent$1 = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-PopoverContent$1.displayName = CONTENT_NAME$1;
+PopoverContent$1.displayName = CONTENT_NAME$2;
 var Slot = /* @__PURE__ */ createSlot$1("PopoverContent.RemoveScroll");
 var PopoverContentModal = import_react.forwardRef((props, forwardedRef) => {
-	const context = usePopoverContext(CONTENT_NAME$1, props.__scopePopover);
+	const context = usePopoverContext(CONTENT_NAME$2, props.__scopePopover);
 	const contentRef = import_react.useRef(null);
 	const composedRefs = useComposedRefs(forwardedRef, contentRef);
 	const isRightClickOutsideRef = import_react.useRef(false);
@@ -29180,7 +29221,7 @@ var PopoverContentModal = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 var PopoverContentNonModal = import_react.forwardRef((props, forwardedRef) => {
-	const context = usePopoverContext(CONTENT_NAME$1, props.__scopePopover);
+	const context = usePopoverContext(CONTENT_NAME$2, props.__scopePopover);
 	const hasInteractedOutsideRef = import_react.useRef(false);
 	const hasPointerDownOutsideRef = import_react.useRef(false);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PopoverContentImpl, {
@@ -29211,7 +29252,7 @@ var PopoverContentNonModal = import_react.forwardRef((props, forwardedRef) => {
 });
 var PopoverContentImpl = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopePopover, trapFocus, onOpenAutoFocus, onCloseAutoFocus, disableOutsidePointerEvents, onEscapeKeyDown, onPointerDownOutside, onFocusOutside, onInteractOutside, ...contentProps } = props;
-	const context = usePopoverContext(CONTENT_NAME$1, __scopePopover);
+	const context = usePopoverContext(CONTENT_NAME$2, __scopePopover);
 	const popperScope = usePopperScope(__scopePopover);
 	useFocusGuards();
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FocusScope, {
@@ -29273,18 +29314,18 @@ PopoverArrow.displayName = ARROW_NAME;
 function getState$1(open) {
 	return open ? "open" : "closed";
 }
-var Root2$1 = Popover$1;
+var Root2$2 = Popover$1;
 var Trigger$1 = PopoverTrigger$1;
 var Portal = PopoverPortal;
-var Content2 = PopoverContent$1;
+var Content2$1 = PopoverContent$1;
 //#endregion
 //#region src/components/ui/popover.tsx
-var Popover = Root2$1;
+var Popover = Root2$2;
 var PopoverTrigger = Trigger$1;
 var PopoverContent = import_react.forwardRef(({ className, align = "center", sideOffset = 4, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Portal, {
 	"data-uid": "src/components/ui/popover.tsx:15:3",
 	"data-prohibitions": "[editContent]",
-	children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Content2, {
+	children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Content2$1, {
 		"data-uid": "src/components/ui/popover.tsx:16:5",
 		"data-prohibitions": "[editContent]",
 		ref,
@@ -29294,7 +29335,7 @@ var PopoverContent = import_react.forwardRef(({ className, align = "center", sid
 		...props
 	})
 }));
-PopoverContent.displayName = Content2.displayName;
+PopoverContent.displayName = Content2$1.displayName;
 //#endregion
 //#region src/components/AppHeader.tsx
 function AppHeader() {
@@ -58026,10 +58067,10 @@ var TabsList$1 = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 TabsList$1.displayName = TAB_LIST_NAME;
-var TRIGGER_NAME$1 = "TabsTrigger";
+var TRIGGER_NAME$2 = "TabsTrigger";
 var TabsTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeTabs, value, disabled = false, ...triggerProps } = props;
-	const context = useTabsContext(TRIGGER_NAME$1, __scopeTabs);
+	const context = useTabsContext(TRIGGER_NAME$2, __scopeTabs);
 	const rovingFocusGroupScope = useRovingFocusGroupScope(__scopeTabs);
 	const triggerId = makeTriggerId(context.baseId, value);
 	const contentId = makeContentId(context.baseId, value);
@@ -58064,11 +58105,11 @@ var TabsTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-TabsTrigger$1.displayName = TRIGGER_NAME$1;
-var CONTENT_NAME = "TabsContent";
+TabsTrigger$1.displayName = TRIGGER_NAME$2;
+var CONTENT_NAME$1 = "TabsContent";
 var TabsContent$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeTabs, value, forceMount, children, ...contentProps } = props;
-	const context = useTabsContext(CONTENT_NAME, __scopeTabs);
+	const context = useTabsContext(CONTENT_NAME$1, __scopeTabs);
 	const triggerId = makeTriggerId(context.baseId, value);
 	const contentId = makeContentId(context.baseId, value);
 	const isSelected = value === context.value;
@@ -58097,20 +58138,20 @@ var TabsContent$1 = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-TabsContent$1.displayName = CONTENT_NAME;
+TabsContent$1.displayName = CONTENT_NAME$1;
 function makeTriggerId(baseId, value) {
 	return `${baseId}-trigger-${value}`;
 }
 function makeContentId(baseId, value) {
 	return `${baseId}-content-${value}`;
 }
-var Root2 = Tabs$1;
+var Root2$1 = Tabs$1;
 var List = TabsList$1;
 var Trigger = TabsTrigger$1;
 var Content = TabsContent$1;
 //#endregion
 //#region src/components/ui/tabs.tsx
-var Tabs = Root2;
+var Tabs = Root2$1;
 var TabsList = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(List, {
 	"data-uid": "src/components/ui/tabs.tsx:13:3",
 	"data-prohibitions": "[editContent]",
@@ -58538,9 +58579,9 @@ function CheckboxProvider(props) {
 		children: isFunction(internal_do_not_use_render) ? internal_do_not_use_render(context) : children
 	});
 }
-var TRIGGER_NAME = "CheckboxTrigger";
+var TRIGGER_NAME$1 = "CheckboxTrigger";
 var CheckboxTrigger = import_react.forwardRef(({ __scopeCheckbox, onKeyDown, onClick, ...checkboxProps }, forwardedRef) => {
-	const { control, value, disabled, checked, required, setControl, setChecked, hasConsumerStoppedPropagationRef, isFormControl, bubbleInput } = useCheckboxContext(TRIGGER_NAME, __scopeCheckbox);
+	const { control, value, disabled, checked, required, setControl, setChecked, hasConsumerStoppedPropagationRef, isFormControl, bubbleInput } = useCheckboxContext(TRIGGER_NAME$1, __scopeCheckbox);
 	const composedRefs = useComposedRefs(forwardedRef, setControl);
 	const initialCheckedStateRef = import_react.useRef(checked);
 	import_react.useEffect(() => {
@@ -58574,7 +58615,7 @@ var CheckboxTrigger = import_react.forwardRef(({ __scopeCheckbox, onKeyDown, onC
 		})
 	});
 });
-CheckboxTrigger.displayName = TRIGGER_NAME;
+CheckboxTrigger.displayName = TRIGGER_NAME$1;
 var Checkbox$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeCheckbox, name, checked, defaultChecked, required, disabled, value, onCheckedChange, form, ...checkboxProps } = props;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CheckboxProvider, {
@@ -60953,9 +60994,229 @@ function Matriz() {
 	});
 }
 //#endregion
+//#region ../../cache/modules/inteligencia-comercial-blink-4eb45/node_modules/.pnpm/@radix-ui+react-alert-dialog@1.1.15_@types+react-dom@19.2.3_@types+react@19.2.14__@type_d492cfbed6c88f7a3980b921a627d48d/node_modules/@radix-ui/react-alert-dialog/dist/index.mjs
+var ROOT_NAME = "AlertDialog";
+var [createAlertDialogContext, createAlertDialogScope] = createContextScope$1(ROOT_NAME, [createDialogScope]);
+var useDialogScope = createDialogScope();
+var AlertDialog$1 = (props) => {
+	const { __scopeAlertDialog, ...alertDialogProps } = props;
+	const dialogScope = useDialogScope(__scopeAlertDialog);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root$4, {
+		...dialogScope,
+		...alertDialogProps,
+		modal: true
+	});
+};
+AlertDialog$1.displayName = ROOT_NAME;
+var TRIGGER_NAME = "AlertDialogTrigger";
+var AlertDialogTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopeAlertDialog, ...triggerProps } = props;
+	const dialogScope = useDialogScope(__scopeAlertDialog);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trigger$3, {
+		...dialogScope,
+		...triggerProps,
+		ref: forwardedRef
+	});
+});
+AlertDialogTrigger$1.displayName = TRIGGER_NAME;
+var PORTAL_NAME = "AlertDialogPortal";
+var AlertDialogPortal$1 = (props) => {
+	const { __scopeAlertDialog, ...portalProps } = props;
+	const dialogScope = useDialogScope(__scopeAlertDialog);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Portal$2, {
+		...dialogScope,
+		...portalProps
+	});
+};
+AlertDialogPortal$1.displayName = PORTAL_NAME;
+var OVERLAY_NAME = "AlertDialogOverlay";
+var AlertDialogOverlay$1 = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopeAlertDialog, ...overlayProps } = props;
+	const dialogScope = useDialogScope(__scopeAlertDialog);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Overlay, {
+		...dialogScope,
+		...overlayProps,
+		ref: forwardedRef
+	});
+});
+AlertDialogOverlay$1.displayName = OVERLAY_NAME;
+var CONTENT_NAME = "AlertDialogContent";
+var [AlertDialogContentProvider, useAlertDialogContentContext] = createAlertDialogContext(CONTENT_NAME);
+var Slottable = /* @__PURE__ */ createSlottable("AlertDialogContent");
+var AlertDialogContent$1 = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopeAlertDialog, children, ...contentProps } = props;
+	const dialogScope = useDialogScope(__scopeAlertDialog);
+	const contentRef = import_react.useRef(null);
+	const composedRefs = useComposedRefs(forwardedRef, contentRef);
+	const cancelRef = import_react.useRef(null);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(WarningProvider, {
+		contentName: CONTENT_NAME,
+		titleName: TITLE_NAME,
+		docsSlug: "alert-dialog",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AlertDialogContentProvider, {
+			scope: __scopeAlertDialog,
+			cancelRef,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Content$1, {
+				role: "alertdialog",
+				...dialogScope,
+				...contentProps,
+				ref: composedRefs,
+				onOpenAutoFocus: composeEventHandlers(contentProps.onOpenAutoFocus, (event) => {
+					event.preventDefault();
+					cancelRef.current?.focus({ preventScroll: true });
+				}),
+				onPointerDownOutside: (event) => event.preventDefault(),
+				onInteractOutside: (event) => event.preventDefault(),
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Slottable, { children }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DescriptionWarning, { contentRef })]
+			})
+		})
+	});
+});
+AlertDialogContent$1.displayName = CONTENT_NAME;
+var TITLE_NAME = "AlertDialogTitle";
+var AlertDialogTitle$1 = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopeAlertDialog, ...titleProps } = props;
+	const dialogScope = useDialogScope(__scopeAlertDialog);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Title, {
+		...dialogScope,
+		...titleProps,
+		ref: forwardedRef
+	});
+});
+AlertDialogTitle$1.displayName = TITLE_NAME;
+var DESCRIPTION_NAME = "AlertDialogDescription";
+var AlertDialogDescription$1 = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopeAlertDialog, ...descriptionProps } = props;
+	const dialogScope = useDialogScope(__scopeAlertDialog);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Description, {
+		...dialogScope,
+		...descriptionProps,
+		ref: forwardedRef
+	});
+});
+AlertDialogDescription$1.displayName = DESCRIPTION_NAME;
+var ACTION_NAME = "AlertDialogAction";
+var AlertDialogAction$1 = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopeAlertDialog, ...actionProps } = props;
+	const dialogScope = useDialogScope(__scopeAlertDialog);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Close, {
+		...dialogScope,
+		...actionProps,
+		ref: forwardedRef
+	});
+});
+AlertDialogAction$1.displayName = ACTION_NAME;
+var CANCEL_NAME = "AlertDialogCancel";
+var AlertDialogCancel$1 = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopeAlertDialog, ...cancelProps } = props;
+	const { cancelRef } = useAlertDialogContentContext(CANCEL_NAME, __scopeAlertDialog);
+	const dialogScope = useDialogScope(__scopeAlertDialog);
+	const ref = useComposedRefs(forwardedRef, cancelRef);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Close, {
+		...dialogScope,
+		...cancelProps,
+		ref
+	});
+});
+AlertDialogCancel$1.displayName = CANCEL_NAME;
+var DescriptionWarning = ({ contentRef }) => {
+	const MESSAGE = `\`${CONTENT_NAME}\` requires a description for the component to be accessible for screen reader users.
+
+You can add a description to the \`${CONTENT_NAME}\` by passing a \`${DESCRIPTION_NAME}\` component as a child, which also benefits sighted users by adding visible context to the dialog.
+
+Alternatively, you can use your own component as a description by assigning it an \`id\` and passing the same value to the \`aria-describedby\` prop in \`${CONTENT_NAME}\`. If the description is confusing or duplicative for sighted users, you can use the \`@radix-ui/react-visually-hidden\` primitive as a wrapper around your description component.
+
+For more information, see https://radix-ui.com/primitives/docs/components/alert-dialog`;
+	import_react.useEffect(() => {
+		if (!document.getElementById(contentRef.current?.getAttribute("aria-describedby"))) console.warn(MESSAGE);
+	}, [MESSAGE, contentRef]);
+	return null;
+};
+var Root2 = AlertDialog$1;
+var Portal2 = AlertDialogPortal$1;
+var Overlay2 = AlertDialogOverlay$1;
+var Content2 = AlertDialogContent$1;
+var Action = AlertDialogAction$1;
+var Cancel = AlertDialogCancel$1;
+var Title2 = AlertDialogTitle$1;
+var Description2 = AlertDialogDescription$1;
+//#endregion
+//#region src/components/ui/alert-dialog.tsx
+var AlertDialog = Root2;
+var AlertDialogPortal = Portal2;
+var AlertDialogOverlay = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Overlay2, {
+	"data-uid": "src/components/ui/alert-dialog.tsx:18:3",
+	"data-prohibitions": "[editContent]",
+	className: cn$1("fixed inset-0 z-50 bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0", className),
+	...props,
+	ref
+}));
+AlertDialogOverlay.displayName = Overlay2.displayName;
+var AlertDialogContent = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(AlertDialogPortal, {
+	"data-uid": "src/components/ui/alert-dialog.tsx:33:3",
+	"data-prohibitions": "[editContent]",
+	children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(AlertDialogOverlay, {
+		"data-uid": "src/components/ui/alert-dialog.tsx:34:5",
+		"data-prohibitions": "[editContent]"
+	}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Content2, {
+		"data-uid": "src/components/ui/alert-dialog.tsx:35:5",
+		"data-prohibitions": "[editContent]",
+		ref,
+		className: cn$1("fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg", className),
+		...props
+	})]
+}));
+AlertDialogContent.displayName = Content2.displayName;
+var AlertDialogHeader = ({ className, ...props }) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+	"data-uid": "src/components/ui/alert-dialog.tsx:48:3",
+	"data-prohibitions": "[editContent]",
+	className: cn$1("flex flex-col space-y-2 text-center sm:text-left", className),
+	...props
+});
+AlertDialogHeader.displayName = "AlertDialogHeader";
+var AlertDialogFooter = ({ className, ...props }) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+	"data-uid": "src/components/ui/alert-dialog.tsx:53:3",
+	"data-prohibitions": "[editContent]",
+	className: cn$1("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", className),
+	...props
+});
+AlertDialogFooter.displayName = "AlertDialogFooter";
+var AlertDialogTitle = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Title2, {
+	"data-uid": "src/components/ui/alert-dialog.tsx:64:3",
+	"data-prohibitions": "[editContent]",
+	ref,
+	className: cn$1("text-lg font-semibold", className),
+	...props
+}));
+AlertDialogTitle.displayName = Title2.displayName;
+var AlertDialogDescription = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Description2, {
+	"data-uid": "src/components/ui/alert-dialog.tsx:76:3",
+	"data-prohibitions": "[editContent]",
+	ref,
+	className: cn$1("text-sm text-muted-foreground", className),
+	...props
+}));
+AlertDialogDescription.displayName = Description2.displayName;
+var AlertDialogAction = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Action, {
+	"data-uid": "src/components/ui/alert-dialog.tsx:88:3",
+	"data-prohibitions": "[editContent]",
+	ref,
+	className: cn$1(buttonVariants(), className),
+	...props
+}));
+AlertDialogAction.displayName = Action.displayName;
+var AlertDialogCancel = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Cancel, {
+	"data-uid": "src/components/ui/alert-dialog.tsx:96:3",
+	"data-prohibitions": "[editContent]",
+	ref,
+	className: cn$1(buttonVariants({ variant: "outline" }), "mt-2 sm:mt-0", className),
+	...props
+}));
+AlertDialogCancel.displayName = Cancel.displayName;
+//#endregion
 //#region src/components/OrderForm.tsx
-function OrderForm({ onSubmit, initialFactoryId }) {
-	const { factories, addOrder } = useAppContext();
+function OrderForm({ onSubmit, initialFactoryId, initialOrder }) {
+	const { factories, addOrder, updateOrder } = useAppContext();
 	const { toast } = useToast();
 	const handleSubmit = (e) => {
 		e.preventDefault();
@@ -60969,17 +61230,26 @@ function OrderForm({ onSubmit, initialFactoryId }) {
 			});
 			return;
 		}
-		addOrder({
+		const orderData = {
 			factoryId,
 			product: fd.get("product"),
 			line: fd.get("line"),
 			quantity: Number(fd.get("quantity")),
 			unitValue: Number(fd.get("unitValue"))
-		});
-		toast({
-			title: "Sucesso",
-			description: "Pedido registrado com sucesso!"
-		});
+		};
+		if (initialOrder) {
+			updateOrder(initialOrder.id, orderData);
+			toast({
+				title: "Sucesso",
+				description: "Pedido atualizado com sucesso!"
+			});
+		} else {
+			addOrder(orderData);
+			toast({
+				title: "Sucesso",
+				description: "Pedido registrado com sucesso!"
+			});
+		}
 		onSubmit();
 	};
 	const sortedFactories = [...factories].sort((a, b) => {
@@ -60994,38 +61264,38 @@ function OrderForm({ onSubmit, initialFactoryId }) {
 		return a.name.localeCompare(b.name);
 	});
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
-		"data-uid": "src/components/OrderForm.tsx:63:5",
+		"data-uid": "src/components/OrderForm.tsx:74:5",
 		"data-prohibitions": "[editContent]",
 		onSubmit: handleSubmit,
 		className: "space-y-4 mt-4",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/components/OrderForm.tsx:64:7",
+				"data-uid": "src/components/OrderForm.tsx:75:7",
 				"data-prohibitions": "[editContent]",
 				className: "space-y-2",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-					"data-uid": "src/components/OrderForm.tsx:65:9",
+					"data-uid": "src/components/OrderForm.tsx:76:9",
 					"data-prohibitions": "[]",
 					children: "Fábrica"
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
-					"data-uid": "src/components/OrderForm.tsx:66:9",
+					"data-uid": "src/components/OrderForm.tsx:77:9",
 					"data-prohibitions": "[editContent]",
 					name: "factoryId",
-					defaultValue: initialFactoryId && initialFactoryId !== "all" ? initialFactoryId : "",
+					defaultValue: initialOrder?.factoryId || (initialFactoryId && initialFactoryId !== "all" ? initialFactoryId : ""),
 					required: true,
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
-						"data-uid": "src/components/OrderForm.tsx:71:11",
+						"data-uid": "src/components/OrderForm.tsx:85:11",
 						"data-prohibitions": "[]",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
-							"data-uid": "src/components/OrderForm.tsx:72:13",
+							"data-uid": "src/components/OrderForm.tsx:86:13",
 							"data-prohibitions": "[editContent]",
 							placeholder: "Selecione a fábrica associada"
 						})
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectContent, {
-						"data-uid": "src/components/OrderForm.tsx:74:11",
+						"data-uid": "src/components/OrderForm.tsx:88:11",
 						"data-prohibitions": "[editContent]",
 						children: sortedFactories.map((f) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectItem, {
-							"data-uid": "src/components/OrderForm.tsx:76:15",
+							"data-uid": "src/components/OrderForm.tsx:90:15",
 							"data-prohibitions": "[editContent]",
 							value: f.id,
 							children: [
@@ -61038,50 +61308,51 @@ function OrderForm({ onSubmit, initialFactoryId }) {
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/components/OrderForm.tsx:84:7",
+				"data-uid": "src/components/OrderForm.tsx:98:7",
 				"data-prohibitions": "[editContent]",
 				className: "grid grid-cols-1 md:grid-cols-2 gap-4",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/components/OrderForm.tsx:85:9",
+						"data-uid": "src/components/OrderForm.tsx:99:9",
 						"data-prohibitions": "[]",
 						className: "space-y-2",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-							"data-uid": "src/components/OrderForm.tsx:86:11",
+							"data-uid": "src/components/OrderForm.tsx:100:11",
 							"data-prohibitions": "[]",
 							children: "Produto"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-							"data-uid": "src/components/OrderForm.tsx:87:11",
+							"data-uid": "src/components/OrderForm.tsx:101:11",
 							"data-prohibitions": "[editContent]",
 							name: "product",
+							defaultValue: initialOrder?.product,
 							placeholder: "Ex: Blink Minerais+",
 							required: true
 						})]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/components/OrderForm.tsx:89:9",
+						"data-uid": "src/components/OrderForm.tsx:108:9",
 						"data-prohibitions": "[editContent]",
 						className: "space-y-2",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-							"data-uid": "src/components/OrderForm.tsx:90:11",
+							"data-uid": "src/components/OrderForm.tsx:109:11",
 							"data-prohibitions": "[]",
 							children: "Linha"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
-							"data-uid": "src/components/OrderForm.tsx:91:11",
+							"data-uid": "src/components/OrderForm.tsx:110:11",
 							"data-prohibitions": "[editContent]",
 							name: "line",
-							defaultValue: "Adsorventes",
+							defaultValue: initialOrder?.line || "Adsorventes",
 							required: true,
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
-								"data-uid": "src/components/OrderForm.tsx:92:13",
+								"data-uid": "src/components/OrderForm.tsx:111:13",
 								"data-prohibitions": "[]",
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
-									"data-uid": "src/components/OrderForm.tsx:93:15",
+									"data-uid": "src/components/OrderForm.tsx:112:15",
 									"data-prohibitions": "[editContent]",
 									placeholder: "Selecione a linha"
 								})
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectContent, {
-								"data-uid": "src/components/OrderForm.tsx:95:13",
+								"data-uid": "src/components/OrderForm.tsx:114:13",
 								"data-prohibitions": "[editContent]",
 								children: [
 									"Adsorventes",
@@ -61090,7 +61361,7 @@ function OrderForm({ onSubmit, initialFactoryId }) {
 									"Blends",
 									"Ingredientes"
 								].map((l) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-									"data-uid": "src/components/OrderForm.tsx:98:19",
+									"data-uid": "src/components/OrderForm.tsx:117:19",
 									"data-prohibitions": "[editContent]",
 									value: l,
 									children: l
@@ -61099,37 +61370,39 @@ function OrderForm({ onSubmit, initialFactoryId }) {
 						})]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/components/OrderForm.tsx:106:9",
+						"data-uid": "src/components/OrderForm.tsx:125:9",
 						"data-prohibitions": "[]",
 						className: "space-y-2",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-							"data-uid": "src/components/OrderForm.tsx:107:11",
+							"data-uid": "src/components/OrderForm.tsx:126:11",
 							"data-prohibitions": "[]",
 							children: "Quantidade"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-							"data-uid": "src/components/OrderForm.tsx:108:11",
+							"data-uid": "src/components/OrderForm.tsx:127:11",
 							"data-prohibitions": "[editContent]",
 							type: "number",
 							name: "quantity",
+							defaultValue: initialOrder?.quantity,
 							min: 1,
 							required: true,
 							placeholder: "Ex: 50"
 						})]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/components/OrderForm.tsx:110:9",
+						"data-uid": "src/components/OrderForm.tsx:136:9",
 						"data-prohibitions": "[]",
 						className: "space-y-2",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-							"data-uid": "src/components/OrderForm.tsx:111:11",
+							"data-uid": "src/components/OrderForm.tsx:137:11",
 							"data-prohibitions": "[]",
 							children: "Preço Unitário (R$)"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-							"data-uid": "src/components/OrderForm.tsx:112:11",
+							"data-uid": "src/components/OrderForm.tsx:138:11",
 							"data-prohibitions": "[editContent]",
 							type: "number",
 							step: "0.01",
 							name: "unitValue",
+							defaultValue: initialOrder?.unitValue,
 							min: .01,
 							required: true,
 							placeholder: "Ex: 120.00"
@@ -61138,21 +61411,21 @@ function OrderForm({ onSubmit, initialFactoryId }) {
 				]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/components/OrderForm.tsx:123:7",
-				"data-prohibitions": "[]",
+				"data-uid": "src/components/OrderForm.tsx:150:7",
+				"data-prohibitions": "[editContent]",
 				className: "flex justify-end gap-2 pt-4",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-					"data-uid": "src/components/OrderForm.tsx:124:9",
+					"data-uid": "src/components/OrderForm.tsx:151:9",
 					"data-prohibitions": "[]",
 					type: "button",
 					variant: "outline",
 					onClick: onSubmit,
 					children: "Cancelar"
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-					"data-uid": "src/components/OrderForm.tsx:127:9",
-					"data-prohibitions": "[]",
+					"data-uid": "src/components/OrderForm.tsx:154:9",
+					"data-prohibitions": "[editContent]",
 					type: "submit",
-					children: "Salvar Pedido"
+					children: initialOrder ? "Salvar Alterações" : "Salvar Pedido"
 				})]
 			})
 		]
@@ -61161,14 +61434,17 @@ function OrderForm({ onSubmit, initialFactoryId }) {
 //#endregion
 //#region src/pages/Pedidos.tsx
 function Pedidos() {
-	const { orders, factories } = useAppContext();
+	const { orders, factories, deleteOrder } = useAppContext();
+	const { toast } = useToast();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const factoryIdParam = searchParams.get("factoryId") || "all";
 	const isNewParam = searchParams.get("new") === "true";
-	const [isDialogOpen, setIsDialogOpen] = (0, import_react.useState)(isNewParam);
+	const [isNewDialogOpen, setIsNewDialogOpen] = (0, import_react.useState)(isNewParam);
+	const [editingOrder, setEditingOrder] = (0, import_react.useState)(null);
+	const [deletingId, setDeletingId] = (0, import_react.useState)(null);
 	(0, import_react.useEffect)(() => {
 		if (isNewParam) {
-			setIsDialogOpen(true);
+			setIsNewDialogOpen(true);
 			searchParams.delete("new");
 			setSearchParams(searchParams, { replace: true });
 		}
@@ -61182,240 +61458,360 @@ function Pedidos() {
 		if (factoryIdParam !== "all") res = res.filter((o) => o.factoryId === factoryIdParam);
 		return res.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
 	}, [orders, factoryIdParam]);
+	const handleDelete = () => {
+		if (deletingId) {
+			deleteOrder(deletingId);
+			setDeletingId(null);
+			toast({
+				title: "Pedido Excluído",
+				description: "O pedido foi removido permanentemente do histórico."
+			});
+		}
+	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		"data-uid": "src/pages/Pedidos.tsx:57:5",
+		"data-uid": "src/pages/Pedidos.tsx:83:5",
 		"data-prohibitions": "[editContent]",
 		className: "space-y-6 animate-fade-in pb-10",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			"data-uid": "src/pages/Pedidos.tsx:58:7",
-			"data-prohibitions": "[]",
-			className: "flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Pedidos.tsx:59:9",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				"data-uid": "src/pages/Pedidos.tsx:84:7",
 				"data-prohibitions": "[]",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-					"data-uid": "src/pages/Pedidos.tsx:60:11",
-					"data-prohibitions": "[]",
-					className: "text-2xl font-bold tracking-tight",
-					children: "Histórico de Pedidos"
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					"data-uid": "src/pages/Pedidos.tsx:61:11",
-					"data-prohibitions": "[]",
-					className: "text-muted-foreground text-sm",
-					children: "Acompanhe o histórico de compras e registre novos pedidos."
-				})]
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Dialog, {
-				"data-uid": "src/pages/Pedidos.tsx:65:9",
-				"data-prohibitions": "[]",
-				open: isDialogOpen,
-				onOpenChange: setIsDialogOpen,
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogTrigger, {
-					"data-uid": "src/pages/Pedidos.tsx:66:11",
-					"data-prohibitions": "[]",
-					asChild: true,
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-						"data-uid": "src/pages/Pedidos.tsx:67:13",
-						"data-prohibitions": "[]",
-						className: "gap-2 shadow-sm",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Plus, {
-							"data-uid": "src/pages/Pedidos.tsx:68:15",
-							"data-prohibitions": "[editContent]",
-							className: "w-4 h-4"
-						}), " Registrar Pedido"]
-					})
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogContent, {
-					"data-uid": "src/pages/Pedidos.tsx:71:11",
-					"data-prohibitions": "[]",
-					className: "sm:max-w-[600px]",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogHeader, {
-						"data-uid": "src/pages/Pedidos.tsx:72:13",
-						"data-prohibitions": "[]",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogTitle, {
-							"data-uid": "src/pages/Pedidos.tsx:73:15",
-							"data-prohibitions": "[]",
-							children: "Registrar Novo Pedido"
-						})
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(OrderForm, {
-						"data-uid": "src/pages/Pedidos.tsx:75:13",
-						"data-prohibitions": "[editContent]",
-						onSubmit: () => setIsDialogOpen(false),
-						initialFactoryId: factoryIdParam !== "all" ? factoryIdParam : void 0
-					})]
-				})]
-			})]
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-			"data-uid": "src/pages/Pedidos.tsx:83:7",
-			"data-prohibitions": "[editContent]",
-			className: "shadow-subtle",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
-				"data-uid": "src/pages/Pedidos.tsx:84:9",
-				"data-prohibitions": "[editContent]",
 				className: "flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Pedidos.tsx:85:11",
+					"data-uid": "src/pages/Pedidos.tsx:85:9",
 					"data-prohibitions": "[]",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
-						"data-uid": "src/pages/Pedidos.tsx:86:13",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+						"data-uid": "src/pages/Pedidos.tsx:86:11",
 						"data-prohibitions": "[]",
-						children: "Pedidos Realizados"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardDescription, {
-						"data-uid": "src/pages/Pedidos.tsx:87:13",
+						className: "text-2xl font-bold tracking-tight",
+						children: "Histórico de Pedidos"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						"data-uid": "src/pages/Pedidos.tsx:87:11",
 						"data-prohibitions": "[]",
-						children: "Visualize e filtre por fábrica"
+						className: "text-muted-foreground text-sm",
+						children: "Acompanhe o histórico de compras e registre novos pedidos."
 					})]
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
-					"data-uid": "src/pages/Pedidos.tsx:89:11",
-					"data-prohibitions": "[editContent]",
-					value: factoryIdParam,
-					onValueChange: (val) => setSearchParams(val === "all" ? {} : { factoryId: val }),
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
-						"data-uid": "src/pages/Pedidos.tsx:93:13",
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Dialog, {
+					"data-uid": "src/pages/Pedidos.tsx:91:9",
+					"data-prohibitions": "[]",
+					open: isNewDialogOpen,
+					onOpenChange: setIsNewDialogOpen,
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogTrigger, {
+						"data-uid": "src/pages/Pedidos.tsx:92:11",
 						"data-prohibitions": "[]",
-						className: "w-[280px]",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
-							"data-uid": "src/pages/Pedidos.tsx:94:15",
-							"data-prohibitions": "[editContent]",
-							placeholder: "Filtrar por fábrica"
-						})
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, {
-						"data-uid": "src/pages/Pedidos.tsx:96:13",
-						"data-prohibitions": "[editContent]",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-							"data-uid": "src/pages/Pedidos.tsx:97:15",
+						asChild: true,
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
+							"data-uid": "src/pages/Pedidos.tsx:93:13",
 							"data-prohibitions": "[]",
-							value: "all",
-							children: "Todas as Fábricas"
-						}), factories.map((f) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-							"data-uid": "src/pages/Pedidos.tsx:99:17",
+							className: "gap-2 shadow-sm",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Plus, {
+								"data-uid": "src/pages/Pedidos.tsx:94:15",
+								"data-prohibitions": "[editContent]",
+								className: "w-4 h-4"
+							}), " Registrar Pedido"]
+						})
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogContent, {
+						"data-uid": "src/pages/Pedidos.tsx:97:11",
+						"data-prohibitions": "[]",
+						className: "sm:max-w-[600px]",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogHeader, {
+							"data-uid": "src/pages/Pedidos.tsx:98:13",
+							"data-prohibitions": "[]",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogTitle, {
+								"data-uid": "src/pages/Pedidos.tsx:99:15",
+								"data-prohibitions": "[]",
+								children: "Registrar Novo Pedido"
+							})
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(OrderForm, {
+							"data-uid": "src/pages/Pedidos.tsx:101:13",
 							"data-prohibitions": "[editContent]",
-							value: f.id,
-							children: f.name
-						}, f.id))]
+							onSubmit: () => setIsNewDialogOpen(false),
+							initialFactoryId: factoryIdParam !== "all" ? factoryIdParam : void 0
+						})]
 					})]
 				})]
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
-				"data-uid": "src/pages/Pedidos.tsx:106:9",
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
+				"data-uid": "src/pages/Pedidos.tsx:109:7",
 				"data-prohibitions": "[editContent]",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Pedidos.tsx:107:11",
+				className: "shadow-subtle",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
+					"data-uid": "src/pages/Pedidos.tsx:110:9",
 					"data-prohibitions": "[editContent]",
-					className: "overflow-x-auto",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Table, {
-						"data-uid": "src/pages/Pedidos.tsx:108:13",
-						"data-prohibitions": "[editContent]",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHeader, {
-							"data-uid": "src/pages/Pedidos.tsx:109:15",
+					className: "flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						"data-uid": "src/pages/Pedidos.tsx:111:11",
+						"data-prohibitions": "[]",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
+							"data-uid": "src/pages/Pedidos.tsx:112:13",
 							"data-prohibitions": "[]",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableRow, {
-								"data-uid": "src/pages/Pedidos.tsx:110:17",
-								"data-prohibitions": "[]",
-								children: [
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Pedidos.tsx:111:19",
-										"data-prohibitions": "[]",
-										children: "Data"
-									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Pedidos.tsx:112:19",
-										"data-prohibitions": "[]",
-										children: "Fábrica"
-									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Pedidos.tsx:113:19",
-										"data-prohibitions": "[]",
-										children: "Produto"
-									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Pedidos.tsx:114:19",
-										"data-prohibitions": "[]",
-										children: "Linha"
-									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Pedidos.tsx:115:19",
-										"data-prohibitions": "[]",
-										className: "text-right",
-										children: "Quantidade"
-									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Pedidos.tsx:116:19",
-										"data-prohibitions": "[]",
-										className: "text-right",
-										children: "V. Unitário"
-									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Pedidos.tsx:117:19",
-										"data-prohibitions": "[]",
-										className: "text-right",
-										children: "V. Total"
-									})
-								]
+							children: "Pedidos Realizados"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardDescription, {
+							"data-uid": "src/pages/Pedidos.tsx:113:13",
+							"data-prohibitions": "[]",
+							children: "Visualize e filtre por fábrica"
+						})]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
+						"data-uid": "src/pages/Pedidos.tsx:115:11",
+						"data-prohibitions": "[editContent]",
+						value: factoryIdParam,
+						onValueChange: (val) => setSearchParams(val === "all" ? {} : { factoryId: val }),
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
+							"data-uid": "src/pages/Pedidos.tsx:119:13",
+							"data-prohibitions": "[]",
+							className: "w-[280px]",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
+								"data-uid": "src/pages/Pedidos.tsx:120:15",
+								"data-prohibitions": "[editContent]",
+								placeholder: "Filtrar por fábrica"
 							})
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableBody, {
-							"data-uid": "src/pages/Pedidos.tsx:120:15",
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectContent, {
+							"data-uid": "src/pages/Pedidos.tsx:122:13",
 							"data-prohibitions": "[editContent]",
-							children: [filteredOrders.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableRow, {
-								"data-uid": "src/pages/Pedidos.tsx:122:19",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+								"data-uid": "src/pages/Pedidos.tsx:123:15",
 								"data-prohibitions": "[]",
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-									"data-uid": "src/pages/Pedidos.tsx:123:21",
+								value: "all",
+								children: "Todas as Fábricas"
+							}), factories.map((f) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+								"data-uid": "src/pages/Pedidos.tsx:125:17",
+								"data-prohibitions": "[editContent]",
+								value: f.id,
+								children: f.name
+							}, f.id))]
+						})]
+					})]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
+					"data-uid": "src/pages/Pedidos.tsx:132:9",
+					"data-prohibitions": "[editContent]",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						"data-uid": "src/pages/Pedidos.tsx:133:11",
+						"data-prohibitions": "[editContent]",
+						className: "overflow-x-auto",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Table, {
+							"data-uid": "src/pages/Pedidos.tsx:134:13",
+							"data-prohibitions": "[editContent]",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHeader, {
+								"data-uid": "src/pages/Pedidos.tsx:135:15",
+								"data-prohibitions": "[]",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableRow, {
+									"data-uid": "src/pages/Pedidos.tsx:136:17",
 									"data-prohibitions": "[]",
-									colSpan: 7,
-									className: "text-center text-muted-foreground h-32",
-									children: "Nenhum pedido encontrado para o filtro selecionado."
-								})
-							}), filteredOrders.map((o) => {
-								const factory = factories.find((f) => f.id === o.factoryId);
-								return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableRow, {
-									"data-uid": "src/pages/Pedidos.tsx:131:21",
-									"data-prohibitions": "[editContent]",
 									children: [
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-											"data-uid": "src/pages/Pedidos.tsx:132:23",
-											"data-prohibitions": "[editContent]",
-											className: "font-medium whitespace-nowrap",
-											children: new Date(o.orderDate).toLocaleDateString("pt-BR")
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
+											"data-uid": "src/pages/Pedidos.tsx:137:19",
+											"data-prohibitions": "[]",
+											children: "Data"
 										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-											"data-uid": "src/pages/Pedidos.tsx:135:23",
-											"data-prohibitions": "[editContent]",
-											children: factory?.name || "Desconhecida"
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
+											"data-uid": "src/pages/Pedidos.tsx:138:19",
+											"data-prohibitions": "[]",
+											children: "Fábrica"
 										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-											"data-uid": "src/pages/Pedidos.tsx:136:23",
-											"data-prohibitions": "[editContent]",
-											children: o.product
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
+											"data-uid": "src/pages/Pedidos.tsx:139:19",
+											"data-prohibitions": "[]",
+											children: "Produto"
 										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-											"data-uid": "src/pages/Pedidos.tsx:137:23",
-											"data-prohibitions": "[editContent]",
-											children: o.line || "-"
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
+											"data-uid": "src/pages/Pedidos.tsx:140:19",
+											"data-prohibitions": "[]",
+											children: "Linha"
 										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-											"data-uid": "src/pages/Pedidos.tsx:138:23",
-											"data-prohibitions": "[editContent]",
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
+											"data-uid": "src/pages/Pedidos.tsx:141:19",
+											"data-prohibitions": "[]",
 											className: "text-right",
-											children: o.quantity
+											children: "Quantidade"
 										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-											"data-uid": "src/pages/Pedidos.tsx:139:23",
-											"data-prohibitions": "[editContent]",
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
+											"data-uid": "src/pages/Pedidos.tsx:142:19",
+											"data-prohibitions": "[]",
 											className: "text-right",
-											children: formatCurrency(o.unitValue)
+											children: "V. Unitário"
 										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-											"data-uid": "src/pages/Pedidos.tsx:140:23",
-											"data-prohibitions": "[editContent]",
-											className: "text-right font-semibold text-primary",
-											children: formatCurrency(o.totalValue)
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
+											"data-uid": "src/pages/Pedidos.tsx:143:19",
+											"data-prohibitions": "[]",
+											className: "text-right",
+											children: "V. Total"
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
+											"data-uid": "src/pages/Pedidos.tsx:144:19",
+											"data-prohibitions": "[]",
+											className: "text-center",
+											children: "Ações"
 										})
 									]
-								}, o.id);
+								})
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableBody, {
+								"data-uid": "src/pages/Pedidos.tsx:147:15",
+								"data-prohibitions": "[editContent]",
+								children: [filteredOrders.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableRow, {
+									"data-uid": "src/pages/Pedidos.tsx:149:19",
+									"data-prohibitions": "[]",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
+										"data-uid": "src/pages/Pedidos.tsx:150:21",
+										"data-prohibitions": "[]",
+										colSpan: 8,
+										className: "text-center text-muted-foreground h-32",
+										children: "Nenhum pedido encontrado para o filtro selecionado."
+									})
+								}), filteredOrders.map((o) => {
+									const factory = factories.find((f) => f.id === o.factoryId);
+									return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableRow, {
+										"data-uid": "src/pages/Pedidos.tsx:158:21",
+										"data-prohibitions": "[editContent]",
+										children: [
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
+												"data-uid": "src/pages/Pedidos.tsx:159:23",
+												"data-prohibitions": "[editContent]",
+												className: "font-medium whitespace-nowrap",
+												children: new Date(o.orderDate).toLocaleDateString("pt-BR")
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
+												"data-uid": "src/pages/Pedidos.tsx:162:23",
+												"data-prohibitions": "[editContent]",
+												children: [factory?.name || "Desconhecida", factory?.priority === "High" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+													"data-uid": "src/pages/Pedidos.tsx:165:27",
+													"data-prohibitions": "[editContent]",
+													className: "inline-block w-2 h-2 rounded-full bg-green-500 ml-2",
+													title: "Alta Prioridade"
+												})]
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
+												"data-uid": "src/pages/Pedidos.tsx:171:23",
+												"data-prohibitions": "[editContent]",
+												children: o.product
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
+												"data-uid": "src/pages/Pedidos.tsx:172:23",
+												"data-prohibitions": "[editContent]",
+												children: o.line || "-"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
+												"data-uid": "src/pages/Pedidos.tsx:173:23",
+												"data-prohibitions": "[editContent]",
+												className: "text-right",
+												children: o.quantity
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
+												"data-uid": "src/pages/Pedidos.tsx:174:23",
+												"data-prohibitions": "[editContent]",
+												className: "text-right",
+												children: formatCurrency(o.unitValue)
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
+												"data-uid": "src/pages/Pedidos.tsx:175:23",
+												"data-prohibitions": "[editContent]",
+												className: "text-right font-semibold text-primary",
+												children: formatCurrency(o.totalValue)
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
+												"data-uid": "src/pages/Pedidos.tsx:178:23",
+												"data-prohibitions": "[]",
+												children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+													"data-uid": "src/pages/Pedidos.tsx:179:25",
+													"data-prohibitions": "[]",
+													className: "flex items-center justify-center gap-1",
+													children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+														"data-uid": "src/pages/Pedidos.tsx:180:27",
+														"data-prohibitions": "[]",
+														variant: "ghost",
+														size: "icon",
+														onClick: () => setEditingOrder(o),
+														title: "Editar pedido",
+														children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pen, {
+															"data-uid": "src/pages/Pedidos.tsx:186:29",
+															"data-prohibitions": "[editContent]",
+															className: "w-4 h-4 text-primary"
+														})
+													}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+														"data-uid": "src/pages/Pedidos.tsx:188:27",
+														"data-prohibitions": "[]",
+														variant: "ghost",
+														size: "icon",
+														onClick: () => setDeletingId(o.id),
+														title: "Excluir pedido",
+														children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, {
+															"data-uid": "src/pages/Pedidos.tsx:194:29",
+															"data-prohibitions": "[editContent]",
+															className: "w-4 h-4 text-destructive"
+														})
+													})]
+												})
+											})
+										]
+									}, o.id);
+								})]
 							})]
-						})]
+						})
 					})
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Dialog, {
+				"data-uid": "src/pages/Pedidos.tsx:208:7",
+				"data-prohibitions": "[editContent]",
+				open: !!editingOrder,
+				onOpenChange: (open) => !open && setEditingOrder(null),
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogContent, {
+					"data-uid": "src/pages/Pedidos.tsx:209:9",
+					"data-prohibitions": "[editContent]",
+					className: "sm:max-w-[600px]",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogHeader, {
+						"data-uid": "src/pages/Pedidos.tsx:210:11",
+						"data-prohibitions": "[]",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogTitle, {
+							"data-uid": "src/pages/Pedidos.tsx:211:13",
+							"data-prohibitions": "[]",
+							children: "Editar Pedido"
+						})
+					}), editingOrder && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(OrderForm, {
+						"data-uid": "src/pages/Pedidos.tsx:214:13",
+						"data-prohibitions": "[editContent]",
+						onSubmit: () => setEditingOrder(null),
+						initialOrder: editingOrder
+					})]
 				})
-			})]
-		})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(AlertDialog, {
+				"data-uid": "src/pages/Pedidos.tsx:220:7",
+				"data-prohibitions": "[]",
+				open: !!deletingId,
+				onOpenChange: (open) => !open && setDeletingId(null),
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(AlertDialogContent, {
+					"data-uid": "src/pages/Pedidos.tsx:221:9",
+					"data-prohibitions": "[]",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(AlertDialogHeader, {
+						"data-uid": "src/pages/Pedidos.tsx:222:11",
+						"data-prohibitions": "[]",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(AlertDialogTitle, {
+							"data-uid": "src/pages/Pedidos.tsx:223:13",
+							"data-prohibitions": "[]",
+							children: "Excluir Pedido?"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AlertDialogDescription, {
+							"data-uid": "src/pages/Pedidos.tsx:224:13",
+							"data-prohibitions": "[]",
+							children: "Tem certeza que deseja remover este pedido permanentemente? Esta ação não poderá ser desfeita."
+						})]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(AlertDialogFooter, {
+						"data-uid": "src/pages/Pedidos.tsx:229:11",
+						"data-prohibitions": "[]",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(AlertDialogCancel, {
+							"data-uid": "src/pages/Pedidos.tsx:230:13",
+							"data-prohibitions": "[]",
+							children: "Cancelar"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AlertDialogAction, {
+							"data-uid": "src/pages/Pedidos.tsx:231:13",
+							"data-prohibitions": "[]",
+							onClick: handleDelete,
+							className: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+							children: "Sim, Excluir"
+						})]
+					})]
+				})
+			})
+		]
 	});
 }
 //#endregion
@@ -61726,4 +62122,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BrowserRouter, {
 }));
 //#endregion
 
-//# sourceMappingURL=index-Bur3x05c.js.map
+//# sourceMappingURL=index-BH6N7180.js.map

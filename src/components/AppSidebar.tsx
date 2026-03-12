@@ -6,7 +6,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar'
-import { Home, Building2, BarChart2, Target, Grid, LogOut } from 'lucide-react'
+import { Home, Building2, BarChart2, Target, Grid, LogOut, ShoppingCart } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/store/AuthContext'
 
@@ -17,6 +17,7 @@ export function AppSidebar() {
     { name: 'Dashboard', path: '/', icon: Home },
     { name: 'Cadastro', path: '/cadastro', icon: Building2 },
     { name: 'Funil', path: '/funil', icon: BarChart2 },
+    { name: 'Histórico de Pedidos', path: '/pedidos', icon: ShoppingCart },
     { name: 'Matriz SWOT', path: '/swot', icon: Target },
     { name: 'Prioridade', path: '/matriz', icon: Grid },
   ]

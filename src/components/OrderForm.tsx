@@ -11,14 +11,16 @@ import {
 } from '@/components/ui/select'
 import { useAppContext } from '@/store/AppContext'
 import { useToast } from '@/hooks/use-toast'
+import { Order } from '@/types'
 
 interface OrderFormProps {
   onSubmit: () => void
   initialFactoryId?: string
+  initialOrder?: Order
 }
 
-export function OrderForm({ onSubmit, initialFactoryId }: OrderFormProps) {
-  const { factories, addOrder } = useAppContext()
+export function OrderForm({ onSubmit, initialFactoryId, initialOrder }: OrderFormProps) {
+  const { factories, addOrder, updateOrder } = useAppContext()
   const { toast } = useToast()
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -35,18 +37,27 @@ export function OrderForm({ onSubmit, initialFactoryId }: OrderFormProps) {
       return
     }
 
-    addOrder({
+    const orderData = {
       factoryId,
       product: fd.get('product') as string,
       line: fd.get('line') as string,
       quantity: Number(fd.get('quantity')),
       unitValue: Number(fd.get('unitValue')),
-    })
+    }
 
-    toast({
-      title: 'Sucesso',
-      description: 'Pedido registrado com sucesso!',
-    })
+    if (initialOrder) {
+      updateOrder(initialOrder.id, orderData)
+      toast({
+        title: 'Sucesso',
+        description: 'Pedido atualizado com sucesso!',
+      })
+    } else {
+      addOrder(orderData)
+      toast({
+        title: 'Sucesso',
+        description: 'Pedido registrado com sucesso!',
+      })
+    }
     onSubmit()
   }
 
@@ -65,7 +76,10 @@ export function OrderForm({ onSubmit, initialFactoryId }: OrderFormProps) {
         <Label>Fábrica</Label>
         <Select
           name="factoryId"
-          defaultValue={initialFactoryId && initialFactoryId !== 'all' ? initialFactoryId : ''}
+          defaultValue={
+            initialOrder?.factoryId ||
+            (initialFactoryId && initialFactoryId !== 'all' ? initialFactoryId : '')
+          }
           required
         >
           <SelectTrigger>
@@ -84,11 +98,16 @@ export function OrderForm({ onSubmit, initialFactoryId }: OrderFormProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Produto</Label>
-          <Input name="product" placeholder="Ex: Blink Minerais+" required />
+          <Input
+            name="product"
+            defaultValue={initialOrder?.product}
+            placeholder="Ex: Blink Minerais+"
+            required
+          />
         </div>
         <div className="space-y-2">
           <Label>Linha</Label>
-          <Select name="line" defaultValue="Adsorventes" required>
+          <Select name="line" defaultValue={initialOrder?.line || 'Adsorventes'} required>
             <SelectTrigger>
               <SelectValue placeholder="Selecione a linha" />
             </SelectTrigger>
@@ -105,7 +124,14 @@ export function OrderForm({ onSubmit, initialFactoryId }: OrderFormProps) {
         </div>
         <div className="space-y-2">
           <Label>Quantidade</Label>
-          <Input type="number" name="quantity" min={1} required placeholder="Ex: 50" />
+          <Input
+            type="number"
+            name="quantity"
+            defaultValue={initialOrder?.quantity}
+            min={1}
+            required
+            placeholder="Ex: 50"
+          />
         </div>
         <div className="space-y-2">
           <Label>Preço Unitário (R$)</Label>
@@ -113,6 +139,7 @@ export function OrderForm({ onSubmit, initialFactoryId }: OrderFormProps) {
             type="number"
             step="0.01"
             name="unitValue"
+            defaultValue={initialOrder?.unitValue}
             min={0.01}
             required
             placeholder="Ex: 120.00"
@@ -124,7 +151,7 @@ export function OrderForm({ onSubmit, initialFactoryId }: OrderFormProps) {
         <Button type="button" variant="outline" onClick={onSubmit}>
           Cancelar
         </Button>
-        <Button type="submit">Salvar Pedido</Button>
+        <Button type="submit">{initialOrder ? 'Salvar Alterações' : 'Salvar Pedido'}</Button>
       </div>
     </form>
   )

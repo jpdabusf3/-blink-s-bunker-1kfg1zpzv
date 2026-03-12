@@ -28,6 +28,8 @@ interface AppContextData {
   deleteTask: (id: string) => void
   addVisit: (data: Omit<Visit, 'id'>) => void
   addOrder: (data: Omit<Order, 'id' | 'totalValue' | 'orderDate'>) => void
+  updateOrder: (id: string, data: Partial<Order>) => void
+  deleteOrder: (id: string) => void
 }
 
 export const AppContext = createContext<AppContextData>({} as AppContextData)
@@ -169,6 +171,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setOrders((prev) => [newOrder, ...prev])
   }
 
+  const updateOrder = (id: string, data: Partial<Order>) => {
+    setOrders((prev) =>
+      prev.map((o) => {
+        if (o.id === id) {
+          const updated = { ...o, ...data }
+          updated.totalValue = updated.quantity * updated.unitValue
+          return updated
+        }
+        return o
+      }),
+    )
+  }
+
+  const deleteOrder = (id: string) => {
+    setOrders((prev) => prev.filter((o) => o.id !== id))
+  }
+
   return (
     <AppContext.Provider
       value={{
@@ -189,6 +208,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         deleteTask,
         addVisit,
         addOrder,
+        updateOrder,
+        deleteOrder,
       }}
     >
       {children}
