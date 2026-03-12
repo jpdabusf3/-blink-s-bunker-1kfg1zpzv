@@ -1,17 +1,9 @@
 import { useAppContext } from '@/store/AppContext'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { formatCurrency } from '@/lib/utils'
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts'
+import { Download } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from 'recharts'
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'
 import {
   Table,
@@ -73,7 +65,17 @@ export default function Index() {
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
-      <h1 className="text-2xl font-bold tracking-tight">Visão Geral MT</h1>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+        <h1 className="text-2xl font-bold tracking-tight">Visão Geral MT</h1>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => window.print()}
+          className="gap-2 print:hidden shadow-sm"
+        >
+          <Download className="w-4 h-4" /> Exportar Relatório PDF
+        </Button>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="shadow-subtle">
@@ -188,7 +190,7 @@ export default function Index() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 print:break-inside-avoid">
         <Card className="lg:col-span-2 shadow-subtle overflow-hidden">
           <CardHeader>
             <CardTitle>Top 5 Oportunidades</CardTitle>

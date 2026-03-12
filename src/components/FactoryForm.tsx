@@ -23,6 +23,9 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
+
+    const deadlineValue = fd.get('deadline') as string
+
     const data: Partial<Factory> = {
       name: fd.get('name') as string,
       city: fd.get('city') as string,
@@ -32,7 +35,8 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
       status: fd.get('status') as Status,
       funnelStage: fd.get('funnelStage') as FunnelStage,
       winProbability: Number(fd.get('winProbability')),
-      lastInteraction: new Date().toISOString(),
+      deadline: deadlineValue ? new Date(deadlineValue).toISOString() : undefined,
+      lastInteraction: factory?.lastInteraction || new Date().toISOString(),
     }
 
     if (factory) {
@@ -133,6 +137,17 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
             defaultValue={factory?.winProbability || 10}
             required
           />
+        </div>
+        <div className="space-y-2 md:col-span-2">
+          <Label>Prazo Limite de Negociação</Label>
+          <Input
+            type="date"
+            name="deadline"
+            defaultValue={factory?.deadline ? factory.deadline.split('T')[0] : ''}
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Será gerado um alerta quando o prazo estiver próximo do fim.
+          </p>
         </div>
       </div>
       <div className="flex justify-end gap-2">

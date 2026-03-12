@@ -1,7 +1,7 @@
-import { Bell, Plus, AlertTriangle } from 'lucide-react'
+import { Bell, Plus, AlertTriangle, Calendar } from 'lucide-react'
 import { Button } from './ui/button'
 import { useAppContext } from '@/store/AppContext'
-import { isStale } from '@/lib/utils'
+import { isStale, isApproachingDeadline, isPassedDeadline } from '@/lib/utils'
 import {
   Dialog,
   DialogTrigger,
@@ -13,14 +13,44 @@ import {
 import { FactoryForm } from './FactoryForm'
 import { useState } from 'react'
 import { SidebarTrigger } from './ui/sidebar'
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 
 export function AppHeader() {
   const { factories } = useAppContext()
-  const staleCount = factories.filter((f) => isStale(f.lastInteraction)).length
   const [open, setOpen] = useState(false)
 
+  const notifications = factories.flatMap((f) => {
+    const notifs = []
+    if (isPassedDeadline(f.deadline)) {
+      notifs.push({
+        id: `passed-${f.id}`,
+        type: 'destructive',
+        icon: Calendar,
+        message: `${f.name}: Prazo de negociação vencido!`,
+      })
+    } else if (isApproachingDeadline(f.deadline)) {
+      notifs.push({
+        id: `approaching-${f.id}`,
+        type: 'warning',
+        icon: Calendar,
+        message: `${f.name}: Prazo de fechamento próximo.`,
+      })
+    }
+    if (isStale(f.lastInteraction)) {
+      notifs.push({
+        id: `stale-${f.id}`,
+        type: 'stale',
+        icon: AlertTriangle,
+        message: `${f.name}: Sem interação há mais de 15 dias.`,
+      })
+    }
+    return notifs
+  })
+
+  const notifCount = notifications.length
+
   return (
-    <header className="h-16 border-b flex items-center justify-between px-4 lg:px-6 bg-card text-card-foreground shrink-0 shadow-sm z-10 sticky top-0">
+    <header className="h-16 border-b flex items-center justify-between px-4 lg:px-6 bg-card text-card-foreground shrink-0 shadow-sm z-10 sticky top-0 print:hidden">
       <div className="flex items-center gap-3">
         <SidebarTrigger className="md:hidden" />
         <h1 className="font-semibold text-lg lg:text-xl text-primary hidden sm:block">
@@ -29,17 +59,49 @@ export function AppHeader() {
       </div>
 
       <div className="flex items-center gap-4 lg:gap-6">
-        <div
-          className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-muted transition-colors cursor-pointer group"
-          title={`${staleCount} contas sem interação recente`}
-        >
-          <Bell className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-          {staleCount > 0 && (
-            <span className="absolute top-1 right-1 bg-destructive text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-card">
-              {staleCount}
-            </span>
-          )}
-        </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <div
+              className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-muted transition-colors cursor-pointer group"
+              title="Notificações"
+            >
+              <Bell className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+              {notifCount > 0 && (
+                <span className="absolute top-1 right-1 bg-destructive text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-card">
+                  {notifCount}
+                </span>
+              )}
+            </div>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-80 p-4">
+            <h3 className="font-semibold mb-3 text-sm flex items-center gap-2">
+              <Bell className="w-4 h-4" /> Notificações Recentes
+            </h3>
+            <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar">
+              {notifications.length === 0 ? (
+                <p className="text-sm text-muted-foreground p-2">Nenhuma pendência no momento.</p>
+              ) : (
+                notifications.map((n) => (
+                  <div
+                    key={n.id}
+                    className="p-3 border rounded-lg text-sm bg-muted/30 flex items-start gap-3"
+                  >
+                    <n.icon
+                      className={`w-4 h-4 shrink-0 mt-0.5 ${
+                        n.type === 'destructive'
+                          ? 'text-destructive'
+                          : n.type === 'warning'
+                            ? 'text-orange-500'
+                            : 'text-primary'
+                      }`}
+                    />
+                    <span className="leading-tight">{n.message}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>

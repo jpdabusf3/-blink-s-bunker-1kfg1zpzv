@@ -6,11 +6,13 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar'
-import { Home, Building2, BarChart2, Target, Grid } from 'lucide-react'
+import { Home, Building2, BarChart2, Target, Grid, LogOut } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
+import { useAuth } from '@/store/AuthContext'
 
 export function AppSidebar() {
   const loc = useLocation()
+  const { logout } = useAuth()
   const menu = [
     { name: 'Dashboard', path: '/', icon: Home },
     { name: 'Cadastro', path: '/cadastro', icon: Building2 },
@@ -20,7 +22,7 @@ export function AppSidebar() {
   ]
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border shadow-sm">
+    <Sidebar collapsible="icon" className="border-r border-border shadow-sm print:hidden">
       <SidebarHeader className="p-4 border-b flex items-center justify-center">
         <div className="flex items-center gap-2 overflow-hidden px-1">
           <div className="bg-primary p-1.5 rounded-lg shrink-0">
@@ -31,7 +33,7 @@ export function AppSidebar() {
           </h2>
         </div>
       </SidebarHeader>
-      <SidebarContent className="p-2 pt-4">
+      <SidebarContent className="p-2 pt-4 flex-1">
         <SidebarMenu className="gap-2">
           {menu.map((m) => (
             <SidebarMenuItem key={m.path}>
@@ -50,6 +52,22 @@ export function AppSidebar() {
           ))}
         </SidebarMenu>
       </SidebarContent>
+      <div className="p-2 border-t mt-auto">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={logout}
+              tooltip="Sair"
+              className="h-10 px-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="group-data-[collapsible=icon]:hidden font-medium">
+                Sair da Conta
+              </span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </div>
     </Sidebar>
   )
 }

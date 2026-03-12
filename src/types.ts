@@ -12,6 +12,14 @@ export type FunnelStage =
   | 'Pós-venda'
   | 'Perda'
 
+export interface Document {
+  id: string
+  name: string
+  url: string
+  size: number
+  uploadedAt: string
+}
+
 export interface Factory {
   id: string
   name: string
@@ -27,6 +35,8 @@ export interface Factory {
   productInterests: string
   funnelStage: FunnelStage
   winProbability: number
+  deadline?: string
+  documents?: Document[]
   swot: {
     strengths: string
     weaknesses: string

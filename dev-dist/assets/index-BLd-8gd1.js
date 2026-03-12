@@ -16360,6 +16360,30 @@ function DataRoutes({ routes, future, state, isStatic, onError }) {
 		future
 	});
 }
+function Navigate({ to, replace: replace2, state, relative }) {
+	invariant$1(useInRouterContext(), `<Navigate> may be used only in the context of a <Router> component.`);
+	let { static: isStatic } = import_react.useContext(NavigationContext);
+	warning(!isStatic, `<Navigate> must not be used on the initial render in a <StaticRouter>. This is a no-op, but you should modify your code so the <Navigate> is only ever rendered in response to some user interaction or state change.`);
+	let { matches } = import_react.useContext(RouteContext);
+	let { pathname: locationPathname } = useLocation();
+	let navigate = useNavigate();
+	let path = resolveTo(to, getResolveToMatches(matches), locationPathname, relative === "path");
+	let jsonPath = JSON.stringify(path);
+	import_react.useEffect(() => {
+		navigate(JSON.parse(jsonPath), {
+			replace: replace2,
+			state,
+			relative
+		});
+	}, [
+		navigate,
+		jsonPath,
+		relative,
+		replace2,
+		state
+	]);
+	return null;
+}
 function Outlet(props) {
 	return useOutlet(props.context);
 }
@@ -18118,15 +18142,15 @@ function handleAndDispatchCustomEvent$1(name, handler, detail, { discrete }) {
 	if (discrete) dispatchDiscreteCustomEvent(target, event);
 	else target.dispatchEvent(event);
 }
-var Root$7 = DismissableLayer;
+var Root$8 = DismissableLayer;
 var Branch = DismissableLayerBranch;
 //#endregion
 //#region ../../cache/modules/inteligencia-comercial-blink-4eb45/node_modules/.pnpm/@radix-ui+react-use-layout-effect@1.1.1_@types+react@19.2.14_react@19.2.4/node_modules/@radix-ui/react-use-layout-effect/dist/index.mjs
 var useLayoutEffect2 = globalThis?.document ? import_react.useLayoutEffect : () => {};
 //#endregion
 //#region ../../cache/modules/inteligencia-comercial-blink-4eb45/node_modules/.pnpm/@radix-ui+react-portal@1.1.9_@types+react-dom@19.2.3_@types+react@19.2.14__@types+react_7668895bec2444446faa4e0f4eb5244b/node_modules/@radix-ui/react-portal/dist/index.mjs
-var PORTAL_NAME$3 = "Portal";
-var Portal$2 = import_react.forwardRef((props, forwardedRef) => {
+var PORTAL_NAME$4 = "Portal";
+var Portal$3 = import_react.forwardRef((props, forwardedRef) => {
 	const { container: containerProp, ...portalProps } = props;
 	const [mounted, setMounted] = import_react.useState(false);
 	useLayoutEffect2(() => setMounted(true), []);
@@ -18136,7 +18160,7 @@ var Portal$2 = import_react.forwardRef((props, forwardedRef) => {
 		ref: forwardedRef
 	}), container) : null;
 });
-Portal$2.displayName = PORTAL_NAME$3;
+Portal$3.displayName = PORTAL_NAME$4;
 //#endregion
 //#region ../../cache/modules/inteligencia-comercial-blink-4eb45/node_modules/.pnpm/@radix-ui+react-presence@1.1.5_@types+react-dom@19.2.3_@types+react@19.2.14__@types+rea_c01c26c80b5ab5e3ecefbda6eca51ad1/node_modules/@radix-ui/react-presence/dist/index.mjs
 function useStateMachine(initialState, machine) {
@@ -18318,12 +18342,12 @@ var VisuallyHidden = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 VisuallyHidden.displayName = NAME$3;
-var Root$6 = VisuallyHidden;
+var Root$7 = VisuallyHidden;
 //#endregion
 //#region ../../cache/modules/inteligencia-comercial-blink-4eb45/node_modules/.pnpm/@radix-ui+react-toast@1.2.15_@types+react-dom@19.2.3_@types+react@19.2.14__@types+react_4581e89c6ba13e4159ce65546c8b2a16/node_modules/@radix-ui/react-toast/dist/index.mjs
 var PROVIDER_NAME$1 = "ToastProvider";
-var [Collection$2, useCollection$2, createCollectionScope$2] = createCollection("Toast");
-var [createToastContext, createToastScope] = createContextScope$1("Toast", [createCollectionScope$2]);
+var [Collection$3, useCollection$3, createCollectionScope$3] = createCollection("Toast");
+var [createToastContext, createToastScope] = createContextScope$1("Toast", [createCollectionScope$3]);
 var [ToastProviderProvider, useToastProviderContext] = createToastContext(PROVIDER_NAME$1);
 var ToastProvider$1 = (props) => {
 	const { __scopeToast, label = "Notification", duration = 5e3, swipeDirection = "right", swipeThreshold = 50, children } = props;
@@ -18332,7 +18356,7 @@ var ToastProvider$1 = (props) => {
 	const isFocusedToastEscapeKeyDownRef = import_react.useRef(false);
 	const isClosePausedRef = import_react.useRef(false);
 	if (!label.trim()) console.error(`Invalid prop \`label\` supplied to \`${PROVIDER_NAME$1}\`. Expected non-empty \`string\`.`);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Collection$2.Provider, {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Collection$3.Provider, {
 		scope: __scopeToast,
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToastProviderProvider, {
 			scope: __scopeToast,
@@ -18359,7 +18383,7 @@ var VIEWPORT_RESUME = "toast.viewportResume";
 var ToastViewport$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeToast, hotkey = VIEWPORT_DEFAULT_HOTKEY, label = "Notifications ({hotkey})", ...viewportProps } = props;
 	const context = useToastProviderContext(VIEWPORT_NAME$1, __scopeToast);
-	const getItems = useCollection$2(__scopeToast);
+	const getItems = useCollection$3(__scopeToast);
 	const wrapperRef = import_react.useRef(null);
 	const headFocusProxyRef = import_react.useRef(null);
 	const tailFocusProxyRef = import_react.useRef(null);
@@ -18436,7 +18460,7 @@ var ToastViewport$1 = import_react.forwardRef((props, forwardedRef) => {
 					}
 					const sortedCandidates = getSortedTabbableCandidates({ tabbingDirection: isTabbingBackwards ? "backwards" : "forwards" });
 					const index = sortedCandidates.findIndex((candidate) => candidate === focusedElement);
-					if (focusFirst$1(sortedCandidates.slice(index + 1))) event.preventDefault();
+					if (focusFirst$2(sortedCandidates.slice(index + 1))) event.preventDefault();
 					else isTabbingBackwards ? headFocusProxyRef.current?.focus() : tailFocusProxyRef.current?.focus();
 				}
 			};
@@ -18454,10 +18478,10 @@ var ToastViewport$1 = import_react.forwardRef((props, forwardedRef) => {
 			hasToasts && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FocusProxy, {
 				ref: headFocusProxyRef,
 				onFocusFromOutsideViewport: () => {
-					focusFirst$1(getSortedTabbableCandidates({ tabbingDirection: "forwards" }));
+					focusFirst$2(getSortedTabbableCandidates({ tabbingDirection: "forwards" }));
 				}
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Collection$2.Slot, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Collection$3.Slot, {
 				scope: __scopeToast,
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.ol, {
 					tabIndex: -1,
@@ -18468,7 +18492,7 @@ var ToastViewport$1 = import_react.forwardRef((props, forwardedRef) => {
 			hasToasts && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FocusProxy, {
 				ref: tailFocusProxyRef,
 				onFocusFromOutsideViewport: () => {
-					focusFirst$1(getSortedTabbableCandidates({ tabbingDirection: "backwards" }));
+					focusFirst$2(getSortedTabbableCandidates({ tabbingDirection: "backwards" }));
 				}
 			})
 		]
@@ -18616,9 +18640,9 @@ var ToastImpl = import_react.forwardRef((props, forwardedRef) => {
 	}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToastInteractiveProvider, {
 		scope: __scopeToast,
 		onClose: handleClose,
-		children: import_react_dom.createPortal(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Collection$2.ItemSlot, {
+		children: import_react_dom.createPortal(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Collection$3.ItemSlot, {
 			scope: __scopeToast,
-			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root$7, {
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root$8, {
 				asChild: true,
 				onEscapeKeyDown: composeEventHandlers(onEscapeKeyDown, () => {
 					if (!context.isFocusedToastEscapeKeyDownRef.current) handleClose();
@@ -18709,7 +18733,7 @@ var ToastAnnounce = (props) => {
 		const timer = window.setTimeout(() => setIsAnnounced(true), 1e3);
 		return () => window.clearTimeout(timer);
 	}, []);
-	return isAnnounced ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Portal$2, {
+	return isAnnounced ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Portal$3, {
 		asChild: true,
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VisuallyHidden, {
 			...announceProps,
@@ -18756,10 +18780,10 @@ var ToastAction$1 = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 ToastAction$1.displayName = ACTION_NAME;
-var CLOSE_NAME$1 = "ToastClose";
+var CLOSE_NAME$2 = "ToastClose";
 var ToastClose$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeToast, ...closeProps } = props;
-	const interactiveContext = useToastInteractiveContext(CLOSE_NAME$1, __scopeToast);
+	const interactiveContext = useToastInteractiveContext(CLOSE_NAME$2, __scopeToast);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToastAnnounceExclude, {
 		asChild: true,
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.button, {
@@ -18770,7 +18794,7 @@ var ToastClose$1 = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-ToastClose$1.displayName = CLOSE_NAME$1;
+ToastClose$1.displayName = CLOSE_NAME$2;
 var ToastAnnounceExclude = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeToast, altText, ...announceExcludeProps } = props;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.div, {
@@ -18838,7 +18862,7 @@ function getTabbableCandidates$1(container) {
 	while (walker.nextNode()) nodes.push(walker.currentNode);
 	return nodes;
 }
-function focusFirst$1(candidates) {
+function focusFirst$2(candidates) {
 	const previouslyFocusedElement = document.activeElement;
 	return candidates.some((candidate) => {
 		if (candidate === previouslyFocusedElement) return true;
@@ -18848,7 +18872,7 @@ function focusFirst$1(candidates) {
 }
 var Provider$1 = ToastProvider$1;
 var Viewport$1 = ToastViewport$1;
-var Root2$2 = Toast$2;
+var Root2$4 = Toast$2;
 var Title$1 = ToastTitle$1;
 var Description$1 = ToastDescription$1;
 var Action = ToastAction$1;
@@ -19059,6 +19083,28 @@ var Building2 = createLucideIcon("building-2", [
 		key: "16ra0t"
 	}]
 ]);
+var Calendar = createLucideIcon("calendar", [
+	["path", {
+		d: "M8 2v4",
+		key: "1cmpym"
+	}],
+	["path", {
+		d: "M16 2v4",
+		key: "4m81vk"
+	}],
+	["rect", {
+		width: "18",
+		height: "18",
+		x: "3",
+		y: "4",
+		rx: "2",
+		key: "1hopcy"
+	}],
+	["path", {
+		d: "M3 10h18",
+		key: "8toen8"
+	}]
+]);
 var ChartNoAxesColumn = createLucideIcon("chart-no-axes-column", [
 	["path", {
 		d: "M5 21v-6",
@@ -19094,6 +19140,56 @@ var Clock = createLucideIcon("clock", [["circle", {
 	d: "M12 6v6l4 2",
 	key: "mmk7yg"
 }]]);
+var CloudUpload = createLucideIcon("cloud-upload", [
+	["path", {
+		d: "M12 13v8",
+		key: "1l5pq0"
+	}],
+	["path", {
+		d: "M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242",
+		key: "1pljnt"
+	}],
+	["path", {
+		d: "m8 17 4-4 4 4",
+		key: "1quai1"
+	}]
+]);
+var Download = createLucideIcon("download", [
+	["path", {
+		d: "M12 15V3",
+		key: "m9g1x1"
+	}],
+	["path", {
+		d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4",
+		key: "ih7n3h"
+	}],
+	["path", {
+		d: "m7 10 5 5 5-5",
+		key: "brsn70"
+	}]
+]);
+var FileText = createLucideIcon("file-text", [
+	["path", {
+		d: "M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z",
+		key: "1oefj6"
+	}],
+	["path", {
+		d: "M14 2v5a1 1 0 0 0 1 1h5",
+		key: "wfsgrz"
+	}],
+	["path", {
+		d: "M10 9H8",
+		key: "b1mrlr"
+	}],
+	["path", {
+		d: "M16 13H8",
+		key: "t4e002"
+	}],
+	["path", {
+		d: "M16 17H8",
+		key: "z1uh3a"
+	}]
+]);
 var Grid3x3 = createLucideIcon("grid-3x3", [
 	["rect", {
 		width: "18",
@@ -19127,6 +19223,20 @@ var House = createLucideIcon("house", [["path", {
 	d: "M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z",
 	key: "r6nss1"
 }]]);
+var LogOut = createLucideIcon("log-out", [
+	["path", {
+		d: "m16 17 5-5-5-5",
+		key: "1bji2h"
+	}],
+	["path", {
+		d: "M21 12H9",
+		key: "dn1m92"
+	}],
+	["path", {
+		d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4",
+		key: "1uf3rs"
+	}]
+]);
 var PanelLeft = createLucideIcon("panel-left", [["rect", {
 	width: "18",
 	height: "18",
@@ -20656,6 +20766,15 @@ function isStale(dateStr) {
 	const diffTime = Math.abs((/* @__PURE__ */ new Date()).getTime() - new Date(dateStr).getTime());
 	return Math.ceil(diffTime / (1e3 * 60 * 60 * 24)) > 15;
 }
+function isApproachingDeadline(dateStr) {
+	if (!dateStr) return false;
+	const diffDays = (new Date(dateStr).getTime() - (/* @__PURE__ */ new Date()).getTime()) / (1e3 * 60 * 60 * 24);
+	return diffDays >= 0 && diffDays <= 7;
+}
+function isPassedDeadline(dateStr) {
+	if (!dateStr) return false;
+	return new Date(dateStr).getTime() < (/* @__PURE__ */ new Date()).getTime();
+}
 function formatCurrency(value) {
 	return new Intl.NumberFormat("pt-BR", {
 		style: "currency",
@@ -20672,6 +20791,30 @@ function getMatrixClassification(score) {
 	if (score > 8) return "Alta Prioridade";
 	if (score >= 5) return "Média";
 	return "Baixa";
+}
+function exportToCSV(filename, rows) {
+	if (!rows || !rows.length) return;
+	const separator = ",";
+	const keys = Object.keys(rows[0]);
+	const csvContent = keys.join(separator) + "\n" + rows.map((row) => {
+		return keys.map((k) => {
+			let cell = row[k] === null || row[k] === void 0 ? "" : row[k];
+			cell = cell instanceof Date ? cell.toLocaleString() : cell.toString().replace(/"/g, "\"\"");
+			if (cell.search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+			return cell;
+		}).join(separator);
+	}).join("\n");
+	const blob = new Blob(["﻿" + csvContent], { type: "text/csv;charset=utf-8;" });
+	const link = document.createElement("a");
+	if (link.download !== void 0) {
+		const url = URL.createObjectURL(blob);
+		link.setAttribute("href", url);
+		link.setAttribute("download", filename);
+		link.style.visibility = "hidden";
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+	}
 }
 //#endregion
 //#region src/components/ui/toast.tsx
@@ -20692,7 +20835,7 @@ var toastVariants = cva("group pointer-events-auto relative flex w-full items-ce
 	defaultVariants: { variant: "default" }
 });
 var Toast$1 = import_react.forwardRef(({ className, variant, ...props }, ref) => {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root2$2, {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root2$4, {
 		"data-uid": "src/components/ui/toast.tsx:47:5",
 		"data-prohibitions": "[editContent]",
 		ref,
@@ -20700,7 +20843,7 @@ var Toast$1 = import_react.forwardRef(({ className, variant, ...props }, ref) =>
 		...props
 	});
 });
-Toast$1.displayName = Root2$2.displayName;
+Toast$1.displayName = Root2$4.displayName;
 var ToastAction = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Action, {
 	"data-uid": "src/components/ui/toast.tsx:60:3",
 	"data-prohibitions": "[editContent]",
@@ -23426,7 +23569,7 @@ var Arrow$1 = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 Arrow$1.displayName = NAME$2;
-var Root$5 = Arrow$1;
+var Root$6 = Arrow$1;
 //#endregion
 //#region ../../cache/modules/inteligencia-comercial-blink-4eb45/node_modules/.pnpm/@radix-ui+react-use-size@1.1.1_@types+react@19.2.14_react@19.2.4/node_modules/@radix-ui/react-use-size/dist/index.mjs
 function useSize(element) {
@@ -23479,10 +23622,10 @@ var Popper = (props) => {
 	});
 };
 Popper.displayName = POPPER_NAME;
-var ANCHOR_NAME = "PopperAnchor";
+var ANCHOR_NAME$1 = "PopperAnchor";
 var PopperAnchor = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopePopper, virtualRef, ...anchorProps } = props;
-	const context = usePopperContext(ANCHOR_NAME, __scopePopper);
+	const context = usePopperContext(ANCHOR_NAME$1, __scopePopper);
 	const ref = import_react.useRef(null);
 	const composedRefs = useComposedRefs(forwardedRef, ref);
 	const anchorRef = import_react.useRef(null);
@@ -23496,12 +23639,12 @@ var PopperAnchor = import_react.forwardRef((props, forwardedRef) => {
 		ref: composedRefs
 	});
 });
-PopperAnchor.displayName = ANCHOR_NAME;
-var CONTENT_NAME$3 = "PopperContent";
-var [PopperContentProvider, useContentContext] = createPopperContext(CONTENT_NAME$3);
+PopperAnchor.displayName = ANCHOR_NAME$1;
+var CONTENT_NAME$5 = "PopperContent";
+var [PopperContentProvider, useContentContext] = createPopperContext(CONTENT_NAME$5);
 var PopperContent = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopePopper, side = "bottom", sideOffset = 0, align = "center", alignOffset = 0, arrowPadding = 0, avoidCollisions = true, collisionBoundary = [], collisionPadding: collisionPaddingProp = 0, sticky = "partial", hideWhenDetached = false, updatePositionStrategy = "optimized", onPlaced, ...contentProps } = props;
-	const context = usePopperContext(CONTENT_NAME$3, __scopePopper);
+	const context = usePopperContext(CONTENT_NAME$5, __scopePopper);
 	const [content, setContent] = import_react.useState(null);
 	const composedRefs = useComposedRefs(forwardedRef, (node) => setContent(node));
 	const [arrow$4, setArrow] = import_react.useState(null);
@@ -23614,8 +23757,8 @@ var PopperContent = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-PopperContent.displayName = CONTENT_NAME$3;
-var ARROW_NAME$2 = "PopperArrow";
+PopperContent.displayName = CONTENT_NAME$5;
+var ARROW_NAME$3 = "PopperArrow";
 var OPPOSITE_SIDE = {
 	top: "bottom",
 	right: "left",
@@ -23624,7 +23767,7 @@ var OPPOSITE_SIDE = {
 };
 var PopperArrow = import_react.forwardRef(function PopperArrow2(props, forwardedRef) {
 	const { __scopePopper, ...arrowProps } = props;
-	const contentContext = useContentContext(ARROW_NAME$2, __scopePopper);
+	const contentContext = useContentContext(ARROW_NAME$3, __scopePopper);
 	const baseSide = OPPOSITE_SIDE[contentContext.placedSide];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 		ref: contentContext.onArrowChange,
@@ -23647,7 +23790,7 @@ var PopperArrow = import_react.forwardRef(function PopperArrow2(props, forwarded
 			}[contentContext.placedSide],
 			visibility: contentContext.shouldHideArrow ? "hidden" : void 0
 		},
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root$5, {
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root$6, {
 			...arrowProps,
 			ref: forwardedRef,
 			style: {
@@ -23657,7 +23800,7 @@ var PopperArrow = import_react.forwardRef(function PopperArrow2(props, forwarded
 		})
 	});
 });
-PopperArrow.displayName = ARROW_NAME$2;
+PopperArrow.displayName = ARROW_NAME$3;
 function isNotNull(value) {
 	return value !== null;
 }
@@ -23702,14 +23845,14 @@ function getSideAndAlignFromPlacement(placement) {
 	const [side, align = "center"] = placement.split("-");
 	return [side, align];
 }
-var Root2$1 = Popper;
+var Root2$3 = Popper;
 var Anchor = PopperAnchor;
-var Content$1 = PopperContent;
+var Content$2 = PopperContent;
 var Arrow = PopperArrow;
 //#endregion
 //#region ../../cache/modules/inteligencia-comercial-blink-4eb45/node_modules/.pnpm/@radix-ui+react-tooltip@1.2.8_@types+react-dom@19.2.3_@types+react@19.2.14__@types+reac_9074d9fb06315b089b2bee17c4c65951/node_modules/@radix-ui/react-tooltip/dist/index.mjs
 var [createTooltipContext, createTooltipScope] = createContextScope$1("Tooltip", [createPopperScope]);
-var usePopperScope$1 = createPopperScope();
+var usePopperScope$2 = createPopperScope();
 var PROVIDER_NAME = "TooltipProvider";
 var DEFAULT_DELAY_DURATION = 700;
 var TOOLTIP_OPEN = "tooltip.open";
@@ -23749,7 +23892,7 @@ var [TooltipContextProvider, useTooltipContext] = createTooltipContext(TOOLTIP_N
 var Tooltip$2 = (props) => {
 	const { __scopeTooltip, children, open: openProp, defaultOpen, onOpenChange, disableHoverableContent: disableHoverableContentProp, delayDuration: delayDurationProp } = props;
 	const providerContext = useTooltipProviderContext(TOOLTIP_NAME, props.__scopeTooltip);
-	const popperScope = usePopperScope$1(__scopeTooltip);
+	const popperScope = usePopperScope$2(__scopeTooltip);
 	const [trigger, setTrigger] = import_react.useState(null);
 	const contentId = useId();
 	const openTimerRef = import_react.useRef(0);
@@ -23798,7 +23941,7 @@ var Tooltip$2 = (props) => {
 			}
 		};
 	}, []);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root2$1, {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root2$3, {
 		...popperScope,
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TooltipContextProvider, {
 			scope: __scopeTooltip,
@@ -23830,12 +23973,12 @@ var Tooltip$2 = (props) => {
 	});
 };
 Tooltip$2.displayName = TOOLTIP_NAME;
-var TRIGGER_NAME$2 = "TooltipTrigger";
+var TRIGGER_NAME$4 = "TooltipTrigger";
 var TooltipTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeTooltip, ...triggerProps } = props;
-	const context = useTooltipContext(TRIGGER_NAME$2, __scopeTooltip);
-	const providerContext = useTooltipProviderContext(TRIGGER_NAME$2, __scopeTooltip);
-	const popperScope = usePopperScope$1(__scopeTooltip);
+	const context = useTooltipContext(TRIGGER_NAME$4, __scopeTooltip);
+	const providerContext = useTooltipProviderContext(TRIGGER_NAME$4, __scopeTooltip);
+	const popperScope = usePopperScope$2(__scopeTooltip);
 	const composedRefs = useComposedRefs(forwardedRef, import_react.useRef(null), context.onTriggerChange);
 	const isPointerDownRef = import_react.useRef(false);
 	const hasPointerMoveOpenedRef = import_react.useRef(false);
@@ -23875,18 +24018,18 @@ var TooltipTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-TooltipTrigger$1.displayName = TRIGGER_NAME$2;
-var PORTAL_NAME$2 = "TooltipPortal";
-var [PortalProvider$1, usePortalContext$1] = createTooltipContext(PORTAL_NAME$2, { forceMount: void 0 });
+TooltipTrigger$1.displayName = TRIGGER_NAME$4;
+var PORTAL_NAME$3 = "TooltipPortal";
+var [PortalProvider$2, usePortalContext$2] = createTooltipContext(PORTAL_NAME$3, { forceMount: void 0 });
 var TooltipPortal = (props) => {
 	const { __scopeTooltip, forceMount, children, container } = props;
-	const context = useTooltipContext(PORTAL_NAME$2, __scopeTooltip);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PortalProvider$1, {
+	const context = useTooltipContext(PORTAL_NAME$3, __scopeTooltip);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PortalProvider$2, {
 		scope: __scopeTooltip,
 		forceMount,
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Presence, {
 			present: forceMount || context.open,
-			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Portal$2, {
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Portal$3, {
 				asChild: true,
 				container,
 				children
@@ -23894,12 +24037,12 @@ var TooltipPortal = (props) => {
 		})
 	});
 };
-TooltipPortal.displayName = PORTAL_NAME$2;
-var CONTENT_NAME$2 = "TooltipContent";
+TooltipPortal.displayName = PORTAL_NAME$3;
+var CONTENT_NAME$4 = "TooltipContent";
 var TooltipContent$1 = import_react.forwardRef((props, forwardedRef) => {
-	const portalContext = usePortalContext$1(CONTENT_NAME$2, props.__scopeTooltip);
+	const portalContext = usePortalContext$2(CONTENT_NAME$4, props.__scopeTooltip);
 	const { forceMount = portalContext.forceMount, side = "top", ...contentProps } = props;
-	const context = useTooltipContext(CONTENT_NAME$2, props.__scopeTooltip);
+	const context = useTooltipContext(CONTENT_NAME$4, props.__scopeTooltip);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Presence, {
 		present: forceMount || context.open,
 		children: context.disableHoverableContent ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TooltipContentImpl, {
@@ -23914,8 +24057,8 @@ var TooltipContent$1 = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 var TooltipContentHoverable = import_react.forwardRef((props, forwardedRef) => {
-	const context = useTooltipContext(CONTENT_NAME$2, props.__scopeTooltip);
-	const providerContext = useTooltipProviderContext(CONTENT_NAME$2, props.__scopeTooltip);
+	const context = useTooltipContext(CONTENT_NAME$4, props.__scopeTooltip);
+	const providerContext = useTooltipProviderContext(CONTENT_NAME$4, props.__scopeTooltip);
 	const ref = import_react.useRef(null);
 	const composedRefs = useComposedRefs(forwardedRef, ref);
 	const [pointerGraceArea, setPointerGraceArea] = import_react.useState(null);
@@ -23992,8 +24135,8 @@ var [VisuallyHiddenContentContextProvider, useVisuallyHiddenContentContext] = cr
 var Slottable = /* @__PURE__ */ createSlottable("TooltipContent");
 var TooltipContentImpl = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeTooltip, children, "aria-label": ariaLabel, onEscapeKeyDown, onPointerDownOutside, ...contentProps } = props;
-	const context = useTooltipContext(CONTENT_NAME$2, __scopeTooltip);
-	const popperScope = usePopperScope$1(__scopeTooltip);
+	const context = useTooltipContext(CONTENT_NAME$4, __scopeTooltip);
+	const popperScope = usePopperScope$2(__scopeTooltip);
 	const { onClose } = context;
 	import_react.useEffect(() => {
 		document.addEventListener(TOOLTIP_OPEN, onClose);
@@ -24015,7 +24158,7 @@ var TooltipContentImpl = import_react.forwardRef((props, forwardedRef) => {
 		onPointerDownOutside,
 		onFocusOutside: (event) => event.preventDefault(),
 		onDismiss: onClose,
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Content$1, {
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Content$2, {
 			"data-state": context.stateAttribute,
 			...popperScope,
 			...contentProps,
@@ -24031,7 +24174,7 @@ var TooltipContentImpl = import_react.forwardRef((props, forwardedRef) => {
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Slottable, { children }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VisuallyHiddenContentContextProvider, {
 				scope: __scopeTooltip,
 				isInside: true,
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root$6, {
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root$7, {
 					id: context.contentId,
 					role: "tooltip",
 					children: ariaLabel || children
@@ -24040,18 +24183,18 @@ var TooltipContentImpl = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-TooltipContent$1.displayName = CONTENT_NAME$2;
-var ARROW_NAME$1 = "TooltipArrow";
+TooltipContent$1.displayName = CONTENT_NAME$4;
+var ARROW_NAME$2 = "TooltipArrow";
 var TooltipArrow = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeTooltip, ...arrowProps } = props;
-	const popperScope = usePopperScope$1(__scopeTooltip);
-	return useVisuallyHiddenContentContext(ARROW_NAME$1, __scopeTooltip).isInside ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Arrow, {
+	const popperScope = usePopperScope$2(__scopeTooltip);
+	return useVisuallyHiddenContentContext(ARROW_NAME$2, __scopeTooltip).isInside ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Arrow, {
 		...popperScope,
 		...arrowProps,
 		ref: forwardedRef
 	});
 });
-TooltipArrow.displayName = ARROW_NAME$1;
+TooltipArrow.displayName = ARROW_NAME$2;
 function getExitSideFromRect(point, rect) {
 	const top = Math.abs(rect.top - point.y);
 	const bottom = Math.abs(rect.bottom - point.y);
@@ -24184,14 +24327,14 @@ function getHullPresorted(points) {
 }
 var Provider = TooltipProvider$1;
 var Root3 = Tooltip$2;
-var Trigger$2 = TooltipTrigger$1;
-var Content2$1 = TooltipContent$1;
+var Trigger$4 = TooltipTrigger$1;
+var Content2$2 = TooltipContent$1;
 //#endregion
 //#region src/components/ui/tooltip.tsx
 var TooltipProvider = Provider;
 var Tooltip$1 = Root3;
-var TooltipTrigger = Trigger$2;
-var TooltipContent = import_react.forwardRef(({ className, sideOffset = 4, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Content2$1, {
+var TooltipTrigger = Trigger$4;
+var TooltipContent = import_react.forwardRef(({ className, sideOffset = 4, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Content2$2, {
 	"data-uid": "src/components/ui/tooltip.tsx:17:3",
 	"data-prohibitions": "[editContent]",
 	ref,
@@ -24199,7 +24342,7 @@ var TooltipContent = import_react.forwardRef(({ className, sideOffset = 4, ...pr
 	className: cn$1("z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-tooltip-content-transform-origin]", className),
 	...props
 }));
-TooltipContent.displayName = Content2$1.displayName;
+TooltipContent.displayName = Content2$2.displayName;
 //#endregion
 //#region ../../cache/modules/inteligencia-comercial-blink-4eb45/node_modules/.pnpm/@radix-ui+react-slot@1.2.4_@types+react@19.2.14_react@19.2.4/node_modules/@radix-ui/react-slot/dist/index.mjs
 var REACT_LAZY_TYPE = Symbol.for("react.lazy");
@@ -24241,7 +24384,7 @@ function createSlot(ownerName) {
 	Slot2.displayName = `${ownerName}.Slot`;
 	return Slot2;
 }
-var Slot$2 = /* @__PURE__ */ createSlot("Slot");
+var Slot$3 = /* @__PURE__ */ createSlot("Slot");
 /* @__NO_SIDE_EFFECTS__ */
 function createSlotClone(ownerName) {
 	const SlotClone = import_react.forwardRef((props, forwardedRef) => {
@@ -24335,7 +24478,7 @@ var buttonVariants = cva("inline-flex items-center justify-center gap-2 whitespa
 	}
 });
 var Button = import_react.forwardRef(({ className, variant, size, asChild = false, ...props }, ref) => {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(asChild ? Slot$2 : "button", {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(asChild ? Slot$3 : "button", {
 		"data-uid": "src/components/ui/button.tsx:44:7",
 		"data-prohibitions": "[editContent]",
 		className: cn$1(buttonVariants({
@@ -24422,10 +24565,10 @@ Separator$2.displayName = NAME$1;
 function isValidOrientation(orientation) {
 	return ORIENTATIONS.includes(orientation);
 }
-var Root$4 = Separator$2;
+var Root$5 = Separator$2;
 //#endregion
 //#region src/components/ui/separator.tsx
-var Separator$1 = import_react.forwardRef(({ className, orientation = "horizontal", decorative = true, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root$4, {
+var Separator$1 = import_react.forwardRef(({ className, orientation = "horizontal", decorative = true, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root$5, {
 	"data-uid": "src/components/ui/separator.tsx:11:3",
 	"data-prohibitions": "[editContent]",
 	ref,
@@ -24434,12 +24577,12 @@ var Separator$1 = import_react.forwardRef(({ className, orientation = "horizonta
 	className: cn$1("shrink-0 bg-border", orientation === "horizontal" ? "h-[1px] w-full" : "h-full w-[1px]", className),
 	...props
 }));
-Separator$1.displayName = Root$4.displayName;
+Separator$1.displayName = Root$5.displayName;
 //#endregion
 //#region ../../cache/modules/inteligencia-comercial-blink-4eb45/node_modules/.pnpm/@radix-ui+react-focus-scope@1.1.7_@types+react-dom@19.2.3_@types+react@19.2.14__@types+_f62f3af4ca2ba305a7aecf04c8534604/node_modules/@radix-ui/react-focus-scope/dist/index.mjs
 var AUTOFOCUS_ON_MOUNT = "focusScope.autoFocusOnMount";
 var AUTOFOCUS_ON_UNMOUNT = "focusScope.autoFocusOnUnmount";
-var EVENT_OPTIONS = {
+var EVENT_OPTIONS$1 = {
 	bubbles: false,
 	cancelable: true
 };
@@ -24499,18 +24642,18 @@ var FocusScope = import_react.forwardRef((props, forwardedRef) => {
 			focusScopesStack.add(focusScope);
 			const previouslyFocusedElement = document.activeElement;
 			if (!container.contains(previouslyFocusedElement)) {
-				const mountEvent = new CustomEvent(AUTOFOCUS_ON_MOUNT, EVENT_OPTIONS);
+				const mountEvent = new CustomEvent(AUTOFOCUS_ON_MOUNT, EVENT_OPTIONS$1);
 				container.addEventListener(AUTOFOCUS_ON_MOUNT, onMountAutoFocus);
 				container.dispatchEvent(mountEvent);
 				if (!mountEvent.defaultPrevented) {
-					focusFirst(removeLinks(getTabbableCandidates(container)), { select: true });
+					focusFirst$1(removeLinks(getTabbableCandidates(container)), { select: true });
 					if (document.activeElement === previouslyFocusedElement) focus(container);
 				}
 			}
 			return () => {
 				container.removeEventListener(AUTOFOCUS_ON_MOUNT, onMountAutoFocus);
 				setTimeout(() => {
-					const unmountEvent = new CustomEvent(AUTOFOCUS_ON_UNMOUNT, EVENT_OPTIONS);
+					const unmountEvent = new CustomEvent(AUTOFOCUS_ON_UNMOUNT, EVENT_OPTIONS$1);
 					container.addEventListener(AUTOFOCUS_ON_UNMOUNT, onUnmountAutoFocus);
 					container.dispatchEvent(unmountEvent);
 					if (!unmountEvent.defaultPrevented) focus(previouslyFocusedElement ?? document.body, { select: true });
@@ -24556,7 +24699,7 @@ var FocusScope = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 FocusScope.displayName = FOCUS_SCOPE_NAME;
-function focusFirst(candidates, { select = false } = {}) {
+function focusFirst$1(candidates, { select = false } = {}) {
 	const previouslyFocusedElement = document.activeElement;
 	for (const candidate of candidates) {
 		focus(candidate, { select });
@@ -25498,34 +25641,34 @@ var Dialog$1 = (props) => {
 	});
 };
 Dialog$1.displayName = DIALOG_NAME;
-var TRIGGER_NAME$1 = "DialogTrigger";
+var TRIGGER_NAME$3 = "DialogTrigger";
 var DialogTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeDialog, ...triggerProps } = props;
-	const context = useDialogContext(TRIGGER_NAME$1, __scopeDialog);
+	const context = useDialogContext(TRIGGER_NAME$3, __scopeDialog);
 	const composedTriggerRef = useComposedRefs(forwardedRef, context.triggerRef);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.button, {
 		type: "button",
 		"aria-haspopup": "dialog",
 		"aria-expanded": context.open,
 		"aria-controls": context.contentId,
-		"data-state": getState(context.open),
+		"data-state": getState$1(context.open),
 		...triggerProps,
 		ref: composedTriggerRef,
 		onClick: composeEventHandlers(props.onClick, context.onOpenToggle)
 	});
 });
-DialogTrigger$1.displayName = TRIGGER_NAME$1;
-var PORTAL_NAME$1 = "DialogPortal";
-var [PortalProvider, usePortalContext] = createDialogContext(PORTAL_NAME$1, { forceMount: void 0 });
+DialogTrigger$1.displayName = TRIGGER_NAME$3;
+var PORTAL_NAME$2 = "DialogPortal";
+var [PortalProvider$1, usePortalContext$1] = createDialogContext(PORTAL_NAME$2, { forceMount: void 0 });
 var DialogPortal$1 = (props) => {
 	const { __scopeDialog, forceMount, children, container } = props;
-	const context = useDialogContext(PORTAL_NAME$1, __scopeDialog);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PortalProvider, {
+	const context = useDialogContext(PORTAL_NAME$2, __scopeDialog);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PortalProvider$1, {
 		scope: __scopeDialog,
 		forceMount,
 		children: import_react.Children.map(children, (child) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Presence, {
 			present: forceMount || context.open,
-			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Portal$2, {
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Portal$3, {
 				asChild: true,
 				container,
 				children: child
@@ -25533,10 +25676,10 @@ var DialogPortal$1 = (props) => {
 		}))
 	});
 };
-DialogPortal$1.displayName = PORTAL_NAME$1;
+DialogPortal$1.displayName = PORTAL_NAME$2;
 var OVERLAY_NAME = "DialogOverlay";
 var DialogOverlay$1 = import_react.forwardRef((props, forwardedRef) => {
-	const portalContext = usePortalContext(OVERLAY_NAME, props.__scopeDialog);
+	const portalContext = usePortalContext$1(OVERLAY_NAME, props.__scopeDialog);
 	const { forceMount = portalContext.forceMount, ...overlayProps } = props;
 	const context = useDialogContext(OVERLAY_NAME, props.__scopeDialog);
 	return context.modal ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Presence, {
@@ -25548,16 +25691,16 @@ var DialogOverlay$1 = import_react.forwardRef((props, forwardedRef) => {
 	}) : null;
 });
 DialogOverlay$1.displayName = OVERLAY_NAME;
-var Slot$1 = /* @__PURE__ */ createSlot$1("DialogOverlay.RemoveScroll");
+var Slot$2 = /* @__PURE__ */ createSlot$1("DialogOverlay.RemoveScroll");
 var DialogOverlayImpl = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeDialog, ...overlayProps } = props;
 	const context = useDialogContext(OVERLAY_NAME, __scopeDialog);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ReactRemoveScroll, {
-		as: Slot$1,
+		as: Slot$2,
 		allowPinchZoom: true,
 		shards: [context.contentRef],
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.div, {
-			"data-state": getState(context.open),
+			"data-state": getState$1(context.open),
 			...overlayProps,
 			ref: forwardedRef,
 			style: {
@@ -25567,11 +25710,11 @@ var DialogOverlayImpl = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-var CONTENT_NAME$1 = "DialogContent";
+var CONTENT_NAME$3 = "DialogContent";
 var DialogContent$1 = import_react.forwardRef((props, forwardedRef) => {
-	const portalContext = usePortalContext(CONTENT_NAME$1, props.__scopeDialog);
+	const portalContext = usePortalContext$1(CONTENT_NAME$3, props.__scopeDialog);
 	const { forceMount = portalContext.forceMount, ...contentProps } = props;
-	const context = useDialogContext(CONTENT_NAME$1, props.__scopeDialog);
+	const context = useDialogContext(CONTENT_NAME$3, props.__scopeDialog);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Presence, {
 		present: forceMount || context.open,
 		children: context.modal ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogContentModal, {
@@ -25583,9 +25726,9 @@ var DialogContent$1 = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-DialogContent$1.displayName = CONTENT_NAME$1;
+DialogContent$1.displayName = CONTENT_NAME$3;
 var DialogContentModal = import_react.forwardRef((props, forwardedRef) => {
-	const context = useDialogContext(CONTENT_NAME$1, props.__scopeDialog);
+	const context = useDialogContext(CONTENT_NAME$3, props.__scopeDialog);
 	const contentRef = import_react.useRef(null);
 	const composedRefs = useComposedRefs(forwardedRef, context.contentRef, contentRef);
 	import_react.useEffect(() => {
@@ -25610,7 +25753,7 @@ var DialogContentModal = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 var DialogContentNonModal = import_react.forwardRef((props, forwardedRef) => {
-	const context = useDialogContext(CONTENT_NAME$1, props.__scopeDialog);
+	const context = useDialogContext(CONTENT_NAME$3, props.__scopeDialog);
 	const hasInteractedOutsideRef = import_react.useRef(false);
 	const hasPointerDownOutsideRef = import_react.useRef(false);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogContentImpl, {
@@ -25641,7 +25784,7 @@ var DialogContentNonModal = import_react.forwardRef((props, forwardedRef) => {
 });
 var DialogContentImpl = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeDialog, trapFocus, onOpenAutoFocus, onCloseAutoFocus, ...contentProps } = props;
-	const context = useDialogContext(CONTENT_NAME$1, __scopeDialog);
+	const context = useDialogContext(CONTENT_NAME$3, __scopeDialog);
 	const contentRef = import_react.useRef(null);
 	const composedRefs = useComposedRefs(forwardedRef, contentRef);
 	useFocusGuards();
@@ -25656,7 +25799,7 @@ var DialogContentImpl = import_react.forwardRef((props, forwardedRef) => {
 			id: context.contentId,
 			"aria-describedby": context.descriptionId,
 			"aria-labelledby": context.titleId,
-			"data-state": getState(context.open),
+			"data-state": getState$1(context.open),
 			...contentProps,
 			ref: composedRefs,
 			onDismiss: () => context.onOpenChange(false)
@@ -25688,10 +25831,10 @@ var DialogDescription$1 = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 DialogDescription$1.displayName = DESCRIPTION_NAME;
-var CLOSE_NAME = "DialogClose";
+var CLOSE_NAME$1 = "DialogClose";
 var DialogClose$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeDialog, ...closeProps } = props;
-	const context = useDialogContext(CLOSE_NAME, __scopeDialog);
+	const context = useDialogContext(CLOSE_NAME$1, __scopeDialog);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.button, {
 		type: "button",
 		...closeProps,
@@ -25699,13 +25842,13 @@ var DialogClose$1 = import_react.forwardRef((props, forwardedRef) => {
 		onClick: composeEventHandlers(props.onClick, () => context.onOpenChange(false))
 	});
 });
-DialogClose$1.displayName = CLOSE_NAME;
-function getState(open) {
+DialogClose$1.displayName = CLOSE_NAME$1;
+function getState$1(open) {
 	return open ? "open" : "closed";
 }
 var TITLE_WARNING_NAME = "DialogTitleWarning";
 var [WarningProvider, useWarningContext] = createContext2(TITLE_WARNING_NAME, {
-	contentName: CONTENT_NAME$1,
+	contentName: CONTENT_NAME$3,
 	titleName: TITLE_NAME,
 	docsSlug: "dialog"
 });
@@ -25738,18 +25881,18 @@ var DescriptionWarning = ({ contentRef, descriptionId }) => {
 	]);
 	return null;
 };
-var Root$3 = Dialog$1;
-var Trigger$1 = DialogTrigger$1;
-var Portal$1 = DialogPortal$1;
+var Root$4 = Dialog$1;
+var Trigger$3 = DialogTrigger$1;
+var Portal$2 = DialogPortal$1;
 var Overlay = DialogOverlay$1;
-var Content = DialogContent$1;
+var Content$1 = DialogContent$1;
 var Title = DialogTitle$1;
 var Description = DialogDescription$1;
 var Close = DialogClose$1;
 //#endregion
 //#region src/components/ui/sheet.tsx
-var Sheet = Root$3;
-var SheetPortal = Portal$1;
+var Sheet = Root$4;
+var SheetPortal = Portal$2;
 var SheetOverlay = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Overlay, {
 	"data-uid": "src/components/ui/sheet.tsx:21:3",
 	"data-prohibitions": "[editContent]",
@@ -25773,7 +25916,7 @@ var SheetContent = import_react.forwardRef(({ side = "right", className, childre
 	children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SheetOverlay, {
 		"data-uid": "src/components/ui/sheet.tsx:61:5",
 		"data-prohibitions": "[editContent]"
-	}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Content, {
+	}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Content$1, {
 		"data-uid": "src/components/ui/sheet.tsx:62:5",
 		"data-prohibitions": "[editContent]",
 		ref,
@@ -25796,7 +25939,7 @@ var SheetContent = import_react.forwardRef(({ side = "right", className, childre
 		})]
 	})]
 }));
-SheetContent.displayName = Content.displayName;
+SheetContent.displayName = Content$1.displayName;
 var SheetHeader = ({ className, ...props }) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 	"data-uid": "src/components/ui/sheet.tsx:74:3",
 	"data-prohibitions": "[editContent]",
@@ -26120,7 +26263,7 @@ var SidebarGroup = import_react.forwardRef(({ className, ...props }, ref) => {
 });
 SidebarGroup.displayName = "SidebarGroup";
 var SidebarGroupLabel = import_react.forwardRef(({ className, asChild = false, ...props }, ref) => {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(asChild ? Slot$2 : "div", {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(asChild ? Slot$3 : "div", {
 		"data-uid": "src/components/ui/sidebar.tsx:433:5",
 		"data-prohibitions": "[editContent]",
 		ref,
@@ -26131,7 +26274,7 @@ var SidebarGroupLabel = import_react.forwardRef(({ className, asChild = false, .
 });
 SidebarGroupLabel.displayName = "SidebarGroupLabel";
 var SidebarGroupAction = import_react.forwardRef(({ className, asChild = false, ...props }, ref) => {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(asChild ? Slot$2 : "button", {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(asChild ? Slot$3 : "button", {
 		"data-uid": "src/components/ui/sidebar.tsx:454:5",
 		"data-prohibitions": "[editContent]",
 		ref,
@@ -26186,7 +26329,7 @@ var sidebarMenuButtonVariants = cva("peer/menu-button flex w-full items-center g
 	}
 });
 var SidebarMenuButton = import_react.forwardRef(({ asChild = false, isActive = false, variant = "default", size = "default", tooltip, className, ...props }, ref) => {
-	const Comp = asChild ? Slot$2 : "button";
+	const Comp = asChild ? Slot$3 : "button";
 	const { isMobile, state } = useSidebar();
 	const button = /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Comp, {
 		"data-uid": "src/components/ui/sidebar.tsx:552:7",
@@ -26223,7 +26366,7 @@ var SidebarMenuButton = import_react.forwardRef(({ asChild = false, isActive = f
 });
 SidebarMenuButton.displayName = "SidebarMenuButton";
 var SidebarMenuAction = import_react.forwardRef(({ className, asChild = false, showOnHover = false, ...props }, ref) => {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(asChild ? Slot$2 : "button", {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(asChild ? Slot$3 : "button", {
 		"data-uid": "src/components/ui/sidebar.tsx:597:5",
 		"data-prohibitions": "[editContent]",
 		ref,
@@ -26285,7 +26428,7 @@ var SidebarMenuSubItem = import_react.forwardRef(({ ...props }, ref) => /* @__PU
 }));
 SidebarMenuSubItem.displayName = "SidebarMenuSubItem";
 var SidebarMenuSubButton = import_react.forwardRef(({ asChild = false, size = "md", isActive, className, ...props }, ref) => {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(asChild ? Slot$2 : "a", {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(asChild ? Slot$3 : "a", {
 		"data-uid": "src/components/ui/sidebar.tsx:703:5",
 		"data-prohibitions": "[editContent]",
 		ref,
@@ -26298,9 +26441,41 @@ var SidebarMenuSubButton = import_react.forwardRef(({ asChild = false, size = "m
 });
 SidebarMenuSubButton.displayName = "SidebarMenuSubButton";
 //#endregion
+//#region src/store/AuthContext.tsx
+var AuthContext = (0, import_react.createContext)({});
+var AuthProvider = ({ children }) => {
+	const [isAuthenticated, setIsAuthenticated] = (0, import_react.useState)(() => {
+		return localStorage.getItem("auth") === "true";
+	});
+	const login = () => {
+		setIsAuthenticated(true);
+		localStorage.setItem("auth", "true");
+	};
+	const logout = () => {
+		setIsAuthenticated(false);
+		localStorage.removeItem("auth");
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthContext.Provider, {
+		"data-uid": "src/store/AuthContext.tsx:28:5",
+		"data-prohibitions": "[editContent]",
+		value: {
+			isAuthenticated,
+			user: isAuthenticated ? {
+				name: "Manager Blink",
+				email: "gerente@blink.com.br"
+			} : null,
+			login,
+			logout
+		},
+		children
+	});
+};
+var useAuth = () => (0, import_react.useContext)(AuthContext);
+//#endregion
 //#region src/components/AppSidebar.tsx
 function AppSidebar() {
 	const loc = useLocation();
+	const { logout } = useAuth();
 	const menu = [
 		{
 			name: "Dashboard",
@@ -26329,71 +26504,104 @@ function AppSidebar() {
 		}
 	];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Sidebar, {
-		"data-uid": "src/components/AppSidebar.tsx:23:5",
+		"data-uid": "src/components/AppSidebar.tsx:25:5",
 		"data-prohibitions": "[editContent]",
 		collapsible: "icon",
-		className: "border-r border-border shadow-sm",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarHeader, {
-			"data-uid": "src/components/AppSidebar.tsx:24:7",
-			"data-prohibitions": "[]",
-			className: "p-4 border-b flex items-center justify-center",
-			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/components/AppSidebar.tsx:25:9",
+		className: "border-r border-border shadow-sm print:hidden",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarHeader, {
+				"data-uid": "src/components/AppSidebar.tsx:26:7",
 				"data-prohibitions": "[]",
-				className: "flex items-center gap-2 overflow-hidden px-1",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/components/AppSidebar.tsx:26:11",
+				className: "p-4 border-b flex items-center justify-center",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					"data-uid": "src/components/AppSidebar.tsx:27:9",
 					"data-prohibitions": "[]",
-					className: "bg-primary p-1.5 rounded-lg shrink-0",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Target, {
-						"data-uid": "src/components/AppSidebar.tsx:27:13",
-						"data-prohibitions": "[editContent]",
-						className: "w-5 h-5 text-primary-foreground"
-					})
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-					"data-uid": "src/components/AppSidebar.tsx:29:11",
-					"data-prohibitions": "[]",
-					className: "text-lg font-bold text-foreground truncate group-data-[collapsible=icon]:hidden",
-					children: "Blink Biotech"
-				})]
-			})
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarContent, {
-			"data-uid": "src/components/AppSidebar.tsx:34:7",
-			"data-prohibitions": "[editContent]",
-			className: "p-2 pt-4",
-			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenu, {
-				"data-uid": "src/components/AppSidebar.tsx:35:9",
-				"data-prohibitions": "[editContent]",
-				className: "gap-2",
-				children: menu.map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuItem, {
-					"data-uid": "src/components/AppSidebar.tsx:37:13",
-					"data-prohibitions": "[editContent]",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuButton, {
-						"data-uid": "src/components/AppSidebar.tsx:38:15",
-						"data-prohibitions": "[editContent]",
-						asChild: true,
-						isActive: loc.pathname === m.path,
-						className: "h-10 px-3 data-[active=true]:bg-primary/10 data-[active=true]:text-primary font-medium transition-all",
-						tooltip: m.name,
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Link, {
-							"data-uid": "src/components/AppSidebar.tsx:44:17",
+					className: "flex items-center gap-2 overflow-hidden px-1",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						"data-uid": "src/components/AppSidebar.tsx:28:11",
+						"data-prohibitions": "[]",
+						className: "bg-primary p-1.5 rounded-lg shrink-0",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Target, {
+							"data-uid": "src/components/AppSidebar.tsx:29:13",
 							"data-prohibitions": "[editContent]",
-							to: m.path,
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(m.icon, {
-								"data-uid": "src/components/AppSidebar.tsx:45:19",
+							className: "w-5 h-5 text-primary-foreground"
+						})
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+						"data-uid": "src/components/AppSidebar.tsx:31:11",
+						"data-prohibitions": "[]",
+						className: "text-lg font-bold text-foreground truncate group-data-[collapsible=icon]:hidden",
+						children: "Blink Biotech"
+					})]
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarContent, {
+				"data-uid": "src/components/AppSidebar.tsx:36:7",
+				"data-prohibitions": "[editContent]",
+				className: "p-2 pt-4 flex-1",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenu, {
+					"data-uid": "src/components/AppSidebar.tsx:37:9",
+					"data-prohibitions": "[editContent]",
+					className: "gap-2",
+					children: menu.map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuItem, {
+						"data-uid": "src/components/AppSidebar.tsx:39:13",
+						"data-prohibitions": "[editContent]",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuButton, {
+							"data-uid": "src/components/AppSidebar.tsx:40:15",
+							"data-prohibitions": "[editContent]",
+							asChild: true,
+							isActive: loc.pathname === m.path,
+							className: "h-10 px-3 data-[active=true]:bg-primary/10 data-[active=true]:text-primary font-medium transition-all",
+							tooltip: m.name,
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Link, {
+								"data-uid": "src/components/AppSidebar.tsx:46:17",
+								"data-prohibitions": "[editContent]",
+								to: m.path,
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(m.icon, {
+									"data-uid": "src/components/AppSidebar.tsx:47:19",
+									"data-prohibitions": "[editContent]",
+									className: "w-5 h-5"
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									"data-uid": "src/components/AppSidebar.tsx:48:19",
+									"data-prohibitions": "[editContent]",
+									className: "group-data-[collapsible=icon]:hidden",
+									children: m.name
+								})]
+							})
+						})
+					}, m.path))
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				"data-uid": "src/components/AppSidebar.tsx:55:7",
+				"data-prohibitions": "[]",
+				className: "p-2 border-t mt-auto",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenu, {
+					"data-uid": "src/components/AppSidebar.tsx:56:9",
+					"data-prohibitions": "[]",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarMenuItem, {
+						"data-uid": "src/components/AppSidebar.tsx:57:11",
+						"data-prohibitions": "[]",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SidebarMenuButton, {
+							"data-uid": "src/components/AppSidebar.tsx:58:13",
+							"data-prohibitions": "[]",
+							onClick: logout,
+							tooltip: "Sair",
+							className: "h-10 px-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(LogOut, {
+								"data-uid": "src/components/AppSidebar.tsx:63:15",
 								"data-prohibitions": "[editContent]",
 								className: "w-5 h-5"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/components/AppSidebar.tsx:46:19",
-								"data-prohibitions": "[editContent]",
-								className: "group-data-[collapsible=icon]:hidden",
-								children: m.name
+								"data-uid": "src/components/AppSidebar.tsx:64:15",
+								"data-prohibitions": "[]",
+								className: "group-data-[collapsible=icon]:hidden font-medium",
+								children: "Sair da Conta"
 							})]
 						})
 					})
-				}, m.path))
+				})
 			})
-		})]
+		]
 	});
 }
 //#endregion
@@ -26414,6 +26622,14 @@ var mockFactories = [
 		contactPhone: "66 9999-0000",
 		operationTypes: "Confinamento, Ração",
 		productInterests: "Aditivos de performance, Enzimas",
+		deadline: new Date(Date.now() + 3 * 864e5).toISOString(),
+		documents: [{
+			id: "doc-1",
+			name: "Contrato_Minuta_v2.pdf",
+			url: "#",
+			size: 125e4,
+			uploadedAt: (/* @__PURE__ */ new Date()).toISOString()
+		}],
 		swot: {
 			strengths: "Grande volume de compra, logística eficiente",
 			weaknesses: "Pagamento alongado",
@@ -26446,6 +26662,8 @@ var mockFactories = [
 		contactPhone: "66 9888-1111",
 		operationTypes: "Premix",
 		productInterests: "Vitaminas",
+		deadline: (/* @__PURE__ */ new Date(Date.now() - 2 * 864e5)).toISOString(),
+		documents: [],
 		swot: {
 			strengths: "Marca forte no norte",
 			weaknesses: "Instabilidade financeira recente",
@@ -26478,6 +26696,14 @@ var mockFactories = [
 		contactPhone: "65 9777-2222",
 		operationTypes: "Núcleo, Ração",
 		productInterests: "Leveduras, Minerais",
+		deadline: new Date(Date.now() + 15 * 864e5).toISOString(),
+		documents: [{
+			id: "doc-2",
+			name: "Analise_Tecnica.xlsx",
+			url: "#",
+			size: 45e4,
+			uploadedAt: (/* @__PURE__ */ new Date(Date.now() - 3 * 864e5)).toISOString()
+		}],
 		swot: {
 			strengths: "Alta adoção de tecnologia",
 			weaknesses: "Exigência extrema de prazos",
@@ -26510,6 +26736,7 @@ var mockFactories = [
 		contactPhone: "65 9666-3333",
 		operationTypes: "Ração",
 		productInterests: "Conservantes",
+		documents: [],
 		swot: {
 			strengths: "",
 			weaknesses: "",
@@ -26542,6 +26769,8 @@ var mockFactories = [
 		contactPhone: "66 9555-4444",
 		operationTypes: "Premix, Núcleo",
 		productInterests: "Probióticos",
+		deadline: new Date(Date.now() + 5 * 864e5).toISOString(),
+		documents: [],
 		swot: {
 			strengths: "Equipe técnica qualificada",
 			weaknesses: "Volume inconstante de compras",
@@ -26625,9 +26854,9 @@ var AppProvider = ({ children }) => {
 var useAppContext = () => (0, import_react.useContext)(AppContext);
 //#endregion
 //#region src/components/ui/dialog.tsx
-var Dialog = Root$3;
-var DialogTrigger = Trigger$1;
-var DialogPortal = Portal$1;
+var Dialog = Root$4;
+var DialogTrigger = Trigger$3;
+var DialogPortal = Portal$2;
 var DialogOverlay = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Overlay, {
 	"data-uid": "src/components/ui/dialog.tsx:20:3",
 	"data-prohibitions": "[editContent]",
@@ -26642,7 +26871,7 @@ var DialogContent = import_react.forwardRef(({ className, children, ...props }, 
 	children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogOverlay, {
 		"data-uid": "src/components/ui/dialog.tsx:36:5",
 		"data-prohibitions": "[editContent]"
-	}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Content, {
+	}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Content$1, {
 		"data-uid": "src/components/ui/dialog.tsx:37:5",
 		"data-prohibitions": "[editContent]",
 		ref,
@@ -26665,7 +26894,7 @@ var DialogContent = import_react.forwardRef(({ className, children, ...props }, 
 		})]
 	})]
 }));
-DialogContent.displayName = Content.displayName;
+DialogContent.displayName = Content$1.displayName;
 var DialogHeader = ({ className, ...props }) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 	"data-uid": "src/components/ui/dialog.tsx:56:3",
 	"data-prohibitions": "[editContent]",
@@ -26711,18 +26940,18 @@ var Label$3 = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 Label$3.displayName = NAME;
-var Root$2 = Label$3;
+var Root$3 = Label$3;
 //#endregion
 //#region src/components/ui/label.tsx
 var labelVariants = cva("text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70");
-var Label$2 = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root$2, {
+var Label$2 = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root$3, {
 	"data-uid": "src/components/ui/label.tsx:16:3",
 	"data-prohibitions": "[editContent]",
 	ref,
 	className: cn$1(labelVariants(), className),
 	...props
 }));
-Label$2.displayName = Root$2.displayName;
+Label$2.displayName = Root$3.displayName;
 //#endregion
 //#region ../../cache/modules/inteligencia-comercial-blink-4eb45/node_modules/.pnpm/@radix-ui+number@1.1.1/node_modules/@radix-ui/number/dist/index.mjs
 function clamp(value, [min, max]) {
@@ -26760,14 +26989,14 @@ var OPEN_KEYS = [
 ];
 var SELECTION_KEYS = [" ", "Enter"];
 var SELECT_NAME = "Select";
-var [Collection$1, useCollection$1, createCollectionScope$1] = createCollection(SELECT_NAME);
-var [createSelectContext, createSelectScope] = createContextScope$1(SELECT_NAME, [createCollectionScope$1, createPopperScope]);
-var usePopperScope = createPopperScope();
+var [Collection$2, useCollection$2, createCollectionScope$2] = createCollection(SELECT_NAME);
+var [createSelectContext, createSelectScope] = createContextScope$1(SELECT_NAME, [createCollectionScope$2, createPopperScope]);
+var usePopperScope$1 = createPopperScope();
 var [SelectProvider, useSelectContext] = createSelectContext(SELECT_NAME);
 var [SelectNativeOptionsProvider, useSelectNativeOptionsContext] = createSelectContext(SELECT_NAME);
 var Select$1 = (props) => {
 	const { __scopeSelect, children, open: openProp, defaultOpen, onOpenChange, value: valueProp, defaultValue, onValueChange, dir, name, autoComplete, disabled, required, form } = props;
-	const popperScope = usePopperScope(__scopeSelect);
+	const popperScope = usePopperScope$1(__scopeSelect);
 	const [trigger, setTrigger] = import_react.useState(null);
 	const [valueNode, setValueNode] = import_react.useState(null);
 	const [valueNodeHasChildren, setValueNodeHasChildren] = import_react.useState(false);
@@ -26788,7 +27017,7 @@ var Select$1 = (props) => {
 	const isFormControl = trigger ? form || !!trigger.closest("form") : true;
 	const [nativeOptionsSet, setNativeOptionsSet] = import_react.useState(/* @__PURE__ */ new Set());
 	const nativeSelectKey = Array.from(nativeOptionsSet).map((option) => option.props.value).join(";");
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root2$1, {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root2$3, {
 		...popperScope,
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SelectProvider, {
 			required,
@@ -26807,7 +27036,7 @@ var Select$1 = (props) => {
 			dir: direction,
 			triggerPointerDownPosRef,
 			disabled,
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Collection$1.Provider, {
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Collection$2.Provider, {
 				scope: __scopeSelect,
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectNativeOptionsProvider, {
 					scope: props.__scopeSelect,
@@ -26839,14 +27068,14 @@ var Select$1 = (props) => {
 	});
 };
 Select$1.displayName = SELECT_NAME;
-var TRIGGER_NAME = "SelectTrigger";
+var TRIGGER_NAME$2 = "SelectTrigger";
 var SelectTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeSelect, disabled = false, ...triggerProps } = props;
-	const popperScope = usePopperScope(__scopeSelect);
-	const context = useSelectContext(TRIGGER_NAME, __scopeSelect);
+	const popperScope = usePopperScope$1(__scopeSelect);
+	const context = useSelectContext(TRIGGER_NAME$2, __scopeSelect);
 	const isDisabled = context.disabled || disabled;
 	const composedRefs = useComposedRefs(forwardedRef, context.onTriggerChange);
-	const getItems = useCollection$1(__scopeSelect);
+	const getItems = useCollection$2(__scopeSelect);
 	const pointerTypeRef = import_react.useRef("touch");
 	const [searchRef, handleTypeaheadSearch, resetTypeahead] = useTypeaheadSearch((search) => {
 		const enabledItems = getItems().filter((item) => !item.disabled);
@@ -26905,7 +27134,7 @@ var SelectTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-SelectTrigger$1.displayName = TRIGGER_NAME;
+SelectTrigger$1.displayName = TRIGGER_NAME$2;
 var VALUE_NAME = "SelectValue";
 var SelectValue$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeSelect, className, style, children, placeholder = "", ...valueProps } = props;
@@ -26935,17 +27164,17 @@ var SelectIcon = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 SelectIcon.displayName = ICON_NAME;
-var PORTAL_NAME = "SelectPortal";
+var PORTAL_NAME$1 = "SelectPortal";
 var SelectPortal = (props) => {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Portal$2, {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Portal$3, {
 		asChild: true,
 		...props
 	});
 };
-SelectPortal.displayName = PORTAL_NAME;
-var CONTENT_NAME = "SelectContent";
+SelectPortal.displayName = PORTAL_NAME$1;
+var CONTENT_NAME$2 = "SelectContent";
 var SelectContent$1 = import_react.forwardRef((props, forwardedRef) => {
-	const context = useSelectContext(CONTENT_NAME, props.__scopeSelect);
+	const context = useSelectContext(CONTENT_NAME$2, props.__scopeSelect);
 	const [fragment, setFragment] = import_react.useState();
 	useLayoutEffect2(() => {
 		setFragment(new DocumentFragment());
@@ -26954,7 +27183,7 @@ var SelectContent$1 = import_react.forwardRef((props, forwardedRef) => {
 		const frag = fragment;
 		return frag ? import_react_dom.createPortal(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectContentProvider, {
 			scope: props.__scopeSelect,
-			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Collection$1.Slot, {
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Collection$2.Slot, {
 				scope: props.__scopeSelect,
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { children: props.children })
 			})
@@ -26965,20 +27194,20 @@ var SelectContent$1 = import_react.forwardRef((props, forwardedRef) => {
 		ref: forwardedRef
 	});
 });
-SelectContent$1.displayName = CONTENT_NAME;
+SelectContent$1.displayName = CONTENT_NAME$2;
 var CONTENT_MARGIN = 10;
-var [SelectContentProvider, useSelectContentContext] = createSelectContext(CONTENT_NAME);
+var [SelectContentProvider, useSelectContentContext] = createSelectContext(CONTENT_NAME$2);
 var CONTENT_IMPL_NAME = "SelectContentImpl";
-var Slot = /* @__PURE__ */ createSlot$1("SelectContent.RemoveScroll");
+var Slot$1 = /* @__PURE__ */ createSlot$1("SelectContent.RemoveScroll");
 var SelectContentImpl = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeSelect, position = "item-aligned", onCloseAutoFocus, onEscapeKeyDown, onPointerDownOutside, side, sideOffset, align, alignOffset, arrowPadding, collisionBoundary, collisionPadding, sticky, hideWhenDetached, avoidCollisions, ...contentProps } = props;
-	const context = useSelectContext(CONTENT_NAME, __scopeSelect);
+	const context = useSelectContext(CONTENT_NAME$2, __scopeSelect);
 	const [content, setContent] = import_react.useState(null);
 	const [viewport, setViewport] = import_react.useState(null);
 	const composedRefs = useComposedRefs(forwardedRef, (node) => setContent(node));
 	const [selectedItem, setSelectedItem] = import_react.useState(null);
 	const [selectedItemText, setSelectedItemText] = import_react.useState(null);
-	const getItems = useCollection$1(__scopeSelect);
+	const getItems = useCollection$2(__scopeSelect);
 	const [isPositioned, setIsPositioned] = import_react.useState(false);
 	const firstValidItemFoundRef = import_react.useRef(false);
 	import_react.useEffect(() => {
@@ -27096,7 +27325,7 @@ var SelectContentImpl = import_react.forwardRef((props, forwardedRef) => {
 		isPositioned,
 		searchRef,
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ReactRemoveScroll, {
-			as: Slot,
+			as: Slot$1,
 			allowPinchZoom: true,
 			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FocusScope, {
 				asChild: true,
@@ -27162,12 +27391,12 @@ SelectContentImpl.displayName = CONTENT_IMPL_NAME;
 var ITEM_ALIGNED_POSITION_NAME = "SelectItemAlignedPosition";
 var SelectItemAlignedPosition = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeSelect, onPlaced, ...popperProps } = props;
-	const context = useSelectContext(CONTENT_NAME, __scopeSelect);
-	const contentContext = useSelectContentContext(CONTENT_NAME, __scopeSelect);
+	const context = useSelectContext(CONTENT_NAME$2, __scopeSelect);
+	const contentContext = useSelectContentContext(CONTENT_NAME$2, __scopeSelect);
 	const [contentWrapper, setContentWrapper] = import_react.useState(null);
 	const [content, setContent] = import_react.useState(null);
 	const composedRefs = useComposedRefs(forwardedRef, (node) => setContent(node));
-	const getItems = useCollection$1(__scopeSelect);
+	const getItems = useCollection$2(__scopeSelect);
 	const shouldExpandOnScrollRef = import_react.useRef(false);
 	const shouldRepositionRef = import_react.useRef(true);
 	const { viewport, selectedItem, selectedItemText, focusSelectedItem } = contentContext;
@@ -27288,8 +27517,8 @@ SelectItemAlignedPosition.displayName = ITEM_ALIGNED_POSITION_NAME;
 var POPPER_POSITION_NAME = "SelectPopperPosition";
 var SelectPopperPosition = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeSelect, align = "start", collisionPadding = CONTENT_MARGIN, ...popperProps } = props;
-	const popperScope = usePopperScope(__scopeSelect);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Content$1, {
+	const popperScope = usePopperScope$1(__scopeSelect);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Content$2, {
 		...popperScope,
 		...popperProps,
 		ref: forwardedRef,
@@ -27307,7 +27536,7 @@ var SelectPopperPosition = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 SelectPopperPosition.displayName = POPPER_POSITION_NAME;
-var [SelectViewportProvider, useSelectViewportContext] = createSelectContext(CONTENT_NAME, {});
+var [SelectViewportProvider, useSelectViewportContext] = createSelectContext(CONTENT_NAME$2, {});
 var VIEWPORT_NAME = "SelectViewport";
 var SelectViewport = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeSelect, nonce, ...viewportProps } = props;
@@ -27318,7 +27547,7 @@ var SelectViewport = import_react.forwardRef((props, forwardedRef) => {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("style", {
 		dangerouslySetInnerHTML: { __html: `[data-radix-select-viewport]{scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;}[data-radix-select-viewport]::-webkit-scrollbar{display:none}` },
 		nonce
-	}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Collection$1.Slot, {
+	}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Collection$2.Slot, {
 		scope: __scopeSelect,
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.div, {
 			"data-radix-select-viewport": "",
@@ -27359,8 +27588,8 @@ var SelectViewport = import_react.forwardRef((props, forwardedRef) => {
 	})] });
 });
 SelectViewport.displayName = VIEWPORT_NAME;
-var GROUP_NAME = "SelectGroup";
-var [SelectGroupContextProvider, useSelectGroupContext] = createSelectContext(GROUP_NAME);
+var GROUP_NAME$1 = "SelectGroup";
+var [SelectGroupContextProvider, useSelectGroupContext] = createSelectContext(GROUP_NAME$1);
 var SelectGroup$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeSelect, ...groupProps } = props;
 	const groupId = useId();
@@ -27375,7 +27604,7 @@ var SelectGroup$1 = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-SelectGroup$1.displayName = GROUP_NAME;
+SelectGroup$1.displayName = GROUP_NAME$1;
 var LABEL_NAME = "SelectLabel";
 var SelectLabel$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeSelect, ...labelProps } = props;
@@ -27387,12 +27616,12 @@ var SelectLabel$1 = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 SelectLabel$1.displayName = LABEL_NAME;
-var ITEM_NAME = "SelectItem";
-var [SelectItemContextProvider, useSelectItemContext] = createSelectContext(ITEM_NAME);
+var ITEM_NAME$1 = "SelectItem";
+var [SelectItemContextProvider, useSelectItemContext] = createSelectContext(ITEM_NAME$1);
 var SelectItem$1 = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeSelect, value, disabled = false, textValue: textValueProp, ...itemProps } = props;
-	const context = useSelectContext(ITEM_NAME, __scopeSelect);
-	const contentContext = useSelectContentContext(ITEM_NAME, __scopeSelect);
+	const context = useSelectContext(ITEM_NAME$1, __scopeSelect);
+	const contentContext = useSelectContentContext(ITEM_NAME$1, __scopeSelect);
 	const isSelected = context.value === value;
 	const [textValue, setTextValue] = import_react.useState(textValueProp ?? "");
 	const [isFocused, setIsFocused] = import_react.useState(false);
@@ -27415,7 +27644,7 @@ var SelectItem$1 = import_react.forwardRef((props, forwardedRef) => {
 		onItemTextChange: import_react.useCallback((node) => {
 			setTextValue((prevTextValue) => prevTextValue || (node?.textContent ?? "").trim());
 		}, []),
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Collection$1.ItemSlot, {
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Collection$2.ItemSlot, {
 			scope: __scopeSelect,
 			value,
 			disabled,
@@ -27459,7 +27688,7 @@ var SelectItem$1 = import_react.forwardRef((props, forwardedRef) => {
 		})
 	});
 });
-SelectItem$1.displayName = ITEM_NAME;
+SelectItem$1.displayName = ITEM_NAME$1;
 var ITEM_TEXT_NAME = "SelectItemText";
 var SelectItemText = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeSelect, className, style, ...itemTextProps } = props;
@@ -27564,7 +27793,7 @@ var SelectScrollButtonImpl = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeSelect, onAutoScroll, ...scrollIndicatorProps } = props;
 	const contentContext = useSelectContentContext("SelectScrollButton", __scopeSelect);
 	const autoScrollTimerRef = import_react.useRef(null);
-	const getItems = useCollection$1(__scopeSelect);
+	const getItems = useCollection$2(__scopeSelect);
 	const clearAutoScrollTimer = import_react.useCallback(() => {
 		if (autoScrollTimerRef.current !== null) {
 			window.clearInterval(autoScrollTimerRef.current);
@@ -27607,19 +27836,19 @@ var SelectSeparator$1 = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 SelectSeparator$1.displayName = SEPARATOR_NAME;
-var ARROW_NAME = "SelectArrow";
+var ARROW_NAME$1 = "SelectArrow";
 var SelectArrow = import_react.forwardRef((props, forwardedRef) => {
 	const { __scopeSelect, ...arrowProps } = props;
-	const popperScope = usePopperScope(__scopeSelect);
-	const context = useSelectContext(ARROW_NAME, __scopeSelect);
-	const contentContext = useSelectContentContext(ARROW_NAME, __scopeSelect);
+	const popperScope = usePopperScope$1(__scopeSelect);
+	const context = useSelectContext(ARROW_NAME$1, __scopeSelect);
+	const contentContext = useSelectContentContext(ARROW_NAME$1, __scopeSelect);
 	return context.open && contentContext.position === "popper" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Arrow, {
 		...popperScope,
 		...arrowProps,
 		ref: forwardedRef
 	}) : null;
 });
-SelectArrow.displayName = ARROW_NAME;
+SelectArrow.displayName = ARROW_NAME$1;
 var BUBBLE_INPUT_NAME$1 = "SelectBubbleInput";
 var SelectBubbleInput = import_react.forwardRef(({ __scopeSelect, value, ...props }, forwardedRef) => {
 	const ref = import_react.useRef(null);
@@ -27679,23 +27908,23 @@ function useTypeaheadSearch(onSearchChange) {
 function findNextItem(items, search, currentItem) {
 	const normalizedSearch = search.length > 1 && Array.from(search).every((char) => char === search[0]) ? search[0] : search;
 	const currentItemIndex = currentItem ? items.indexOf(currentItem) : -1;
-	let wrappedItems = wrapArray(items, Math.max(currentItemIndex, 0));
+	let wrappedItems = wrapArray$1(items, Math.max(currentItemIndex, 0));
 	if (normalizedSearch.length === 1) wrappedItems = wrappedItems.filter((v) => v !== currentItem);
 	const nextItem = wrappedItems.find((item) => item.textValue.toLowerCase().startsWith(normalizedSearch.toLowerCase()));
 	return nextItem !== currentItem ? nextItem : void 0;
 }
-function wrapArray(array, startIndex) {
+function wrapArray$1(array, startIndex) {
 	return array.map((_, index) => array[(startIndex + index) % array.length]);
 }
-var Root2 = Select$1;
-var Trigger = SelectTrigger$1;
+var Root2$2 = Select$1;
+var Trigger$2 = SelectTrigger$1;
 var Value = SelectValue$1;
 var Icon = SelectIcon;
-var Portal = SelectPortal;
-var Content2 = SelectContent$1;
+var Portal$1 = SelectPortal;
+var Content2$1 = SelectContent$1;
 var Viewport = SelectViewport;
 var Label$1 = SelectLabel$1;
-var Item = SelectItem$1;
+var Item$1 = SelectItem$1;
 var ItemText = SelectItemText;
 var ItemIndicator = SelectItemIndicator;
 var ScrollUpButton = SelectScrollUpButton$1;
@@ -27703,9 +27932,9 @@ var ScrollDownButton = SelectScrollDownButton$1;
 var Separator = SelectSeparator$1;
 //#endregion
 //#region src/components/ui/select.tsx
-var Select = Root2;
+var Select = Root2$2;
 var SelectValue = Value;
-var SelectTrigger = import_react.forwardRef(({ className, children, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Trigger, {
+var SelectTrigger = import_react.forwardRef(({ className, children, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Trigger$2, {
 	"data-uid": "src/components/ui/select.tsx:18:3",
 	"data-prohibitions": "[editContent]",
 	ref,
@@ -27722,7 +27951,7 @@ var SelectTrigger = import_react.forwardRef(({ className, children, ...props }, 
 		})
 	})]
 }));
-SelectTrigger.displayName = Trigger.displayName;
+SelectTrigger.displayName = Trigger$2.displayName;
 var SelectScrollUpButton = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ScrollUpButton, {
 	"data-uid": "src/components/ui/select.tsx:38:3",
 	"data-prohibitions": "[editContent]",
@@ -27749,10 +27978,10 @@ var SelectScrollDownButton = import_react.forwardRef(({ className, ...props }, r
 	})
 }));
 SelectScrollDownButton.displayName = ScrollDownButton.displayName;
-var SelectContent = import_react.forwardRef(({ className, children, position = "popper", ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Portal, {
+var SelectContent = import_react.forwardRef(({ className, children, position = "popper", ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Portal$1, {
 	"data-uid": "src/components/ui/select.tsx:66:3",
 	"data-prohibitions": "[editContent]",
-	children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Content2, {
+	children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Content2$1, {
 		"data-uid": "src/components/ui/select.tsx:67:5",
 		"data-prohibitions": "[editContent]",
 		ref,
@@ -27777,7 +28006,7 @@ var SelectContent = import_react.forwardRef(({ className, children, position = "
 		]
 	})
 }));
-SelectContent.displayName = Content2.displayName;
+SelectContent.displayName = Content2$1.displayName;
 var SelectLabel = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$1, {
 	"data-uid": "src/components/ui/select.tsx:98:3",
 	"data-prohibitions": "[editContent]",
@@ -27786,7 +28015,7 @@ var SelectLabel = import_react.forwardRef(({ className, ...props }, ref) => /* @
 	...props
 }));
 SelectLabel.displayName = Label$1.displayName;
-var SelectItem = import_react.forwardRef(({ className, children, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Item, {
+var SelectItem = import_react.forwardRef(({ className, children, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Item$1, {
 	"data-uid": "src/components/ui/select.tsx:110:3",
 	"data-prohibitions": "[editContent]",
 	ref,
@@ -27811,7 +28040,7 @@ var SelectItem = import_react.forwardRef(({ className, children, ...props }, ref
 		children
 	})]
 }));
-SelectItem.displayName = Item.displayName;
+SelectItem.displayName = Item$1.displayName;
 var SelectSeparator = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Separator, {
 	"data-uid": "src/components/ui/select.tsx:133:3",
 	"data-prohibitions": "[editContent]",
@@ -27827,6 +28056,7 @@ function FactoryForm({ factory, onSubmit }) {
 	const handleSubmit = (e) => {
 		e.preventDefault();
 		const fd = new FormData(e.currentTarget);
+		const deadlineValue = fd.get("deadline");
 		const data = {
 			name: fd.get("name"),
 			city: fd.get("city"),
@@ -27836,38 +28066,23 @@ function FactoryForm({ factory, onSubmit }) {
 			status: fd.get("status"),
 			funnelStage: fd.get("funnelStage"),
 			winProbability: Number(fd.get("winProbability")),
-			lastInteraction: (/* @__PURE__ */ new Date()).toISOString()
+			deadline: deadlineValue ? new Date(deadlineValue).toISOString() : void 0,
+			lastInteraction: factory?.lastInteraction || (/* @__PURE__ */ new Date()).toISOString()
 		};
 		if (factory) updateFactory(factory.id, data);
 		else addFactory(data);
 		onSubmit();
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
-		"data-uid": "src/components/FactoryForm.tsx:47:5",
+		"data-uid": "src/components/FactoryForm.tsx:51:5",
 		"data-prohibitions": "[editContent]",
 		onSubmit: handleSubmit,
 		className: "space-y-6 mt-4",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			"data-uid": "src/components/FactoryForm.tsx:48:7",
+			"data-uid": "src/components/FactoryForm.tsx:52:7",
 			"data-prohibitions": "[editContent]",
 			className: "grid grid-cols-1 md:grid-cols-2 gap-4",
 			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/FactoryForm.tsx:49:9",
-					"data-prohibitions": "[]",
-					className: "space-y-2",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-						"data-uid": "src/components/FactoryForm.tsx:50:11",
-						"data-prohibitions": "[]",
-						children: "Nome da Fábrica"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-						"data-uid": "src/components/FactoryForm.tsx:51:11",
-						"data-prohibitions": "[editContent]",
-						name: "name",
-						defaultValue: factory?.name,
-						required: true
-					})]
-				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					"data-uid": "src/components/FactoryForm.tsx:53:9",
 					"data-prohibitions": "[]",
@@ -27875,9 +28090,25 @@ function FactoryForm({ factory, onSubmit }) {
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
 						"data-uid": "src/components/FactoryForm.tsx:54:11",
 						"data-prohibitions": "[]",
-						children: "Cidade"
+						children: "Nome da Fábrica"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
 						"data-uid": "src/components/FactoryForm.tsx:55:11",
+						"data-prohibitions": "[editContent]",
+						name: "name",
+						defaultValue: factory?.name,
+						required: true
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					"data-uid": "src/components/FactoryForm.tsx:57:9",
+					"data-prohibitions": "[]",
+					className: "space-y-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
+						"data-uid": "src/components/FactoryForm.tsx:58:11",
+						"data-prohibitions": "[]",
+						children: "Cidade"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+						"data-uid": "src/components/FactoryForm.tsx:59:11",
 						"data-prohibitions": "[editContent]",
 						name: "city",
 						defaultValue: factory?.city,
@@ -27885,28 +28116,28 @@ function FactoryForm({ factory, onSubmit }) {
 					})]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/FactoryForm.tsx:57:9",
+					"data-uid": "src/components/FactoryForm.tsx:61:9",
 					"data-prohibitions": "[editContent]",
 					className: "space-y-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-						"data-uid": "src/components/FactoryForm.tsx:58:11",
+						"data-uid": "src/components/FactoryForm.tsx:62:11",
 						"data-prohibitions": "[]",
 						children: "Região"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
-						"data-uid": "src/components/FactoryForm.tsx:59:11",
+						"data-uid": "src/components/FactoryForm.tsx:63:11",
 						"data-prohibitions": "[editContent]",
 						name: "region",
 						defaultValue: factory?.region || "Norte",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
-							"data-uid": "src/components/FactoryForm.tsx:60:13",
+							"data-uid": "src/components/FactoryForm.tsx:64:13",
 							"data-prohibitions": "[]",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
-								"data-uid": "src/components/FactoryForm.tsx:61:15",
+								"data-uid": "src/components/FactoryForm.tsx:65:15",
 								"data-prohibitions": "[editContent]",
 								placeholder: "Selecione"
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectContent, {
-							"data-uid": "src/components/FactoryForm.tsx:63:13",
+							"data-uid": "src/components/FactoryForm.tsx:67:13",
 							"data-prohibitions": "[editContent]",
 							children: [
 								"Norte",
@@ -27915,7 +28146,7 @@ function FactoryForm({ factory, onSubmit }) {
 								"Oeste",
 								"Médio-Norte"
 							].map((r) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-								"data-uid": "src/components/FactoryForm.tsx:65:17",
+								"data-uid": "src/components/FactoryForm.tsx:69:17",
 								"data-prohibitions": "[editContent]",
 								value: r,
 								children: r
@@ -27924,57 +28155,40 @@ function FactoryForm({ factory, onSubmit }) {
 					})]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/FactoryForm.tsx:72:9",
+					"data-uid": "src/components/FactoryForm.tsx:76:9",
 					"data-prohibitions": "[editContent]",
 					className: "space-y-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-						"data-uid": "src/components/FactoryForm.tsx:73:11",
+						"data-uid": "src/components/FactoryForm.tsx:77:11",
 						"data-prohibitions": "[]",
 						children: "Status"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
-						"data-uid": "src/components/FactoryForm.tsx:74:11",
+						"data-uid": "src/components/FactoryForm.tsx:78:11",
 						"data-prohibitions": "[editContent]",
 						name: "status",
 						defaultValue: factory?.status || "Prospeção",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
-							"data-uid": "src/components/FactoryForm.tsx:75:13",
+							"data-uid": "src/components/FactoryForm.tsx:79:13",
 							"data-prohibitions": "[]",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
-								"data-uid": "src/components/FactoryForm.tsx:76:15",
+								"data-uid": "src/components/FactoryForm.tsx:80:15",
 								"data-prohibitions": "[editContent]",
 								placeholder: "Selecione"
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectContent, {
-							"data-uid": "src/components/FactoryForm.tsx:78:13",
+							"data-uid": "src/components/FactoryForm.tsx:82:13",
 							"data-prohibitions": "[editContent]",
 							children: [
 								"Atendido",
 								"Não atendido",
 								"Prospeção"
 							].map((s) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-								"data-uid": "src/components/FactoryForm.tsx:80:17",
+								"data-uid": "src/components/FactoryForm.tsx:84:17",
 								"data-prohibitions": "[editContent]",
 								value: s,
 								children: s
 							}, s))
 						})]
-					})]
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/FactoryForm.tsx:87:9",
-					"data-prohibitions": "[]",
-					className: "space-y-2",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-						"data-uid": "src/components/FactoryForm.tsx:88:11",
-						"data-prohibitions": "[]",
-						children: "Capacidade (ton/mês)"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-						"data-uid": "src/components/FactoryForm.tsx:89:11",
-						"data-prohibitions": "[editContent]",
-						type: "number",
-						name: "capacity",
-						defaultValue: factory?.capacity,
-						required: true
 					})]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -27984,9 +28198,26 @@ function FactoryForm({ factory, onSubmit }) {
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
 						"data-uid": "src/components/FactoryForm.tsx:92:11",
 						"data-prohibitions": "[]",
-						children: "Potencial (R$)"
+						children: "Capacidade (ton/mês)"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
 						"data-uid": "src/components/FactoryForm.tsx:93:11",
+						"data-prohibitions": "[editContent]",
+						type: "number",
+						name: "capacity",
+						defaultValue: factory?.capacity,
+						required: true
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					"data-uid": "src/components/FactoryForm.tsx:95:9",
+					"data-prohibitions": "[]",
+					className: "space-y-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
+						"data-uid": "src/components/FactoryForm.tsx:96:11",
+						"data-prohibitions": "[]",
+						children: "Potencial (R$)"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+						"data-uid": "src/components/FactoryForm.tsx:97:11",
 						"data-prohibitions": "[editContent]",
 						type: "number",
 						name: "potentialValue",
@@ -27995,28 +28226,28 @@ function FactoryForm({ factory, onSubmit }) {
 					})]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/FactoryForm.tsx:100:9",
+					"data-uid": "src/components/FactoryForm.tsx:104:9",
 					"data-prohibitions": "[editContent]",
 					className: "space-y-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-						"data-uid": "src/components/FactoryForm.tsx:101:11",
+						"data-uid": "src/components/FactoryForm.tsx:105:11",
 						"data-prohibitions": "[]",
 						children: "Estágio no Funil"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
-						"data-uid": "src/components/FactoryForm.tsx:102:11",
+						"data-uid": "src/components/FactoryForm.tsx:106:11",
 						"data-prohibitions": "[editContent]",
 						name: "funnelStage",
 						defaultValue: factory?.funnelStage || "Lead",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
-							"data-uid": "src/components/FactoryForm.tsx:103:13",
+							"data-uid": "src/components/FactoryForm.tsx:107:13",
 							"data-prohibitions": "[]",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
-								"data-uid": "src/components/FactoryForm.tsx:104:15",
+								"data-uid": "src/components/FactoryForm.tsx:108:15",
 								"data-prohibitions": "[editContent]",
 								placeholder: "Selecione"
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectContent, {
-							"data-uid": "src/components/FactoryForm.tsx:106:13",
+							"data-uid": "src/components/FactoryForm.tsx:110:13",
 							"data-prohibitions": "[editContent]",
 							children: [
 								"Lead",
@@ -28030,7 +28261,7 @@ function FactoryForm({ factory, onSubmit }) {
 								"Pós-venda",
 								"Perda"
 							].map((s) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-								"data-uid": "src/components/FactoryForm.tsx:119:17",
+								"data-uid": "src/components/FactoryForm.tsx:123:17",
 								"data-prohibitions": "[editContent]",
 								value: s,
 								children: s
@@ -28039,15 +28270,15 @@ function FactoryForm({ factory, onSubmit }) {
 					})]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/FactoryForm.tsx:126:9",
+					"data-uid": "src/components/FactoryForm.tsx:130:9",
 					"data-prohibitions": "[]",
 					className: "space-y-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
-						"data-uid": "src/components/FactoryForm.tsx:127:11",
+						"data-uid": "src/components/FactoryForm.tsx:131:11",
 						"data-prohibitions": "[]",
 						children: "Probabilidade (%)"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-						"data-uid": "src/components/FactoryForm.tsx:128:11",
+						"data-uid": "src/components/FactoryForm.tsx:132:11",
 						"data-prohibitions": "[editContent]",
 						type: "number",
 						name: "winProbability",
@@ -28056,21 +28287,46 @@ function FactoryForm({ factory, onSubmit }) {
 						defaultValue: factory?.winProbability || 10,
 						required: true
 					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					"data-uid": "src/components/FactoryForm.tsx:141:9",
+					"data-prohibitions": "[]",
+					className: "space-y-2 md:col-span-2",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
+							"data-uid": "src/components/FactoryForm.tsx:142:11",
+							"data-prohibitions": "[]",
+							children: "Prazo Limite de Negociação"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+							"data-uid": "src/components/FactoryForm.tsx:143:11",
+							"data-prohibitions": "[editContent]",
+							type: "date",
+							name: "deadline",
+							defaultValue: factory?.deadline ? factory.deadline.split("T")[0] : ""
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							"data-uid": "src/components/FactoryForm.tsx:148:11",
+							"data-prohibitions": "[]",
+							className: "text-xs text-muted-foreground mt-1",
+							children: "Será gerado um alerta quando o prazo estiver próximo do fim."
+						})
+					]
 				})
 			]
 		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			"data-uid": "src/components/FactoryForm.tsx:138:7",
+			"data-uid": "src/components/FactoryForm.tsx:153:7",
 			"data-prohibitions": "[]",
 			className: "flex justify-end gap-2",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-				"data-uid": "src/components/FactoryForm.tsx:139:9",
+				"data-uid": "src/components/FactoryForm.tsx:154:9",
 				"data-prohibitions": "[]",
 				type: "button",
 				variant: "outline",
 				onClick: onSubmit,
 				children: "Cancelar"
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-				"data-uid": "src/components/FactoryForm.tsx:142:9",
+				"data-uid": "src/components/FactoryForm.tsx:157:9",
 				"data-prohibitions": "[]",
 				type: "submit",
 				children: "Salvar Fábrica"
@@ -28079,91 +28335,419 @@ function FactoryForm({ factory, onSubmit }) {
 	});
 }
 //#endregion
+//#region ../../cache/modules/inteligencia-comercial-blink-4eb45/node_modules/.pnpm/@radix-ui+react-popover@1.1.15_@types+react-dom@19.2.3_@types+react@19.2.14__@types+rea_8b5332f8e883134e9d9ab2856fc4395d/node_modules/@radix-ui/react-popover/dist/index.mjs
+var POPOVER_NAME = "Popover";
+var [createPopoverContext, createPopoverScope] = createContextScope$1(POPOVER_NAME, [createPopperScope]);
+var usePopperScope = createPopperScope();
+var [PopoverProvider, usePopoverContext] = createPopoverContext(POPOVER_NAME);
+var Popover$1 = (props) => {
+	const { __scopePopover, children, open: openProp, defaultOpen, onOpenChange, modal = false } = props;
+	const popperScope = usePopperScope(__scopePopover);
+	const triggerRef = import_react.useRef(null);
+	const [hasCustomAnchor, setHasCustomAnchor] = import_react.useState(false);
+	const [open, setOpen] = useControllableState({
+		prop: openProp,
+		defaultProp: defaultOpen ?? false,
+		onChange: onOpenChange,
+		caller: POPOVER_NAME
+	});
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root2$3, {
+		...popperScope,
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PopoverProvider, {
+			scope: __scopePopover,
+			contentId: useId(),
+			triggerRef,
+			open,
+			onOpenChange: setOpen,
+			onOpenToggle: import_react.useCallback(() => setOpen((prevOpen) => !prevOpen), [setOpen]),
+			hasCustomAnchor,
+			onCustomAnchorAdd: import_react.useCallback(() => setHasCustomAnchor(true), []),
+			onCustomAnchorRemove: import_react.useCallback(() => setHasCustomAnchor(false), []),
+			modal,
+			children
+		})
+	});
+};
+Popover$1.displayName = POPOVER_NAME;
+var ANCHOR_NAME = "PopoverAnchor";
+var PopoverAnchor = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopePopover, ...anchorProps } = props;
+	const context = usePopoverContext(ANCHOR_NAME, __scopePopover);
+	const popperScope = usePopperScope(__scopePopover);
+	const { onCustomAnchorAdd, onCustomAnchorRemove } = context;
+	import_react.useEffect(() => {
+		onCustomAnchorAdd();
+		return () => onCustomAnchorRemove();
+	}, [onCustomAnchorAdd, onCustomAnchorRemove]);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Anchor, {
+		...popperScope,
+		...anchorProps,
+		ref: forwardedRef
+	});
+});
+PopoverAnchor.displayName = ANCHOR_NAME;
+var TRIGGER_NAME$1 = "PopoverTrigger";
+var PopoverTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopePopover, ...triggerProps } = props;
+	const context = usePopoverContext(TRIGGER_NAME$1, __scopePopover);
+	const popperScope = usePopperScope(__scopePopover);
+	const composedTriggerRef = useComposedRefs(forwardedRef, context.triggerRef);
+	const trigger = /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.button, {
+		type: "button",
+		"aria-haspopup": "dialog",
+		"aria-expanded": context.open,
+		"aria-controls": context.contentId,
+		"data-state": getState(context.open),
+		...triggerProps,
+		ref: composedTriggerRef,
+		onClick: composeEventHandlers(props.onClick, context.onOpenToggle)
+	});
+	return context.hasCustomAnchor ? trigger : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Anchor, {
+		asChild: true,
+		...popperScope,
+		children: trigger
+	});
+});
+PopoverTrigger$1.displayName = TRIGGER_NAME$1;
+var PORTAL_NAME = "PopoverPortal";
+var [PortalProvider, usePortalContext] = createPopoverContext(PORTAL_NAME, { forceMount: void 0 });
+var PopoverPortal = (props) => {
+	const { __scopePopover, forceMount, children, container } = props;
+	const context = usePopoverContext(PORTAL_NAME, __scopePopover);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PortalProvider, {
+		scope: __scopePopover,
+		forceMount,
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Presence, {
+			present: forceMount || context.open,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Portal$3, {
+				asChild: true,
+				container,
+				children
+			})
+		})
+	});
+};
+PopoverPortal.displayName = PORTAL_NAME;
+var CONTENT_NAME$1 = "PopoverContent";
+var PopoverContent$1 = import_react.forwardRef((props, forwardedRef) => {
+	const portalContext = usePortalContext(CONTENT_NAME$1, props.__scopePopover);
+	const { forceMount = portalContext.forceMount, ...contentProps } = props;
+	const context = usePopoverContext(CONTENT_NAME$1, props.__scopePopover);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Presence, {
+		present: forceMount || context.open,
+		children: context.modal ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PopoverContentModal, {
+			...contentProps,
+			ref: forwardedRef
+		}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PopoverContentNonModal, {
+			...contentProps,
+			ref: forwardedRef
+		})
+	});
+});
+PopoverContent$1.displayName = CONTENT_NAME$1;
+var Slot = /* @__PURE__ */ createSlot$1("PopoverContent.RemoveScroll");
+var PopoverContentModal = import_react.forwardRef((props, forwardedRef) => {
+	const context = usePopoverContext(CONTENT_NAME$1, props.__scopePopover);
+	const contentRef = import_react.useRef(null);
+	const composedRefs = useComposedRefs(forwardedRef, contentRef);
+	const isRightClickOutsideRef = import_react.useRef(false);
+	import_react.useEffect(() => {
+		const content = contentRef.current;
+		if (content) return hideOthers(content);
+	}, []);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ReactRemoveScroll, {
+		as: Slot,
+		allowPinchZoom: true,
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PopoverContentImpl, {
+			...props,
+			ref: composedRefs,
+			trapFocus: context.open,
+			disableOutsidePointerEvents: true,
+			onCloseAutoFocus: composeEventHandlers(props.onCloseAutoFocus, (event) => {
+				event.preventDefault();
+				if (!isRightClickOutsideRef.current) context.triggerRef.current?.focus();
+			}),
+			onPointerDownOutside: composeEventHandlers(props.onPointerDownOutside, (event) => {
+				const originalEvent = event.detail.originalEvent;
+				const ctrlLeftClick = originalEvent.button === 0 && originalEvent.ctrlKey === true;
+				isRightClickOutsideRef.current = originalEvent.button === 2 || ctrlLeftClick;
+			}, { checkForDefaultPrevented: false }),
+			onFocusOutside: composeEventHandlers(props.onFocusOutside, (event) => event.preventDefault(), { checkForDefaultPrevented: false })
+		})
+	});
+});
+var PopoverContentNonModal = import_react.forwardRef((props, forwardedRef) => {
+	const context = usePopoverContext(CONTENT_NAME$1, props.__scopePopover);
+	const hasInteractedOutsideRef = import_react.useRef(false);
+	const hasPointerDownOutsideRef = import_react.useRef(false);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PopoverContentImpl, {
+		...props,
+		ref: forwardedRef,
+		trapFocus: false,
+		disableOutsidePointerEvents: false,
+		onCloseAutoFocus: (event) => {
+			props.onCloseAutoFocus?.(event);
+			if (!event.defaultPrevented) {
+				if (!hasInteractedOutsideRef.current) context.triggerRef.current?.focus();
+				event.preventDefault();
+			}
+			hasInteractedOutsideRef.current = false;
+			hasPointerDownOutsideRef.current = false;
+		},
+		onInteractOutside: (event) => {
+			props.onInteractOutside?.(event);
+			if (!event.defaultPrevented) {
+				hasInteractedOutsideRef.current = true;
+				if (event.detail.originalEvent.type === "pointerdown") hasPointerDownOutsideRef.current = true;
+			}
+			const target = event.target;
+			if (context.triggerRef.current?.contains(target)) event.preventDefault();
+			if (event.detail.originalEvent.type === "focusin" && hasPointerDownOutsideRef.current) event.preventDefault();
+		}
+	});
+});
+var PopoverContentImpl = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopePopover, trapFocus, onOpenAutoFocus, onCloseAutoFocus, disableOutsidePointerEvents, onEscapeKeyDown, onPointerDownOutside, onFocusOutside, onInteractOutside, ...contentProps } = props;
+	const context = usePopoverContext(CONTENT_NAME$1, __scopePopover);
+	const popperScope = usePopperScope(__scopePopover);
+	useFocusGuards();
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FocusScope, {
+		asChild: true,
+		loop: true,
+		trapped: trapFocus,
+		onMountAutoFocus: onOpenAutoFocus,
+		onUnmountAutoFocus: onCloseAutoFocus,
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DismissableLayer, {
+			asChild: true,
+			disableOutsidePointerEvents,
+			onInteractOutside,
+			onEscapeKeyDown,
+			onPointerDownOutside,
+			onFocusOutside,
+			onDismiss: () => context.onOpenChange(false),
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Content$2, {
+				"data-state": getState(context.open),
+				role: "dialog",
+				id: context.contentId,
+				...popperScope,
+				...contentProps,
+				ref: forwardedRef,
+				style: {
+					...contentProps.style,
+					"--radix-popover-content-transform-origin": "var(--radix-popper-transform-origin)",
+					"--radix-popover-content-available-width": "var(--radix-popper-available-width)",
+					"--radix-popover-content-available-height": "var(--radix-popper-available-height)",
+					"--radix-popover-trigger-width": "var(--radix-popper-anchor-width)",
+					"--radix-popover-trigger-height": "var(--radix-popper-anchor-height)"
+				}
+			})
+		})
+	});
+});
+var CLOSE_NAME = "PopoverClose";
+var PopoverClose = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopePopover, ...closeProps } = props;
+	const context = usePopoverContext(CLOSE_NAME, __scopePopover);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.button, {
+		type: "button",
+		...closeProps,
+		ref: forwardedRef,
+		onClick: composeEventHandlers(props.onClick, () => context.onOpenChange(false))
+	});
+});
+PopoverClose.displayName = CLOSE_NAME;
+var ARROW_NAME = "PopoverArrow";
+var PopoverArrow = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopePopover, ...arrowProps } = props;
+	const popperScope = usePopperScope(__scopePopover);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Arrow, {
+		...popperScope,
+		...arrowProps,
+		ref: forwardedRef
+	});
+});
+PopoverArrow.displayName = ARROW_NAME;
+function getState(open) {
+	return open ? "open" : "closed";
+}
+var Root2$1 = Popover$1;
+var Trigger$1 = PopoverTrigger$1;
+var Portal = PopoverPortal;
+var Content2 = PopoverContent$1;
+//#endregion
+//#region src/components/ui/popover.tsx
+var Popover = Root2$1;
+var PopoverTrigger = Trigger$1;
+var PopoverContent = import_react.forwardRef(({ className, align = "center", sideOffset = 4, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Portal, {
+	"data-uid": "src/components/ui/popover.tsx:15:3",
+	"data-prohibitions": "[editContent]",
+	children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Content2, {
+		"data-uid": "src/components/ui/popover.tsx:16:5",
+		"data-prohibitions": "[editContent]",
+		ref,
+		align,
+		sideOffset,
+		className: cn$1("z-50 w-72 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-popover-content-transform-origin]", className),
+		...props
+	})
+}));
+PopoverContent.displayName = Content2.displayName;
+//#endregion
 //#region src/components/AppHeader.tsx
 function AppHeader() {
 	const { factories } = useAppContext();
-	const staleCount = factories.filter((f) => isStale(f.lastInteraction)).length;
 	const [open, setOpen] = (0, import_react.useState)(false);
+	const notifications = factories.flatMap((f) => {
+		const notifs = [];
+		if (isPassedDeadline(f.deadline)) notifs.push({
+			id: `passed-${f.id}`,
+			type: "destructive",
+			icon: Calendar,
+			message: `${f.name}: Prazo de negociação vencido!`
+		});
+		else if (isApproachingDeadline(f.deadline)) notifs.push({
+			id: `approaching-${f.id}`,
+			type: "warning",
+			icon: Calendar,
+			message: `${f.name}: Prazo de fechamento próximo.`
+		});
+		if (isStale(f.lastInteraction)) notifs.push({
+			id: `stale-${f.id}`,
+			type: "stale",
+			icon: TriangleAlert,
+			message: `${f.name}: Sem interação há mais de 15 dias.`
+		});
+		return notifs;
+	});
+	const notifCount = notifications.length;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
-		"data-uid": "src/components/AppHeader.tsx:23:5",
+		"data-uid": "src/components/AppHeader.tsx:53:5",
 		"data-prohibitions": "[editContent]",
-		className: "h-16 border-b flex items-center justify-between px-4 lg:px-6 bg-card text-card-foreground shrink-0 shadow-sm z-10 sticky top-0",
+		className: "h-16 border-b flex items-center justify-between px-4 lg:px-6 bg-card text-card-foreground shrink-0 shadow-sm z-10 sticky top-0 print:hidden",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			"data-uid": "src/components/AppHeader.tsx:24:7",
+			"data-uid": "src/components/AppHeader.tsx:54:7",
 			"data-prohibitions": "[]",
 			className: "flex items-center gap-3",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarTrigger, {
-				"data-uid": "src/components/AppHeader.tsx:25:9",
+				"data-uid": "src/components/AppHeader.tsx:55:9",
 				"data-prohibitions": "[editContent]",
 				className: "md:hidden"
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-				"data-uid": "src/components/AppHeader.tsx:26:9",
+				"data-uid": "src/components/AppHeader.tsx:56:9",
 				"data-prohibitions": "[]",
 				className: "font-semibold text-lg lg:text-xl text-primary hidden sm:block",
 				children: "Painel Executivo"
 			})]
 		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			"data-uid": "src/components/AppHeader.tsx:31:7",
+			"data-uid": "src/components/AppHeader.tsx:61:7",
 			"data-prohibitions": "[editContent]",
 			className: "flex items-center gap-4 lg:gap-6",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/components/AppHeader.tsx:32:9",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Popover, {
+				"data-uid": "src/components/AppHeader.tsx:62:9",
 				"data-prohibitions": "[editContent]",
-				className: "relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-muted transition-colors cursor-pointer group",
-				title: `${staleCount} contas sem interação recente`,
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bell, {
-					"data-uid": "src/components/AppHeader.tsx:36:11",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(PopoverTrigger, {
+					"data-uid": "src/components/AppHeader.tsx:63:11",
 					"data-prohibitions": "[editContent]",
-					className: "w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors"
-				}), staleCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-					"data-uid": "src/components/AppHeader.tsx:38:13",
+					asChild: true,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						"data-uid": "src/components/AppHeader.tsx:64:13",
+						"data-prohibitions": "[editContent]",
+						className: "relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-muted transition-colors cursor-pointer group",
+						title: "Notificações",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bell, {
+							"data-uid": "src/components/AppHeader.tsx:68:15",
+							"data-prohibitions": "[editContent]",
+							className: "w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors"
+						}), notifCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							"data-uid": "src/components/AppHeader.tsx:70:17",
+							"data-prohibitions": "[editContent]",
+							className: "absolute top-1 right-1 bg-destructive text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-card",
+							children: notifCount
+						})]
+					})
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(PopoverContent, {
+					"data-uid": "src/components/AppHeader.tsx:76:11",
 					"data-prohibitions": "[editContent]",
-					className: "absolute top-1 right-1 bg-destructive text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-card",
-					children: staleCount
+					align: "end",
+					className: "w-80 p-4",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
+						"data-uid": "src/components/AppHeader.tsx:77:13",
+						"data-prohibitions": "[]",
+						className: "font-semibold mb-3 text-sm flex items-center gap-2",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bell, {
+							"data-uid": "src/components/AppHeader.tsx:78:15",
+							"data-prohibitions": "[editContent]",
+							className: "w-4 h-4"
+						}), " Notificações Recentes"]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						"data-uid": "src/components/AppHeader.tsx:80:13",
+						"data-prohibitions": "[editContent]",
+						className: "space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar",
+						children: notifications.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							"data-uid": "src/components/AppHeader.tsx:82:17",
+							"data-prohibitions": "[]",
+							className: "text-sm text-muted-foreground p-2",
+							children: "Nenhuma pendência no momento."
+						}) : notifications.map((n) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							"data-uid": "src/components/AppHeader.tsx:85:19",
+							"data-prohibitions": "[editContent]",
+							className: "p-3 border rounded-lg text-sm bg-muted/30 flex items-start gap-3",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(n.icon, {
+								"data-uid": "src/components/AppHeader.tsx:89:21",
+								"data-prohibitions": "[editContent]",
+								className: `w-4 h-4 shrink-0 mt-0.5 ${n.type === "destructive" ? "text-destructive" : n.type === "warning" ? "text-orange-500" : "text-primary"}`
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								"data-uid": "src/components/AppHeader.tsx:98:21",
+								"data-prohibitions": "[editContent]",
+								className: "leading-tight",
+								children: n.message
+							})]
+						}, n.id))
+					})]
 				})]
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Dialog, {
-				"data-uid": "src/components/AppHeader.tsx:44:9",
+				"data-uid": "src/components/AppHeader.tsx:106:9",
 				"data-prohibitions": "[]",
 				open,
 				onOpenChange: setOpen,
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogTrigger, {
-					"data-uid": "src/components/AppHeader.tsx:45:11",
+					"data-uid": "src/components/AppHeader.tsx:107:11",
 					"data-prohibitions": "[]",
 					asChild: true,
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-						"data-uid": "src/components/AppHeader.tsx:46:13",
+						"data-uid": "src/components/AppHeader.tsx:108:13",
 						"data-prohibitions": "[]",
 						size: "sm",
 						className: "gap-2 shadow-sm",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Plus, {
-							"data-uid": "src/components/AppHeader.tsx:47:15",
+							"data-uid": "src/components/AppHeader.tsx:109:15",
 							"data-prohibitions": "[editContent]",
 							className: "w-4 h-4"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							"data-uid": "src/components/AppHeader.tsx:48:15",
+							"data-uid": "src/components/AppHeader.tsx:110:15",
 							"data-prohibitions": "[]",
 							className: "hidden sm:inline",
 							children: "Nova Fábrica"
 						})]
 					})
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogContent, {
-					"data-uid": "src/components/AppHeader.tsx:51:11",
+					"data-uid": "src/components/AppHeader.tsx:113:11",
 					"data-prohibitions": "[]",
 					className: "max-w-2xl max-h-[90vh] overflow-y-auto",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogHeader, {
-						"data-uid": "src/components/AppHeader.tsx:52:13",
+						"data-uid": "src/components/AppHeader.tsx:114:13",
 						"data-prohibitions": "[]",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogTitle, {
-							"data-uid": "src/components/AppHeader.tsx:53:15",
+							"data-uid": "src/components/AppHeader.tsx:115:15",
 							"data-prohibitions": "[]",
 							children: "Cadastro Rápido"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogDescription, {
-							"data-uid": "src/components/AppHeader.tsx:54:15",
+							"data-uid": "src/components/AppHeader.tsx:116:15",
 							"data-prohibitions": "[]",
 							children: "Adicione uma nova fábrica ao pipeline."
 						})]
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FactoryForm, {
-						"data-uid": "src/components/AppHeader.tsx:56:13",
+						"data-uid": "src/components/AppHeader.tsx:118:13",
 						"data-prohibitions": "[editContent]",
 						onSubmit: () => setOpen(false)
 					})]
@@ -53758,40 +54342,57 @@ function Index() {
 		"hsl(var(--chart-5))"
 	];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		"data-uid": "src/pages/Index.tsx:75:5",
+		"data-uid": "src/pages/Index.tsx:67:5",
 		"data-prohibitions": "[editContent]",
 		className: "space-y-6 animate-fade-in pb-10",
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-				"data-uid": "src/pages/Index.tsx:76:7",
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				"data-uid": "src/pages/Index.tsx:68:7",
 				"data-prohibitions": "[]",
-				className: "text-2xl font-bold tracking-tight",
-				children: "Visão Geral MT"
+				className: "flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+					"data-uid": "src/pages/Index.tsx:69:9",
+					"data-prohibitions": "[]",
+					className: "text-2xl font-bold tracking-tight",
+					children: "Visão Geral MT"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
+					"data-uid": "src/pages/Index.tsx:70:9",
+					"data-prohibitions": "[]",
+					variant: "outline",
+					size: "sm",
+					onClick: () => window.print(),
+					className: "gap-2 print:hidden shadow-sm",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Download, {
+						"data-uid": "src/pages/Index.tsx:76:11",
+						"data-prohibitions": "[editContent]",
+						className: "w-4 h-4"
+					}), " Exportar Relatório PDF"]
+				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Index.tsx:78:7",
+				"data-uid": "src/pages/Index.tsx:80:7",
 				"data-prohibitions": "[editContent]",
 				className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-						"data-uid": "src/pages/Index.tsx:79:9",
+						"data-uid": "src/pages/Index.tsx:81:9",
 						"data-prohibitions": "[editContent]",
 						className: "shadow-subtle",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardHeader, {
-							"data-uid": "src/pages/Index.tsx:80:11",
+							"data-uid": "src/pages/Index.tsx:82:11",
 							"data-prohibitions": "[]",
 							className: "pb-2 pt-4",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
-								"data-uid": "src/pages/Index.tsx:81:13",
+								"data-uid": "src/pages/Index.tsx:83:13",
 								"data-prohibitions": "[]",
 								className: "text-sm font-medium text-muted-foreground",
 								children: "Fábricas Mapeadas"
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
-							"data-uid": "src/pages/Index.tsx:85:11",
+							"data-uid": "src/pages/Index.tsx:87:11",
 							"data-prohibitions": "[editContent]",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								"data-uid": "src/pages/Index.tsx:86:13",
+								"data-uid": "src/pages/Index.tsx:88:13",
 								"data-prohibitions": "[editContent]",
 								className: "text-3xl font-bold",
 								children: factories.length
@@ -53799,31 +54400,31 @@ function Index() {
 						})]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-						"data-uid": "src/pages/Index.tsx:89:9",
+						"data-uid": "src/pages/Index.tsx:91:9",
 						"data-prohibitions": "[editContent]",
 						className: "shadow-subtle",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardHeader, {
-							"data-uid": "src/pages/Index.tsx:90:11",
+							"data-uid": "src/pages/Index.tsx:92:11",
 							"data-prohibitions": "[]",
 							className: "pb-2 pt-4",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
-								"data-uid": "src/pages/Index.tsx:91:13",
+								"data-uid": "src/pages/Index.tsx:93:13",
 								"data-prohibitions": "[]",
 								className: "text-sm font-medium text-muted-foreground",
 								children: "Ativas / Prospecção"
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
-							"data-uid": "src/pages/Index.tsx:95:11",
+							"data-uid": "src/pages/Index.tsx:97:11",
 							"data-prohibitions": "[editContent]",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								"data-uid": "src/pages/Index.tsx:96:13",
+								"data-uid": "src/pages/Index.tsx:98:13",
 								"data-prohibitions": "[editContent]",
 								className: "text-3xl font-bold",
 								children: [
 									activeCount,
 									" ",
 									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-										"data-uid": "src/pages/Index.tsx:97:29",
+										"data-uid": "src/pages/Index.tsx:99:29",
 										"data-prohibitions": "[editContent]",
 										className: "text-muted-foreground text-xl",
 										children: ["/ ", prospectCount]
@@ -53833,24 +54434,24 @@ function Index() {
 						})]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-						"data-uid": "src/pages/Index.tsx:101:9",
+						"data-uid": "src/pages/Index.tsx:103:9",
 						"data-prohibitions": "[editContent]",
 						className: "shadow-subtle",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardHeader, {
-							"data-uid": "src/pages/Index.tsx:102:11",
+							"data-uid": "src/pages/Index.tsx:104:11",
 							"data-prohibitions": "[]",
 							className: "pb-2 pt-4",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
-								"data-uid": "src/pages/Index.tsx:103:13",
+								"data-uid": "src/pages/Index.tsx:105:13",
 								"data-prohibitions": "[]",
 								className: "text-sm font-medium text-muted-foreground",
 								children: "Receita Potencial"
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
-							"data-uid": "src/pages/Index.tsx:107:11",
+							"data-uid": "src/pages/Index.tsx:109:11",
 							"data-prohibitions": "[editContent]",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								"data-uid": "src/pages/Index.tsx:108:13",
+								"data-uid": "src/pages/Index.tsx:110:13",
 								"data-prohibitions": "[editContent]",
 								className: "text-3xl font-bold text-primary",
 								children: formatCurrency(totalRevenue)
@@ -53858,24 +54459,24 @@ function Index() {
 						})]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-						"data-uid": "src/pages/Index.tsx:111:9",
+						"data-uid": "src/pages/Index.tsx:113:9",
 						"data-prohibitions": "[editContent]",
 						className: "shadow-subtle",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardHeader, {
-							"data-uid": "src/pages/Index.tsx:112:11",
+							"data-uid": "src/pages/Index.tsx:114:11",
 							"data-prohibitions": "[]",
 							className: "pb-2 pt-4",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
-								"data-uid": "src/pages/Index.tsx:113:13",
+								"data-uid": "src/pages/Index.tsx:115:13",
 								"data-prohibitions": "[]",
 								className: "text-sm font-medium text-muted-foreground",
 								children: "Forecast Ponderado"
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
-							"data-uid": "src/pages/Index.tsx:117:11",
+							"data-uid": "src/pages/Index.tsx:119:11",
 							"data-prohibitions": "[editContent]",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								"data-uid": "src/pages/Index.tsx:118:13",
+								"data-uid": "src/pages/Index.tsx:120:13",
 								"data-prohibitions": "[editContent]",
 								className: "text-3xl font-bold text-accent",
 								children: formatCurrency(weightedRevenue)
@@ -53885,31 +54486,31 @@ function Index() {
 				]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Index.tsx:123:7",
+				"data-uid": "src/pages/Index.tsx:125:7",
 				"data-prohibitions": "[editContent]",
 				className: "grid grid-cols-1 lg:grid-cols-2 gap-6",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-					"data-uid": "src/pages/Index.tsx:124:9",
+					"data-uid": "src/pages/Index.tsx:126:9",
 					"data-prohibitions": "[]",
 					className: "shadow-subtle",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
-						"data-uid": "src/pages/Index.tsx:125:11",
+						"data-uid": "src/pages/Index.tsx:127:11",
 						"data-prohibitions": "[]",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
-							"data-uid": "src/pages/Index.tsx:126:13",
+							"data-uid": "src/pages/Index.tsx:128:13",
 							"data-prohibitions": "[]",
 							children: "Funil de Vendas"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardDescription, {
-							"data-uid": "src/pages/Index.tsx:127:13",
+							"data-uid": "src/pages/Index.tsx:129:13",
 							"data-prohibitions": "[]",
 							children: "Valor acumulado por estágio"
 						})]
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
-						"data-uid": "src/pages/Index.tsx:129:11",
+						"data-uid": "src/pages/Index.tsx:131:11",
 						"data-prohibitions": "[]",
 						className: "h-[300px]",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChartContainer, {
-							"data-uid": "src/pages/Index.tsx:130:13",
+							"data-uid": "src/pages/Index.tsx:132:13",
 							"data-prohibitions": "[]",
 							config: { value: {
 								label: "Valor (R$)",
@@ -53917,7 +54518,7 @@ function Index() {
 							} },
 							className: "h-full w-full",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(BarChart, {
-								"data-uid": "src/pages/Index.tsx:134:15",
+								"data-uid": "src/pages/Index.tsx:136:15",
 								"data-prohibitions": "[]",
 								data: funnelData,
 								layout: "vertical",
@@ -53927,13 +54528,13 @@ function Index() {
 								},
 								children: [
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(XAxis, {
-										"data-uid": "src/pages/Index.tsx:135:17",
+										"data-uid": "src/pages/Index.tsx:137:17",
 										"data-prohibitions": "[editContent]",
 										type: "number",
 										hide: true
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(YAxis, {
-										"data-uid": "src/pages/Index.tsx:136:17",
+										"data-uid": "src/pages/Index.tsx:138:17",
 										"data-prohibitions": "[editContent]",
 										dataKey: "stage",
 										type: "category",
@@ -53946,16 +54547,16 @@ function Index() {
 										}
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Tooltip, {
-										"data-uid": "src/pages/Index.tsx:144:17",
+										"data-uid": "src/pages/Index.tsx:146:17",
 										"data-prohibitions": "[editContent]",
 										content: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChartTooltipContent, {
-											"data-uid": "src/pages/Index.tsx:145:28",
+											"data-uid": "src/pages/Index.tsx:147:28",
 											"data-prohibitions": "[editContent]"
 										}),
 										cursor: { fill: "hsl(var(--muted)/0.5)" }
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bar, {
-										"data-uid": "src/pages/Index.tsx:148:17",
+										"data-uid": "src/pages/Index.tsx:150:17",
 										"data-prohibitions": "[editContent]",
 										dataKey: "value",
 										fill: "hsl(var(--primary))",
@@ -53972,27 +54573,27 @@ function Index() {
 						})
 					})]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-					"data-uid": "src/pages/Index.tsx:159:9",
+					"data-uid": "src/pages/Index.tsx:161:9",
 					"data-prohibitions": "[editContent]",
 					className: "shadow-subtle",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
-						"data-uid": "src/pages/Index.tsx:160:11",
+						"data-uid": "src/pages/Index.tsx:162:11",
 						"data-prohibitions": "[]",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
-							"data-uid": "src/pages/Index.tsx:161:13",
+							"data-uid": "src/pages/Index.tsx:163:13",
 							"data-prohibitions": "[]",
 							children: "Distribuição Regional"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardDescription, {
-							"data-uid": "src/pages/Index.tsx:162:13",
+							"data-uid": "src/pages/Index.tsx:164:13",
 							"data-prohibitions": "[]",
 							children: "Potencial financeiro por território"
 						})]
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
-						"data-uid": "src/pages/Index.tsx:164:11",
+						"data-uid": "src/pages/Index.tsx:166:11",
 						"data-prohibitions": "[editContent]",
 						className: "h-[300px]",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChartContainer, {
-							"data-uid": "src/pages/Index.tsx:165:13",
+							"data-uid": "src/pages/Index.tsx:167:13",
 							"data-prohibitions": "[editContent]",
 							config: { value: {
 								label: "Valor",
@@ -54000,10 +54601,10 @@ function Index() {
 							} },
 							className: "h-full w-full",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(PieChart, {
-								"data-uid": "src/pages/Index.tsx:169:15",
+								"data-uid": "src/pages/Index.tsx:171:15",
 								"data-prohibitions": "[editContent]",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pie, {
-									"data-uid": "src/pages/Index.tsx:170:17",
+									"data-uid": "src/pages/Index.tsx:172:17",
 									"data-prohibitions": "[editContent]",
 									data: regionData,
 									cx: "50%",
@@ -54014,15 +54615,15 @@ function Index() {
 									nameKey: "name",
 									label: ({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`,
 									children: regionData.map((entry, index) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Cell, {
-										"data-uid": "src/pages/Index.tsx:181:21",
+										"data-uid": "src/pages/Index.tsx:183:21",
 										"data-prohibitions": "[editContent]",
 										fill: COLORS[index % COLORS.length]
 									}, `cell-${index}`))
 								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Tooltip, {
-									"data-uid": "src/pages/Index.tsx:184:17",
+									"data-uid": "src/pages/Index.tsx:186:17",
 									"data-prohibitions": "[editContent]",
 									content: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChartTooltipContent, {
-										"data-uid": "src/pages/Index.tsx:184:35",
+										"data-uid": "src/pages/Index.tsx:186:35",
 										"data-prohibitions": "[editContent]"
 									})
 								})]
@@ -54032,52 +54633,52 @@ function Index() {
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Index.tsx:191:7",
+				"data-uid": "src/pages/Index.tsx:193:7",
 				"data-prohibitions": "[editContent]",
-				className: "grid grid-cols-1 lg:grid-cols-3 gap-6",
+				className: "grid grid-cols-1 lg:grid-cols-3 gap-6 print:break-inside-avoid",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-					"data-uid": "src/pages/Index.tsx:192:9",
+					"data-uid": "src/pages/Index.tsx:194:9",
 					"data-prohibitions": "[editContent]",
 					className: "lg:col-span-2 shadow-subtle overflow-hidden",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardHeader, {
-						"data-uid": "src/pages/Index.tsx:193:11",
+						"data-uid": "src/pages/Index.tsx:195:11",
 						"data-prohibitions": "[]",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
-							"data-uid": "src/pages/Index.tsx:194:13",
+							"data-uid": "src/pages/Index.tsx:196:13",
 							"data-prohibitions": "[]",
 							children: "Top 5 Oportunidades"
 						})
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						"data-uid": "src/pages/Index.tsx:196:11",
+						"data-uid": "src/pages/Index.tsx:198:11",
 						"data-prohibitions": "[editContent]",
 						className: "overflow-x-auto",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Table, {
-							"data-uid": "src/pages/Index.tsx:197:13",
+							"data-uid": "src/pages/Index.tsx:199:13",
 							"data-prohibitions": "[editContent]",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHeader, {
-								"data-uid": "src/pages/Index.tsx:198:15",
+								"data-uid": "src/pages/Index.tsx:200:15",
 								"data-prohibitions": "[]",
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableRow, {
-									"data-uid": "src/pages/Index.tsx:199:17",
+									"data-uid": "src/pages/Index.tsx:201:17",
 									"data-prohibitions": "[]",
 									children: [
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-											"data-uid": "src/pages/Index.tsx:200:19",
+											"data-uid": "src/pages/Index.tsx:202:19",
 											"data-prohibitions": "[]",
 											children: "Fábrica"
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-											"data-uid": "src/pages/Index.tsx:201:19",
+											"data-uid": "src/pages/Index.tsx:203:19",
 											"data-prohibitions": "[]",
 											children: "Região"
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-											"data-uid": "src/pages/Index.tsx:202:19",
+											"data-uid": "src/pages/Index.tsx:204:19",
 											"data-prohibitions": "[]",
 											children: "Estágio"
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-											"data-uid": "src/pages/Index.tsx:203:19",
+											"data-uid": "src/pages/Index.tsx:205:19",
 											"data-prohibitions": "[]",
 											className: "text-right",
 											children: "Potencial"
@@ -54085,30 +54686,30 @@ function Index() {
 									]
 								})
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableBody, {
-								"data-uid": "src/pages/Index.tsx:206:15",
+								"data-uid": "src/pages/Index.tsx:208:15",
 								"data-prohibitions": "[editContent]",
 								children: topFactories.map((f) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableRow, {
-									"data-uid": "src/pages/Index.tsx:208:19",
+									"data-uid": "src/pages/Index.tsx:210:19",
 									"data-prohibitions": "[editContent]",
 									children: [
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-											"data-uid": "src/pages/Index.tsx:209:21",
+											"data-uid": "src/pages/Index.tsx:211:21",
 											"data-prohibitions": "[editContent]",
 											className: "font-medium",
 											children: f.name
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-											"data-uid": "src/pages/Index.tsx:210:21",
+											"data-uid": "src/pages/Index.tsx:212:21",
 											"data-prohibitions": "[editContent]",
 											children: f.region
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-											"data-uid": "src/pages/Index.tsx:211:21",
+											"data-uid": "src/pages/Index.tsx:213:21",
 											"data-prohibitions": "[editContent]",
 											children: f.funnelStage
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-											"data-uid": "src/pages/Index.tsx:212:21",
+											"data-uid": "src/pages/Index.tsx:214:21",
 											"data-prohibitions": "[editContent]",
 											className: "text-right font-semibold text-primary",
 											children: formatCurrency(f.potentialValue)
@@ -54119,56 +54720,56 @@ function Index() {
 						})
 					})]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-					"data-uid": "src/pages/Index.tsx:222:9",
+					"data-uid": "src/pages/Index.tsx:224:9",
 					"data-prohibitions": "[editContent]",
 					className: "shadow-subtle",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardHeader, {
-						"data-uid": "src/pages/Index.tsx:223:11",
+						"data-uid": "src/pages/Index.tsx:225:11",
 						"data-prohibitions": "[]",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
-							"data-uid": "src/pages/Index.tsx:224:13",
+							"data-uid": "src/pages/Index.tsx:226:13",
 							"data-prohibitions": "[]",
 							children: "Highlights Estratégicos"
 						})
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
-						"data-uid": "src/pages/Index.tsx:226:11",
+						"data-uid": "src/pages/Index.tsx:228:11",
 						"data-prohibitions": "[editContent]",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Index.tsx:227:13",
+							"data-uid": "src/pages/Index.tsx:229:13",
 							"data-prohibitions": "[editContent]",
 							className: "space-y-4",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								"data-uid": "src/pages/Index.tsx:228:15",
+								"data-uid": "src/pages/Index.tsx:230:15",
 								"data-prohibitions": "[editContent]",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h4", {
-									"data-uid": "src/pages/Index.tsx:229:17",
+									"data-uid": "src/pages/Index.tsx:231:17",
 									"data-prohibitions": "[]",
 									className: "text-sm font-semibold mb-2 text-primary",
 									children: "Forças Frequentes"
 								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-									"data-uid": "src/pages/Index.tsx:230:17",
+									"data-uid": "src/pages/Index.tsx:232:17",
 									"data-prohibitions": "[editContent]",
 									className: "text-sm text-muted-foreground list-disc pl-4 space-y-1",
 									children: topFactories.slice(0, 3).map((f) => f.swot.strengths && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", {
-										"data-uid": "src/pages/Index.tsx:233:53",
+										"data-uid": "src/pages/Index.tsx:235:53",
 										"data-prohibitions": "[editContent]",
 										children: f.swot.strengths
 									}, f.id))
 								})]
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								"data-uid": "src/pages/Index.tsx:236:15",
+								"data-uid": "src/pages/Index.tsx:238:15",
 								"data-prohibitions": "[editContent]",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h4", {
-									"data-uid": "src/pages/Index.tsx:237:17",
+									"data-uid": "src/pages/Index.tsx:239:17",
 									"data-prohibitions": "[]",
 									className: "text-sm font-semibold mb-2 text-accent",
 									children: "Oportunidades"
 								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-									"data-uid": "src/pages/Index.tsx:238:17",
+									"data-uid": "src/pages/Index.tsx:240:17",
 									"data-prohibitions": "[editContent]",
 									className: "text-sm text-muted-foreground list-disc pl-4 space-y-1",
 									children: topFactories.slice(0, 3).map((f) => f.swot.opportunities && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", {
-										"data-uid": "src/pages/Index.tsx:241:57",
+										"data-uid": "src/pages/Index.tsx:243:57",
 										"data-prohibitions": "[editContent]",
 										children: f.swot.opportunities
 									}, f.id))
@@ -54201,241 +54802,350 @@ function Badge({ className, variant, ...props }) {
 	});
 }
 //#endregion
-//#region src/pages/Cadastro.tsx
-function Cadastro() {
-	const { factories, deleteFactory } = useAppContext();
-	const [search, setSearch] = (0, import_react.useState)("");
-	const [editing, setEditing] = (0, import_react.useState)(null);
-	const filtered = factories.filter((f) => f.name.toLowerCase().includes(search.toLowerCase()) || f.city.toLowerCase().includes(search.toLowerCase()));
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		"data-uid": "src/pages/Cadastro.tsx:32:5",
-		"data-prohibitions": "[editContent]",
-		className: "space-y-6 animate-fade-in",
-		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Cadastro.tsx:33:7",
-				"data-prohibitions": "[]",
-				className: "flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Cadastro.tsx:34:9",
-					"data-prohibitions": "[]",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-						"data-uid": "src/pages/Cadastro.tsx:35:11",
-						"data-prohibitions": "[]",
-						className: "text-2xl font-bold tracking-tight",
-						children: "Cadastro de Fábricas"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						"data-uid": "src/pages/Cadastro.tsx:36:11",
-						"data-prohibitions": "[]",
-						className: "text-muted-foreground text-sm",
-						children: "Gerencie o banco de dados de clientes e prospects."
-					})]
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Cadastro.tsx:40:9",
-					"data-prohibitions": "[]",
-					className: "relative w-full sm:w-72",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Search, {
-						"data-uid": "src/pages/Cadastro.tsx:41:11",
-						"data-prohibitions": "[editContent]",
-						className: "absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-						"data-uid": "src/pages/Cadastro.tsx:42:11",
-						"data-prohibitions": "[editContent]",
-						placeholder: "Buscar fábrica ou cidade...",
-						value: search,
-						onChange: (e) => setSearch(e.target.value),
-						className: "pl-9"
-					})]
-				})]
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				"data-uid": "src/pages/Cadastro.tsx:51:7",
-				"data-prohibitions": "[editContent]",
-				className: "bg-card border rounded-lg overflow-hidden shadow-subtle",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Cadastro.tsx:52:9",
-					"data-prohibitions": "[editContent]",
-					className: "overflow-x-auto",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Table, {
-						"data-uid": "src/pages/Cadastro.tsx:53:11",
-						"data-prohibitions": "[editContent]",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHeader, {
-							"data-uid": "src/pages/Cadastro.tsx:54:13",
-							"data-prohibitions": "[]",
-							className: "bg-muted/50",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableRow, {
-								"data-uid": "src/pages/Cadastro.tsx:55:15",
-								"data-prohibitions": "[]",
-								children: [
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:56:17",
-										"data-prohibitions": "[]",
-										children: "Fábrica"
-									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:57:17",
-										"data-prohibitions": "[]",
-										children: "Local"
-									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:58:17",
-										"data-prohibitions": "[]",
-										children: "Status"
-									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:59:17",
-										"data-prohibitions": "[]",
-										className: "text-right",
-										children: "Potencial"
-									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Cadastro.tsx:60:17",
-										"data-prohibitions": "[]",
-										className: "text-center",
-										children: "Ações"
-									})
-								]
-							})
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableBody, {
-							"data-uid": "src/pages/Cadastro.tsx:63:13",
-							"data-prohibitions": "[editContent]",
-							children: [filtered.map((f) => {
-								const stale = isStale(f.lastInteraction);
-								return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableRow, {
-									"data-uid": "src/pages/Cadastro.tsx:67:19",
-									"data-prohibitions": "[editContent]",
-									className: stale ? "bg-destructive/5" : "",
-									children: [
-										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:68:21",
-											"data-prohibitions": "[editContent]",
-											className: "font-medium",
-											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:69:23",
-												"data-prohibitions": "[editContent]",
-												className: "flex items-center gap-2",
-												children: [f.name, stale && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TriangleAlert, {
-													"data-uid": "src/pages/Cadastro.tsx:72:27",
-													"data-prohibitions": "[editContent]",
-													className: "w-4 h-4 text-destructive",
-													title: "Sem interação há mais de 15 dias"
-												})]
-											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:78:23",
-												"data-prohibitions": "[editContent]",
-												className: "text-xs text-muted-foreground mt-1",
-												children: f.operationTypes
-											})]
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:80:21",
-											"data-prohibitions": "[editContent]",
-											children: [f.city, /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:82:23",
-												"data-prohibitions": "[editContent]",
-												className: "text-xs text-muted-foreground mt-1",
-												children: f.region
-											})]
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:84:21",
-											"data-prohibitions": "[editContent]",
-											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Badge, {
-												"data-uid": "src/pages/Cadastro.tsx:85:23",
-												"data-prohibitions": "[editContent]",
-												variant: f.status === "Atendido" ? "default" : f.status === "Prospeção" ? "secondary" : "outline",
-												className: "rounded-full",
-												children: f.status
-											})
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:98:21",
-											"data-prohibitions": "[editContent]",
-											className: "text-right font-semibold",
-											children: [formatCurrency(f.potentialValue), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:100:23",
-												"data-prohibitions": "[editContent]",
-												className: "text-xs text-muted-foreground font-normal mt-1",
-												children: [f.capacity, " t/mês"]
-											})]
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-											"data-uid": "src/pages/Cadastro.tsx:104:21",
-											"data-prohibitions": "[]",
-											children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-												"data-uid": "src/pages/Cadastro.tsx:105:23",
-												"data-prohibitions": "[]",
-												className: "flex items-center justify-center gap-2",
-												children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-													"data-uid": "src/pages/Cadastro.tsx:106:25",
-													"data-prohibitions": "[]",
-													variant: "ghost",
-													size: "icon",
-													onClick: () => setEditing(f),
-													children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pen, {
-														"data-uid": "src/pages/Cadastro.tsx:107:27",
-														"data-prohibitions": "[editContent]",
-														className: "w-4 h-4 text-primary"
-													})
-												}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-													"data-uid": "src/pages/Cadastro.tsx:109:25",
-													"data-prohibitions": "[]",
-													variant: "ghost",
-													size: "icon",
-													onClick: () => deleteFactory(f.id),
-													children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, {
-														"data-uid": "src/pages/Cadastro.tsx:110:27",
-														"data-prohibitions": "[editContent]",
-														className: "w-4 h-4 text-destructive"
-													})
-												})]
-											})
-										})
-									]
-								}, f.id);
-							}), filtered.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableRow, {
-								"data-uid": "src/pages/Cadastro.tsx:118:17",
-								"data-prohibitions": "[]",
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-									"data-uid": "src/pages/Cadastro.tsx:119:19",
-									"data-prohibitions": "[]",
-									colSpan: 5,
-									className: "text-center h-24 text-muted-foreground",
-									children: "Nenhuma fábrica encontrada."
-								})
-							})]
-						})]
-					})
-				})
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Dialog, {
-				"data-uid": "src/pages/Cadastro.tsx:129:7",
-				"data-prohibitions": "[editContent]",
-				open: !!editing,
-				onOpenChange: (open) => !open && setEditing(null),
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogContent, {
-					"data-uid": "src/pages/Cadastro.tsx:130:9",
-					"data-prohibitions": "[editContent]",
-					className: "max-w-2xl max-h-[90vh] overflow-y-auto",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogHeader, {
-						"data-uid": "src/pages/Cadastro.tsx:131:11",
-						"data-prohibitions": "[]",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogTitle, {
-							"data-uid": "src/pages/Cadastro.tsx:132:13",
-							"data-prohibitions": "[]",
-							children: "Editar Fábrica"
-						})
-					}), editing && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FactoryForm, {
-						"data-uid": "src/pages/Cadastro.tsx:134:23",
-						"data-prohibitions": "[editContent]",
-						factory: editing,
-						onSubmit: () => setEditing(null)
-					})]
-				})
+//#region ../../cache/modules/inteligencia-comercial-blink-4eb45/node_modules/.pnpm/@radix-ui+react-roving-focus@1.1.11_@types+react-dom@19.2.3_@types+react@19.2.14__@type_4eeb29c998b846c35358e2f929e7490e/node_modules/@radix-ui/react-roving-focus/dist/index.mjs
+var ENTRY_FOCUS = "rovingFocusGroup.onEntryFocus";
+var EVENT_OPTIONS = {
+	bubbles: false,
+	cancelable: true
+};
+var GROUP_NAME = "RovingFocusGroup";
+var [Collection$1, useCollection$1, createCollectionScope$1] = createCollection(GROUP_NAME);
+var [createRovingFocusGroupContext, createRovingFocusGroupScope] = createContextScope$1(GROUP_NAME, [createCollectionScope$1]);
+var [RovingFocusProvider, useRovingFocusContext] = createRovingFocusGroupContext(GROUP_NAME);
+var RovingFocusGroup = import_react.forwardRef((props, forwardedRef) => {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Collection$1.Provider, {
+		scope: props.__scopeRovingFocusGroup,
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Collection$1.Slot, {
+			scope: props.__scopeRovingFocusGroup,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RovingFocusGroupImpl, {
+				...props,
+				ref: forwardedRef
 			})
-		]
+		})
 	});
+});
+RovingFocusGroup.displayName = GROUP_NAME;
+var RovingFocusGroupImpl = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopeRovingFocusGroup, orientation, loop = false, dir, currentTabStopId: currentTabStopIdProp, defaultCurrentTabStopId, onCurrentTabStopIdChange, onEntryFocus, preventScrollOnEntryFocus = false, ...groupProps } = props;
+	const ref = import_react.useRef(null);
+	const composedRefs = useComposedRefs(forwardedRef, ref);
+	const direction = useDirection(dir);
+	const [currentTabStopId, setCurrentTabStopId] = useControllableState({
+		prop: currentTabStopIdProp,
+		defaultProp: defaultCurrentTabStopId ?? null,
+		onChange: onCurrentTabStopIdChange,
+		caller: GROUP_NAME
+	});
+	const [isTabbingBackOut, setIsTabbingBackOut] = import_react.useState(false);
+	const handleEntryFocus = useCallbackRef$1(onEntryFocus);
+	const getItems = useCollection$1(__scopeRovingFocusGroup);
+	const isClickFocusRef = import_react.useRef(false);
+	const [focusableItemsCount, setFocusableItemsCount] = import_react.useState(0);
+	import_react.useEffect(() => {
+		const node = ref.current;
+		if (node) {
+			node.addEventListener(ENTRY_FOCUS, handleEntryFocus);
+			return () => node.removeEventListener(ENTRY_FOCUS, handleEntryFocus);
+		}
+	}, [handleEntryFocus]);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RovingFocusProvider, {
+		scope: __scopeRovingFocusGroup,
+		orientation,
+		dir: direction,
+		loop,
+		currentTabStopId,
+		onItemFocus: import_react.useCallback((tabStopId) => setCurrentTabStopId(tabStopId), [setCurrentTabStopId]),
+		onItemShiftTab: import_react.useCallback(() => setIsTabbingBackOut(true), []),
+		onFocusableItemAdd: import_react.useCallback(() => setFocusableItemsCount((prevCount) => prevCount + 1), []),
+		onFocusableItemRemove: import_react.useCallback(() => setFocusableItemsCount((prevCount) => prevCount - 1), []),
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.div, {
+			tabIndex: isTabbingBackOut || focusableItemsCount === 0 ? -1 : 0,
+			"data-orientation": orientation,
+			...groupProps,
+			ref: composedRefs,
+			style: {
+				outline: "none",
+				...props.style
+			},
+			onMouseDown: composeEventHandlers(props.onMouseDown, () => {
+				isClickFocusRef.current = true;
+			}),
+			onFocus: composeEventHandlers(props.onFocus, (event) => {
+				const isKeyboardFocus = !isClickFocusRef.current;
+				if (event.target === event.currentTarget && isKeyboardFocus && !isTabbingBackOut) {
+					const entryFocusEvent = new CustomEvent(ENTRY_FOCUS, EVENT_OPTIONS);
+					event.currentTarget.dispatchEvent(entryFocusEvent);
+					if (!entryFocusEvent.defaultPrevented) {
+						const items = getItems().filter((item) => item.focusable);
+						focusFirst([
+							items.find((item) => item.active),
+							items.find((item) => item.id === currentTabStopId),
+							...items
+						].filter(Boolean).map((item) => item.ref.current), preventScrollOnEntryFocus);
+					}
+				}
+				isClickFocusRef.current = false;
+			}),
+			onBlur: composeEventHandlers(props.onBlur, () => setIsTabbingBackOut(false))
+		})
+	});
+});
+var ITEM_NAME = "RovingFocusGroupItem";
+var RovingFocusGroupItem = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopeRovingFocusGroup, focusable = true, active = false, tabStopId, children, ...itemProps } = props;
+	const autoId = useId();
+	const id = tabStopId || autoId;
+	const context = useRovingFocusContext(ITEM_NAME, __scopeRovingFocusGroup);
+	const isCurrentTabStop = context.currentTabStopId === id;
+	const getItems = useCollection$1(__scopeRovingFocusGroup);
+	const { onFocusableItemAdd, onFocusableItemRemove, currentTabStopId } = context;
+	import_react.useEffect(() => {
+		if (focusable) {
+			onFocusableItemAdd();
+			return () => onFocusableItemRemove();
+		}
+	}, [
+		focusable,
+		onFocusableItemAdd,
+		onFocusableItemRemove
+	]);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Collection$1.ItemSlot, {
+		scope: __scopeRovingFocusGroup,
+		id,
+		focusable,
+		active,
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.span, {
+			tabIndex: isCurrentTabStop ? 0 : -1,
+			"data-orientation": context.orientation,
+			...itemProps,
+			ref: forwardedRef,
+			onMouseDown: composeEventHandlers(props.onMouseDown, (event) => {
+				if (!focusable) event.preventDefault();
+				else context.onItemFocus(id);
+			}),
+			onFocus: composeEventHandlers(props.onFocus, () => context.onItemFocus(id)),
+			onKeyDown: composeEventHandlers(props.onKeyDown, (event) => {
+				if (event.key === "Tab" && event.shiftKey) {
+					context.onItemShiftTab();
+					return;
+				}
+				if (event.target !== event.currentTarget) return;
+				const focusIntent = getFocusIntent(event, context.orientation, context.dir);
+				if (focusIntent !== void 0) {
+					if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+					event.preventDefault();
+					let candidateNodes = getItems().filter((item) => item.focusable).map((item) => item.ref.current);
+					if (focusIntent === "last") candidateNodes.reverse();
+					else if (focusIntent === "prev" || focusIntent === "next") {
+						if (focusIntent === "prev") candidateNodes.reverse();
+						const currentIndex = candidateNodes.indexOf(event.currentTarget);
+						candidateNodes = context.loop ? wrapArray(candidateNodes, currentIndex + 1) : candidateNodes.slice(currentIndex + 1);
+					}
+					setTimeout(() => focusFirst(candidateNodes));
+				}
+			}),
+			children: typeof children === "function" ? children({
+				isCurrentTabStop,
+				hasTabStop: currentTabStopId != null
+			}) : children
+		})
+	});
+});
+RovingFocusGroupItem.displayName = ITEM_NAME;
+var MAP_KEY_TO_FOCUS_INTENT = {
+	ArrowLeft: "prev",
+	ArrowUp: "prev",
+	ArrowRight: "next",
+	ArrowDown: "next",
+	PageUp: "first",
+	Home: "first",
+	PageDown: "last",
+	End: "last"
+};
+function getDirectionAwareKey(key, dir) {
+	if (dir !== "rtl") return key;
+	return key === "ArrowLeft" ? "ArrowRight" : key === "ArrowRight" ? "ArrowLeft" : key;
 }
+function getFocusIntent(event, orientation, dir) {
+	const key = getDirectionAwareKey(event.key, dir);
+	if (orientation === "vertical" && ["ArrowLeft", "ArrowRight"].includes(key)) return void 0;
+	if (orientation === "horizontal" && ["ArrowUp", "ArrowDown"].includes(key)) return void 0;
+	return MAP_KEY_TO_FOCUS_INTENT[key];
+}
+function focusFirst(candidates, preventScroll = false) {
+	const PREVIOUSLY_FOCUSED_ELEMENT = document.activeElement;
+	for (const candidate of candidates) {
+		if (candidate === PREVIOUSLY_FOCUSED_ELEMENT) return;
+		candidate.focus({ preventScroll });
+		if (document.activeElement !== PREVIOUSLY_FOCUSED_ELEMENT) return;
+	}
+}
+function wrapArray(array, startIndex) {
+	return array.map((_, index) => array[(startIndex + index) % array.length]);
+}
+var Root$2 = RovingFocusGroup;
+var Item = RovingFocusGroupItem;
+//#endregion
+//#region ../../cache/modules/inteligencia-comercial-blink-4eb45/node_modules/.pnpm/@radix-ui+react-tabs@1.1.13_@types+react-dom@19.2.3_@types+react@19.2.14__@types+react@_2ad0945e3cb98dc5bbfaaf29c105e977/node_modules/@radix-ui/react-tabs/dist/index.mjs
+var TABS_NAME = "Tabs";
+var [createTabsContext, createTabsScope] = createContextScope$1(TABS_NAME, [createRovingFocusGroupScope]);
+var useRovingFocusGroupScope = createRovingFocusGroupScope();
+var [TabsProvider, useTabsContext] = createTabsContext(TABS_NAME);
+var Tabs$1 = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopeTabs, value: valueProp, onValueChange, defaultValue, orientation = "horizontal", dir, activationMode = "automatic", ...tabsProps } = props;
+	const direction = useDirection(dir);
+	const [value, setValue] = useControllableState({
+		prop: valueProp,
+		onChange: onValueChange,
+		defaultProp: defaultValue ?? "",
+		caller: TABS_NAME
+	});
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsProvider, {
+		scope: __scopeTabs,
+		baseId: useId(),
+		value,
+		onValueChange: setValue,
+		orientation,
+		dir: direction,
+		activationMode,
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.div, {
+			dir: direction,
+			"data-orientation": orientation,
+			...tabsProps,
+			ref: forwardedRef
+		})
+	});
+});
+Tabs$1.displayName = TABS_NAME;
+var TAB_LIST_NAME = "TabsList";
+var TabsList$1 = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopeTabs, loop = true, ...listProps } = props;
+	const context = useTabsContext(TAB_LIST_NAME, __scopeTabs);
+	const rovingFocusGroupScope = useRovingFocusGroupScope(__scopeTabs);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root$2, {
+		asChild: true,
+		...rovingFocusGroupScope,
+		orientation: context.orientation,
+		dir: context.dir,
+		loop,
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.div, {
+			role: "tablist",
+			"aria-orientation": context.orientation,
+			...listProps,
+			ref: forwardedRef
+		})
+	});
+});
+TabsList$1.displayName = TAB_LIST_NAME;
+var TRIGGER_NAME = "TabsTrigger";
+var TabsTrigger$1 = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopeTabs, value, disabled = false, ...triggerProps } = props;
+	const context = useTabsContext(TRIGGER_NAME, __scopeTabs);
+	const rovingFocusGroupScope = useRovingFocusGroupScope(__scopeTabs);
+	const triggerId = makeTriggerId(context.baseId, value);
+	const contentId = makeContentId(context.baseId, value);
+	const isSelected = value === context.value;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Item, {
+		asChild: true,
+		...rovingFocusGroupScope,
+		focusable: !disabled,
+		active: isSelected,
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.button, {
+			type: "button",
+			role: "tab",
+			"aria-selected": isSelected,
+			"aria-controls": contentId,
+			"data-state": isSelected ? "active" : "inactive",
+			"data-disabled": disabled ? "" : void 0,
+			disabled,
+			id: triggerId,
+			...triggerProps,
+			ref: forwardedRef,
+			onMouseDown: composeEventHandlers(props.onMouseDown, (event) => {
+				if (!disabled && event.button === 0 && event.ctrlKey === false) context.onValueChange(value);
+				else event.preventDefault();
+			}),
+			onKeyDown: composeEventHandlers(props.onKeyDown, (event) => {
+				if ([" ", "Enter"].includes(event.key)) context.onValueChange(value);
+			}),
+			onFocus: composeEventHandlers(props.onFocus, () => {
+				const isAutomaticActivation = context.activationMode !== "manual";
+				if (!isSelected && !disabled && isAutomaticActivation) context.onValueChange(value);
+			})
+		})
+	});
+});
+TabsTrigger$1.displayName = TRIGGER_NAME;
+var CONTENT_NAME = "TabsContent";
+var TabsContent$1 = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopeTabs, value, forceMount, children, ...contentProps } = props;
+	const context = useTabsContext(CONTENT_NAME, __scopeTabs);
+	const triggerId = makeTriggerId(context.baseId, value);
+	const contentId = makeContentId(context.baseId, value);
+	const isSelected = value === context.value;
+	const isMountAnimationPreventedRef = import_react.useRef(isSelected);
+	import_react.useEffect(() => {
+		const rAF = requestAnimationFrame(() => isMountAnimationPreventedRef.current = false);
+		return () => cancelAnimationFrame(rAF);
+	}, []);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Presence, {
+		present: forceMount || isSelected,
+		children: ({ present }) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.div, {
+			"data-state": isSelected ? "active" : "inactive",
+			"data-orientation": context.orientation,
+			role: "tabpanel",
+			"aria-labelledby": triggerId,
+			hidden: !present,
+			id: contentId,
+			tabIndex: 0,
+			...contentProps,
+			ref: forwardedRef,
+			style: {
+				...props.style,
+				animationDuration: isMountAnimationPreventedRef.current ? "0s" : void 0
+			},
+			children: present && children
+		})
+	});
+});
+TabsContent$1.displayName = CONTENT_NAME;
+function makeTriggerId(baseId, value) {
+	return `${baseId}-trigger-${value}`;
+}
+function makeContentId(baseId, value) {
+	return `${baseId}-content-${value}`;
+}
+var Root2 = Tabs$1;
+var List = TabsList$1;
+var Trigger = TabsTrigger$1;
+var Content = TabsContent$1;
+//#endregion
+//#region src/components/ui/tabs.tsx
+var Tabs = Root2;
+var TabsList = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(List, {
+	"data-uid": "src/components/ui/tabs.tsx:13:3",
+	"data-prohibitions": "[editContent]",
+	ref,
+	className: cn$1("inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground", className),
+	...props
+}));
+TabsList.displayName = List.displayName;
+var TabsTrigger = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trigger, {
+	"data-uid": "src/components/ui/tabs.tsx:28:3",
+	"data-prohibitions": "[editContent]",
+	ref,
+	className: cn$1("inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm", className),
+	...props
+}));
+TabsTrigger.displayName = Trigger.displayName;
+var TabsContent = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Content, {
+	"data-uid": "src/components/ui/tabs.tsx:43:3",
+	"data-prohibitions": "[editContent]",
+	ref,
+	className: cn$1("mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2", className),
+	...props
+}));
+TabsContent.displayName = Content.displayName;
 //#endregion
 //#region ../../cache/modules/inteligencia-comercial-blink-4eb45/node_modules/.pnpm/@radix-ui+react-context@1.1.3_@types+react@19.2.14_react@19.2.4/node_modules/@radix-ui/react-context/dist/index.mjs
 function createContextScope(scopeName, createContextScopeDeps = []) {
@@ -54591,6 +55301,525 @@ var Progress = import_react.forwardRef(({ className, value, ...props }, ref) => 
 }));
 Progress.displayName = Root$1.displayName;
 //#endregion
+//#region src/components/FactoryDocuments.tsx
+function FactoryDocuments({ factory }) {
+	const { updateFactory } = useAppContext();
+	const [uploading, setUploading] = (0, import_react.useState)(false);
+	const [progress, setProgress] = (0, import_react.useState)(0);
+	const handleUpload = (e) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+		setUploading(true);
+		setProgress(0);
+		const interval = setInterval(() => {
+			setProgress((prev) => {
+				if (prev >= 100) {
+					clearInterval(interval);
+					const newDoc = {
+						id: Math.random().toString(36).substr(2, 9),
+						name: file.name,
+						url: "#",
+						size: file.size,
+						uploadedAt: (/* @__PURE__ */ new Date()).toISOString()
+					};
+					updateFactory(factory.id, { documents: [...factory.documents || [], newDoc] });
+					setUploading(false);
+					toast$1({
+						title: "Upload concluído",
+						description: `O arquivo ${file.name} foi adicionado aos registros da fábrica.`
+					});
+					return 100;
+				}
+				return prev + 25;
+			});
+		}, 400);
+	};
+	const handleDelete = (docId) => {
+		updateFactory(factory.id, { documents: (factory.documents || []).filter((d) => d.id !== docId) });
+		toast$1({
+			title: "Documento removido",
+			description: "O arquivo foi excluído com sucesso."
+		});
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		"data-uid": "src/components/FactoryDocuments.tsx:60:5",
+		"data-prohibitions": "[editContent]",
+		className: "space-y-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				"data-uid": "src/components/FactoryDocuments.tsx:61:7",
+				"data-prohibitions": "[]",
+				className: "p-4 border border-dashed rounded-lg bg-muted/20 flex flex-col items-center justify-center text-center space-y-3",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CloudUpload, {
+						"data-uid": "src/components/FactoryDocuments.tsx:62:9",
+						"data-prohibitions": "[editContent]",
+						className: "w-8 h-8 text-muted-foreground"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						"data-uid": "src/components/FactoryDocuments.tsx:63:9",
+						"data-prohibitions": "[]",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							"data-uid": "src/components/FactoryDocuments.tsx:64:11",
+							"data-prohibitions": "[]",
+							className: "text-sm font-medium",
+							children: "Anexar novo documento"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							"data-uid": "src/components/FactoryDocuments.tsx:65:11",
+							"data-prohibitions": "[]",
+							className: "text-xs text-muted-foreground mt-1",
+							children: "PDFs, planilhas ou imagens de trials e contratos."
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						"data-uid": "src/components/FactoryDocuments.tsx:69:9",
+						"data-prohibitions": "[]",
+						className: "relative",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+							"data-uid": "src/components/FactoryDocuments.tsx:70:11",
+							"data-prohibitions": "[editContent]",
+							type: "file",
+							onChange: handleUpload,
+							disabled: uploading,
+							className: "absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+							"data-uid": "src/components/FactoryDocuments.tsx:76:11",
+							"data-prohibitions": "[]",
+							variant: "secondary",
+							size: "sm",
+							disabled: uploading,
+							children: "Selecionar Arquivo"
+						})]
+					})
+				]
+			}),
+			uploading && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				"data-uid": "src/components/FactoryDocuments.tsx:83:9",
+				"data-prohibitions": "[editContent]",
+				className: "space-y-2",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					"data-uid": "src/components/FactoryDocuments.tsx:84:11",
+					"data-prohibitions": "[editContent]",
+					className: "flex justify-between text-xs font-medium",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						"data-uid": "src/components/FactoryDocuments.tsx:85:13",
+						"data-prohibitions": "[]",
+						children: "Enviando arquivo..."
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+						"data-uid": "src/components/FactoryDocuments.tsx:86:13",
+						"data-prohibitions": "[editContent]",
+						children: [progress, "%"]
+					})]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Progress, {
+					"data-uid": "src/components/FactoryDocuments.tsx:88:11",
+					"data-prohibitions": "[editContent]",
+					value: progress,
+					className: "h-2"
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				"data-uid": "src/components/FactoryDocuments.tsx:92:7",
+				"data-prohibitions": "[editContent]",
+				className: "space-y-2",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+						"data-uid": "src/components/FactoryDocuments.tsx:93:9",
+						"data-prohibitions": "[]",
+						className: "text-sm font-medium border-b pb-2",
+						children: "Arquivos Salvos"
+					}),
+					(!factory.documents || factory.documents.length === 0) && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						"data-uid": "src/components/FactoryDocuments.tsx:95:11",
+						"data-prohibitions": "[]",
+						className: "text-sm text-muted-foreground text-center py-6",
+						children: "Nenhum documento encontrado."
+					}),
+					factory.documents?.map((doc) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						"data-uid": "src/components/FactoryDocuments.tsx:100:11",
+						"data-prohibitions": "[editContent]",
+						className: "flex items-center justify-between p-3 border rounded-lg hover:bg-muted/30 transition-colors",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							"data-uid": "src/components/FactoryDocuments.tsx:104:13",
+							"data-prohibitions": "[editContent]",
+							className: "flex items-center gap-3 overflow-hidden",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								"data-uid": "src/components/FactoryDocuments.tsx:105:15",
+								"data-prohibitions": "[]",
+								className: "bg-primary/10 p-2 rounded-md",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FileText, {
+									"data-uid": "src/components/FactoryDocuments.tsx:106:17",
+									"data-prohibitions": "[editContent]",
+									className: "w-5 h-5 text-primary"
+								})
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								"data-uid": "src/components/FactoryDocuments.tsx:108:15",
+								"data-prohibitions": "[editContent]",
+								className: "min-w-0",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									"data-uid": "src/components/FactoryDocuments.tsx:109:17",
+									"data-prohibitions": "[editContent]",
+									className: "text-sm font-medium truncate",
+									title: doc.name,
+									children: doc.name
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+									"data-uid": "src/components/FactoryDocuments.tsx:112:17",
+									"data-prohibitions": "[editContent]",
+									className: "text-xs text-muted-foreground",
+									children: [
+										(doc.size / 1024).toFixed(1),
+										" KB •",
+										" ",
+										new Date(doc.uploadedAt).toLocaleDateString("pt-BR")
+									]
+								})]
+							})]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							"data-uid": "src/components/FactoryDocuments.tsx:118:13",
+							"data-prohibitions": "[]",
+							className: "flex items-center gap-1 shrink-0 ml-4",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+								"data-uid": "src/components/FactoryDocuments.tsx:119:15",
+								"data-prohibitions": "[]",
+								variant: "ghost",
+								size: "icon",
+								title: "Baixar",
+								onClick: () => window.open(doc.url),
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Download, {
+									"data-uid": "src/components/FactoryDocuments.tsx:125:17",
+									"data-prohibitions": "[editContent]",
+									className: "w-4 h-4 text-muted-foreground"
+								})
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+								"data-uid": "src/components/FactoryDocuments.tsx:127:15",
+								"data-prohibitions": "[]",
+								variant: "ghost",
+								size: "icon",
+								title: "Excluir",
+								onClick: () => handleDelete(doc.id),
+								className: "text-destructive hover:text-destructive hover:bg-destructive/10",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, {
+									"data-uid": "src/components/FactoryDocuments.tsx:134:17",
+									"data-prohibitions": "[editContent]",
+									className: "w-4 h-4"
+								})
+							})]
+						})]
+					}, doc.id))
+				]
+			})
+		]
+	});
+}
+//#endregion
+//#region src/pages/Cadastro.tsx
+function Cadastro() {
+	const { factories, deleteFactory } = useAppContext();
+	const [search, setSearch] = (0, import_react.useState)("");
+	const [editing, setEditing] = (0, import_react.useState)(null);
+	const filtered = factories.filter((f) => f.name.toLowerCase().includes(search.toLowerCase()) || f.city.toLowerCase().includes(search.toLowerCase()));
+	const handleExport = () => {
+		exportToCSV("cadastro-fabricas.csv", filtered.map((f) => ({
+			Nome: f.name,
+			Cidade: f.city,
+			Região: f.region,
+			Status: f.status,
+			"Capacidade (t/mês)": f.capacity,
+			"Potencial (R$)": f.potentialValue,
+			"Estágio Funil": f.funnelStage,
+			"Probabilidade (%)": f.winProbability,
+			Contato: f.contactName,
+			Telefone: f.contactPhone,
+			"Prazo Negociação": f.deadline ? new Date(f.deadline).toLocaleDateString("pt-BR") : ""
+		})));
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		"data-uid": "src/pages/Cadastro.tsx:51:5",
+		"data-prohibitions": "[editContent]",
+		className: "space-y-6 animate-fade-in pb-10",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				"data-uid": "src/pages/Cadastro.tsx:52:7",
+				"data-prohibitions": "[]",
+				className: "flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					"data-uid": "src/pages/Cadastro.tsx:53:9",
+					"data-prohibitions": "[]",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+						"data-uid": "src/pages/Cadastro.tsx:54:11",
+						"data-prohibitions": "[]",
+						className: "text-2xl font-bold tracking-tight",
+						children: "Cadastro de Fábricas"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						"data-uid": "src/pages/Cadastro.tsx:55:11",
+						"data-prohibitions": "[]",
+						className: "text-muted-foreground text-sm",
+						children: "Gerencie o banco de dados de clientes e prospects."
+					})]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					"data-uid": "src/pages/Cadastro.tsx:59:9",
+					"data-prohibitions": "[]",
+					className: "flex items-center gap-2 w-full sm:w-auto",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						"data-uid": "src/pages/Cadastro.tsx:60:11",
+						"data-prohibitions": "[]",
+						className: "relative w-full sm:w-72",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Search, {
+							"data-uid": "src/pages/Cadastro.tsx:61:13",
+							"data-prohibitions": "[editContent]",
+							className: "absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+							"data-uid": "src/pages/Cadastro.tsx:62:13",
+							"data-prohibitions": "[editContent]",
+							placeholder: "Buscar fábrica ou cidade...",
+							value: search,
+							onChange: (e) => setSearch(e.target.value),
+							className: "pl-9"
+						})]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+						"data-uid": "src/pages/Cadastro.tsx:69:11",
+						"data-prohibitions": "[]",
+						variant: "outline",
+						size: "icon",
+						onClick: handleExport,
+						title: "Exportar para Excel (CSV)",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Download, {
+							"data-uid": "src/pages/Cadastro.tsx:75:13",
+							"data-prohibitions": "[editContent]",
+							className: "w-4 h-4"
+						})
+					})]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				"data-uid": "src/pages/Cadastro.tsx:80:7",
+				"data-prohibitions": "[editContent]",
+				className: "bg-card border rounded-lg overflow-hidden shadow-subtle",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					"data-uid": "src/pages/Cadastro.tsx:81:9",
+					"data-prohibitions": "[editContent]",
+					className: "overflow-x-auto",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Table, {
+						"data-uid": "src/pages/Cadastro.tsx:82:11",
+						"data-prohibitions": "[editContent]",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHeader, {
+							"data-uid": "src/pages/Cadastro.tsx:83:13",
+							"data-prohibitions": "[]",
+							className: "bg-muted/50",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableRow, {
+								"data-uid": "src/pages/Cadastro.tsx:84:15",
+								"data-prohibitions": "[]",
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
+										"data-uid": "src/pages/Cadastro.tsx:85:17",
+										"data-prohibitions": "[]",
+										children: "Fábrica"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
+										"data-uid": "src/pages/Cadastro.tsx:86:17",
+										"data-prohibitions": "[]",
+										children: "Local"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
+										"data-uid": "src/pages/Cadastro.tsx:87:17",
+										"data-prohibitions": "[]",
+										children: "Status"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
+										"data-uid": "src/pages/Cadastro.tsx:88:17",
+										"data-prohibitions": "[]",
+										className: "text-right",
+										children: "Potencial"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
+										"data-uid": "src/pages/Cadastro.tsx:89:17",
+										"data-prohibitions": "[]",
+										className: "text-center",
+										children: "Ações"
+									})
+								]
+							})
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableBody, {
+							"data-uid": "src/pages/Cadastro.tsx:92:13",
+							"data-prohibitions": "[editContent]",
+							children: [filtered.map((f) => {
+								const stale = isStale(f.lastInteraction);
+								return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableRow, {
+									"data-uid": "src/pages/Cadastro.tsx:96:19",
+									"data-prohibitions": "[editContent]",
+									className: stale ? "bg-destructive/5" : "",
+									children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
+											"data-uid": "src/pages/Cadastro.tsx:97:21",
+											"data-prohibitions": "[editContent]",
+											className: "font-medium",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+												"data-uid": "src/pages/Cadastro.tsx:98:23",
+												"data-prohibitions": "[editContent]",
+												className: "flex items-center gap-2",
+												children: [f.name, stale && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TriangleAlert, {
+													"data-uid": "src/pages/Cadastro.tsx:101:27",
+													"data-prohibitions": "[editContent]",
+													className: "w-4 h-4 text-destructive",
+													title: "Sem interação há mais de 15 dias"
+												})]
+											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+												"data-uid": "src/pages/Cadastro.tsx:107:23",
+												"data-prohibitions": "[editContent]",
+												className: "text-xs text-muted-foreground mt-1",
+												children: f.operationTypes
+											})]
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
+											"data-uid": "src/pages/Cadastro.tsx:109:21",
+											"data-prohibitions": "[editContent]",
+											children: [f.city, /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+												"data-uid": "src/pages/Cadastro.tsx:111:23",
+												"data-prohibitions": "[editContent]",
+												className: "text-xs text-muted-foreground mt-1",
+												children: f.region
+											})]
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
+											"data-uid": "src/pages/Cadastro.tsx:113:21",
+											"data-prohibitions": "[editContent]",
+											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Badge, {
+												"data-uid": "src/pages/Cadastro.tsx:114:23",
+												"data-prohibitions": "[editContent]",
+												variant: f.status === "Atendido" ? "default" : f.status === "Prospeção" ? "secondary" : "outline",
+												className: "rounded-full",
+												children: f.status
+											})
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
+											"data-uid": "src/pages/Cadastro.tsx:127:21",
+											"data-prohibitions": "[editContent]",
+											className: "text-right font-semibold",
+											children: [formatCurrency(f.potentialValue), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+												"data-uid": "src/pages/Cadastro.tsx:129:23",
+												"data-prohibitions": "[editContent]",
+												className: "text-xs text-muted-foreground font-normal mt-1",
+												children: [f.capacity, " t/mês"]
+											})]
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
+											"data-uid": "src/pages/Cadastro.tsx:133:21",
+											"data-prohibitions": "[]",
+											children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+												"data-uid": "src/pages/Cadastro.tsx:134:23",
+												"data-prohibitions": "[]",
+												className: "flex items-center justify-center gap-2",
+												children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+													"data-uid": "src/pages/Cadastro.tsx:135:25",
+													"data-prohibitions": "[]",
+													variant: "ghost",
+													size: "icon",
+													onClick: () => setEditing(f),
+													children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pen, {
+														"data-uid": "src/pages/Cadastro.tsx:136:27",
+														"data-prohibitions": "[editContent]",
+														className: "w-4 h-4 text-primary"
+													})
+												}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+													"data-uid": "src/pages/Cadastro.tsx:138:25",
+													"data-prohibitions": "[]",
+													variant: "ghost",
+													size: "icon",
+													onClick: () => deleteFactory(f.id),
+													children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, {
+														"data-uid": "src/pages/Cadastro.tsx:139:27",
+														"data-prohibitions": "[editContent]",
+														className: "w-4 h-4 text-destructive"
+													})
+												})]
+											})
+										})
+									]
+								}, f.id);
+							}), filtered.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableRow, {
+								"data-uid": "src/pages/Cadastro.tsx:147:17",
+								"data-prohibitions": "[]",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
+									"data-uid": "src/pages/Cadastro.tsx:148:19",
+									"data-prohibitions": "[]",
+									colSpan: 5,
+									className: "text-center h-24 text-muted-foreground",
+									children: "Nenhuma fábrica encontrada."
+								})
+							})]
+						})]
+					})
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Dialog, {
+				"data-uid": "src/pages/Cadastro.tsx:158:7",
+				"data-prohibitions": "[editContent]",
+				open: !!editing,
+				onOpenChange: (open) => !open && setEditing(null),
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogContent, {
+					"data-uid": "src/pages/Cadastro.tsx:159:9",
+					"data-prohibitions": "[editContent]",
+					className: "max-w-3xl max-h-[90vh] overflow-y-auto",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogHeader, {
+						"data-uid": "src/pages/Cadastro.tsx:160:11",
+						"data-prohibitions": "[editContent]",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogTitle, {
+							"data-uid": "src/pages/Cadastro.tsx:161:13",
+							"data-prohibitions": "[editContent]",
+							children: ["Fábrica: ", editing?.name]
+						})
+					}), editing && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Tabs, {
+						"data-uid": "src/pages/Cadastro.tsx:164:13",
+						"data-prohibitions": "[]",
+						defaultValue: "dados",
+						className: "w-full mt-2",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TabsList, {
+								"data-uid": "src/pages/Cadastro.tsx:165:15",
+								"data-prohibitions": "[]",
+								className: "grid w-full grid-cols-2",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsTrigger, {
+									"data-uid": "src/pages/Cadastro.tsx:166:17",
+									"data-prohibitions": "[]",
+									value: "dados",
+									children: "Dados Cadastrais"
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsTrigger, {
+									"data-uid": "src/pages/Cadastro.tsx:167:17",
+									"data-prohibitions": "[]",
+									value: "docs",
+									children: "Documentos e Anexos"
+								})]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsContent, {
+								"data-uid": "src/pages/Cadastro.tsx:169:15",
+								"data-prohibitions": "[]",
+								value: "dados",
+								className: "pt-4 focus-visible:outline-none",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FactoryForm, {
+									"data-uid": "src/pages/Cadastro.tsx:170:17",
+									"data-prohibitions": "[editContent]",
+									factory: editing,
+									onSubmit: () => setEditing(null)
+								})
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TabsContent, {
+								"data-uid": "src/pages/Cadastro.tsx:172:15",
+								"data-prohibitions": "[]",
+								value: "docs",
+								className: "pt-4 focus-visible:outline-none",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FactoryDocuments, {
+									"data-uid": "src/pages/Cadastro.tsx:173:17",
+									"data-prohibitions": "[editContent]",
+									factory: editing
+								})
+							})
+						]
+					})]
+				})
+			})
+		]
+	});
+}
+//#endregion
 //#region src/pages/Funil.tsx
 var STAGES = [
 	"Lead",
@@ -54606,139 +55835,187 @@ var STAGES = [
 ];
 function Funil() {
 	const { factories } = useAppContext();
+	const handleExport = () => {
+		exportToCSV("funil-vendas.csv", factories.map((f) => ({
+			"Nome da Fábrica": f.name,
+			"Estágio Atual": f.funnelStage,
+			"Probabilidade (%)": f.winProbability,
+			"Valor Potencial (R$)": f.potentialValue,
+			"Prazo Negociação": f.deadline ? new Date(f.deadline).toLocaleDateString("pt-BR") : "",
+			"Última Interação": new Date(f.lastInteraction).toLocaleDateString("pt-BR")
+		})));
+	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		"data-uid": "src/pages/Funil.tsx:26:5",
+		"data-uid": "src/pages/Funil.tsx:45:5",
 		"data-prohibitions": "[editContent]",
 		className: "flex flex-col h-full animate-fade-in space-y-4",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			"data-uid": "src/pages/Funil.tsx:27:7",
+			"data-uid": "src/pages/Funil.tsx:46:7",
 			"data-prohibitions": "[]",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-				"data-uid": "src/pages/Funil.tsx:28:9",
+			className: "flex justify-between items-start",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				"data-uid": "src/pages/Funil.tsx:47:9",
 				"data-prohibitions": "[]",
-				className: "text-2xl font-bold tracking-tight",
-				children: "Funil de Vendas"
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				"data-uid": "src/pages/Funil.tsx:29:9",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+					"data-uid": "src/pages/Funil.tsx:48:11",
+					"data-prohibitions": "[]",
+					className: "text-2xl font-bold tracking-tight",
+					children: "Funil de Vendas"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					"data-uid": "src/pages/Funil.tsx:49:11",
+					"data-prohibitions": "[]",
+					className: "text-muted-foreground text-sm",
+					children: "Acompanhe as negociações em cada etapa do processo comercial."
+				})]
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
+				"data-uid": "src/pages/Funil.tsx:53:9",
 				"data-prohibitions": "[]",
-				className: "text-muted-foreground text-sm",
-				children: "Acompanhe as negociações em cada etapa do processo comercial."
+				variant: "outline",
+				size: "sm",
+				onClick: handleExport,
+				className: "gap-2 shadow-sm",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Download, {
+					"data-uid": "src/pages/Funil.tsx:54:11",
+					"data-prohibitions": "[editContent]",
+					className: "w-4 h-4"
+				}), " Exportar Dados"]
 			})]
 		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			"data-uid": "src/pages/Funil.tsx:34:7",
+			"data-uid": "src/pages/Funil.tsx:58:7",
 			"data-prohibitions": "[editContent]",
 			className: "flex-1 overflow-x-auto pb-4 custom-scrollbar",
 			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				"data-uid": "src/pages/Funil.tsx:35:9",
+				"data-uid": "src/pages/Funil.tsx:59:9",
 				"data-prohibitions": "[editContent]",
 				className: "flex gap-4 min-w-max h-full items-stretch",
 				children: STAGES.map((stage) => {
 					const items = factories.filter((f) => f.funnelStage === stage);
 					const totalStageValue = items.reduce((s, f) => s + f.potentialValue, 0);
 					return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/pages/Funil.tsx:41:15",
+						"data-uid": "src/pages/Funil.tsx:65:15",
 						"data-prohibitions": "[editContent]",
 						className: "w-80 bg-muted/40 border rounded-xl flex flex-col max-h-full",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Funil.tsx:45:17",
+							"data-uid": "src/pages/Funil.tsx:69:17",
 							"data-prohibitions": "[editContent]",
 							className: "p-3 border-b bg-card/50 rounded-t-xl sticky top-0 z-10",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								"data-uid": "src/pages/Funil.tsx:46:19",
+								"data-uid": "src/pages/Funil.tsx:70:19",
 								"data-prohibitions": "[editContent]",
 								className: "flex justify-between items-center mb-1",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-									"data-uid": "src/pages/Funil.tsx:47:21",
+									"data-uid": "src/pages/Funil.tsx:71:21",
 									"data-prohibitions": "[editContent]",
 									className: "font-semibold text-sm text-foreground",
 									children: stage
 								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Badge, {
-									"data-uid": "src/pages/Funil.tsx:48:21",
+									"data-uid": "src/pages/Funil.tsx:72:21",
 									"data-prohibitions": "[editContent]",
 									variant: "secondary",
 									className: "font-mono",
 									children: items.length
 								})]
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								"data-uid": "src/pages/Funil.tsx:52:19",
+								"data-uid": "src/pages/Funil.tsx:76:19",
 								"data-prohibitions": "[editContent]",
 								className: "text-xs text-muted-foreground font-medium",
 								children: formatCurrency(totalStageValue)
 							})]
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Funil.tsx:57:17",
+							"data-uid": "src/pages/Funil.tsx:81:17",
 							"data-prohibitions": "[editContent]",
 							className: "p-2 flex-1 overflow-y-auto space-y-3",
 							children: [items.map((f) => {
 								const stale = isStale(f.lastInteraction);
+								const passed = isPassedDeadline(f.deadline);
+								const approaching = isApproachingDeadline(f.deadline);
 								return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-									"data-uid": "src/pages/Funil.tsx:61:23",
+									"data-uid": "src/pages/Funil.tsx:88:23",
 									"data-prohibitions": "[editContent]",
-									className: `p-3 shadow-subtle hover:shadow-md transition-shadow cursor-pointer border-l-4 ${stale ? "border-l-destructive" : "border-l-primary"}`,
+									className: `p-3 shadow-subtle hover:shadow-md transition-shadow cursor-pointer border-l-4 ${stale || passed ? "border-l-destructive" : "border-l-primary"}`,
 									children: [
 										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-											"data-uid": "src/pages/Funil.tsx:65:25",
+											"data-uid": "src/pages/Funil.tsx:92:25",
 											"data-prohibitions": "[editContent]",
 											className: "flex justify-between items-start",
 											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-												"data-uid": "src/pages/Funil.tsx:66:27",
+												"data-uid": "src/pages/Funil.tsx:93:27",
 												"data-prohibitions": "[editContent]",
 												className: "font-semibold text-sm leading-tight line-clamp-2",
 												children: f.name
 											}), stale && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TriangleAlert, {
-												"data-uid": "src/pages/Funil.tsx:69:37",
+												"data-uid": "src/pages/Funil.tsx:97:29",
 												"data-prohibitions": "[editContent]",
-												className: "w-4 h-4 text-destructive shrink-0"
+												className: "w-4 h-4 text-destructive shrink-0",
+												title: "Sem interação recente"
 											})]
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-											"data-uid": "src/pages/Funil.tsx:71:25",
+											"data-uid": "src/pages/Funil.tsx:103:25",
 											"data-prohibitions": "[editContent]",
 											className: "text-xs text-primary font-medium mt-2",
 											children: formatCurrency(f.potentialValue)
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-											"data-uid": "src/pages/Funil.tsx:75:25",
+											"data-uid": "src/pages/Funil.tsx:107:25",
 											"data-prohibitions": "[editContent]",
 											className: "mt-3 space-y-1",
 											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-												"data-uid": "src/pages/Funil.tsx:76:27",
+												"data-uid": "src/pages/Funil.tsx:108:27",
 												"data-prohibitions": "[editContent]",
 												className: "flex justify-between text-[10px] text-muted-foreground font-medium",
 												children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-													"data-uid": "src/pages/Funil.tsx:77:29",
+													"data-uid": "src/pages/Funil.tsx:109:29",
 													"data-prohibitions": "[]",
 													children: "Probabilidade"
 												}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-													"data-uid": "src/pages/Funil.tsx:78:29",
+													"data-uid": "src/pages/Funil.tsx:110:29",
 													"data-prohibitions": "[editContent]",
 													children: [f.winProbability, "%"]
 												})]
 											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Progress, {
-												"data-uid": "src/pages/Funil.tsx:80:27",
+												"data-uid": "src/pages/Funil.tsx:112:27",
 												"data-prohibitions": "[editContent]",
 												value: f.winProbability,
 												className: "h-1.5"
 											})]
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-											"data-uid": "src/pages/Funil.tsx:83:25",
+											"data-uid": "src/pages/Funil.tsx:115:25",
 											"data-prohibitions": "[editContent]",
-											className: "flex items-center gap-1 mt-3 text-[10px] text-muted-foreground",
-											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Clock, {
-												"data-uid": "src/pages/Funil.tsx:84:27",
+											className: "mt-3 space-y-1",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+												"data-uid": "src/pages/Funil.tsx:116:27",
 												"data-prohibitions": "[editContent]",
-												className: "w-3 h-3"
-											}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-												"data-uid": "src/pages/Funil.tsx:85:27",
+												className: "flex items-center gap-1 text-[10px] text-muted-foreground",
+												children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Clock, {
+													"data-uid": "src/pages/Funil.tsx:117:29",
+													"data-prohibitions": "[editContent]",
+													className: "w-3 h-3"
+												}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+													"data-uid": "src/pages/Funil.tsx:118:29",
+													"data-prohibitions": "[editContent]",
+													children: ["Último cont: ", new Date(f.lastInteraction).toLocaleDateString("pt-BR")]
+												})]
+											}), f.deadline && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+												"data-uid": "src/pages/Funil.tsx:123:29",
 												"data-prohibitions": "[editContent]",
-												children: ["Último cont: ", new Date(f.lastInteraction).toLocaleDateString("pt-BR")]
+												className: `flex items-center gap-1 text-[10px] ${passed ? "text-destructive font-bold" : approaching ? "text-orange-500 font-bold" : "text-muted-foreground"}`,
+												children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Calendar, {
+													"data-uid": "src/pages/Funil.tsx:126:31",
+													"data-prohibitions": "[editContent]",
+													className: "w-3 h-3"
+												}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+													"data-uid": "src/pages/Funil.tsx:127:31",
+													"data-prohibitions": "[editContent]",
+													children: ["Prazo: ", new Date(f.deadline).toLocaleDateString("pt-BR")]
+												})]
 											})]
 										})
 									]
 								}, f.id);
 							}), items.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								"data-uid": "src/pages/Funil.tsx:93:21",
+								"data-uid": "src/pages/Funil.tsx:135:21",
 								"data-prohibitions": "[]",
 								className: "text-center p-4 text-xs text-muted-foreground border border-dashed rounded-lg bg-transparent",
 								children: "Sem oportunidades"
@@ -55687,97 +56964,249 @@ var NotFound = () => {
 	});
 };
 //#endregion
+//#region src/pages/Login.tsx
+function Login() {
+	const [email, setEmail] = (0, import_react.useState)("");
+	const [password, setPassword] = (0, import_react.useState)("");
+	const { login } = useAuth();
+	const navigate = useNavigate();
+	const handleLogin = (e) => {
+		e.preventDefault();
+		if (email && password) {
+			login();
+			navigate("/");
+		}
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		"data-uid": "src/pages/Login.tsx:25:5",
+		"data-prohibitions": "[]",
+		className: "min-h-screen flex items-center justify-center bg-muted/30 p-4 animate-fade-in",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
+			"data-uid": "src/pages/Login.tsx:26:7",
+			"data-prohibitions": "[]",
+			className: "w-full max-w-md shadow-xl border-border/50",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
+				"data-uid": "src/pages/Login.tsx:27:9",
+				"data-prohibitions": "[]",
+				className: "space-y-2 flex flex-col items-center text-center pt-8",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						"data-uid": "src/pages/Login.tsx:28:11",
+						"data-prohibitions": "[]",
+						className: "bg-primary p-3 rounded-xl mb-3 shadow-sm",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Target, {
+							"data-uid": "src/pages/Login.tsx:29:13",
+							"data-prohibitions": "[editContent]",
+							className: "w-8 h-8 text-primary-foreground"
+						})
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardTitle, {
+						"data-uid": "src/pages/Login.tsx:31:11",
+						"data-prohibitions": "[]",
+						className: "text-2xl font-bold tracking-tight",
+						children: "Blink Biotech"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardDescription, {
+						"data-uid": "src/pages/Login.tsx:32:11",
+						"data-prohibitions": "[]",
+						className: "text-base",
+						children: "Faça login para acessar o painel de inteligência comercial."
+					})
+				]
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardContent, {
+				"data-uid": "src/pages/Login.tsx:36:9",
+				"data-prohibitions": "[]",
+				className: "pb-8 pt-4",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
+					"data-uid": "src/pages/Login.tsx:37:11",
+					"data-prohibitions": "[]",
+					onSubmit: handleLogin,
+					className: "space-y-5",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							"data-uid": "src/pages/Login.tsx:38:13",
+							"data-prohibitions": "[]",
+							className: "space-y-2",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
+								"data-uid": "src/pages/Login.tsx:39:15",
+								"data-prohibitions": "[]",
+								htmlFor: "email",
+								children: "E-mail Corporativo"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+								"data-uid": "src/pages/Login.tsx:40:15",
+								"data-prohibitions": "[editContent]",
+								id: "email",
+								type: "email",
+								placeholder: "gerente@blink.com.br",
+								value: email,
+								onChange: (e) => setEmail(e.target.value),
+								required: true
+							})]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							"data-uid": "src/pages/Login.tsx:49:13",
+							"data-prohibitions": "[]",
+							className: "space-y-2",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$2, {
+								"data-uid": "src/pages/Login.tsx:50:15",
+								"data-prohibitions": "[]",
+								htmlFor: "password",
+								children: "Senha"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+								"data-uid": "src/pages/Login.tsx:51:15",
+								"data-prohibitions": "[editContent]",
+								id: "password",
+								type: "password",
+								value: password,
+								onChange: (e) => setPassword(e.target.value),
+								placeholder: "••••••••",
+								required: true
+							})]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+							"data-uid": "src/pages/Login.tsx:60:13",
+							"data-prohibitions": "[]",
+							type: "submit",
+							className: "w-full mt-4 text-base h-11",
+							children: "Acessar Plataforma"
+						})
+					]
+				})
+			})]
+		})
+	});
+}
+//#endregion
+//#region src/components/ProtectedRoute.tsx
+function ProtectedRoute() {
+	const { isAuthenticated } = useAuth();
+	if (!isAuthenticated) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Navigate, {
+		"data-uid": "src/components/ProtectedRoute.tsx:8:12",
+		"data-prohibitions": "[editContent]",
+		to: "/login",
+		replace: true
+	});
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Outlet, {
+		"data-uid": "src/components/ProtectedRoute.tsx:11:10",
+		"data-prohibitions": "[editContent]"
+	});
+}
+//#endregion
 //#region src/App.tsx
 var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BrowserRouter, {
-	"data-uid": "src/App.tsx:15:3",
+	"data-uid": "src/App.tsx:18:3",
 	"data-prohibitions": "[]",
 	future: {
 		v7_startTransition: false,
 		v7_relativeSplatPath: false
 	},
-	children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AppProvider, {
-		"data-uid": "src/App.tsx:16:5",
+	children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, {
+		"data-uid": "src/App.tsx:19:5",
 		"data-prohibitions": "[]",
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TooltipProvider, {
-			"data-uid": "src/App.tsx:17:7",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AppProvider, {
+			"data-uid": "src/App.tsx:20:7",
 			"data-prohibitions": "[]",
-			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Toaster$2, {
-					"data-uid": "src/App.tsx:18:9",
-					"data-prohibitions": "[editContent]"
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Toaster, {
-					"data-uid": "src/App.tsx:19:9",
-					"data-prohibitions": "[editContent]"
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Routes, {
-					"data-uid": "src/App.tsx:20:9",
-					"data-prohibitions": "[]",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Route, {
-						"data-uid": "src/App.tsx:21:11",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TooltipProvider, {
+				"data-uid": "src/App.tsx:21:9",
+				"data-prohibitions": "[]",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Toaster$2, {
+						"data-uid": "src/App.tsx:22:11",
+						"data-prohibitions": "[editContent]"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Toaster, {
+						"data-uid": "src/App.tsx:23:11",
+						"data-prohibitions": "[editContent]"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Routes, {
+						"data-uid": "src/App.tsx:24:11",
 						"data-prohibitions": "[]",
-						element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Layout, {
-							"data-uid": "src/App.tsx:21:27",
-							"data-prohibitions": "[editContent]"
-						}),
 						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Route, {
-								"data-uid": "src/App.tsx:22:13",
-								"data-prohibitions": "[editContent]",
-								path: "/",
-								element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Index, {
-									"data-uid": "src/App.tsx:22:38",
-									"data-prohibitions": "[editContent]"
-								})
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Route, {
-								"data-uid": "src/App.tsx:23:13",
-								"data-prohibitions": "[editContent]",
-								path: "/cadastro",
-								element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Cadastro, {
-									"data-uid": "src/App.tsx:23:46",
-									"data-prohibitions": "[editContent]"
-								})
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Route, {
-								"data-uid": "src/App.tsx:24:13",
-								"data-prohibitions": "[editContent]",
-								path: "/funil",
-								element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Funil, {
-									"data-uid": "src/App.tsx:24:43",
-									"data-prohibitions": "[editContent]"
-								})
-							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Route, {
 								"data-uid": "src/App.tsx:25:13",
 								"data-prohibitions": "[editContent]",
-								path: "/swot",
-								element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SWOT, {
-									"data-uid": "src/App.tsx:25:42",
+								path: "/login",
+								element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Login, {
+									"data-uid": "src/App.tsx:25:43",
 									"data-prohibitions": "[editContent]"
 								})
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Route, {
-								"data-uid": "src/App.tsx:26:13",
+								"data-uid": "src/App.tsx:27:13",
+								"data-prohibitions": "[]",
+								element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ProtectedRoute, {
+									"data-uid": "src/App.tsx:27:29",
+									"data-prohibitions": "[editContent]"
+								}),
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Route, {
+									"data-uid": "src/App.tsx:28:15",
+									"data-prohibitions": "[]",
+									element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Layout, {
+										"data-uid": "src/App.tsx:28:31",
+										"data-prohibitions": "[editContent]"
+									}),
+									children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Route, {
+											"data-uid": "src/App.tsx:29:17",
+											"data-prohibitions": "[editContent]",
+											path: "/",
+											element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Index, {
+												"data-uid": "src/App.tsx:29:42",
+												"data-prohibitions": "[editContent]"
+											})
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Route, {
+											"data-uid": "src/App.tsx:30:17",
+											"data-prohibitions": "[editContent]",
+											path: "/cadastro",
+											element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Cadastro, {
+												"data-uid": "src/App.tsx:30:50",
+												"data-prohibitions": "[editContent]"
+											})
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Route, {
+											"data-uid": "src/App.tsx:31:17",
+											"data-prohibitions": "[editContent]",
+											path: "/funil",
+											element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Funil, {
+												"data-uid": "src/App.tsx:31:47",
+												"data-prohibitions": "[editContent]"
+											})
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Route, {
+											"data-uid": "src/App.tsx:32:17",
+											"data-prohibitions": "[editContent]",
+											path: "/swot",
+											element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SWOT, {
+												"data-uid": "src/App.tsx:32:46",
+												"data-prohibitions": "[editContent]"
+											})
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Route, {
+											"data-uid": "src/App.tsx:33:17",
+											"data-prohibitions": "[editContent]",
+											path: "/matriz",
+											element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Matriz, {
+												"data-uid": "src/App.tsx:33:48",
+												"data-prohibitions": "[editContent]"
+											})
+										})
+									]
+								})
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Route, {
+								"data-uid": "src/App.tsx:37:13",
 								"data-prohibitions": "[editContent]",
-								path: "/matriz",
-								element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Matriz, {
-									"data-uid": "src/App.tsx:26:44",
+								path: "*",
+								element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NotFound, {
+									"data-uid": "src/App.tsx:37:38",
 									"data-prohibitions": "[editContent]"
 								})
 							})
 						]
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Route, {
-						"data-uid": "src/App.tsx:28:11",
-						"data-prohibitions": "[editContent]",
-						path: "*",
-						element: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NotFound, {
-							"data-uid": "src/App.tsx:28:36",
-							"data-prohibitions": "[editContent]"
-						})
-					})]
-				})
-			]
+					})
+				]
+			})
 		})
 	})
 });
@@ -55789,4 +57218,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BrowserRouter, {
 }));
 //#endregion
 
-//# sourceMappingURL=index-CgoVsmwZ.js.map
+//# sourceMappingURL=index-BLd-8gd1.js.map

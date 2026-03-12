@@ -16,6 +16,16 @@ export const mockFactories: Factory[] = [
     contactPhone: '66 9999-0000',
     operationTypes: 'Confinamento, Ração',
     productInterests: 'Aditivos de performance, Enzimas',
+    deadline: new Date(Date.now() + 3 * 86400000).toISOString(),
+    documents: [
+      {
+        id: 'doc-1',
+        name: 'Contrato_Minuta_v2.pdf',
+        url: '#',
+        size: 1250000,
+        uploadedAt: new Date().toISOString(),
+      },
+    ],
     swot: {
       strengths: 'Grande volume de compra, logística eficiente',
       weaknesses: 'Pagamento alongado',
@@ -48,6 +58,8 @@ export const mockFactories: Factory[] = [
     contactPhone: '66 9888-1111',
     operationTypes: 'Premix',
     productInterests: 'Vitaminas',
+    deadline: new Date(Date.now() - 2 * 86400000).toISOString(),
+    documents: [],
     swot: {
       strengths: 'Marca forte no norte',
       weaknesses: 'Instabilidade financeira recente',
@@ -72,6 +84,16 @@ export const mockFactories: Factory[] = [
     contactPhone: '65 9777-2222',
     operationTypes: 'Núcleo, Ração',
     productInterests: 'Leveduras, Minerais',
+    deadline: new Date(Date.now() + 15 * 86400000).toISOString(),
+    documents: [
+      {
+        id: 'doc-2',
+        name: 'Analise_Tecnica.xlsx',
+        url: '#',
+        size: 450000,
+        uploadedAt: new Date(Date.now() - 3 * 86400000).toISOString(),
+      },
+    ],
     swot: {
       strengths: 'Alta adoção de tecnologia',
       weaknesses: 'Exigência extrema de prazos',
@@ -104,6 +126,7 @@ export const mockFactories: Factory[] = [
     contactPhone: '65 9666-3333',
     operationTypes: 'Ração',
     productInterests: 'Conservantes',
+    documents: [],
     swot: {
       strengths: '',
       weaknesses: '',
@@ -128,6 +151,8 @@ export const mockFactories: Factory[] = [
     contactPhone: '66 9555-4444',
     operationTypes: 'Premix, Núcleo',
     productInterests: 'Probióticos',
+    deadline: new Date(Date.now() + 5 * 86400000).toISOString(),
+    documents: [],
     swot: {
       strengths: 'Equipe técnica qualificada',
       weaknesses: 'Volume inconstante de compras',

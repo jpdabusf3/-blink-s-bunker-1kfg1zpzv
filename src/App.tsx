@@ -9,26 +9,36 @@ import Funil from './pages/Funil'
 import SWOT from './pages/SWOT'
 import Matriz from './pages/Matriz'
 import NotFound from './pages/NotFound'
+import Login from './pages/Login'
 import { AppProvider } from './store/AppContext'
+import { AuthProvider } from './store/AuthContext'
+import { ProtectedRoute } from './components/ProtectedRoute'
 
 const App = () => (
   <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
-    <AppProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/" element={<Index />} />
-            <Route path="/cadastro" element={<Cadastro />} />
-            <Route path="/funil" element={<Funil />} />
-            <Route path="/swot" element={<SWOT />} />
-            <Route path="/matriz" element={<Matriz />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </TooltipProvider>
-    </AppProvider>
+    <AuthProvider>
+      <AppProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <Routes>
+            <Route path="/login" element={<Login />} />
+
+            <Route element={<ProtectedRoute />}>
+              <Route element={<Layout />}>
+                <Route path="/" element={<Index />} />
+                <Route path="/cadastro" element={<Cadastro />} />
+                <Route path="/funil" element={<Funil />} />
+                <Route path="/swot" element={<SWOT />} />
+                <Route path="/matriz" element={<Matriz />} />
+              </Route>
+            </Route>
+
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </TooltipProvider>
+      </AppProvider>
+    </AuthProvider>
   </BrowserRouter>
 )
 
