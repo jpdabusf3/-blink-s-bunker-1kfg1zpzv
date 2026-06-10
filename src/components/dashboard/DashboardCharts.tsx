@@ -11,8 +11,13 @@ const COLORS = [
   'hsl(var(--chart-5))',
 ]
 
-export function DashboardCharts() {
+export function DashboardCharts({ regionFilter = 'Todas as Regiões' }: { regionFilter?: string }) {
   const { factories } = useAppContext()
+
+  const filteredFactories =
+    regionFilter === 'Todas as Regiões'
+      ? factories
+      : factories.filter((f) => f.region === regionFilter)
 
   const funnelData = [
     'Lead',
@@ -26,7 +31,7 @@ export function DashboardCharts() {
   ]
     .map((stage) => ({
       stage: stage.split(' ')[0],
-      value: factories
+      value: filteredFactories
         .filter((f) => f.funnelStage === stage)
         .reduce((s, f) => s + f.potentialValue, 0),
     }))
@@ -35,11 +40,13 @@ export function DashboardCharts() {
   const regionData = ['Norte', 'Sul', 'Leste', 'Oeste', 'Médio-Norte']
     .map((region) => ({
       name: region,
-      value: factories.filter((f) => f.region === region).reduce((s, f) => s + f.potentialValue, 0),
+      value: filteredFactories
+        .filter((f) => f.region === region)
+        .reduce((s, f) => s + f.potentialValue, 0),
     }))
     .filter((d) => d.value > 0)
 
-  const topVolume = [...factories]
+  const topVolume = [...filteredFactories]
     .sort((a, b) => b.capacity - a.capacity)
     .slice(0, 5)
     .map((f) => ({ name: f.name.substring(0, 15), value: f.capacity }))
@@ -47,7 +54,7 @@ export function DashboardCharts() {
   const productData = ['Adsorventes', 'Prebióticos', 'Minerais Orgânicos', 'Blends', 'Ingredientes']
     .map((line) => ({
       name: line,
-      value: factories
+      value: filteredFactories
         .filter((f) => f.productLineAffinity === line)
         .reduce((s, f) => s + f.potentialValue, 0),
     }))

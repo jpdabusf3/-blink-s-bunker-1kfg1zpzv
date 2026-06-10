@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 import {
@@ -11,9 +11,25 @@ import {
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'
 import { useAppContext } from '@/store/AppContext'
 
-export function ScoreEvolutionCard() {
+export function ScoreEvolutionCard({
+  regionFilter = 'Todas as Regiões',
+}: {
+  regionFilter?: string
+}) {
   const { factories } = useAppContext()
-  const [selectedId, setSelectedId] = useState(factories[0]?.id)
+
+  const filteredFactories =
+    regionFilter === 'Todas as Regiões'
+      ? factories
+      : factories.filter((f) => f.region === regionFilter)
+
+  const [selectedId, setSelectedId] = useState(filteredFactories[0]?.id)
+
+  useEffect(() => {
+    if (filteredFactories.length > 0 && !filteredFactories.find((f) => f.id === selectedId)) {
+      setSelectedId(filteredFactories[0].id)
+    }
+  }, [regionFilter, filteredFactories, selectedId])
 
   const factory = factories.find((f) => f.id === selectedId)
   const data = factory?.scoreHistory || []
@@ -32,7 +48,7 @@ export function ScoreEvolutionCard() {
             <SelectValue placeholder="Selecione..." />
           </SelectTrigger>
           <SelectContent>
-            {factories.map((f) => (
+            {filteredFactories.map((f) => (
               <SelectItem key={f.id} value={f.id}>
                 {f.name}
               </SelectItem>

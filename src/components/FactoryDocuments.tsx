@@ -63,12 +63,13 @@ export function FactoryDocuments({ factory }: { factory: Factory }) {
         <div>
           <p className="text-sm font-medium">Anexar novo documento</p>
           <p className="text-xs text-muted-foreground mt-1">
-            PDFs, planilhas ou imagens de trials e contratos.
+            PDFs, planilhas (.xlsx, .csv) de trials e contratos.
           </p>
         </div>
         <div className="relative">
           <Input
             type="file"
+            accept=".pdf,.xlsx,.csv"
             onChange={handleUpload}
             disabled={uploading}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"

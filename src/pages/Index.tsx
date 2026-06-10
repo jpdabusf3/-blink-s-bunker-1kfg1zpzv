@@ -3,7 +3,14 @@ import { useAppContext } from '@/store/AppContext'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatCompactCurrency } from '@/lib/utils'
-import { Download, GripVertical } from 'lucide-react'
+import { Download, GripVertical, Filter } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { MapCard } from '@/components/dashboard/MapCard'
 import { ScoreEvolutionCard } from '@/components/dashboard/ScoreEvolutionCard'
 import { DashboardCharts } from '@/components/dashboard/DashboardCharts'
@@ -72,6 +79,7 @@ function DraggableBlock({
 
 export default function Index() {
   const { factories, tasks } = useAppContext()
+  const [regionFilter, setRegionFilter] = useState('Todas as Regiões')
 
   const [blocks, setBlocks] = useState<string[]>(() => {
     const saved = localStorage.getItem('blink_dashboard_order_v2')
@@ -89,11 +97,19 @@ export default function Index() {
     setBlocks(newBlocks)
   }
 
+  const filteredFactories =
+    regionFilter === 'Todas as Regiões'
+      ? factories
+      : factories.filter((f) => f.region === regionFilter)
+
   const metrics = {
-    revenue: factories.reduce((s, f) => s + f.potentialValue, 0),
-    weighted: factories.reduce((s, f) => s + f.potentialValue * (f.winProbability / 100), 0),
-    active: factories.filter((f) => f.status === 'Atendido').length,
-    prospect: factories.filter((f) => f.status === 'Prospeção').length,
+    revenue: filteredFactories.reduce((s, f) => s + f.potentialValue, 0),
+    weighted: filteredFactories.reduce(
+      (s, f) => s + f.potentialValue * (f.winProbability / 100),
+      0,
+    ),
+    active: filteredFactories.filter((f) => f.status === 'Atendido').length,
+    prospect: filteredFactories.filter((f) => f.status === 'Prospeção').length,
   }
 
   const handleWhatsAppShare = () => {
@@ -138,7 +154,7 @@ export default function Index() {
               <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight">
                 Fábricas Mapeadas
               </h3>
-              <div className="text-xl sm:text-3xl font-bold">{factories.length}</div>
+              <div className="text-xl sm:text-3xl font-bold">{filteredFactories.length}</div>
             </Card>
             <Card className="shadow-subtle text-center flex flex-col justify-center items-center p-4 print:border-none print:shadow-none print:bg-muted/10">
               <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight">
@@ -169,16 +185,16 @@ export default function Index() {
       case 'maps':
         return (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-1">
-            <MapCard />
-            <ScoreEvolutionCard />
+            <MapCard regionFilter={regionFilter} />
+            <ScoreEvolutionCard regionFilter={regionFilter} />
           </div>
         )
       case 'charts':
-        return <DashboardCharts />
+        return <DashboardCharts regionFilter={regionFilter} />
       case 'list':
         return (
           <div className="grid grid-cols-1 gap-6 print:hidden">
-            <FactoryListCard />
+            <FactoryListCard regionFilter={regionFilter} />
           </div>
         )
       default:
@@ -196,7 +212,23 @@ export default function Index() {
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2 print:hidden">
-        <h1 className="text-2xl font-bold tracking-tight">Visão Geral MT</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold tracking-tight">Visão Geral MT</h1>
+          <Select value={regionFilter} onValueChange={setRegionFilter}>
+            <SelectTrigger className="w-[180px] h-9">
+              <Filter className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Região" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Todas as Regiões">Todas as Regiões</SelectItem>
+              <SelectItem value="Norte">Norte</SelectItem>
+              <SelectItem value="Sul">Sul</SelectItem>
+              <SelectItem value="Médio-Norte">Médio-Norte</SelectItem>
+              <SelectItem value="Oeste">Oeste</SelectItem>
+              <SelectItem value="Leste">Leste</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
           <Button
             onClick={handleWhatsAppShare}

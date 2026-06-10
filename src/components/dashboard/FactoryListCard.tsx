@@ -19,12 +19,13 @@ import {
 import { useAppContext } from '@/store/AppContext'
 import { formatCurrency } from '@/lib/utils'
 
-export function FactoryListCard() {
+export function FactoryListCard({ regionFilter = 'Todas as Regiões' }: { regionFilter?: string }) {
   const { factories, orders } = useAppContext()
   const [sectorFilter, setSectorFilter] = useState<string>('all')
   const [lineFilter, setLineFilter] = useState<string>('all')
 
   const filtered = factories.filter((f) => {
+    if (regionFilter !== 'Todas as Regiões' && f.region !== regionFilter) return false
     if (sectorFilter !== 'all' && f.sector !== sectorFilter) return false
     if (lineFilter !== 'all' && f.productLineAffinity !== lineFilter) return false
     return true

@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, Cell } from 'recharts'
 import { ChartContainer } from '@/components/ui/chart'
@@ -12,15 +13,27 @@ const regionCoords: Record<string, [number, number]> = {
   Sul: [50, 20],
 }
 
-export function MapCard() {
+export function MapCard({ regionFilter = 'Todas as Regiões' }: { regionFilter?: string }) {
   const { factories } = useAppContext()
+  const navigate = useNavigate()
 
-  const data = factories.map((f) => {
+  const filteredFactories =
+    regionFilter === 'Todas as Regiões'
+      ? factories
+      : factories.filter((f) => f.region === regionFilter)
+
+  const data = filteredFactories.map((f) => {
     const [baseX, baseY] = regionCoords[f.region] || [50, 50]
     const jitterX = (f.name.charCodeAt(0) % 10) - 5
     const jitterY = (f.name.charCodeAt(1) % 10) - 5
     return { ...f, x: baseX + jitterX, y: baseY + jitterY }
   })
+
+  const getPriorityColor = (priority?: string) => {
+    if (priority === 'High') return 'hsl(var(--destructive))'
+    if (priority === 'Medium') return 'hsl(var(--chart-4))'
+    return 'hsl(var(--primary))'
+  }
 
   return (
     <Card className="shadow-subtle print:hidden">
@@ -43,13 +56,23 @@ export function MapCard() {
                     <span className="text-muted-foreground">
                       {f.region} • {f.city}
                     </span>
+                    <span className="text-xs font-medium">Prioridade: {f.priority || 'N/A'}</span>
+                    <span className="text-[10px] text-primary mt-1">Clique para ver perfil</span>
                   </div>
                 )
               }}
             />
-            <Scatter name="Fábricas" data={data}>
-              {data.map((_, index) => (
-                <Cell key={`cell-${index}`} fill="hsl(var(--primary))" />
+            <Scatter
+              name="Fábricas"
+              data={data}
+              onClick={(node: any) => {
+                const id = node?.payload?.id || node?.id
+                if (id) navigate(`/cadastro?id=${id}`)
+              }}
+              style={{ cursor: 'pointer' }}
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={getPriorityColor(entry.priority)} />
               ))}
             </Scatter>
           </ScatterChart>
