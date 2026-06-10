@@ -3,21 +3,14 @@ import { formatCurrency } from './utils'
 
 export function exportOrdersToExcel(filteredOrders: Order[], factories: Factory[]) {
   const separator = ';'
-  const keys = [
-    'Data',
-    'Fábrica',
-    'Produto',
-    'Linha',
-    'Quantidade',
-    'Valor Unitário',
-    'Valor Total',
-  ]
+  const keys = ['ID', 'Data', 'Fábrica', 'Produto', 'Linha', 'Qtd', 'Valor Unitário', 'Valor Total']
 
   const csvContent = [
     keys.join(separator),
     ...filteredOrders.map((o) => {
       const factory = factories.find((f) => f.id === o.factoryId)
       return [
+        `"${o.id.replace(/"/g, '""')}"`,
         new Date(o.orderDate).toLocaleDateString('pt-BR'),
         `"${(factory?.name || 'Desconhecida').replace(/"/g, '""')}"`,
         `"${o.product.replace(/"/g, '""')}"`,
@@ -77,8 +70,7 @@ export function exportOrdersToPDF(
       </head>
       <body>
         <div class="header">
-          <h1>Blink Biotech</h1>
-          <p><strong>Relatório de Histórico de Pedidos</strong></p>
+          <h1>Relatório de Pedidos - Blink Biotech</h1>
           <p>Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
         </div>
         
@@ -92,13 +84,13 @@ export function exportOrdersToPDF(
         <table>
           <thead>
             <tr>
+              <th>ID</th>
               <th>Data</th>
               <th>Fábrica</th>
               <th>Produto</th>
-              <th>Linha</th>
-              <th class="text-right">Quantidade</th>
-              <th class="text-right">V. Unitário</th>
-              <th class="text-right">V. Total</th>
+              <th class="text-right">Qtd</th>
+              <th class="text-right">Valor Unitário</th>
+              <th class="text-right">Valor Total</th>
             </tr>
           </thead>
           <tbody>
@@ -107,10 +99,10 @@ export function exportOrdersToPDF(
                 const factory = factories.find((f) => f.id === o.factoryId)
                 return `
                 <tr>
+                  <td>${o.id.substring(0, 8)}</td>
                   <td>${new Date(o.orderDate).toLocaleDateString('pt-BR')}</td>
                   <td>${factory?.name || 'Desconhecida'}</td>
                   <td>${o.product}</td>
-                  <td>${o.line || '-'}</td>
                   <td class="text-right">${o.quantity}</td>
                   <td class="text-right">${formatCurrency(o.unitValue)}</td>
                   <td class="text-right">${formatCurrency(o.totalValue)}</td>
@@ -119,7 +111,7 @@ export function exportOrdersToPDF(
               })
               .join('')}
             <tr class="total-row">
-              <td colspan="6" class="text-right">Total Geral do Período:</td>
+              <td colspan="6" class="text-right">Valor Total Geral:</td>
               <td class="text-right">${formatCurrency(totalOrders)}</td>
             </tr>
           </tbody>

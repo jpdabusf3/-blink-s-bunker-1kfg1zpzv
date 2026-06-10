@@ -111,26 +111,24 @@ export default function Pedidos() {
   }
 
   const handleExportExcel = () => {
-    if (filteredOrders.length === 0) {
-      toast({
-        title: 'Nenhum dado',
-        description: 'Não há pedidos para exportar com os filtros atuais.',
-        variant: 'destructive',
-      })
-      return
-    }
+    if (filteredOrders.length === 0) return
+
+    toast({
+      title: 'Exportando Excel',
+      description: 'O download do seu arquivo CSV foi iniciado.',
+    })
+
     exportOrdersToExcel(filteredOrders, factories)
   }
 
   const handleExportPDF = () => {
-    if (filteredOrders.length === 0) {
-      toast({
-        title: 'Nenhum dado',
-        description: 'Não há pedidos para exportar com os filtros atuais.',
-        variant: 'destructive',
-      })
-      return
-    }
+    if (filteredOrders.length === 0) return
+
+    toast({
+      title: 'Gerando PDF',
+      description: 'Seu documento está sendo preparado.',
+    })
+
     const success = exportOrdersToPDF(filteredOrders, factories, {
       factoryIdParam,
       productLine,
@@ -237,14 +235,17 @@ export default function Pedidos() {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
+                  disabled={filteredOrders.length === 0}
                   className="w-full gap-2 text-primary border-primary/20 hover:bg-primary/5"
                 >
                   <Download className="w-4 h-4" /> Exportar
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleExportPDF}>Exportar como PDF</DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportExcel}>Exportar como Excel</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPDF}>Documento PDF</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportExcel}>
+                  Planilha Excel (CSV)
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
