@@ -112,6 +112,19 @@ export default function Index() {
     prospect: filteredFactories.filter((f) => f.status === 'Prospeção').length,
   }
 
+  const handleExportPDF = () => {
+    const originalTitle = document.title
+    const safeRegion = regionFilter.replace(/\s+/g, '_')
+    const dateStr = new Date().toISOString().split('T')[0]
+    document.title = `Relatorio_${safeRegion}_${dateStr}`
+
+    window.print()
+
+    setTimeout(() => {
+      document.title = originalTitle
+    }, 1000)
+  }
+
   const handleWhatsAppShare = () => {
     let text = '*Resumo Operacional - Inteligência Comercial Blink*\n\n'
 
@@ -205,10 +218,27 @@ export default function Index() {
   return (
     <div className="space-y-6 animate-fade-in pb-10 print:m-0 print:p-0 print:space-y-8">
       <div className="hidden print:block mb-8 border-b-2 border-primary pb-4">
-        <h1 className="text-3xl font-bold text-primary mb-1">Relatório Executivo - MT</h1>
-        <p className="text-muted-foreground text-sm">
-          Inteligência Comercial Blink • Gerado em {new Date().toLocaleDateString('pt-BR')}
-        </p>
+        <div className="flex justify-between items-end">
+          <div>
+            <h1 className="text-3xl font-bold text-primary mb-1">Blink Biotech</h1>
+            <h2 className="text-xl font-semibold mb-1">Relatório Executivo de Área</h2>
+            <p className="text-muted-foreground text-sm">
+              Gerado em: {new Date().toLocaleDateString('pt-BR')} às{' '}
+              {new Date().toLocaleTimeString('pt-BR')}
+            </p>
+          </div>
+          <div className="text-right border-l-2 pl-4 border-muted">
+            <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+              Filtros Aplicados
+            </h3>
+            <p className="text-sm font-medium">
+              Região: <span className="text-primary">{regionFilter}</span>
+            </p>
+            <p className="text-sm font-medium">
+              Nível de Foco: <span className="text-primary">Todos</span>
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2 print:hidden">
@@ -238,10 +268,10 @@ export default function Index() {
           </Button>
           <Button
             variant="outline"
-            onClick={() => window.print()}
+            onClick={handleExportPDF}
             className="gap-2 shadow-sm w-full sm:w-auto"
           >
-            <Download className="w-5 h-5 md:w-4 md:h-4" /> Exportar Relatório PDF
+            <Download className="w-5 h-5 md:w-4 md:h-4" /> Exportar Snapshot PDF
           </Button>
         </div>
       </div>

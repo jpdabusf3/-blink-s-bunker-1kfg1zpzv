@@ -69,6 +69,21 @@ const rawData: Array<[string, number | string, string, string, Priority]> = [
   ['Marombi', 5, 'Sorriso', 'Aves', 'High'],
 ]
 
+const getRegionCoords = (region: string, i: number) => {
+  const bases = {
+    Norte: { lat: -11.0, lng: -55.0 },
+    Sul: { lat: -16.0, lng: -54.0 },
+    'Médio-Norte': { lat: -13.5, lng: -56.0 },
+    Oeste: { lat: -15.0, lng: -58.0 },
+    Leste: { lat: -14.0, lng: -52.0 },
+  }
+  const base = bases[region as keyof typeof bases] || bases['Norte']
+  return {
+    lat: base.lat + ((i % 10) - 5) * 0.2,
+    lng: base.lng + ((i % 8) - 4) * 0.2,
+  }
+}
+
 function getRegionForCity(city: string): Region {
   const c = city.toLowerCase()
   if (
@@ -143,6 +158,7 @@ export const mockFactories: Factory[] = rawData.map((row, index) => {
     productInterests: sector,
     documents: [],
     scoreHistory: scoreTrends[index % 5],
+    coordinates: getRegionCoords(region, index),
     swot: {
       strengths: '',
       weaknesses: '',
