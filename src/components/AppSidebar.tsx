@@ -8,11 +8,11 @@ import {
 } from '@/components/ui/sidebar'
 import { Home, Building2, BarChart2, Target, Grid, LogOut, ShoppingCart } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
-import { useAuth } from '@/store/AuthContext'
+import { useAuth } from '@/hooks/use-auth'
 
 export function AppSidebar() {
   const loc = useLocation()
-  const { logout } = useAuth()
+  const { signOut } = useAuth()
   const menu = [
     { name: 'Dashboard', path: '/', icon: Home },
     { name: 'Cadastro', path: '/cadastro', icon: Building2 },
@@ -20,6 +20,7 @@ export function AppSidebar() {
     { name: 'Histórico de Pedidos', path: '/pedidos', icon: ShoppingCart },
     { name: 'Matriz SWOT', path: '/swot', icon: Target },
     { name: 'Prioridade', path: '/matriz', icon: Grid },
+    { name: 'Relatórios', path: '/relatorios', icon: BarChart2 },
   ]
 
   return (
@@ -57,7 +58,7 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={logout}
+              onClick={signOut}
               tooltip="Sair"
               className="h-10 px-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
             >

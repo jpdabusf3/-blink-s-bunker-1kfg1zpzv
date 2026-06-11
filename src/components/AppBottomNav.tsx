@@ -10,6 +10,7 @@ export function AppBottomNav() {
     { name: 'Funil', path: '/funil', icon: BarChart2 },
     { name: 'SWOT', path: '/swot', icon: Target },
     { name: 'Prioridade', path: '/matriz', icon: Grid },
+    { name: 'Relatórios', path: '/relatorios', icon: BarChart2 },
   ]
 
   return (

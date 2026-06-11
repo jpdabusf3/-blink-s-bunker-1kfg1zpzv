@@ -12,8 +12,9 @@ import Pedidos from './pages/Pedidos'
 import NotFound from './pages/NotFound'
 import Login from './pages/Login'
 import { AppProvider } from './store/AppContext'
-import { AuthProvider } from './store/AuthContext'
+import { AuthProvider } from './hooks/use-auth'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import Relatorios from './pages/Relatorios'
 import { ThemeProvider } from './components/ThemeProvider'
 
 const App = () => (
@@ -35,6 +36,7 @@ const App = () => (
                   <Route path="/swot" element={<SWOT />} />
                   <Route path="/matriz" element={<Matriz />} />
                   <Route path="/pedidos" element={<Pedidos />} />
+                  <Route path="/relatorios" element={<Relatorios />} />
                 </Route>
               </Route>
 

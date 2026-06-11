@@ -87,6 +87,24 @@ export interface Factory {
   funnelStage: FunnelStage
   winProbability: number
   deadline?: string
+  state?: string
+  stateRegion?:
+    | 'Sul'
+    | 'Norte'
+    | 'Oeste'
+    | 'Leste'
+    | 'Nordeste'
+    | 'Noroeste'
+    | 'Sudeste'
+    | 'Sudoeste'
+    | 'Centro'
+  salesChannel?: 'Direct' | 'Indirect'
+  indirectChannelType?:
+    | 'Representantes'
+    | 'Distribuidores'
+    | 'Revendas'
+    | 'Cooperativas'
+    | 'Indústrias'
   documents?: Document[]
   scoreHistory?: ScoreHistory[]
   coordinates?: {

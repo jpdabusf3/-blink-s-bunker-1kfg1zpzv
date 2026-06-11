@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-10T18:30:38.685Z",
+  "generatedAt": "2026-06-11T15:25:20.236Z",
   "collections": [
     {
       "name": "users",
@@ -37,12 +37,262 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "job_title",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
         "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
       ]
+    },
+    {
+      "name": "factories",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "",
+        "update": "",
+        "delete": ""
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "city",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "state",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "stateRegion",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Sul",
+            "Norte",
+            "Oeste",
+            "Leste",
+            "Nordeste",
+            "Noroeste",
+            "Sudeste",
+            "Sudoeste",
+            "Centro"
+          ]
+        },
+        {
+          "name": "region",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sector",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "productLineAffinity",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "capacity",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "potentialValue",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "priority",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "focusLevel",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lastInteraction",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "contactName",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "contactPhone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "operationTypes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "productInterests",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "funnelStage",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "winProbability",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "salesChannel",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Direct", "Indirect"]
+        },
+        {
+          "name": "indirectChannelType",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Representantes",
+            "Distribuidores",
+            "Revendas",
+            "Cooperativas",
+            "Indústrias"
+          ]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "orders",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "",
+        "update": "",
+        "delete": ""
+      },
+      "fields": [
+        {
+          "name": "factoryId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "factories"
+        },
+        {
+          "name": "product",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "line",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "quantity",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "unitValue",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "totalValue",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "orderDate",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
     }
   ]
 }
