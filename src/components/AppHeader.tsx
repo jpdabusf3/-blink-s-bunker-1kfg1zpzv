@@ -1,4 +1,14 @@
-import { Bell, Plus, AlertTriangle, Calendar, WifiOff, CheckCircle2, Moon, Sun } from 'lucide-react'
+import {
+  Bell,
+  Plus,
+  AlertTriangle,
+  Calendar,
+  WifiOff,
+  CheckCircle2,
+  Moon,
+  Sun,
+  Check,
+} from 'lucide-react'
 import { Button } from './ui/button'
 import { useAppContext } from '@/store/AppContext'
 import { isStale, isApproachingDeadline, isPassedDeadline } from '@/lib/utils'
@@ -11,15 +21,50 @@ import {
   DialogDescription,
 } from './ui/dialog'
 import { FactoryForm } from './FactoryForm'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { SidebarTrigger } from './ui/sidebar'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { useTheme } from 'next-themes'
+import { getNotifications, evaluateTargets, markNotificationAsRead } from '@/services/notifications'
+import { AppNotification } from '@/types'
+import { useRealtime } from '@/hooks/use-realtime'
 
 export function AppHeader() {
   const { factories, tasks, isOnline } = useAppContext()
   const [open, setOpen] = useState(false)
+  const [dbNotifications, setDbNotifications] = useState<AppNotification[]>([])
   const { theme, setTheme } = useTheme()
+
+  const loadNotifications = async () => {
+    try {
+      await evaluateTargets()
+      const data = await getNotifications()
+      setDbNotifications(data)
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  useEffect(() => {
+    loadNotifications()
+  }, [])
+
+  useRealtime('orders', () => {
+    loadNotifications()
+  })
+
+  useRealtime('notifications', () => {
+    loadNotifications()
+  })
+
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await markNotificationAsRead(id)
+      setDbNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)))
+    } catch (e) {
+      console.error(e)
+    }
+  }
 
   const notifications = factories.flatMap((f) => {
     const notifs = []
@@ -88,7 +133,22 @@ export function AppHeader() {
     }
   })
 
-  const notifCount = notifications.length
+  // Merge backend notifications with dynamic ones
+  const unreadDbNotifications = dbNotifications.filter((n) => !n.isRead)
+
+  const allNotifications = [
+    ...unreadDbNotifications.map((n) => ({
+      id: n.id,
+      isDb: true,
+      type: n.type === 'success' ? 'success' : n.type === 'warning' ? 'warning' : 'info',
+      icon: n.type === 'success' ? CheckCircle2 : AlertTriangle,
+      title: n.title,
+      message: n.message,
+    })),
+    ...notifications.map((n) => ({ ...n, isDb: false, title: 'Aviso' })),
+  ]
+
+  const notifCount = allNotifications.length
 
   return (
     <header className="h-16 border-b flex items-center justify-between px-4 lg:px-6 bg-card text-card-foreground shrink-0 shadow-sm z-10 sticky top-0 print:hidden">
@@ -140,25 +200,43 @@ export function AppHeader() {
             <h3 className="font-semibold mb-3 text-sm flex items-center gap-2">
               <Bell className="w-4 h-4" /> Notificações Recentes
             </h3>
-            <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar">
-              {notifications.length === 0 ? (
+            <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+              {allNotifications.length === 0 ? (
                 <p className="text-sm text-muted-foreground p-2">Nenhuma pendência no momento.</p>
               ) : (
-                notifications.map((n) => (
+                allNotifications.map((n) => (
                   <div
                     key={n.id}
-                    className="p-3 border rounded-lg text-sm bg-muted/30 flex items-start gap-3"
+                    className="p-3 border rounded-lg text-sm bg-muted/30 flex flex-col gap-1 relative group"
                   >
-                    <n.icon
-                      className={`w-4 h-4 shrink-0 mt-0.5 ${
-                        n.type === 'destructive'
-                          ? 'text-destructive'
-                          : n.type === 'warning'
-                            ? 'text-orange-500'
-                            : 'text-primary'
-                      }`}
-                    />
-                    <span className="leading-tight">{n.message}</span>
+                    <div className="flex items-start gap-3">
+                      <n.icon
+                        className={`w-4 h-4 shrink-0 mt-0.5 ${
+                          n.type === 'destructive'
+                            ? 'text-destructive'
+                            : n.type === 'warning'
+                              ? 'text-orange-500'
+                              : n.type === 'success'
+                                ? 'text-green-500'
+                                : 'text-primary'
+                        }`}
+                      />
+                      <div className="flex-1">
+                        <strong className="block text-xs mb-0.5">{n.title}</strong>
+                        <span className="leading-tight text-muted-foreground">{n.message}</span>
+                      </div>
+                      {n.isDb && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity absolute top-2 right-2"
+                          onClick={() => handleMarkAsRead(n.id)}
+                          title="Marcar como lida"
+                        >
+                          <Check className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))
               )}

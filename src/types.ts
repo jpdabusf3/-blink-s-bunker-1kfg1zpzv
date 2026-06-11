@@ -34,6 +34,19 @@ export interface ScoreHistory {
   score: number
 }
 
+export interface AppNotification {
+  id: string
+  userId: string
+  title: string
+  message: string
+  type: 'success' | 'warning' | 'info' | 'error'
+  isRead: boolean
+  targetId?: string
+  milestone?: string
+  created: string
+  updated: string
+}
+
 export interface Target {
   id: string
   name: string
