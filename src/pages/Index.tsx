@@ -15,6 +15,7 @@ import { MapCard } from '@/components/dashboard/MapCard'
 import { ScoreEvolutionCard } from '@/components/dashboard/ScoreEvolutionCard'
 import { DashboardCharts } from '@/components/dashboard/DashboardCharts'
 import { FactoryListCard } from '@/components/dashboard/FactoryListCard'
+import { TargetsCard } from '@/components/dashboard/TargetsCard'
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={className} fill="currentColor">
@@ -22,7 +23,7 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
   </svg>
 )
 
-const DEFAULT_BLOCKS = ['metrics', 'maps', 'charts', 'list']
+const DEFAULT_BLOCKS = ['metrics', 'targets', 'maps', 'charts', 'list']
 
 function DraggableBlock({
   id,
@@ -82,12 +83,17 @@ export default function Index() {
   const [regionFilter, setRegionFilter] = useState('Todas as Regiões')
 
   const [blocks, setBlocks] = useState<string[]>(() => {
-    const saved = localStorage.getItem('blink_dashboard_order_v2')
-    return saved ? JSON.parse(saved) : DEFAULT_BLOCKS
+    const saved = localStorage.getItem('blink_dashboard_order_v3')
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      const missing = DEFAULT_BLOCKS.filter((b) => !parsed.includes(b))
+      return [...parsed, ...missing]
+    }
+    return DEFAULT_BLOCKS
   })
 
   useEffect(() => {
-    localStorage.setItem('blink_dashboard_order_v2', JSON.stringify(blocks))
+    localStorage.setItem('blink_dashboard_order_v3', JSON.stringify(blocks))
   }, [blocks])
 
   const moveBlock = (fromIndex: number, toIndex: number) => {
@@ -195,6 +201,8 @@ export default function Index() {
             </Card>
           </div>
         )
+      case 'targets':
+        return <TargetsCard regionFilter={regionFilter} />
       case 'maps':
         return (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-1">

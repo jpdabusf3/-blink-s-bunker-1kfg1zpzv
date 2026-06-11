@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-11T15:25:20.236Z",
+  "generatedAt": "2026-06-11T15:41:22.700Z",
   "collections": [
     {
       "name": "users",
@@ -275,6 +275,71 @@
           "name": "orderDate",
           "type": "date",
           "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "targets",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "targetValue",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "categoryType",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["General", "Region", "Channel", "ProductLine"]
+        },
+        {
+          "name": "categoryValue",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "startDate",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "endDate",
+          "type": "date",
+          "required": true,
           "system": false
         },
         {

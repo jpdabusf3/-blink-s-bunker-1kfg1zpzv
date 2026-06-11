@@ -20,6 +20,7 @@ export function AppSidebar() {
     { name: 'Histórico de Pedidos', path: '/pedidos', icon: ShoppingCart },
     { name: 'Matriz SWOT', path: '/swot', icon: Target },
     { name: 'Prioridade', path: '/matriz', icon: Grid },
+    { name: 'Metas', path: '/metas', icon: Target },
     { name: 'Relatórios', path: '/relatorios', icon: BarChart2 },
   ]
 

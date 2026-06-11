@@ -34,6 +34,18 @@ export interface ScoreHistory {
   score: number
 }
 
+export interface Target {
+  id: string
+  name: string
+  targetValue: number
+  categoryType: 'General' | 'Region' | 'Channel' | 'ProductLine'
+  categoryValue: string
+  startDate: string
+  endDate: string
+  created: string
+  updated: string
+}
+
 export interface Order {
   id: string
   factoryId: string

@@ -31,7 +31,10 @@ import {
   Cell,
 } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-import { Loader2 } from 'lucide-react'
+import { Loader2, FileSpreadsheet } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { exportOrdersToExcel } from '@/lib/exportUtils'
+import { useAppContext } from '@/store/AppContext'
 
 const STATE_REGIONS = [
   'Sul',
@@ -55,6 +58,7 @@ const INDIRECT_TYPES = [
 export default function Relatorios() {
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const { factories } = useAppContext()
 
   const [period, setPeriod] = useState<string>('monthly')
   const [channel, setChannel] = useState<string>('all')
@@ -175,11 +179,21 @@ export default function Relatorios() {
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Relatórios de Vendas</h1>
-        <p className="text-muted-foreground text-sm">
-          Analise volumes e performance por diversos recortes.
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Relatórios de Vendas</h1>
+          <p className="text-muted-foreground text-sm">
+            Analise volumes e performance por diversos recortes.
+          </p>
+        </div>
+        <Button
+          onClick={() => exportOrdersToExcel(filteredOrders, factories)}
+          variant="outline"
+          className="gap-2"
+        >
+          <FileSpreadsheet className="w-4 h-4" />
+          Exportar para Excel (.csv)
+        </Button>
       </div>
 
       <Card className="border shadow-subtle">

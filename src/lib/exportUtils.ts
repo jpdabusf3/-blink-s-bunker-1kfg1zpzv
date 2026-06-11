@@ -3,16 +3,31 @@ import { formatCurrency } from './utils'
 
 export function exportOrdersToExcel(filteredOrders: Order[], factories: Factory[]) {
   const separator = ';'
-  const keys = ['ID', 'Data', 'Fábrica', 'Produto', 'Linha', 'Qtd', 'Valor Unitário', 'Valor Total']
+  const keys = [
+    'ID',
+    'Data',
+    'Fábrica',
+    'Canal de Venda',
+    'Região',
+    'Produto',
+    'Linha',
+    'Qtd',
+    'Valor Unitário',
+    'Valor Total',
+  ]
 
   const csvContent = [
     keys.join(separator),
     ...filteredOrders.map((o) => {
       const factory = factories.find((f) => f.id === o.factoryId)
+      const channelLabel =
+        factory?.salesChannel === 'Indirect' ? factory.indirectChannelType : factory?.salesChannel
       return [
         `"${o.id.replace(/"/g, '""')}"`,
         new Date(o.orderDate).toLocaleDateString('pt-BR'),
         `"${(factory?.name || 'Desconhecida').replace(/"/g, '""')}"`,
+        `"${(channelLabel || '-').replace(/"/g, '""')}"`,
+        `"${(factory?.region || '-').replace(/"/g, '""')}"`,
         `"${o.product.replace(/"/g, '""')}"`,
         `"${(o.line || '-').replace(/"/g, '""')}"`,
         o.quantity,
