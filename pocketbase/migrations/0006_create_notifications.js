@@ -1,5 +1,7 @@
 migrate(
   (app) => {
+    const targetsCollection = app.findCollectionByNameOrId('targets')
+
     const collection = new Collection({
       name: 'notifications',
       type: 'base',
@@ -31,7 +33,7 @@ migrate(
           name: 'targetId',
           type: 'relation',
           required: false,
-          collectionId: 'targets',
+          collectionId: targetsCollection.id,
           maxSelect: 1,
         },
         { name: 'milestone', type: 'text', required: false },
