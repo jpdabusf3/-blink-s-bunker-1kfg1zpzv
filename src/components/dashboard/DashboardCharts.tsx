@@ -148,15 +148,52 @@ export function DashboardCharts({ regionFilter = 'Todas as Regiões' }: { region
       const totalDays = totalDuration / (1000 * 60 * 60 * 24)
 
       const projected = elapsedDays > 0 ? (totalSales / elapsedDays) * totalDays : 0
+      const status = projected >= target.targetValue ? 'On Track' : 'At Risk'
 
       return {
         name: target.name.substring(0, 15),
         Meta: target.targetValue,
         Atual: totalSales,
         Projetado: Math.round(projected),
+        Status: status,
       }
     })
     .filter((d) => d.Meta > 0)
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload
+      return (
+        <div className="bg-card border text-card-foreground p-3 rounded-lg shadow-lg text-sm z-50">
+          <p className="font-semibold mb-2">{data.name}</p>
+          <div className="space-y-1">
+            <p>
+              <span className="font-medium text-muted-foreground">Meta:</span> R${' '}
+              {data.Meta.toLocaleString('pt-BR')}
+            </p>
+            <p>
+              <span className="font-medium text-primary">Atual:</span> R${' '}
+              {data.Atual.toLocaleString('pt-BR')}
+            </p>
+            <p>
+              <span className="font-medium" style={{ color: 'hsl(var(--chart-2))' }}>
+                Projetado:
+              </span>{' '}
+              R$ {data.Projetado.toLocaleString('pt-BR')}
+            </p>
+            <div className="mt-2 pt-2 border-t">
+              <span
+                className={`font-semibold ${data.Status === 'On Track' ? 'text-green-500' : 'text-destructive'}`}
+              >
+                {data.Status === 'On Track' ? 'No Caminho (On Track)' : 'Em Risco (At Risk)'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )
+    }
+    return null
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-2">
@@ -189,10 +226,7 @@ export function DashboardCharts({ regionFilter = 'Todas as Regiões' }: { region
                   tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                   tickFormatter={(val) => `R$ ${(val / 1000).toFixed(0)}k`}
                 />
-                <Tooltip
-                  content={<ChartTooltipContent />}
-                  cursor={{ fill: 'hsl(var(--muted)/0.4)' }}
-                />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--muted)/0.4)' }} />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
                 <Bar
                   dataKey="Meta"
