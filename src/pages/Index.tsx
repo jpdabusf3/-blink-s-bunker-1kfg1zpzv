@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useAppContext } from '@/store/AppContext'
+import { useAuth } from '@/hooks/use-auth'
+import { isManager } from '@/lib/user-scope'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatCompactCurrency } from '@/lib/utils'
-import { Download, GripVertical, Filter } from 'lucide-react'
+import { Download, GripVertical, Filter, Globe, MapPin } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -16,6 +18,10 @@ import { ScoreEvolutionCard } from '@/components/dashboard/ScoreEvolutionCard'
 import { DashboardCharts } from '@/components/dashboard/DashboardCharts'
 import { FactoryListCard } from '@/components/dashboard/FactoryListCard'
 import { TargetsCard } from '@/components/dashboard/TargetsCard'
+import { GlobalRankingCard } from '@/components/dashboard/GlobalRankingCard'
+import { RevenueVsTargetCard } from '@/components/dashboard/RevenueVsTargetCard'
+import { DailySalesLogCard } from '@/components/dashboard/DailySalesLogCard'
+import { LocalFactoryStatusCard } from '@/components/dashboard/LocalFactoryStatusCard'
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={className} fill="currentColor">
@@ -23,7 +29,7 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
   </svg>
 )
 
-const DEFAULT_BLOCKS = ['metrics', 'targets', 'maps', 'charts', 'list']
+const DEFAULT_BLOCKS = ['metrics', 'targets', 'role-widgets', 'maps', 'charts', 'list']
 
 function DraggableBlock({
   id,
@@ -80,20 +86,26 @@ function DraggableBlock({
 
 export default function Index() {
   const { factories, tasks } = useAppContext()
+  const { user } = useAuth()
+  const isLeader = isManager(user)
+  const userRegion = user?.geographicArea || ''
+
   const [regionFilter, setRegionFilter] = useState('Todas as Regiões')
+  const [viewMode, setViewMode] = useState<'global' | 'regional'>('global')
 
   const [blocks, setBlocks] = useState<string[]>(() => {
-    const saved = localStorage.getItem('blink_dashboard_order_v3')
+    const saved = localStorage.getItem('blink_dashboard_order_v4')
     if (saved) {
       const parsed = JSON.parse(saved)
-      const missing = DEFAULT_BLOCKS.filter((b) => !parsed.includes(b))
-      return [...parsed, ...missing]
+      const valid = parsed.filter((b: string) => DEFAULT_BLOCKS.includes(b))
+      const missing = DEFAULT_BLOCKS.filter((b) => !valid.includes(b))
+      return [...valid, ...missing]
     }
     return DEFAULT_BLOCKS
   })
 
   useEffect(() => {
-    localStorage.setItem('blink_dashboard_order_v3', JSON.stringify(blocks))
+    localStorage.setItem('blink_dashboard_order_v4', JSON.stringify(blocks))
   }, [blocks])
 
   const moveBlock = (fromIndex: number, toIndex: number) => {
@@ -103,10 +115,14 @@ export default function Index() {
     setBlocks(newBlocks)
   }
 
+  const effectiveRegionFilter = isLeader ? regionFilter : userRegion || 'Todas as Regiões'
+
   const filteredFactories =
-    regionFilter === 'Todas as Regiões'
+    effectiveRegionFilter === 'Todas as Regiões'
       ? factories
-      : factories.filter((f) => f.region === regionFilter)
+      : factories.filter(
+          (f) => f.region === effectiveRegionFilter || f.stateRegion === effectiveRegionFilter,
+        )
 
   const metrics = {
     revenue: filteredFactories.reduce((s, f) => s + f.potentialValue, 0),
@@ -120,12 +136,10 @@ export default function Index() {
 
   const handleExportPDF = () => {
     const originalTitle = document.title
-    const safeRegion = regionFilter.replace(/\s+/g, '_')
+    const safeRegion = (isLeader ? regionFilter : userRegion).replace(/\s+/g, '_')
     const dateStr = new Date().toISOString().split('T')[0]
     document.title = `Relatorio_${safeRegion}_${dateStr}`
-
     window.print()
-
     setTimeout(() => {
       document.title = originalTitle
     }, 1000)
@@ -134,7 +148,7 @@ export default function Index() {
   const handleWhatsAppShare = () => {
     let text = '*Resumo Operacional - Inteligência Comercial Blink*\n\n'
 
-    const recentFactories = [...factories]
+    const recentFactories = [...filteredFactories]
       .sort((a, b) => new Date(b.lastInteraction).getTime() - new Date(a.lastInteraction).getTime())
       .slice(0, 5)
 
@@ -144,15 +158,16 @@ export default function Index() {
       text += `- ${f.name} (${date}): ${f.status} - ${f.funnelStage}\n`
     })
 
+    const scopedFactoryIds = new Set(filteredFactories.map((f) => f.id))
     const pendingTasks = tasks
-      .filter((t) => !t.completed)
+      .filter((t) => !t.completed && scopedFactoryIds.has(t.factoryId))
       .sort((a, b) => new Date(a.dueDate || '').getTime() - new Date(b.dueDate || '').getTime())
 
     text += '\n*Pendências:*\n'
     if (pendingTasks.length > 0) {
       pendingTasks.forEach((t) => {
         const date = t.dueDate ? new Date(t.dueDate).toLocaleDateString('pt-BR') : 'Sem data'
-        const factory = factories.find((f) => f.id === t.factoryId)
+        const factory = filteredFactories.find((f) => f.id === t.factoryId)
         const factoryName = factory ? ` (${factory.name})` : ''
         text += `- [ ] ${t.description}${factoryName} (Venc: ${date})\n`
       })
@@ -202,20 +217,36 @@ export default function Index() {
           </div>
         )
       case 'targets':
-        return <TargetsCard regionFilter={regionFilter} />
+        return <TargetsCard regionFilter={effectiveRegionFilter} />
+      case 'role-widgets': {
+        if (isLeader && viewMode === 'global') {
+          return (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <GlobalRankingCard />
+              <RevenueVsTargetCard />
+            </div>
+          )
+        }
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <DailySalesLogCard regionFilter={effectiveRegionFilter} />
+            <LocalFactoryStatusCard regionFilter={effectiveRegionFilter} />
+          </div>
+        )
+      }
       case 'maps':
         return (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-1">
-            <MapCard regionFilter={regionFilter} />
-            <ScoreEvolutionCard regionFilter={regionFilter} />
+            <MapCard regionFilter={effectiveRegionFilter} />
+            <ScoreEvolutionCard regionFilter={effectiveRegionFilter} />
           </div>
         )
       case 'charts':
-        return <DashboardCharts regionFilter={regionFilter} />
+        return <DashboardCharts regionFilter={effectiveRegionFilter} />
       case 'list':
         return (
           <div className="grid grid-cols-1 gap-6 print:hidden">
-            <FactoryListCard regionFilter={regionFilter} />
+            <FactoryListCard regionFilter={effectiveRegionFilter} />
           </div>
         )
       default:
@@ -229,7 +260,11 @@ export default function Index() {
         <div className="flex justify-between items-end">
           <div>
             <h1 className="text-3xl font-bold text-primary mb-1">Blink Biotech</h1>
-            <h2 className="text-xl font-semibold mb-1">Relatório Executivo de Área</h2>
+            <h2 className="text-xl font-semibold mb-1">
+              {isLeader && viewMode === 'global'
+                ? 'Relatório Executivo Global'
+                : `Relatório Regional - ${effectiveRegionFilter}`}
+            </h2>
             <p className="text-muted-foreground text-sm">
               Gerado em: {new Date().toLocaleDateString('pt-BR')} às{' '}
               {new Date().toLocaleTimeString('pt-BR')}
@@ -240,32 +275,67 @@ export default function Index() {
               Filtros Aplicados
             </h3>
             <p className="text-sm font-medium">
-              Região: <span className="text-primary">{regionFilter}</span>
+              Região: <span className="text-primary">{effectiveRegionFilter}</span>
             </p>
             <p className="text-sm font-medium">
-              Nível de Foco: <span className="text-primary">Todos</span>
+              Usuário: <span className="text-primary">{user?.name || user?.email || 'N/A'}</span>
             </p>
           </div>
         </div>
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2 print:hidden">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold tracking-tight">Visão Geral MT</h1>
-          <Select value={regionFilter} onValueChange={setRegionFilter}>
-            <SelectTrigger className="w-[180px] h-9">
-              <Filter className="w-4 h-4 mr-2" />
-              <SelectValue placeholder="Região" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Todas as Regiões">Todas as Regiões</SelectItem>
-              <SelectItem value="Norte">Norte</SelectItem>
-              <SelectItem value="Sul">Sul</SelectItem>
-              <SelectItem value="Médio-Norte">Médio-Norte</SelectItem>
-              <SelectItem value="Oeste">Oeste</SelectItem>
-              <SelectItem value="Leste">Leste</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex items-center gap-4 flex-wrap">
+          <h1 className="text-2xl font-bold tracking-tight">
+            {isLeader && viewMode === 'global'
+              ? 'Visão Global MT'
+              : `Visão Regional - ${effectiveRegionFilter}`}
+          </h1>
+          {isLeader && (
+            <div className="flex gap-1 bg-muted rounded-lg p-1">
+              <Button
+                size="sm"
+                variant={viewMode === 'global' ? 'default' : 'ghost'}
+                onClick={() => {
+                  setViewMode('global')
+                  setRegionFilter('Todas as Regiões')
+                }}
+                className="gap-1.5 h-8"
+              >
+                <Globe className="w-4 h-4" /> Global
+              </Button>
+              <Button
+                size="sm"
+                variant={viewMode === 'regional' ? 'default' : 'ghost'}
+                onClick={() => setViewMode('regional')}
+                className="gap-1.5 h-8"
+              >
+                <MapPin className="w-4 h-4" /> Regional
+              </Button>
+            </div>
+          )}
+          {isLeader && viewMode === 'regional' && (
+            <Select value={regionFilter} onValueChange={setRegionFilter}>
+              <SelectTrigger className="w-[180px] h-9">
+                <Filter className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Região" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Todas as Regiões">Todas as Regiões</SelectItem>
+                <SelectItem value="Norte">Norte</SelectItem>
+                <SelectItem value="Sul">Sul</SelectItem>
+                <SelectItem value="Médio-Norte">Médio-Norte</SelectItem>
+                <SelectItem value="Oeste">Oeste</SelectItem>
+                <SelectItem value="Leste">Leste</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          {!isLeader && userRegion && (
+            <div className="text-sm text-muted-foreground flex items-center gap-1.5 px-3 py-1.5 bg-muted/50 rounded-lg">
+              <MapPin className="w-4 h-4" />
+              {userRegion}
+            </div>
+          )}
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
           <Button

@@ -43,6 +43,7 @@ export interface AppNotification {
   isRead: boolean
   targetId?: string
   milestone?: string
+  region?: string
   created: string
   updated: string
 }
