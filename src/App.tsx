@@ -20,6 +20,7 @@ import Relatorios from './pages/Relatorios'
 import Documents from './pages/Documents'
 import AdminLogs from './pages/AdminLogs'
 import UsersPage from './pages/Users'
+import TeamManagement from './pages/TeamManagement'
 import { ManagerRoute } from './components/ManagerRoute'
 import { SuperAdminRoute } from './components/SuperAdminRoute'
 import { ThemeProvider } from './components/ThemeProvider'
@@ -52,6 +53,7 @@ const App = () => (
                     </Route>
                     <Route element={<SuperAdminRoute />}>
                       <Route path="/usuarios" element={<UsersPage />} />
+                      <Route path="/equipe" element={<TeamManagement />} />
                     </Route>
                   </Route>
                 </Route>

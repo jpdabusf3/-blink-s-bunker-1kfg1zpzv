@@ -85,6 +85,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await pb.collection('users').authWithPassword(email, password)
       try {
+        await pb.send('/backend/v1/check-invitation', { method: 'POST' })
+      } catch {
+        /* intentionally ignored */
+      }
+      try {
         await pb.send('/backend/v1/log-activity', {
           method: 'POST',
           body: JSON.stringify({ action: 'Logged In', details: email }),

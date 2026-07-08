@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-08T20:37:46.129Z",
+  "generatedAt": "2026-07-08T21:14:34.501Z",
   "collections": [
     {
       "name": "users",
@@ -592,6 +592,88 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_documents_category ON documents (category)"]
+    },
+    {
+      "name": "invitations",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.email = 'joaopedro_zoo@hotmail.com' || @request.auth.job_title = 'CEO'",
+        "view": "@request.auth.email = 'joaopedro_zoo@hotmail.com' || @request.auth.job_title = 'CEO'",
+        "create": "@request.auth.email = 'joaopedro_zoo@hotmail.com' || @request.auth.job_title = 'CEO'",
+        "update": "@request.auth.email = 'joaopedro_zoo@hotmail.com' || @request.auth.job_title = 'CEO'",
+        "delete": "@request.auth.email = 'joaopedro_zoo@hotmail.com' || @request.auth.job_title = 'CEO'"
+      },
+      "fields": [
+        {
+          "name": "email",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "role",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["CEO", "Diretor", "Gestor", "Gerente", "Manager", "Vendedor", "Comum"]
+        },
+        {
+          "name": "geographicArea",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "country",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "token",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["pending", "accepted", "expired"]
+        },
+        {
+          "name": "expiresAt",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_invitations_email ON invitations (email)",
+        "CREATE INDEX idx_invitations_token ON invitations (token)",
+        "CREATE INDEX idx_invitations_status ON invitations (status)"
+      ]
     }
   ]
 }
