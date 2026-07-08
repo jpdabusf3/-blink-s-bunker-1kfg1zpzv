@@ -17,6 +17,7 @@ import { AuthProvider } from './hooks/use-auth'
 import { I18nProvider } from './hooks/use-i18n'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import Relatorios from './pages/Relatorios'
+import Documents from './pages/Documents'
 import AdminLogs from './pages/AdminLogs'
 import UsersPage from './pages/Users'
 import { ManagerRoute } from './components/ManagerRoute'
@@ -45,6 +46,7 @@ const App = () => (
                     <Route path="/pedidos" element={<Pedidos />} />
                     <Route path="/metas" element={<Metas />} />
                     <Route path="/relatorios" element={<Relatorios />} />
+                    <Route path="/documentos" element={<Documents />} />
                     <Route element={<ManagerRoute />}>
                       <Route path="/admin/logs" element={<AdminLogs />} />
                     </Route>

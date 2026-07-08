@@ -11,7 +11,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { ScrollText, Shield } from 'lucide-react'
+import { ScrollText, Shield, FileSpreadsheet, FileText } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { exportActivityLogsToPDF, exportActivityLogsToExcel } from '@/lib/exportReports'
 import { ActivityLog } from '@/types'
 
 export default function AdminLogs() {
@@ -51,15 +53,37 @@ export default function AdminLogs() {
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
-      <div className="flex items-center gap-3">
-        <div className="bg-primary p-2 rounded-lg">
-          <ScrollText className="w-6 h-6 text-primary-foreground" />
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex items-center gap-3">
+          <div className="bg-primary p-2 rounded-lg">
+            <ScrollText className="w-6 h-6 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Auditoria de Atividades</h1>
+            <p className="text-muted-foreground text-sm">
+              Histórico completo de acessos e ações dos usuários.
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Auditoria de Atividades</h1>
-          <p className="text-muted-foreground text-sm">
-            Histórico completo de acessos e ações dos usuários.
-          </p>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => exportActivityLogsToExcel(logs)}
+            disabled={logs.length === 0}
+          >
+            <FileSpreadsheet className="w-4 h-4 mr-1" />
+            Excel
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => exportActivityLogsToPDF(logs)}
+            disabled={logs.length === 0}
+          >
+            <FileText className="w-4 h-4 mr-1" />
+            PDF
+          </Button>
         </div>
       </div>
 

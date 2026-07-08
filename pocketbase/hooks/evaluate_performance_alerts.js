@@ -1,6 +1,6 @@
 routerAdd(
   'POST',
-  '/backend/v1/targets/evaluate',
+  '/backend/v1/performance-alerts/evaluate',
   (e) => {
     var userId = e.auth && e.auth.id
     if (!userId) return e.unauthorizedError('auth required')
@@ -19,6 +19,8 @@ routerAdd(
     var leadershipUsers = users.filter(function (u) {
       return leadershipTitles.indexOf(u.getString('job_title')) !== -1
     })
+
+    var alertsCreated = 0
 
     for (var t = 0; t < targets.length; t++) {
       var target = targets[t]
@@ -94,7 +96,9 @@ routerAdd(
       var targetUsers = leadershipUsers.slice()
       if (catType === 'Region' && catVal) {
         var existingIds = {}
-        for (var lu = 0; lu < targetUsers.length; lu++) existingIds[targetUsers[lu].id] = true
+        for (var lu = 0; lu < targetUsers.length; lu++) {
+          existingIds[targetUsers[lu].id] = true
+        }
         for (var u = 0; u < users.length; u++) {
           if (users[u].getString('geographicArea') === catVal && !existingIds[users[u].id]) {
             targetUsers.push(users[u])
@@ -127,10 +131,11 @@ routerAdd(
             record.set('region', region)
           } catch (_) {}
           $app.save(record)
+          alertsCreated++
         }
       }
     }
-    return e.json(200, { success: true })
+    return e.json(200, { success: true, alertsCreated: alertsCreated })
   },
   $apis.requireAuth(),
 )

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-08T02:32:08.223Z",
+  "generatedAt": "2026-07-08T02:50:13.455Z",
   "collections": [
     {
       "name": "users",
@@ -510,9 +510,88 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "userId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "targetId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "targets"
+        },
+        {
+          "name": "milestone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "isRead",
+          "type": "bool",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []
+    },
+    {
+      "name": "documents",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.email = 'joaopedro_zoo@hotmail.com' || @request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager'",
+        "update": "@request.auth.email = 'joaopedro_zoo@hotmail.com' || @request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager'",
+        "delete": "@request.auth.email = 'joaopedro_zoo@hotmail.com' || @request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager'"
+      },
+      "fields": [
+        {
+          "name": "title",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "file",
+          "type": "file",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "category",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "min_access_level",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["CEO", "Diretor", "Gestor", "Gerente", "Manager", "Vendedor", "Comum"]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_documents_category ON documents (category)"]
     }
   ]
 }

@@ -18,8 +18,12 @@ import {
   Factory,
   CheckCircle2,
   TrendingUp,
+  FileSpreadsheet,
+  FileText,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { exportUserReportToPDF, exportUserReportToExcel } from '@/lib/exportReports'
 
 export default function Users() {
   const [users, setUsers] = useState<UserListItem[]>([])
@@ -125,6 +129,26 @@ export default function Users() {
               Relatório de Atividades — {selectedUser?.name || selectedUser?.email}
             </DialogTitle>
           </DialogHeader>
+          {!reportLoading && report && (
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportUserReportToExcel(selectedUser!, report!)}
+              >
+                <FileSpreadsheet className="w-4 h-4 mr-1" />
+                Excel
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportUserReportToPDF(selectedUser!, report!)}
+              >
+                <FileText className="w-4 h-4 mr-1" />
+                PDF
+              </Button>
+            </div>
+          )}
           {reportLoading ? (
             <div className="flex justify-center p-8">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
