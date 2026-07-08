@@ -89,6 +89,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       id: Math.random().toString(36).substr(2, 9),
       name: data.name || '',
       city: data.city || '',
+      country: data.country || 'Brasil',
       region: data.region || 'Norte',
       sector: data.sector || 'Bovinos em Geral',
       productLineAffinity: data.productLineAffinity || 'Adsorventes',

@@ -18,18 +18,33 @@ export function isManager(user: any): boolean {
 export function getScopedFactories(factories: Factory[], user: any): Factory[] {
   if (!user || isManager(user)) return factories
   const area = user.geographicArea || ''
-  if (!area) return factories
-  return factories.filter((f) => f.stateRegion === area || f.region === area)
+  const country = user.country || ''
+  if (!area && !country) return factories
+  return factories.filter((f) => {
+    const countryMatch = !country || f.country === country
+    const regionMatch = !area || f.stateRegion === area || f.region === area
+    return countryMatch && regionMatch
+  })
 }
 
 export function getScopedOrders(orders: Order[], factories: Factory[], user: any): Order[] {
   if (!user || isManager(user)) return orders
   const area = user.geographicArea || ''
-  if (!area) return orders
+  const country = user.country || ''
+  if (!area && !country) return orders
   const allowedFactoryIds = new Set(
-    factories.filter((f) => f.stateRegion === area || f.region === area).map((f) => f.id),
+    factories
+      .filter((f) => {
+        const countryMatch = !country || f.country === country
+        const regionMatch = !area || f.stateRegion === area || f.region === area
+        return countryMatch && regionMatch
+      })
+      .map((f) => f.id),
   )
-  return orders.filter((o) => allowedFactoryIds.has(o.factoryId) || o.region === area)
+  return orders.filter((o) => {
+    const countryMatch = !country || o.country === country
+    return allowedFactoryIds.has(o.factoryId) || (countryMatch && o.region === area)
+  })
 }
 
 export function getScopedTargets(targets: Target[], user: any): Target[] {

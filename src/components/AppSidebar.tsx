@@ -18,22 +18,24 @@ import {
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
+import { useI18n } from '@/hooks/use-i18n'
 import { isManager } from '@/lib/user-scope'
 
 export function AppSidebar() {
   const loc = useLocation()
   const { signOut, user } = useAuth()
+  const { t } = useI18n()
   const showAdmin = isManager(user)
   const menu = [
-    { name: 'Dashboard', path: '/', icon: Home },
-    { name: 'Cadastro', path: '/cadastro', icon: Building2 },
-    { name: 'Funil', path: '/funil', icon: BarChart2 },
-    { name: 'Histórico de Pedidos', path: '/pedidos', icon: ShoppingCart },
-    { name: 'Matriz SWOT', path: '/swot', icon: Target },
-    { name: 'Prioridade', path: '/matriz', icon: Grid },
-    { name: 'Metas', path: '/metas', icon: Target },
-    { name: 'Relatórios', path: '/relatorios', icon: BarChart2 },
-    ...(showAdmin ? [{ name: 'Auditoria', path: '/admin/logs', icon: ScrollText }] : []),
+    { name: t('nav.dashboard'), path: '/', icon: Home },
+    { name: t('nav.cadastro'), path: '/cadastro', icon: Building2 },
+    { name: t('nav.funil'), path: '/funil', icon: BarChart2 },
+    { name: t('nav.pedidos'), path: '/pedidos', icon: ShoppingCart },
+    { name: t('nav.swot'), path: '/swot', icon: Target },
+    { name: t('nav.prioridade'), path: '/matriz', icon: Grid },
+    { name: t('nav.metas'), path: '/metas', icon: Target },
+    { name: t('nav.relatorios'), path: '/relatorios', icon: BarChart2 },
+    ...(showAdmin ? [{ name: t('nav.auditoria'), path: '/admin/logs', icon: ScrollText }] : []),
   ]
 
   return (
@@ -72,12 +74,12 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={signOut}
-              tooltip="Sair"
+              tooltip={t('nav.sair')}
               className="h-10 px-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
             >
               <LogOut className="w-5 h-5" />
               <span className="group-data-[collapsible=icon]:hidden font-medium">
-                Sair da Conta
+                {t('nav.sair')}
               </span>
             </SidebarMenuButton>
           </SidebarMenuItem>

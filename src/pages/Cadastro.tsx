@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAppContext } from '@/store/AppContext'
+import { useI18n } from '@/hooks/use-i18n'
 import {
   Table,
   TableBody,
@@ -36,6 +37,7 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 
 export default function Cadastro() {
   const { factories, deleteFactory } = useAppContext()
+  const { t } = useI18n()
   const [search, setSearch] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('all')
   const [cityFilter, setCityFilter] = useState('all')
@@ -91,24 +93,22 @@ export default function Cadastro() {
     <div className="space-y-6 animate-fade-in pb-10">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Cadastro de Fábricas</h1>
-          <p className="text-muted-foreground text-sm">
-            Gerencie o banco de dados de clientes e prospects.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight">{t('cad.title')}</h1>
+          <p className="text-muted-foreground text-sm">{t('cad.subtitle')}</p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
           <Button
             onClick={handleWhatsAppShare}
             className="gap-2 shadow-sm bg-[#25D366] hover:bg-[#128C7E] text-white w-full sm:w-auto"
           >
-            <WhatsAppIcon className="w-5 h-5" /> Compartilhar (WhatsApp)
+            <WhatsAppIcon className="w-5 h-5" /> {t('cad.share')}
           </Button>
           <Button
             variant="outline"
             onClick={() => window.print()}
             className="gap-2 shadow-sm w-full sm:w-auto"
           >
-            <Download className="w-5 h-5 md:w-4 md:h-4" /> Exportar PDF
+            <Download className="w-5 h-5 md:w-4 md:h-4" /> {t('cad.exportPDF')}
           </Button>
         </div>
       </div>
@@ -117,7 +117,7 @@ export default function Cadastro() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar fábrica, setor..."
+            placeholder={t('cad.search')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 bg-background"
@@ -128,7 +128,7 @@ export default function Cadastro() {
             <SelectValue placeholder="Prioridade" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todas Prioridades</SelectItem>
+            <SelectItem value="all">{t('cad.allPri')}</SelectItem>
             <SelectItem value="High">Alta Prioridade (Verde)</SelectItem>
             <SelectItem value="Medium">Média Prioridade (Amarelo)</SelectItem>
             <SelectItem value="Low">Baixa Prioridade (Vermelho)</SelectItem>
@@ -139,7 +139,7 @@ export default function Cadastro() {
             <SelectValue placeholder="Cidade" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todas as Cidades</SelectItem>
+            <SelectItem value="all">{t('cad.allCities')}</SelectItem>
             {uniqueCities.map((city) => (
               <SelectItem key={city} value={city}>
                 {city}
@@ -164,12 +164,12 @@ export default function Cadastro() {
           <Table>
             <TableHeader className="bg-muted/50">
               <TableRow>
-                <TableHead>Fábrica</TableHead>
-                <TableHead>Local</TableHead>
-                <TableHead>Setor / Foco</TableHead>
-                <TableHead>Prioridade</TableHead>
-                <TableHead className="text-right">Potencial</TableHead>
-                <TableHead className="text-center">Ações</TableHead>
+                <TableHead>{t('cad.factory')}</TableHead>
+                <TableHead>{t('cad.location')}</TableHead>
+                <TableHead>{t('cad.sector')}</TableHead>
+                <TableHead>{t('cad.pri')}</TableHead>
+                <TableHead className="text-right">{t('cad.potential')}</TableHead>
+                <TableHead className="text-center">{t('cad.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -233,7 +233,7 @@ export default function Cadastro() {
               {filtered.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
-                    Nenhuma fábrica encontrada.
+                    {t('cad.noResults')}
                   </TableCell>
                 </TableRow>
               )}
@@ -289,7 +289,7 @@ export default function Cadastro() {
 
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <Button variant="ghost" size="sm" onClick={() => setEditing(f)} className="gap-2">
-                  <Edit2 className="w-4 h-4" /> Detalhes
+                  <Edit2 className="w-4 h-4" /> {t('cad.details')}
                 </Button>
                 <Button
                   variant="ghost"
@@ -305,7 +305,7 @@ export default function Cadastro() {
         })}
         {filtered.length === 0 && (
           <div className="text-center p-8 text-muted-foreground border rounded-lg bg-card">
-            Nenhuma fábrica encontrada.
+            {t('cad.noResults')}
           </div>
         )}
       </div>

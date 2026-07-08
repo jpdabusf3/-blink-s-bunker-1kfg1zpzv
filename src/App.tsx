@@ -14,6 +14,7 @@ import NotFound from './pages/NotFound'
 import Login from './pages/Login'
 import { AppProvider } from './store/AppContext'
 import { AuthProvider } from './hooks/use-auth'
+import { I18nProvider } from './hooks/use-i18n'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import Relatorios from './pages/Relatorios'
 import AdminLogs from './pages/AdminLogs'
@@ -24,33 +25,35 @@ const App = () => (
   <ThemeProvider defaultTheme="system" storageKey="blink-theme" attribute="class">
     <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
       <AuthProvider>
-        <AppProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <Routes>
-              <Route path="/login" element={<Login />} />
+        <I18nProvider>
+          <AppProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <Routes>
+                <Route path="/login" element={<Login />} />
 
-              <Route element={<ProtectedRoute />}>
-                <Route element={<Layout />}>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/cadastro" element={<Cadastro />} />
-                  <Route path="/funil" element={<Funil />} />
-                  <Route path="/swot" element={<SWOT />} />
-                  <Route path="/matriz" element={<Matriz />} />
-                  <Route path="/pedidos" element={<Pedidos />} />
-                  <Route path="/metas" element={<Metas />} />
-                  <Route path="/relatorios" element={<Relatorios />} />
-                  <Route element={<ManagerRoute />}>
-                    <Route path="/admin/logs" element={<AdminLogs />} />
+                <Route element={<ProtectedRoute />}>
+                  <Route element={<Layout />}>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/cadastro" element={<Cadastro />} />
+                    <Route path="/funil" element={<Funil />} />
+                    <Route path="/swot" element={<SWOT />} />
+                    <Route path="/matriz" element={<Matriz />} />
+                    <Route path="/pedidos" element={<Pedidos />} />
+                    <Route path="/metas" element={<Metas />} />
+                    <Route path="/relatorios" element={<Relatorios />} />
+                    <Route element={<ManagerRoute />}>
+                      <Route path="/admin/logs" element={<AdminLogs />} />
+                    </Route>
                   </Route>
                 </Route>
-              </Route>
 
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </TooltipProvider>
-        </AppProvider>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </TooltipProvider>
+          </AppProvider>
+        </I18nProvider>
       </AuthProvider>
     </BrowserRouter>
   </ThemeProvider>

@@ -63,6 +63,7 @@ export interface Target {
 export interface Order {
   id: string
   factoryId: string
+  country?: string
   product: string
   line?: ProductLine | string
   quantity: number
@@ -116,6 +117,7 @@ export interface Factory {
   id: string
   name: string
   city: string
+  country?: string
   region: Region
   sector?: string
   productLineAffinity?: ProductLine

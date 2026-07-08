@@ -1,16 +1,18 @@
 import { Home, Building2, BarChart2, Target, Grid } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/hooks/use-i18n'
 
 export function AppBottomNav() {
   const loc = useLocation()
+  const { t } = useI18n()
   const menu = [
-    { name: 'Início', path: '/', icon: Home },
-    { name: 'Fábricas', path: '/cadastro', icon: Building2 },
-    { name: 'Funil', path: '/funil', icon: BarChart2 },
-    { name: 'SWOT', path: '/swot', icon: Target },
-    { name: 'Prioridade', path: '/matriz', icon: Grid },
-    { name: 'Relatórios', path: '/relatorios', icon: BarChart2 },
+    { name: t('bn.inicio'), path: '/', icon: Home },
+    { name: t('bn.fabricas'), path: '/cadastro', icon: Building2 },
+    { name: t('bn.funil'), path: '/funil', icon: BarChart2 },
+    { name: t('bn.swot'), path: '/swot', icon: Target },
+    { name: t('bn.prioridade'), path: '/matriz', icon: Grid },
+    { name: t('bn.relatorios'), path: '/relatorios', icon: BarChart2 },
   ]
 
   return (

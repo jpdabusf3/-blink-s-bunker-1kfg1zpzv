@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
+import { useI18n } from '@/hooks/use-i18n'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,10 +17,12 @@ import { Target } from 'lucide-react'
 import { toast } from 'sonner'
 import { extractFieldErrors, getErrorMessage } from '@/lib/pocketbase/errors'
 import { isAllowedDomain } from '@/lib/user-scope'
+import { COUNTRIES } from '@/lib/countries'
 
 export default function Login() {
   const navigate = useNavigate()
   const { signIn, signUp } = useAuth()
+  const { t } = useI18n()
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [loginData, setLoginData] = useState({ email: '', password: '' })
@@ -27,29 +30,28 @@ export default function Login() {
     email: '',
     password: '',
     jobTitle: '',
-    stateRegion: '',
     country: 'Brasil',
+    stateRegion: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const selectedCountry = COUNTRIES.find((c) => c.name === regData.country)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
     setErrors({})
-
     if (!isAllowedDomain(loginData.email)) {
-      toast.error('Apenas e-mails corporativos @blinkbiotech.com são permitidos.')
+      toast.error(t('login.domainErr'))
       setIsSubmitting(false)
       return
     }
-
     const { error } = await signIn(loginData.email, loginData.password)
     setIsSubmitting(false)
-
     if (error) {
       toast.error(getErrorMessage(error))
     } else {
-      toast.success('Login realizado com sucesso')
+      toast.success(t('login.loginOk'))
       navigate('/')
     }
   }
@@ -58,25 +60,21 @@ export default function Login() {
     e.preventDefault()
     setIsSubmitting(true)
     setErrors({})
-
     if (!isAllowedDomain(regData.email)) {
-      toast.error('Apenas e-mails corporativos @blinkbiotech.com são permitidos.')
+      toast.error(t('login.domainErr'))
       setIsSubmitting(false)
       return
     }
-
     if (!regData.jobTitle) {
-      toast.error('Selecione seu cargo.')
+      toast.error(t('login.selJob'))
       setIsSubmitting(false)
       return
     }
-
     if (!regData.stateRegion) {
-      toast.error('Selecione sua região geográfica.')
+      toast.error(t('login.selRegion'))
       setIsSubmitting(false)
       return
     }
-
     const { error } = await signUp(
       regData.email,
       regData.password,
@@ -85,12 +83,11 @@ export default function Login() {
       regData.country,
     )
     setIsSubmitting(false)
-
     if (error) {
       setErrors(extractFieldErrors(error))
       toast.error(getErrorMessage(error))
     } else {
-      toast.success('Conta criada com sucesso')
+      toast.success(t('login.regOk'))
       navigate('/')
     }
   }
@@ -102,31 +99,31 @@ export default function Login() {
           <div className="bg-primary p-3 rounded-xl mb-4">
             <Target className="w-8 h-8 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold">Blink Biotech</h1>
-          <p className="text-muted-foreground text-sm">Inteligência Comercial</p>
+          <h1 className="text-2xl font-bold">{t('login.title')}</h1>
+          <p className="text-muted-foreground text-sm">{t('login.subtitle')}</p>
         </div>
 
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="login">Entrar</TabsTrigger>
-            <TabsTrigger value="register">Criar Conta</TabsTrigger>
+            <TabsTrigger value="login">{t('login.signIn')}</TabsTrigger>
+            <TabsTrigger value="register">{t('login.create')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="login">
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="login-email">Email</Label>
+                <Label htmlFor="login-email">{t('login.email')}</Label>
                 <Input
                   id="login-email"
                   type="email"
                   required
                   value={loginData.email}
                   onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                  placeholder="seu@email.com"
+                  placeholder={t('login.emailPh')}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="login-password">Senha</Label>
+                <Label htmlFor="login-password">{t('login.password')}</Label>
                 <Input
                   id="login-password"
                   type="password"
@@ -136,7 +133,7 @@ export default function Login() {
                 />
               </div>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? 'Entrando...' : 'Entrar na Plataforma'}
+                {isSubmitting ? t('login.signingIn') : t('login.signInBtn')}
               </Button>
             </form>
           </TabsContent>
@@ -144,19 +141,19 @@ export default function Login() {
           <TabsContent value="register">
             <form onSubmit={handleRegister} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="reg-email">Email Profissional</Label>
+                <Label htmlFor="reg-email">{t('login.emailProf')}</Label>
                 <Input
                   id="reg-email"
                   type="email"
                   required
                   value={regData.email}
                   onChange={(e) => setRegData({ ...regData, email: e.target.value })}
-                  placeholder="seu@email.com"
+                  placeholder={t('login.emailPh')}
                 />
                 {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="reg-password">Senha</Label>
+                <Label htmlFor="reg-password">{t('login.password')}</Label>
                 <Input
                   id="reg-password"
                   type="password"
@@ -164,18 +161,18 @@ export default function Login() {
                   minLength={8}
                   value={regData.password}
                   onChange={(e) => setRegData({ ...regData, password: e.target.value })}
-                  placeholder="Mínimo 8 caracteres"
+                  placeholder={t('login.passPh')}
                 />
                 {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="reg-job">Cargo (Job Title) *</Label>
+                <Label htmlFor="reg-job">{t('login.job')} *</Label>
                 <Select
                   value={regData.jobTitle}
                   onValueChange={(val) => setRegData({ ...regData, jobTitle: val })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione seu cargo" />
+                    <SelectValue placeholder={t('login.jobPh')} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="CEO">CEO</SelectItem>
@@ -192,53 +189,52 @@ export default function Login() {
                 {errors.job_title && <p className="text-xs text-destructive">{errors.job_title}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="reg-country">País</Label>
+                <Label htmlFor="reg-country">{t('login.country')}</Label>
                 <Select
                   value={regData.country}
-                  onValueChange={(val) => setRegData({ ...regData, country: val })}
+                  onValueChange={(val) => setRegData({ ...regData, country: val, stateRegion: '' })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
+                    <SelectValue placeholder={t('login.country')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Brasil">Brasil</SelectItem>
-                    <SelectItem value="Argentina">Argentina</SelectItem>
-                    <SelectItem value="Uruguai">Uruguai</SelectItem>
-                    <SelectItem value="Paraguai">Paraguai</SelectItem>
-                    <SelectItem value="Outro">Outro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="reg-region">Região Geográfica *</Label>
-                <Select
-                  value={regData.stateRegion}
-                  onValueChange={(val) => setRegData({ ...regData, stateRegion: val })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione sua região" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[
-                      'Sul',
-                      'Norte',
-                      'Oeste',
-                      'Leste',
-                      'Nordeste',
-                      'Noroeste',
-                      'Sudeste',
-                      'Sudoeste',
-                      'Centro',
-                    ].map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {r}
+                    {COUNTRIES.map((c) => (
+                      <SelectItem key={c.name} value={c.name}>
+                        {c.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="reg-region">{t('login.region')} *</Label>
+                {selectedCountry?.regions ? (
+                  <Select
+                    value={regData.stateRegion}
+                    onValueChange={(val) => setRegData({ ...regData, stateRegion: val })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('login.regionPh')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedCountry.regions.map((r) => (
+                        <SelectItem key={r} value={r}>
+                          {r}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    id="reg-region"
+                    value={regData.stateRegion}
+                    onChange={(e) => setRegData({ ...regData, stateRegion: e.target.value })}
+                    placeholder={t('login.regionPh')}
+                  />
+                )}
+              </div>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? 'Criando...' : 'Criar Conta'}
+                {isSubmitting ? t('login.creating') : t('login.createBtn')}
               </Button>
             </form>
           </TabsContent>
