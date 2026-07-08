@@ -6,13 +6,24 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar'
-import { Home, Building2, BarChart2, Target, Grid, LogOut, ShoppingCart } from 'lucide-react'
+import {
+  Home,
+  Building2,
+  BarChart2,
+  Target,
+  Grid,
+  LogOut,
+  ShoppingCart,
+  ScrollText,
+} from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
+import { isManager } from '@/lib/user-scope'
 
 export function AppSidebar() {
   const loc = useLocation()
-  const { signOut } = useAuth()
+  const { signOut, user } = useAuth()
+  const showAdmin = isManager(user)
   const menu = [
     { name: 'Dashboard', path: '/', icon: Home },
     { name: 'Cadastro', path: '/cadastro', icon: Building2 },
@@ -22,6 +33,7 @@ export function AppSidebar() {
     { name: 'Prioridade', path: '/matriz', icon: Grid },
     { name: 'Metas', path: '/metas', icon: Target },
     { name: 'Relatórios', path: '/relatorios', icon: BarChart2 },
+    ...(showAdmin ? [{ name: 'Auditoria', path: '/admin/logs', icon: ScrollText }] : []),
   ]
 
   return (

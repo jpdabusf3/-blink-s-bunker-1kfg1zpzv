@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-11T16:00:19.510Z",
+  "generatedAt": "2026-07-08T00:20:02.264Z",
   "collections": [
     {
       "name": "users",
@@ -43,6 +43,18 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "geographicArea",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "country",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -54,11 +66,11 @@
       "name": "factories",
       "type": "base",
       "apiRules": {
-        "list": "",
-        "view": "",
-        "create": "",
-        "update": "",
-        "delete": ""
+        "list": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || stateRegion = @request.auth.geographicArea)",
+        "view": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || stateRegion = @request.auth.geographicArea)",
+        "create": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || stateRegion = @request.auth.geographicArea)",
+        "update": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || stateRegion = @request.auth.geographicArea)",
+        "delete": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || stateRegion = @request.auth.geographicArea)"
       },
       "fields": [
         {
@@ -227,11 +239,11 @@
       "name": "orders",
       "type": "base",
       "apiRules": {
-        "list": "",
-        "view": "",
-        "create": "",
-        "update": "",
-        "delete": ""
+        "list": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || region = @request.auth.geographicArea)",
+        "view": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || region = @request.auth.geographicArea)",
+        "create": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || region = @request.auth.geographicArea)",
+        "update": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || region = @request.auth.geographicArea)",
+        "delete": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || region = @request.auth.geographicArea)"
       },
       "fields": [
         {
@@ -290,6 +302,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "region",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []
@@ -298,11 +316,11 @@
       "name": "targets",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || categoryType != 'Region' || (categoryType = 'Region' && categoryValue = @request.auth.geographicArea))",
+        "view": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || categoryType != 'Region' || (categoryType = 'Region' && categoryValue = @request.auth.geographicArea))",
+        "create": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || categoryType != 'Region' || (categoryType = 'Region' && categoryValue = @request.auth.geographicArea))",
+        "update": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || categoryType != 'Region' || (categoryType = 'Region' && categoryValue = @request.auth.geographicArea))",
+        "delete": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || categoryType != 'Region' || (categoryType = 'Region' && categoryValue = @request.auth.geographicArea))"
       },
       "fields": [
         {
@@ -358,6 +376,56 @@
         }
       ],
       "indexes": []
+    },
+    {
+      "name": "activity_logs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || user = @request.auth.id",
+        "view": "@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || user = @request.auth.id",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor'",
+        "delete": "@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor'"
+      },
+      "fields": [
+        {
+          "name": "user",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "action",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "details",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_activity_logs_user ON activity_logs (user)",
+        "CREATE INDEX idx_activity_logs_created ON activity_logs (created DESC)"
+      ]
     }
   ]
 }

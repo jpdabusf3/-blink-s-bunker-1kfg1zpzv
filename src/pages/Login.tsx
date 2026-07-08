@@ -5,9 +5,17 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Target } from 'lucide-react'
 import { toast } from 'sonner'
 import { extractFieldErrors, getErrorMessage } from '@/lib/pocketbase/errors'
+import { isAllowedDomain } from '@/lib/user-scope'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -15,13 +23,25 @@ export default function Login() {
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [loginData, setLoginData] = useState({ email: '', password: '' })
-  const [regData, setRegData] = useState({ email: '', password: '', jobTitle: '' })
+  const [regData, setRegData] = useState({
+    email: '',
+    password: '',
+    jobTitle: '',
+    stateRegion: '',
+    country: 'Brasil',
+  })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
     setErrors({})
+
+    if (!isAllowedDomain(loginData.email)) {
+      toast.error('Access restricted to Blink Biotech employees.')
+      setIsSubmitting(false)
+      return
+    }
 
     const { error } = await signIn(loginData.email, loginData.password)
     setIsSubmitting(false)
@@ -39,7 +59,25 @@ export default function Login() {
     setIsSubmitting(true)
     setErrors({})
 
-    const { error } = await signUp(regData.email, regData.password, regData.jobTitle)
+    if (!isAllowedDomain(regData.email)) {
+      toast.error('Access restricted to Blink Biotech employees.')
+      setIsSubmitting(false)
+      return
+    }
+
+    if (!regData.stateRegion) {
+      toast.error('Selecione sua região geográfica.')
+      setIsSubmitting(false)
+      return
+    }
+
+    const { error } = await signUp(
+      regData.email,
+      regData.password,
+      regData.jobTitle,
+      regData.stateRegion,
+      regData.country,
+    )
     setIsSubmitting(false)
 
     if (error) {
@@ -135,6 +173,52 @@ export default function Login() {
                   placeholder="Ex: Gerente Comercial"
                 />
                 {errors.job_title && <p className="text-xs text-destructive">{errors.job_title}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="reg-country">País</Label>
+                <Select
+                  value={regData.country}
+                  onValueChange={(val) => setRegData({ ...regData, country: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Brasil">Brasil</SelectItem>
+                    <SelectItem value="Argentina">Argentina</SelectItem>
+                    <SelectItem value="Uruguai">Uruguai</SelectItem>
+                    <SelectItem value="Paraguai">Paraguai</SelectItem>
+                    <SelectItem value="Outro">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="reg-region">Região Geográfica *</Label>
+                <Select
+                  value={regData.stateRegion}
+                  onValueChange={(val) => setRegData({ ...regData, stateRegion: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione sua região" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[
+                      'Sul',
+                      'Norte',
+                      'Oeste',
+                      'Leste',
+                      'Nordeste',
+                      'Noroeste',
+                      'Sudeste',
+                      'Sudoeste',
+                      'Centro',
+                    ].map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {r}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? 'Criando...' : 'Criar Conta'}

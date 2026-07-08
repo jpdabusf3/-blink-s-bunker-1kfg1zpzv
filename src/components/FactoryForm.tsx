@@ -11,6 +11,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useAppContext } from '@/store/AppContext'
+import { useAuth } from '@/hooks/use-auth'
+import { isManager } from '@/lib/user-scope'
 
 interface FactoryFormProps {
   factory?: Factory
@@ -19,6 +21,10 @@ interface FactoryFormProps {
 
 export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
   const { addFactory, updateFactory } = useAppContext()
+  const { user } = useAuth()
+  const userIsManager = isManager(user)
+  const userArea = user?.geographicArea || ''
+  const defaultStateRegion = factory?.stateRegion || userArea || 'Sul'
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -41,6 +47,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
       status: fd.get('status') as Status,
       funnelStage: fd.get('funnelStage') as FunnelStage,
       winProbability: Number(fd.get('winProbability')),
+      stateRegion: (userIsManager ? fd.get('stateRegion') : userArea) as Factory['stateRegion'],
       deadline: deadlineValue ? new Date(deadlineValue).toISOString() : undefined,
       lastInteraction: factory?.lastInteraction || new Date().toISOString(),
     }

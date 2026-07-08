@@ -92,6 +92,25 @@ export interface Visit {
   potentialValue: number
 }
 
+export interface ActivityLog {
+  id: string
+  user: string
+  action: string
+  details: string
+  created: string
+  updated: string
+  expand?: {
+    user?: {
+      id: string
+      name: string
+      email: string
+      job_title: string
+      geographicArea: string
+      country: string
+    }
+  }
+}
+
 export interface Factory {
   id: string
   name: string

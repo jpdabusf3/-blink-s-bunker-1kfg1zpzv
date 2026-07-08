@@ -4,7 +4,13 @@ import pb from '@/lib/pocketbase/client'
 interface AuthContextType {
   user: any
   isAuthenticated: boolean
-  signUp: (email: string, password: string, jobTitle: string) => Promise<{ error: any }>
+  signUp: (
+    email: string,
+    password: string,
+    jobTitle: string,
+    geographicArea: string,
+    country: string,
+  ) => Promise<{ error: any }>
   signIn: (email: string, password: string) => Promise<{ error: any }>
   signOut: () => void
   loading: boolean
@@ -43,12 +49,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [])
 
-  const signUp = async (email: string, password: string, jobTitle: string) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    jobTitle: string,
+    geographicArea: string,
+    country: string,
+  ) => {
     try {
       await pb
         .collection('users')
-        .create({ email, password, passwordConfirm: password, job_title: jobTitle })
+        .create({
+          email,
+          password,
+          passwordConfirm: password,
+          job_title: jobTitle,
+          geographicArea,
+          country,
+        })
       await pb.collection('users').authWithPassword(email, password)
+      try {
+        await pb.send('/backend/v1/log-activity', {
+          method: 'POST',
+          body: JSON.stringify({ action: 'Signed Up', details: email }),
+          headers: { 'Content-Type': 'application/json' },
+        })
+      } catch {
+        /* intentionally ignored */
+      }
       return { error: null }
     } catch (error) {
       return { error }
@@ -58,6 +86,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       await pb.collection('users').authWithPassword(email, password)
+      try {
+        await pb.send('/backend/v1/log-activity', {
+          method: 'POST',
+          body: JSON.stringify({ action: 'Logged In', details: email }),
+          headers: { 'Content-Type': 'application/json' },
+        })
+      } catch {
+        /* intentionally ignored */
+      }
       return { error: null }
     } catch (error) {
       return { error }
