@@ -67,6 +67,33 @@ export function exportUserReportToPDF(user: UserListItem, report: UserReport) {
   win.document.close()
 }
 
+export function exportTeamToExcel(users: UserListItem[]) {
+  const sep = ';'
+  const headers = ['Nome', 'Email', 'Cargo', 'Área de Atuação', 'País', 'Data de Cadastro']
+  const lines = [
+    headers.join(sep),
+    ...users.map((u) =>
+      [
+        `"${(u.name || 'N/A').replace(/"/g, '""')}"`,
+        `"${u.email.replace(/"/g, '""')}"`,
+        `"${(u.job_title || 'N/A').replace(/"/g, '""')}"`,
+        `"${(u.geographicArea || 'N/A').replace(/"/g, '""')}"`,
+        `"${(u.country || 'N/A').replace(/"/g, '""')}"`,
+        new Date(u.created).toLocaleDateString('pt-BR'),
+      ].join(sep),
+    ),
+  ]
+  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  link.setAttribute('href', url)
+  link.setAttribute('download', 'relatorio_equipe_blink_biotech.csv')
+  link.style.visibility = 'hidden'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
 export function exportActivityLogsToExcel(logs: ActivityLog[]) {
   const sep = ';'
   const content = [

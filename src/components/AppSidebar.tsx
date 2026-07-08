@@ -22,13 +22,12 @@ import {
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { useI18n } from '@/hooks/use-i18n'
-import { isManager, isSuperAdmin, isMasterOrCeo } from '@/lib/user-scope'
+import { isMasterOrCeo } from '@/lib/user-scope'
 
 export function AppSidebar() {
   const loc = useLocation()
   const { signOut, user } = useAuth()
   const { t } = useI18n()
-  const showAdmin = isManager(user)
   const showMasterOrCeo = isMasterOrCeo(user)
   const menu = [
     { name: t('nav.dashboard'), path: '/', icon: Home },
@@ -41,7 +40,9 @@ export function AppSidebar() {
     { name: t('nav.relatorios'), path: '/relatorios', icon: BarChart2 },
     ...(showMasterOrCeo ? [{ name: 'Equipe', path: '/equipe', icon: UserPlus }] : []),
     ...(showMasterOrCeo ? [{ name: 'Documentos', path: '/documentos', icon: FileText }] : []),
-    ...(showAdmin ? [{ name: t('nav.auditoria'), path: '/admin/logs', icon: ScrollText }] : []),
+    ...(showMasterOrCeo
+      ? [{ name: t('nav.auditoria'), path: '/admin/logs', icon: ScrollText }]
+      : []),
     ...(showMasterOrCeo ? [{ name: t('nav.usuarios'), path: '/usuarios', icon: Users }] : []),
   ]
 

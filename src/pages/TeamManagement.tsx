@@ -14,15 +14,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Users as UsersIcon, UserPlus, Trash2, Loader2 } from 'lucide-react'
+import { Users as UsersIcon, UserPlus, Trash2, Loader2, Download } from 'lucide-react'
 import { InvitationForm } from '@/components/InvitationForm'
 import { toast } from 'sonner'
+import { exportTeamToExcel } from '@/lib/exportReports'
 
 export default function TeamManagement() {
   const [users, setUsers] = useState<UserListItem[]>([])
   const [invitations, setInvitations] = useState<Invitation[]>([])
   const [loading, setLoading] = useState(true)
   const [showInvite, setShowInvite] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const loadData = async () => {
     try {
@@ -71,6 +73,18 @@ export default function TeamManagement() {
     )
   }
 
+  const handleExport = () => {
+    setExporting(true)
+    try {
+      exportTeamToExcel(users)
+      toast.success('Relatório da equipe exportado com sucesso.')
+    } catch {
+      toast.error('Erro ao exportar relatório.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const handleDeleteInvitation = async (id: string) => {
     try {
       await deleteInvitation(id)
@@ -95,9 +109,24 @@ export default function TeamManagement() {
             </p>
           </div>
         </div>
-        <Button onClick={() => setShowInvite(true)} className="gap-2">
-          <UserPlus className="w-4 h-4" /> Convidar Usuário
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={exporting || users.length === 0}
+            className="gap-2"
+          >
+            {exporting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            Exportar Relatório
+          </Button>
+          <Button onClick={() => setShowInvite(true)} className="gap-2">
+            <UserPlus className="w-4 h-4" /> Convidar Usuário
+          </Button>
+        </div>
       </div>
 
       {loading ? (

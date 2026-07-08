@@ -21,7 +21,6 @@ import Documents from './pages/Documents'
 import AdminLogs from './pages/AdminLogs'
 import UsersPage from './pages/Users'
 import TeamManagement from './pages/TeamManagement'
-import { ManagerRoute } from './components/ManagerRoute'
 import { SuperAdminRoute } from './components/SuperAdminRoute'
 import { ThemeProvider } from './components/ThemeProvider'
 
@@ -48,12 +47,10 @@ const App = () => (
                     <Route path="/metas" element={<Metas />} />
                     <Route path="/relatorios" element={<Relatorios />} />
                     <Route path="/documentos" element={<Documents />} />
-                    <Route element={<ManagerRoute />}>
-                      <Route path="/admin/logs" element={<AdminLogs />} />
-                    </Route>
                     <Route element={<SuperAdminRoute />}>
                       <Route path="/usuarios" element={<UsersPage />} />
                       <Route path="/equipe" element={<TeamManagement />} />
+                      <Route path="/admin/logs" element={<AdminLogs />} />
                     </Route>
                   </Route>
                 </Route>
