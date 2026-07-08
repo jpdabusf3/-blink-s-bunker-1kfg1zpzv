@@ -57,16 +57,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     country: string,
   ) => {
     try {
-      await pb
-        .collection('users')
-        .create({
-          email,
-          password,
-          passwordConfirm: password,
-          job_title: jobTitle,
-          geographicArea,
-          country,
-        })
+      await pb.collection('users').create({
+        email,
+        password,
+        passwordConfirm: password,
+        job_title: jobTitle,
+        geographicArea,
+        country,
+      })
       await pb.collection('users').authWithPassword(email, password)
       try {
         await pb.send('/backend/v1/log-activity', {

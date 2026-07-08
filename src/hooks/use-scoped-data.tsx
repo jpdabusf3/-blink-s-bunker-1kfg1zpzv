@@ -15,3 +15,15 @@ export function useScopedOrders(): Order[] {
   const { user } = useAuth()
   return useMemo(() => getScopedOrders(orders, factories, user), [orders, factories, user])
 }
+
+export function useScopedFactories(): Factory[] {
+  const { factories } = useAppContext()
+  const { user } = useAuth()
+  return useMemo(() => getScopedFactories(factories, user), [factories, user])
+}
+
+export function useScopedOrders(): Order[] {
+  const { orders, factories } = useAppContext()
+  const { user } = useAuth()
+  return useMemo(() => getScopedOrders(orders, factories, user), [orders, factories, user])
+}

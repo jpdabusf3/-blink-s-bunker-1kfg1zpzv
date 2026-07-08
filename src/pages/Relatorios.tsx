@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import pb from '@/lib/pocketbase/client'
+import { useAuth } from '@/hooks/use-auth'
+import { isManager } from '@/lib/user-scope'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
@@ -59,6 +61,8 @@ export default function Relatorios() {
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const { factories } = useAppContext()
+  const { user } = useAuth()
+  const isLeadership = isManager(user)
 
   const [period, setPeriod] = useState<string>('monthly')
   const [channel, setChannel] = useState<string>('all')
@@ -248,39 +252,50 @@ export default function Relatorios() {
             </div>
           )}
 
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground">Estado (UF)</label>
-            <Select value={stateFilter} onValueChange={setStateFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {states.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {isLeadership ? (
+            <>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Estado (UF)</label>
+                <Select value={stateFilter} onValueChange={setStateFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {states.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground">Região</label>
-            <Select value={regionFilter} onValueChange={setRegionFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                {STATE_REGIONS.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {r}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Região</label>
+                <Select value={regionFilter} onValueChange={setRegionFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    {STATE_REGIONS.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {r}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">Área de Atuação</label>
+              <div className="h-9 px-3 flex items-center rounded-md border bg-muted/50 text-sm font-medium">
+                {user?.geographicArea || 'Não definida'}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

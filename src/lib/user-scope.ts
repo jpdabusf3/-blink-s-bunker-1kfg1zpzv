@@ -1,16 +1,18 @@
-import type { Factory, Order } from '@/types'
+import type { Factory, Order, Target } from '@/types'
 
-const ALLOWED_DOMAINS = ['blinkbiotech.com.br', 'blink.com.br']
+const ALLOWED_DOMAINS = ['blinkbiotech.com']
 
 export function isAllowedDomain(email: string): boolean {
   const domain = email.split('@')[1]?.toLowerCase() || ''
   return ALLOWED_DOMAINS.includes(domain)
 }
 
+const LEADERSHIP_TITLES = ['ceo', 'diretor', 'gestor', 'gerente', 'manager']
+
 export function isManager(user: any): boolean {
   if (!user) return false
   const title = (user.job_title || '').toLowerCase()
-  return title === 'manager' || title === 'gestor'
+  return LEADERSHIP_TITLES.includes(title)
 }
 
 export function getScopedFactories(factories: Factory[], user: any): Factory[] {
@@ -27,5 +29,15 @@ export function getScopedOrders(orders: Order[], factories: Factory[], user: any
   const allowedFactoryIds = new Set(
     factories.filter((f) => f.stateRegion === area || f.region === area).map((f) => f.id),
   )
-  return orders.filter((o) => allowedFactoryIds.has(o.factoryId))
+  return orders.filter((o) => allowedFactoryIds.has(o.factoryId) || o.region === area)
+}
+
+export function getScopedTargets(targets: Target[], user: any): Target[] {
+  if (!user || isManager(user)) return targets
+  const area = user.geographicArea || ''
+  if (!area) return targets
+  return targets.filter(
+    (t) =>
+      t.categoryType === 'General' || (t.categoryType === 'Region' && t.categoryValue === area),
+  )
 }

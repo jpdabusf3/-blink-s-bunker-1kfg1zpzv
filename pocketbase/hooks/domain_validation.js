@@ -9,10 +9,10 @@ onRecordCreateRequest((e) => {
 
   if (email) {
     const domain = email.split('@')[1] || ''
-    const allowedDomains = ['blinkbiotech.com.br', 'blink.com.br']
+    const allowedDomains = ['blinkbiotech.com']
 
     if (!allowedDomains.includes(domain)) {
-      return e.badRequestError('Access restricted to Blink Biotech employees.')
+      return e.badRequestError('Apenas e-mails corporativos @blinkbiotech.com são permitidos.')
     }
   }
 

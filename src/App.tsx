@@ -16,6 +16,8 @@ import { AppProvider } from './store/AppContext'
 import { AuthProvider } from './hooks/use-auth'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import Relatorios from './pages/Relatorios'
+import AdminLogs from './pages/AdminLogs'
+import { ManagerRoute } from './components/ManagerRoute'
 import { ThemeProvider } from './components/ThemeProvider'
 
 const App = () => (
@@ -39,6 +41,9 @@ const App = () => (
                   <Route path="/pedidos" element={<Pedidos />} />
                   <Route path="/metas" element={<Metas />} />
                   <Route path="/relatorios" element={<Relatorios />} />
+                  <Route element={<ManagerRoute />}>
+                    <Route path="/admin/logs" element={<AdminLogs />} />
+                  </Route>
                 </Route>
               </Route>
 

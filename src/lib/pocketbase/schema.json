@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-08T00:20:02.264Z",
+  "generatedAt": "2026-07-08T01:00:14.990Z",
   "collections": [
     {
       "name": "users",
@@ -66,11 +66,11 @@
       "name": "factories",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || stateRegion = @request.auth.geographicArea)",
-        "view": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || stateRegion = @request.auth.geographicArea)",
-        "create": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || stateRegion = @request.auth.geographicArea)",
-        "update": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || stateRegion = @request.auth.geographicArea)",
-        "delete": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || stateRegion = @request.auth.geographicArea)"
+        "list": "@request.auth.id != '' && (@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || stateRegion = @request.auth.geographicArea || region = @request.auth.geographicArea)",
+        "view": "@request.auth.id != '' && (@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || stateRegion = @request.auth.geographicArea || region = @request.auth.geographicArea)",
+        "create": "@request.auth.id != '' && (@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || @request.body.stateRegion = @request.auth.geographicArea || @request.body.region = @request.auth.geographicArea)",
+        "update": "@request.auth.id != '' && (@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || @request.body.stateRegion = @request.auth.geographicArea || @request.body.region = @request.auth.geographicArea)",
+        "delete": "@request.auth.id != '' && (@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || stateRegion = @request.auth.geographicArea || region = @request.auth.geographicArea)"
       },
       "fields": [
         {
@@ -239,11 +239,11 @@
       "name": "orders",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || region = @request.auth.geographicArea)",
-        "view": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || region = @request.auth.geographicArea)",
-        "create": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || region = @request.auth.geographicArea)",
-        "update": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || region = @request.auth.geographicArea)",
-        "delete": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || region = @request.auth.geographicArea)"
+        "list": "@request.auth.id != '' && (@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || region = @request.auth.geographicArea)",
+        "view": "@request.auth.id != '' && (@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || region = @request.auth.geographicArea)",
+        "create": "@request.auth.id != '' && (@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || @request.body.region = @request.auth.geographicArea)",
+        "update": "@request.auth.id != '' && (@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || @request.body.region = @request.auth.geographicArea)",
+        "delete": "@request.auth.id != '' && (@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || region = @request.auth.geographicArea)"
       },
       "fields": [
         {
@@ -316,11 +316,11 @@
       "name": "targets",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || categoryType != 'Region' || (categoryType = 'Region' && categoryValue = @request.auth.geographicArea))",
-        "view": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || categoryType != 'Region' || (categoryType = 'Region' && categoryValue = @request.auth.geographicArea))",
-        "create": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || categoryType != 'Region' || (categoryType = 'Region' && categoryValue = @request.auth.geographicArea))",
-        "update": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || categoryType != 'Region' || (categoryType = 'Region' && categoryValue = @request.auth.geographicArea))",
-        "delete": "@request.auth.id != '' && (@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || categoryType != 'Region' || (categoryType = 'Region' && categoryValue = @request.auth.geographicArea))"
+        "list": "@request.auth.id != '' && (@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || categoryType = 'General' || (categoryType = 'Region' && categoryValue = @request.auth.geographicArea))",
+        "view": "@request.auth.id != '' && (@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || categoryType = 'General' || (categoryType = 'Region' && categoryValue = @request.auth.geographicArea))",
+        "create": "@request.auth.id != '' && (@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || @request.body.categoryType = 'General' || (@request.body.categoryType = 'Region' && @request.body.categoryValue = @request.auth.geographicArea))",
+        "update": "@request.auth.id != '' && (@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || @request.body.categoryType = 'General' || (@request.body.categoryType = 'Region' && @request.body.categoryValue = @request.auth.geographicArea))",
+        "delete": "@request.auth.id != '' && (@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || categoryType = 'General' || (categoryType = 'Region' && categoryValue = @request.auth.geographicArea))"
       },
       "fields": [
         {
@@ -381,11 +381,11 @@
       "name": "activity_logs",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || user = @request.auth.id",
-        "view": "@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor' || user = @request.auth.id",
+        "list": "@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || user = @request.auth.id",
+        "view": "@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || user = @request.auth.id",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor'",
-        "delete": "@request.auth.job_title = 'Manager' || @request.auth.job_title = 'Gestor'"
+        "update": "@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager'",
+        "delete": "@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager'"
       },
       "fields": [
         {

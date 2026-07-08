@@ -38,7 +38,7 @@ export default function Login() {
     setErrors({})
 
     if (!isAllowedDomain(loginData.email)) {
-      toast.error('Access restricted to Blink Biotech employees.')
+      toast.error('Apenas e-mails corporativos @blinkbiotech.com são permitidos.')
       setIsSubmitting(false)
       return
     }
@@ -60,7 +60,13 @@ export default function Login() {
     setErrors({})
 
     if (!isAllowedDomain(regData.email)) {
-      toast.error('Access restricted to Blink Biotech employees.')
+      toast.error('Apenas e-mails corporativos @blinkbiotech.com são permitidos.')
+      setIsSubmitting(false)
+      return
+    }
+
+    if (!regData.jobTitle) {
+      toast.error('Selecione seu cargo.')
       setIsSubmitting(false)
       return
     }
@@ -163,15 +169,26 @@ export default function Login() {
                 {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="reg-job">Cargo (Job Title)</Label>
-                <Input
-                  id="reg-job"
-                  type="text"
-                  required
+                <Label htmlFor="reg-job">Cargo (Job Title) *</Label>
+                <Select
                   value={regData.jobTitle}
-                  onChange={(e) => setRegData({ ...regData, jobTitle: e.target.value })}
-                  placeholder="Ex: Gerente Comercial"
-                />
+                  onValueChange={(val) => setRegData({ ...regData, jobTitle: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione seu cargo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CEO">CEO</SelectItem>
+                    <SelectItem value="Diretor">Diretor</SelectItem>
+                    <SelectItem value="Gestor">Gestor</SelectItem>
+                    <SelectItem value="Gerente">Gerente</SelectItem>
+                    <SelectItem value="Representante">Representante</SelectItem>
+                    <SelectItem value="Analista">Analista</SelectItem>
+                    <SelectItem value="Vendedor">Vendedor</SelectItem>
+                    <SelectItem value="Consultor">Consultor</SelectItem>
+                    <SelectItem value="Outro">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
                 {errors.job_title && <p className="text-xs text-destructive">{errors.job_title}</p>}
               </div>
               <div className="space-y-2">
