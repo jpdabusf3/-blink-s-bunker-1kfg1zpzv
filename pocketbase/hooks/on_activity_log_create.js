@@ -20,6 +20,8 @@ onRecordCreateRequest(
       log.set('user', auth.id)
       log.set('action', action)
       log.set('details', recordName)
+      log.set('recordId', e.record.id)
+      log.set('collectionName', colName)
       $app.save(log)
     } catch (err) {
       console.log('activity log create failed', err.message)

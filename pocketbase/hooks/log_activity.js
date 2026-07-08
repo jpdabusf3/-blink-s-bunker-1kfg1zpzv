@@ -14,6 +14,8 @@ routerAdd(
       record.set('user', userId)
       record.set('action', body.action)
       record.set('details', body.details || '')
+      if (body.recordId) record.set('recordId', body.recordId)
+      if (body.collectionName) record.set('collectionName', body.collectionName)
       $app.save(record)
     } catch (err) {
       return e.json(500, { error: 'failed to log activity' })

@@ -24,6 +24,7 @@ import {
 import { FactoryForm } from '@/components/FactoryForm'
 import { FactoryDocuments } from '@/components/FactoryDocuments'
 import { FactoryTasks } from '@/components/FactoryTasks'
+import { FactoryChangeLog } from '@/components/FactoryChangeLog'
 import { FactoryVisits } from '@/components/FactoryVisits'
 import { isStale, formatCurrency, exportToCSV } from '@/lib/utils'
 import { AlertTriangle, Search, Edit2, Trash2, Download } from 'lucide-react'
@@ -317,7 +318,7 @@ export default function Cadastro() {
           </DialogHeader>
           {editing && (
             <Tabs defaultValue="dados" className="w-full mt-2">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="dados" className="text-xs sm:text-sm">
                   Cadastro
                 </TabsTrigger>
@@ -329,6 +330,9 @@ export default function Cadastro() {
                 </TabsTrigger>
                 <TabsTrigger value="tasks" className="text-xs sm:text-sm">
                   Tarefas
+                </TabsTrigger>
+                <TabsTrigger value="historico" className="text-xs sm:text-sm">
+                  Histórico
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="dados" className="pt-4 focus-visible:outline-none">
@@ -342,6 +346,9 @@ export default function Cadastro() {
               </TabsContent>
               <TabsContent value="tasks" className="pt-4 focus-visible:outline-none">
                 <FactoryTasks factoryId={editing.id} />
+              </TabsContent>
+              <TabsContent value="historico" className="pt-4 focus-visible:outline-none">
+                <FactoryChangeLog factoryId={editing.id} />
               </TabsContent>
             </Tabs>
           )}

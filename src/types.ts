@@ -99,6 +99,8 @@ export interface ActivityLog {
   user: string
   action: string
   details: string
+  recordId?: string
+  collectionName?: string
   created: string
   updated: string
   expand?: {

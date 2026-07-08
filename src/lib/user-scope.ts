@@ -24,7 +24,8 @@ export function isSuperAdmin(user: any): boolean {
 
 export function isMasterOrCeo(user: any): boolean {
   if (!user) return false
-  return isSuperAdmin(user) || (user.job_title || '').toLowerCase() === 'ceo'
+  const title = (user.job_title || '').toLowerCase()
+  return isSuperAdmin(user) || title === 'ceo' || title === 'diretor'
 }
 
 export function getScopedFactories(factories: Factory[], user: any): Factory[] {

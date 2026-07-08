@@ -4,6 +4,7 @@ onRecordDeleteRequest(
     const colName = e.record.collectionName
     const recordName =
       e.record.getString('name') || e.record.getString('product') || e.record.id || ''
+    const recordId = e.record.id
 
     e.next()
 
@@ -20,6 +21,8 @@ onRecordDeleteRequest(
       log.set('user', auth.id)
       log.set('action', action)
       log.set('details', recordName)
+      log.set('recordId', recordId)
+      log.set('collectionName', colName)
       $app.save(log)
     } catch (err) {
       console.log('activity log delete failed', err.message)

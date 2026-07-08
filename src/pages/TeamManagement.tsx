@@ -14,8 +14,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Users as UsersIcon, UserPlus, Trash2, Loader2, Download } from 'lucide-react'
+import { Users as UsersIcon, UserPlus, Trash2, Loader2, Download, BarChart3 } from 'lucide-react'
 import { InvitationForm } from '@/components/InvitationForm'
+import { TeamPerformanceDashboard } from '@/components/TeamPerformanceDashboard'
+import { UserActivityDialog } from '@/components/UserActivityDialog'
 import { toast } from 'sonner'
 import { exportTeamToExcel } from '@/lib/exportReports'
 
@@ -25,6 +27,8 @@ export default function TeamManagement() {
   const [loading, setLoading] = useState(true)
   const [showInvite, setShowInvite] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<UserListItem | null>(null)
+  const [showUserDialog, setShowUserDialog] = useState(false)
 
   const loadData = async () => {
     try {
@@ -42,12 +46,8 @@ export default function TeamManagement() {
     loadData()
   }, [])
 
-  useRealtime('users', () => {
-    loadData()
-  })
-  useRealtime('invitations', () => {
-    loadData()
-  })
+  useRealtime('users', () => loadData())
+  useRealtime('invitations', () => loadData())
 
   const getInvitationStatus = (inv: Invitation): string => {
     if (inv.status === 'accepted') return 'accepted'
@@ -95,6 +95,11 @@ export default function TeamManagement() {
     }
   }
 
+  const handleUserClick = (user: UserListItem) => {
+    setSelectedUser(user)
+    setShowUserDialog(true)
+  }
+
   return (
     <div className="space-y-6 animate-fade-in pb-10">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -134,11 +139,18 @@ export default function TeamManagement() {
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
         </div>
       ) : (
-        <Tabs defaultValue="users">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
+        <Tabs defaultValue="performance">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
+            <TabsTrigger value="performance" className="gap-1">
+              <BarChart3 className="w-4 h-4" /> Performance
+            </TabsTrigger>
             <TabsTrigger value="users">Usuários ({users.length})</TabsTrigger>
             <TabsTrigger value="invitations">Convites ({invitations.length})</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="performance">
+            <TeamPerformanceDashboard />
+          </TabsContent>
 
           <TabsContent value="users">
             <Card className="shadow-subtle">
@@ -166,7 +178,11 @@ export default function TeamManagement() {
                         </TableRow>
                       ) : (
                         users.map((u) => (
-                          <TableRow key={u.id}>
+                          <TableRow
+                            key={u.id}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => handleUserClick(u)}
+                          >
                             <TableCell className="font-medium">{u.name || 'N/A'}</TableCell>
                             <TableCell className="text-sm">{u.email}</TableCell>
                             <TableCell>
@@ -250,6 +266,11 @@ export default function TeamManagement() {
       )}
 
       <InvitationForm open={showInvite} onOpenChange={setShowInvite} onSuccess={loadData} />
+      <UserActivityDialog
+        user={selectedUser}
+        open={showUserDialog}
+        onOpenChange={setShowUserDialog}
+      />
     </div>
   )
 }

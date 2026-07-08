@@ -32,6 +32,7 @@ export default function AdminLogs() {
   const [actionFilter, setActionFilter] = useState('all')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [objectFilter, setObjectFilter] = useState('all')
 
   const loadLogs = async () => {
     try {
@@ -96,13 +97,17 @@ export default function AdminLogs() {
         }
       }
 
+      if (objectFilter !== 'all') {
+        if (log.collectionName !== objectFilter) return false
+      }
+
       const logDate = new Date(log.created)
       if (startDate && logDate < new Date(startDate + 'T00:00:00')) return false
       if (endDate && logDate > new Date(endDate + 'T23:59:59')) return false
 
       return true
     })
-  }, [logs, userFilter, actionFilter, startDate, endDate])
+  }, [logs, userFilter, actionFilter, startDate, endDate, objectFilter])
 
   const getActionBadge = (action: string) => {
     if (action.includes('Created'))
@@ -116,13 +121,15 @@ export default function AdminLogs() {
     return <Badge variant="secondary">{action}</Badge>
   }
 
-  const hasFilters = userFilter || actionFilter !== 'all' || startDate || endDate
+  const hasFilters =
+    userFilter || actionFilter !== 'all' || startDate || endDate || objectFilter !== 'all'
 
   const clearFilters = () => {
     setUserFilter('')
     setActionFilter('all')
     setStartDate('')
     setEndDate('')
+    setObjectFilter('all')
   }
 
   return (
@@ -218,6 +225,21 @@ export default function AdminLogs() {
                 className="h-9"
               />
             </div>
+            <div className="sm:w-44">
+              <Label className="text-xs text-muted-foreground mb-1 block">Objeto</Label>
+              <Select value={objectFilter} onValueChange={setObjectFilter}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Todos os objetos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os objetos</SelectItem>
+                  <SelectItem value="factories">Fábricas</SelectItem>
+                  <SelectItem value="orders">Pedidos</SelectItem>
+                  <SelectItem value="targets">Metas</SelectItem>
+                  <SelectItem value="users">Usuários</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             {hasFilters && (
               <div className="flex items-end">
                 <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
@@ -238,13 +260,14 @@ export default function AdminLogs() {
                     <TableHead>Usuário</TableHead>
                     <TableHead>Ação</TableHead>
                     <TableHead>Recurso</TableHead>
+                    <TableHead>Objeto</TableHead>
                     <TableHead className="text-right">Data e Hora</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredLogs.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
+                      <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
                         {hasFilters
                           ? 'Nenhum registro encontrado com os filtros aplicados.'
                           : 'Nenhuma atividade registrada.'}
@@ -259,6 +282,23 @@ export default function AdminLogs() {
                         <TableCell>{getActionBadge(log.action)}</TableCell>
                         <TableCell className="text-muted-foreground">
                           {log.details || '-'}
+                        </TableCell>
+                        <TableCell>
+                          {log.collectionName ? (
+                            <Badge variant="outline" className="text-xs">
+                              {log.collectionName === 'factories'
+                                ? 'Fábrica'
+                                : log.collectionName === 'orders'
+                                  ? 'Pedido'
+                                  : log.collectionName === 'targets'
+                                    ? 'Meta'
+                                    : log.collectionName === 'users'
+                                      ? 'Usuário'
+                                      : log.collectionName}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-right text-sm whitespace-nowrap">
                           {new Date(log.created).toLocaleString('pt-BR')}
