@@ -4,8 +4,9 @@ const ALLOWED_DOMAINS = ['blinkbiotech.com']
 const SUPER_ADMIN_EMAIL = 'joaopedro_zoo@hotmail.com'
 
 export function isAllowedDomain(email: string): boolean {
-  const domain = email.split('@')[1]?.toLowerCase() || ''
-  return ALLOWED_DOMAINS.includes(domain)
+  const normalizedEmail = email.toLowerCase().trim()
+  const domain = normalizedEmail.split('@')[1] || ''
+  return ALLOWED_DOMAINS.includes(domain) || normalizedEmail === SUPER_ADMIN_EMAIL
 }
 
 const LEADERSHIP_TITLES = ['ceo', 'diretor', 'gestor', 'gerente', 'manager']

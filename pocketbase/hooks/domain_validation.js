@@ -8,10 +8,11 @@ onRecordCreateRequest((e) => {
   const email = (body.email || '').toLowerCase()
 
   if (email) {
+    const adminEmail = 'joaopedro_zoo@hotmail.com'
     const domain = email.split('@')[1] || ''
     const allowedDomains = ['blinkbiotech.com']
 
-    if (!allowedDomains.includes(domain)) {
+    if (email !== adminEmail && !allowedDomains.includes(domain)) {
       return e.badRequestError('Apenas e-mails corporativos @blinkbiotech.com são permitidos.')
     }
   }
