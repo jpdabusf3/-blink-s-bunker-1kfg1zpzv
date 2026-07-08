@@ -21,6 +21,11 @@ export function isSuperAdmin(user: any): boolean {
   return user.email === SUPER_ADMIN_EMAIL
 }
 
+export function isMasterOrCeo(user: any): boolean {
+  if (!user) return false
+  return isSuperAdmin(user) || (user.job_title || '').toLowerCase() === 'ceo'
+}
+
 export function getScopedFactories(factories: Factory[], user: any): Factory[] {
   if (!user || isManager(user) || isSuperAdmin(user)) return factories
   const area = user.geographicArea || ''

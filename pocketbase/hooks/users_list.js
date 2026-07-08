@@ -4,7 +4,9 @@ routerAdd(
   (e) => {
     var auth = e.auth
     if (!auth) return e.unauthorizedError('auth required')
-    if (auth.email !== 'joaopedro_zoo@hotmail.com') return e.forbiddenError('super admin only')
+    if (auth.email !== 'joaopedro_zoo@hotmail.com' && auth.getString('job_title') !== 'CEO') {
+      return e.forbiddenError('master or CEO only')
+    }
 
     var users = $app.findRecordsByFilter('users', "id != ''", '-created', 0, 0)
 

@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { getUsers, getUserReport, type UserListItem, type UserReport } from '@/services/users'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Search } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -31,6 +33,19 @@ export default function Users() {
   const [selectedUser, setSelectedUser] = useState<UserListItem | null>(null)
   const [report, setReport] = useState<UserReport | null>(null)
   const [reportLoading, setReportLoading] = useState(false)
+  const [search, setSearch] = useState('')
+
+  const filteredUsers = useMemo(() => {
+    if (!search.trim()) return users
+    const q = search.toLowerCase()
+    return users.filter(
+      (u) =>
+        (u.name || '').toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        (u.job_title || '').toLowerCase().includes(q) ||
+        (u.geographicArea || '').toLowerCase().includes(q),
+    )
+  }, [users, search])
 
   useEffect(() => {
     getUsers()
@@ -85,9 +100,22 @@ export default function Users() {
           <CardDescription>{users.length} usuário(s) encontrado(s)</CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, email, cargo ou região..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
           {loading ? (
             <div className="flex justify-center p-8">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhum usuário encontrado com os critérios de busca.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -102,7 +130,7 @@ export default function Users() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((u) => (
+                  {filteredUsers.map((u) => (
                     <TableRow
                       key={u.id}
                       className="cursor-pointer hover:bg-muted/50"

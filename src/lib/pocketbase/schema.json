@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-08T03:03:52.465Z",
+  "generatedAt": "2026-07-08T19:23:18.944Z",
   "collections": [
     {
       "name": "users",
@@ -8,8 +8,8 @@
         "list": "id = @request.auth.id || @request.auth.email = 'joaopedro_zoo@hotmail.com'",
         "view": "id = @request.auth.id || @request.auth.email = 'joaopedro_zoo@hotmail.com'",
         "create": "",
-        "update": "id = @request.auth.id",
-        "delete": "id = @request.auth.id"
+        "update": "id = @request.auth.id || @request.auth.email = 'joaopedro_zoo@hotmail.com'",
+        "delete": "@request.auth.email = 'joaopedro_zoo@hotmail.com'"
       },
       "fields": [
         {
@@ -463,8 +463,8 @@
         "list": "@request.auth.id != ''",
         "view": "@request.auth.id != ''",
         "create": "@request.auth.id != ''",
-        "update": null,
-        "delete": null
+        "update": "@request.auth.id != '' && (userId = @request.auth.id || @request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || @request.auth.email = 'joaopedro_zoo@hotmail.com')",
+        "delete": "@request.auth.email = 'joaopedro_zoo@hotmail.com' || @request.auth.job_title = 'CEO'"
       },
       "fields": [
         {

@@ -4,9 +4,25 @@ routerAdd(
   (e) => {
     var auth = e.auth
     if (!auth) return e.unauthorizedError('auth required')
-    if (auth.email !== 'joaopedro_zoo@hotmail.com') return e.forbiddenError('super admin only')
+    if (auth.email !== 'joaopedro_zoo@hotmail.com' && auth.getString('job_title') !== 'CEO') {
+      return e.forbiddenError('master or CEO only')
+    }
 
     var userId = e.request.pathValue('userId')
+
+    var userRecord = null
+    try {
+      userRecord = $app.findRecordById('users', userId)
+    } catch (_) {
+      return e.notFoundError('user not found')
+    }
+
+    var userArea = userRecord.getString('geographicArea')
+    var userCountry = userRecord.getString('country')
+    var userTitle = userRecord.getString('job_title')
+
+    var leadershipTitles = ['CEO', 'Diretor', 'Gestor', 'Gerente', 'Manager']
+    var isLeadership = leadershipTitles.indexOf(userTitle) !== -1
 
     var logs = $app.findRecordsByFilter(
       'activity_logs',
@@ -30,10 +46,12 @@ routerAdd(
 
     var prospectCount = 0
     var homologatedCount = 0
+    var userFactoryIds = []
 
     for (var j = 0; j < createdFactoryNames.length; j++) {
       try {
         var factory = $app.findFirstRecordByData('factories', 'name', createdFactoryNames[j])
+        userFactoryIds.push(factory.id)
         var status = factory.getString('status')
         if (status === 'Prospeção' || status === 'Não atendido') prospectCount++
         if (status === 'Atendido') homologatedCount++
@@ -43,13 +61,33 @@ routerAdd(
     var orders = $app.findRecordsByFilter('orders', "id != ''", '', 0, 0)
     var totalOrdersValue = 0
     for (var k = 0; k < orders.length; k++) {
-      totalOrdersValue += orders[k].get('totalValue') || 0
+      var order = orders[k]
+      if (isLeadership) {
+        totalOrdersValue += order.get('totalValue') || 0
+      } else {
+        var orderRegion = order.getString('region')
+        var orderCountry = order.getString('country')
+        var regionMatch = !userArea || orderRegion === userArea
+        var countryMatch = !userCountry || orderCountry === userCountry
+        if (regionMatch && countryMatch) {
+          totalOrdersValue += order.get('totalValue') || 0
+        }
+      }
     }
 
     var targets = $app.findRecordsByFilter('targets', "id != ''", '', 0, 0)
     var totalTargetsValue = 0
     for (var m = 0; m < targets.length; m++) {
-      totalTargetsValue += targets[m].get('targetValue') || 0
+      var target = targets[m]
+      if (isLeadership) {
+        totalTargetsValue += target.get('targetValue') || 0
+      } else {
+        var catType = target.getString('categoryType')
+        var catVal = target.getString('categoryValue')
+        if (catType === 'General' || (catType === 'Region' && catVal === userArea)) {
+          totalTargetsValue += target.get('targetValue') || 0
+        }
+      }
     }
 
     var logResults = []
