@@ -24,6 +24,8 @@ import { DailySalesLogCard } from '@/components/dashboard/DailySalesLogCard'
 import { LocalFactoryStatusCard } from '@/components/dashboard/LocalFactoryStatusCard'
 import { FactoriesByStateCard } from '@/components/dashboard/FactoriesByStateCard'
 import { FactoriesBySpeciesCard } from '@/components/dashboard/FactoriesBySpeciesCard'
+import { HistoricalComparisonCard } from '@/components/dashboard/HistoricalComparisonCard'
+import { TimelineSummaryCard } from '@/components/dashboard/TimelineSummaryCard'
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={className} fill="currentColor">
@@ -38,6 +40,7 @@ const DEFAULT_BLOCKS = [
   'maps',
   'distribution',
   'charts',
+  'historical',
   'list',
 ]
 
@@ -104,7 +107,7 @@ export default function Index() {
   const [viewMode, setViewMode] = useState<'global' | 'regional'>('global')
 
   const [blocks, setBlocks] = useState<string[]>(() => {
-    const saved = localStorage.getItem('blink_dashboard_order_v4')
+    const saved = localStorage.getItem('blink_dashboard_order_v5')
     if (saved) {
       const parsed = JSON.parse(saved)
       const valid = parsed.filter((b: string) => DEFAULT_BLOCKS.includes(b))
@@ -115,7 +118,7 @@ export default function Index() {
   })
 
   useEffect(() => {
-    localStorage.setItem('blink_dashboard_order_v4', JSON.stringify(blocks))
+    localStorage.setItem('blink_dashboard_order_v5', JSON.stringify(blocks))
   }, [blocks])
 
   const moveBlock = (fromIndex: number, toIndex: number) => {
@@ -266,6 +269,13 @@ export default function Index() {
             <FactoryListCard regionFilter={effectiveRegionFilter} />
           </div>
         )
+      case 'historical':
+        return isLeader ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-1">
+            <HistoricalComparisonCard regionFilter={effectiveRegionFilter} />
+            <TimelineSummaryCard regionFilter={effectiveRegionFilter} />
+          </div>
+        ) : null
       default:
         return null
     }
