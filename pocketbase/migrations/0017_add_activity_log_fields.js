@@ -5,8 +5,8 @@ migrate(
     if (!activityLogs.fields.getByName('recordId')) {
       activityLogs.fields.add(new TextField({ name: 'recordId' }))
     }
-    if (!activityLogs.fields.getByName('collectionName')) {
-      activityLogs.fields.add(new TextField({ name: 'collectionName' }))
+    if (!activityLogs.fields.getByName('target_collection')) {
+      activityLogs.fields.add(new TextField({ name: 'target_collection' }))
     }
 
     app.save(activityLogs)
@@ -14,7 +14,7 @@ migrate(
   (app) => {
     var activityLogs = app.findCollectionByNameOrId('activity_logs')
     activityLogs.fields.removeByName('recordId')
-    activityLogs.fields.removeByName('collectionName')
+    activityLogs.fields.removeByName('target_collection')
     app.save(activityLogs)
   },
 )
