@@ -39,6 +39,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
       city: fd.get('city') as string,
       region: fd.get('region') as Region,
       sector: fd.get('sector') as string,
+      animalSpecies: fd.get('animalSpecies') as string,
       priority: fd.get('priority') as Priority,
       focusLevel: finalFocus,
       productLineAffinity: fd.get('productLineAffinity') as ProductLine,
@@ -142,6 +143,31 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
                 'Ruminantes',
                 'Ruminantes, Pet',
                 'Suínos',
+              ].map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Espécie Animal</Label>
+          <Select name="animalSpecies" defaultValue={factory?.animalSpecies || 'Bovinos'}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              {[
+                'Bovinos',
+                'Suínos',
+                'Aves',
+                'Aqua',
+                'PET',
+                'Equinos',
+                'Caprinos',
+                'Ovinos',
+                'Multiespécie',
               ].map((s) => (
                 <SelectItem key={s} value={s}>
                   {s}

@@ -15,17 +15,19 @@ import {
   LogOut,
   ShoppingCart,
   ScrollText,
+  Users,
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { useI18n } from '@/hooks/use-i18n'
-import { isManager } from '@/lib/user-scope'
+import { isManager, isSuperAdmin } from '@/lib/user-scope'
 
 export function AppSidebar() {
   const loc = useLocation()
   const { signOut, user } = useAuth()
   const { t } = useI18n()
   const showAdmin = isManager(user)
+  const showUsers = isSuperAdmin(user)
   const menu = [
     { name: t('nav.dashboard'), path: '/', icon: Home },
     { name: t('nav.cadastro'), path: '/cadastro', icon: Building2 },
@@ -36,6 +38,7 @@ export function AppSidebar() {
     { name: t('nav.metas'), path: '/metas', icon: Target },
     { name: t('nav.relatorios'), path: '/relatorios', icon: BarChart2 },
     ...(showAdmin ? [{ name: t('nav.auditoria'), path: '/admin/logs', icon: ScrollText }] : []),
+    ...(showUsers ? [{ name: t('nav.usuarios'), path: '/usuarios', icon: Users }] : []),
   ]
 
   return (

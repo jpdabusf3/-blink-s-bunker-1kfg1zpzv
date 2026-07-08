@@ -120,6 +120,7 @@ export interface Factory {
   country?: string
   region: Region
   sector?: string
+  animalSpecies?: string
   productLineAffinity?: ProductLine
   capacity: number
   potentialValue: number

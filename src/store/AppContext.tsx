@@ -92,6 +92,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       country: data.country || 'Brasil',
       region: data.region || 'Norte',
       sector: data.sector || 'Bovinos em Geral',
+      animalSpecies: data.animalSpecies,
       productLineAffinity: data.productLineAffinity || 'Adsorventes',
       capacity: data.capacity || 0,
       potentialValue: data.potentialValue || 0,

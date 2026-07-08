@@ -22,6 +22,8 @@ import { GlobalRankingCard } from '@/components/dashboard/GlobalRankingCard'
 import { RevenueVsTargetCard } from '@/components/dashboard/RevenueVsTargetCard'
 import { DailySalesLogCard } from '@/components/dashboard/DailySalesLogCard'
 import { LocalFactoryStatusCard } from '@/components/dashboard/LocalFactoryStatusCard'
+import { FactoriesByStateCard } from '@/components/dashboard/FactoriesByStateCard'
+import { FactoriesBySpeciesCard } from '@/components/dashboard/FactoriesBySpeciesCard'
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={className} fill="currentColor">
@@ -29,7 +31,15 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
   </svg>
 )
 
-const DEFAULT_BLOCKS = ['metrics', 'targets', 'role-widgets', 'maps', 'charts', 'list']
+const DEFAULT_BLOCKS = [
+  'metrics',
+  'targets',
+  'role-widgets',
+  'maps',
+  'distribution',
+  'charts',
+  'list',
+]
 
 function DraggableBlock({
   id,
@@ -239,6 +249,13 @@ export default function Index() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-1">
             <MapCard regionFilter={effectiveRegionFilter} />
             <ScoreEvolutionCard regionFilter={effectiveRegionFilter} />
+          </div>
+        )
+      case 'distribution':
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <FactoriesByStateCard regionFilter={effectiveRegionFilter} />
+            <FactoriesBySpeciesCard regionFilter={effectiveRegionFilter} />
           </div>
         )
       case 'charts':

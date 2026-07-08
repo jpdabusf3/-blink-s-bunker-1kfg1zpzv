@@ -1,6 +1,7 @@
 import type { Factory, Order, Target } from '@/types'
 
 const ALLOWED_DOMAINS = ['blinkbiotech.com']
+const SUPER_ADMIN_EMAIL = 'joaopedro_zoo@hotmail.com'
 
 export function isAllowedDomain(email: string): boolean {
   const domain = email.split('@')[1]?.toLowerCase() || ''
@@ -15,8 +16,13 @@ export function isManager(user: any): boolean {
   return LEADERSHIP_TITLES.includes(title)
 }
 
+export function isSuperAdmin(user: any): boolean {
+  if (!user) return false
+  return user.email === SUPER_ADMIN_EMAIL
+}
+
 export function getScopedFactories(factories: Factory[], user: any): Factory[] {
-  if (!user || isManager(user)) return factories
+  if (!user || isManager(user) || isSuperAdmin(user)) return factories
   const area = user.geographicArea || ''
   const country = user.country || ''
   if (!area && !country) return factories
@@ -28,7 +34,7 @@ export function getScopedFactories(factories: Factory[], user: any): Factory[] {
 }
 
 export function getScopedOrders(orders: Order[], factories: Factory[], user: any): Order[] {
-  if (!user || isManager(user)) return orders
+  if (!user || isManager(user) || isSuperAdmin(user)) return orders
   const area = user.geographicArea || ''
   const country = user.country || ''
   if (!area && !country) return orders
@@ -48,7 +54,7 @@ export function getScopedOrders(orders: Order[], factories: Factory[], user: any
 }
 
 export function getScopedTargets(targets: Target[], user: any): Target[] {
-  if (!user || isManager(user)) return targets
+  if (!user || isManager(user) || isSuperAdmin(user)) return targets
   const area = user.geographicArea || ''
   if (!area) return targets
   return targets.filter(

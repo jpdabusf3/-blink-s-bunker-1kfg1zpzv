@@ -18,7 +18,9 @@ import { I18nProvider } from './hooks/use-i18n'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import Relatorios from './pages/Relatorios'
 import AdminLogs from './pages/AdminLogs'
+import UsersPage from './pages/Users'
 import { ManagerRoute } from './components/ManagerRoute'
+import { SuperAdminRoute } from './components/SuperAdminRoute'
 import { ThemeProvider } from './components/ThemeProvider'
 
 const App = () => (
@@ -45,6 +47,9 @@ const App = () => (
                     <Route path="/relatorios" element={<Relatorios />} />
                     <Route element={<ManagerRoute />}>
                       <Route path="/admin/logs" element={<AdminLogs />} />
+                    </Route>
+                    <Route element={<SuperAdminRoute />}>
+                      <Route path="/usuarios" element={<UsersPage />} />
                     </Route>
                   </Route>
                 </Route>
