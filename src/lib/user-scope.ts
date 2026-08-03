@@ -11,15 +11,17 @@ export function isAllowedDomain(email: string): boolean {
 
 const LEADERSHIP_TITLES = ['ceo', 'diretor', 'gestor', 'gerente', 'manager']
 
-export function isManager(user: any): boolean {
-  if (!user) return false
-  const title = (user.job_title || '').toLowerCase()
-  return LEADERSHIP_TITLES.includes(title)
-}
-
 export function isSuperAdmin(user: any): boolean {
   if (!user) return false
-  return user.email === SUPER_ADMIN_EMAIL
+  const normalizedEmail = (user.email || '').toLowerCase().trim()
+  return normalizedEmail === SUPER_ADMIN_EMAIL
+}
+
+export function isManager(user: any): boolean {
+  if (!user) return false
+  if (isSuperAdmin(user)) return true
+  const title = (user.job_title || '').toLowerCase().trim()
+  return LEADERSHIP_TITLES.includes(title)
 }
 
 export function isMasterOrCeo(user: any): boolean {

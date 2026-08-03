@@ -1,4 +1,5 @@
 import { useAppContext } from '@/store/AppContext'
+import { useScopedFactories } from '@/hooks/use-scoped-data'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -27,7 +28,7 @@ const STAGES: FunnelStage[] = [
 ]
 
 export default function Funil() {
-  const { factories } = useAppContext()
+  const factories = useScopedFactories()
 
   const handleExport = () => {
     const data = factories.map((f) => ({

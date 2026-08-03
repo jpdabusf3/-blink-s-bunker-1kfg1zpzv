@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAppContext } from '@/store/AppContext'
+import { useScopedFactories } from '@/hooks/use-scoped-data'
 import { useI18n } from '@/hooks/use-i18n'
 import {
   Table,
@@ -37,11 +38,13 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 )
 
 export default function Cadastro() {
-  const { factories, deleteFactory } = useAppContext()
+  const { deleteFactory } = useAppContext()
+  const factories = useScopedFactories()
   const { t } = useI18n()
   const [search, setSearch] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('all')
   const [cityFilter, setCityFilter] = useState('all')
+  const [profileTypeFilter, setProfileTypeFilter] = useState('all')
   const [editing, setEditing] = useState<Factory | null>(null)
 
   const uniqueCities = Array.from(new Set(factories.map((f) => f.city))).sort()
@@ -50,11 +53,18 @@ export default function Cadastro() {
     const matchesSearch =
       f.name.toLowerCase().includes(search.toLowerCase()) ||
       f.city.toLowerCase().includes(search.toLowerCase()) ||
-      f.sector?.toLowerCase().includes(search.toLowerCase())
+      f.sector?.toLowerCase().includes(search.toLowerCase()) ||
+      f.profile_type?.toLowerCase().includes(search.toLowerCase()) ||
+      f.animalSpecies?.toLowerCase().includes(search.toLowerCase()) ||
+      f.contactName?.toLowerCase().includes(search.toLowerCase())
     const matchesPriority = priorityFilter === 'all' || f.priority === priorityFilter
     const matchesCity = cityFilter === 'all' || f.city === cityFilter
+    const matchesProfileType =
+      profileTypeFilter === 'all' ||
+      f.profile_type === profileTypeFilter ||
+      f.sector === profileTypeFilter
 
-    return matchesSearch && matchesPriority && matchesCity
+    return matchesSearch && matchesPriority && matchesCity && matchesProfileType
   })
 
   const handleExport = () => {
@@ -124,15 +134,30 @@ export default function Cadastro() {
             className="pl-9 bg-background"
           />
         </div>
-        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+        <Select value={profileTypeFilter} onValueChange={setProfileTypeFilter}>
           <SelectTrigger className="w-full md:w-[180px] bg-background">
+            <SelectValue placeholder="Carteira" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as Carteiras</SelectItem>
+            <SelectItem value="Indústria">Indústria</SelectItem>
+            <SelectItem value="Cooperativa">Cooperativa</SelectItem>
+            <SelectItem value="Integradora">Integradora</SelectItem>
+            <SelectItem value="Premixeira">Premixeira</SelectItem>
+            <SelectItem value="Produtores">Produtores</SelectItem>
+            <SelectItem value="Distribuidor">Distribuidor</SelectItem>
+            <SelectItem value="Outros">Outros</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+          <SelectTrigger className="w-full md:w-[160px] bg-background">
             <SelectValue placeholder="Prioridade" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t('cad.allPri')}</SelectItem>
-            <SelectItem value="High">Alta Prioridade (Verde)</SelectItem>
-            <SelectItem value="Medium">Média Prioridade (Amarelo)</SelectItem>
-            <SelectItem value="Low">Baixa Prioridade (Vermelho)</SelectItem>
+            <SelectItem value="High">Alta Prioridade</SelectItem>
+            <SelectItem value="Medium">Média Prioridade</SelectItem>
+            <SelectItem value="Low">Baixa Prioridade</SelectItem>
           </SelectContent>
         </Select>
         <Select value={cityFilter} onValueChange={setCityFilter}>
