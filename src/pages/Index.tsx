@@ -5,7 +5,7 @@ import { isManager } from '@/lib/user-scope'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatCompactCurrency } from '@/lib/utils'
-import { Download, GripVertical, Filter, Globe, MapPin } from 'lucide-react'
+import { Download, GripVertical, Filter, Globe, MapPin, Compass } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -26,6 +26,7 @@ import { FactoriesByStateCard } from '@/components/dashboard/FactoriesByStateCar
 import { FactoriesBySpeciesCard } from '@/components/dashboard/FactoriesBySpeciesCard'
 import { HistoricalComparisonCard } from '@/components/dashboard/HistoricalComparisonCard'
 import { TimelineSummaryCard } from '@/components/dashboard/TimelineSummaryCard'
+import { GeographicOverview } from '@/components/dashboard/GeographicOverview'
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={className} fill="currentColor">
@@ -104,7 +105,7 @@ export default function Index() {
   const userRegion = user?.geographicArea || ''
 
   const [regionFilter, setRegionFilter] = useState('Todas as Regiões')
-  const [viewMode, setViewMode] = useState<'global' | 'regional'>('global')
+  const [viewMode, setViewMode] = useState<'global' | 'regional' | 'geographic'>('global')
 
   const [blocks, setBlocks] = useState<string[]>(() => {
     const saved = localStorage.getItem('blink_dashboard_order_v5')
@@ -288,9 +289,11 @@ export default function Index() {
           <div>
             <h1 className="text-3xl font-bold text-primary mb-1">Blink Biotech</h1>
             <h2 className="text-xl font-semibold mb-1">
-              {isLeader && viewMode === 'global'
-                ? 'Relatório Executivo Global'
-                : `Relatório Regional - ${effectiveRegionFilter}`}
+              {isLeader && viewMode === 'geographic'
+                ? 'Relatório Geográfico Global'
+                : isLeader && viewMode === 'global'
+                  ? 'Relatório Executivo Global'
+                  : `Relatório Regional - ${effectiveRegionFilter}`}
             </h2>
             <p className="text-muted-foreground text-sm">
               Gerado em: {new Date().toLocaleDateString('pt-BR')} às{' '}
@@ -314,9 +317,11 @@ export default function Index() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2 print:hidden">
         <div className="flex items-center gap-4 flex-wrap">
           <h1 className="text-2xl font-bold tracking-tight">
-            {isLeader && viewMode === 'global'
-              ? 'Visão Global MT'
-              : `Visão Regional - ${effectiveRegionFilter}`}
+            {isLeader && viewMode === 'geographic'
+              ? 'Visão Geográfica'
+              : isLeader && viewMode === 'global'
+                ? 'Visão Global MT'
+                : `Visão Regional - ${effectiveRegionFilter}`}
           </h1>
           {isLeader && (
             <div className="flex gap-1 bg-muted rounded-lg p-1">
@@ -338,6 +343,17 @@ export default function Index() {
                 className="gap-1.5 h-8"
               >
                 <MapPin className="w-4 h-4" /> Regional
+              </Button>
+              <Button
+                size="sm"
+                variant={viewMode === 'geographic' ? 'default' : 'ghost'}
+                onClick={() => {
+                  setViewMode('geographic')
+                  setRegionFilter('Todas as Regiões')
+                }}
+                className="gap-1.5 h-8"
+              >
+                <Compass className="w-4 h-4" /> Geográfico
               </Button>
             </div>
           )}
@@ -381,13 +397,17 @@ export default function Index() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-6">
-        {blocks.map((blockId, index) => (
-          <DraggableBlock key={blockId} id={blockId} index={index} moveBlock={moveBlock}>
-            {renderBlock(blockId)}
-          </DraggableBlock>
-        ))}
-      </div>
+      {isLeader && viewMode === 'geographic' ? (
+        <GeographicOverview />
+      ) : (
+        <div className="flex flex-col gap-6">
+          {blocks.map((blockId, index) => (
+            <DraggableBlock key={blockId} id={blockId} index={index} moveBlock={moveBlock}>
+              {renderBlock(blockId)}
+            </DraggableBlock>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
