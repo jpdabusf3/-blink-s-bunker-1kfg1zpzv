@@ -31,6 +31,7 @@ export function isMasterOrCeo(user: any): boolean {
 }
 
 export function getScopedFactories(factories: Factory[], user: any): Factory[] {
+  // CEO, Diretor, Gestor, Gerente, Manager and Super Admin have total global data visibility
   if (!user || isManager(user) || isSuperAdmin(user)) return factories
   const area = user.geographicArea || ''
   const country = user.country || ''

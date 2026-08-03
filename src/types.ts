@@ -184,4 +184,6 @@ export interface Factory {
   created?: string
   notes?: string
   suggested_approach?: string
+  contact_email?: string
+  address?: string
 }

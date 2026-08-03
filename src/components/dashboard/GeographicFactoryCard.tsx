@@ -1,79 +1,85 @@
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import type { Factory } from '@/types'
 import { formatCurrency } from '@/lib/utils'
-import { MapPin, TrendingUp, Package, UserCog } from 'lucide-react'
+import { MapPin, User, ArrowRight, Tag } from 'lucide-react'
+import type { Factory } from '@/types'
 
-const PRIORITY_STYLES: Record<string, string> = {
-  High: 'bg-red-500/10 text-red-600 border-red-500/20',
-  Medium: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
-  Low: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+interface GeographicFactoryCardProps {
+  factory: Factory
 }
 
-const STATUS_STYLES: Record<string, string> = {
-  Atendido: 'bg-green-500/10 text-green-600 border-green-500/20',
-  Prospeção: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
-  'Não atendido': 'bg-gray-500/10 text-gray-600 border-gray-500/20',
-}
+export function GeographicFactoryCard({ factory }: GeographicFactoryCardProps) {
+  const nextSteps = factory.suggested_approach || factory.notes || ''
 
-export function GeographicFactoryCard({ factory }: { factory: Factory }) {
   return (
-    <Card className="shadow-subtle hover:shadow-md transition-shadow">
-      <CardContent className="p-4 space-y-3">
-        <div className="flex justify-between items-start gap-2">
-          <div className="min-w-0">
-            <h4 className="font-semibold text-sm truncate">{factory.name}</h4>
+    <Card className="p-3 shadow-subtle hover:shadow-md transition-all flex flex-col justify-between border-l-4 border-l-primary">
+      <div className="space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h4 className="font-bold text-sm leading-tight text-foreground">{factory.name}</h4>
             <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-              <MapPin className="w-3 h-3 shrink-0" />
-              <span className="truncate">
-                {[factory.city, factory.state, factory.country].filter(Boolean).join(', ') || 'N/A'}
-              </span>
+              <MapPin className="w-3 h-3 text-primary shrink-0" />
+              {[factory.city, factory.state, factory.country].filter(Boolean).join(' • ') || 'N/A'}
             </p>
           </div>
-          <div className="text-right shrink-0">
-            <div className="text-sm font-bold text-primary">
-              {formatCurrency(factory.potentialValue)}
-            </div>
-            <div className="text-[10px] text-muted-foreground">Potencial</div>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {factory.priority && (
-            <Badge
-              variant="outline"
-              className={`text-[10px] ${PRIORITY_STYLES[factory.priority] || ''}`}
-            >
-              {factory.priority === 'High'
-                ? 'Alta'
-                : factory.priority === 'Medium'
-                  ? 'Média'
-                  : 'Baixa'}
-            </Badge>
-          )}
-          <Badge variant="outline" className={`text-[10px] ${STATUS_STYLES[factory.status] || ''}`}>
+          <Badge
+            variant={
+              factory.status === 'Atendido'
+                ? 'default'
+                : factory.status === 'Prospeção'
+                  ? 'secondary'
+                  : 'outline'
+            }
+            className="text-[10px] shrink-0"
+          >
             {factory.status}
           </Badge>
-          <Badge variant="outline" className="text-[10px]">
-            {factory.funnelStage}
-          </Badge>
         </div>
-        <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t">
-          <span className="flex items-center gap-1 truncate">
-            <Package className="w-3 h-3 shrink-0" />
-            <span className="truncate">{factory.specialty || factory.sector || 'N/A'}</span>
-          </span>
-          <span className="flex items-center gap-1 shrink-0">
-            <TrendingUp className="w-3 h-3" />
-            {factory.winProbability}%
+
+        <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground pt-1">
+          {factory.profile_type && (
+            <Badge variant="outline" className="text-[10px] gap-1 bg-muted/30">
+              <Tag className="w-3 h-3" />
+              {factory.profile_type}
+            </Badge>
+          )}
+          {factory.animalSpecies && (
+            <Badge variant="secondary" className="text-[10px]">
+              {factory.animalSpecies}
+            </Badge>
+          )}
+          {factory.funnelStage && (
+            <Badge className="text-[10px] bg-primary/10 text-primary hover:bg-primary/20 border-none">
+              {factory.funnelStage}
+            </Badge>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between text-xs pt-1 border-t">
+          <span className="text-muted-foreground font-medium">Potencial:</span>
+          <span className="font-bold text-primary">{formatCurrency(factory.potentialValue)}</span>
+        </div>
+
+        <div className="text-xs flex items-center gap-1 text-muted-foreground">
+          <User className="w-3.5 h-3.5 text-primary shrink-0" />
+          <span className="truncate">
+            Gestor Técnico:{' '}
+            <strong className="text-foreground font-semibold">
+              {factory.salesOwnerName || factory.salesOwner || 'Não atribuído'}
+            </strong>
           </span>
         </div>
-        {factory.salesOwnerName && (
-          <div className="flex items-center gap-1 text-xs text-primary pt-1">
-            <UserCog className="w-3 h-3 shrink-0" />
-            <span className="truncate font-medium">{factory.salesOwnerName}</span>
+
+        {nextSteps && (
+          <div className="text-[11px] bg-muted/40 p-2 rounded-md border text-muted-foreground space-y-0.5 mt-2">
+            <div className="font-semibold text-primary flex items-center gap-1">
+              <ArrowRight className="w-3 h-3" />
+              Próximos Passos:
+            </div>
+            <p className="line-clamp-2 italic">{nextSteps}</p>
           </div>
         )}
-      </CardContent>
+      </div>
     </Card>
   )
 }

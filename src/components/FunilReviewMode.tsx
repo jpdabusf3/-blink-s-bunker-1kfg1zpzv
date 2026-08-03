@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useAppContext } from '@/store/AppContext'
 import { useScopedFactories } from '@/hooks/use-scoped-data'
 import { updateFactoryPB } from '@/services/factories'
+import { getUsers, type UserListItem } from '@/services/users'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -15,7 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/utils'
-import { Save } from 'lucide-react'
+import { Save, UserCheck, Search, Filter } from 'lucide-react'
 import type { Factory } from '@/types'
 
 const SPECIES = [
@@ -42,6 +43,15 @@ const STAGES = [
   'Pós-venda',
   'Perda',
 ]
+const PROFILE_TYPES = [
+  'Indústria',
+  'Cooperativa',
+  'Integradora',
+  'Premixeira',
+  'Produtores',
+  'Distribuidor',
+  'Outros',
+]
 const REGIONS = [
   'Sul',
   'Norte',
@@ -57,19 +67,49 @@ const REGIONS = [
 export function FunilReviewMode() {
   const { updateFactory } = useAppContext()
   const factories = useScopedFactories()
+  const [users, setUsers] = useState<UserListItem[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [searchTerm, setSearchTerm] = useState('')
   const [batchPriority, setBatchPriority] = useState('')
   const [batchProb, setBatchProb] = useState('')
+  const [batchOwner, setBatchOwner] = useState('')
+
   const [filters, setFilters] = useState({
     species: 'all',
     status: 'all',
     stage: 'all',
     country: 'all',
     region: 'all',
+    profile: 'all',
   })
+
   const [editValues, setEditValues] = useState<
-    Record<string, { priority?: string; winProbability?: string }>
+    Record<
+      string,
+      {
+        priority?: string
+        winProbability?: string
+        salesOwner?: string
+        suggested_approach?: string
+      }
+    >
   >({})
+
+  useEffect(() => {
+    getUsers()
+      .then(setUsers)
+      .catch(() => {})
+  }, [])
+
+  const sellers = useMemo(
+    () =>
+      users.filter((u) =>
+        ['Vendedor', 'Manager', 'Gerente', 'Gestor', 'Diretor', 'CEO', 'Comum'].includes(
+          u.job_title,
+        ),
+      ),
+    [users],
+  )
 
   const countries = useMemo(
     () => Array.from(new Set(factories.map((f) => f.country).filter(Boolean))),
@@ -79,26 +119,25 @@ export function FunilReviewMode() {
   const filtered = useMemo(
     () =>
       factories.filter((f) => {
+        if (searchTerm) {
+          const q = searchTerm.toLowerCase()
+          const nameMatch = f.name.toLowerCase().includes(q)
+          const cityMatch = f.city?.toLowerCase().includes(q)
+          const ownerMatch = f.salesOwnerName?.toLowerCase().includes(q)
+          if (!nameMatch && !cityMatch && !ownerMatch) return false
+        }
         if (filters.species !== 'all' && f.animalSpecies !== filters.species) return false
         if (filters.status !== 'all' && f.status !== filters.status) return false
         if (filters.stage !== 'all' && f.funnelStage !== filters.stage) return false
         if (filters.country !== 'all' && f.country !== filters.country) return false
         if (filters.region !== 'all' && f.stateRegion !== filters.region) return false
+        if (filters.profile !== 'all' && f.profile_type !== filters.profile) return false
         return true
       }),
-    [factories, filters],
+    [factories, filters, searchTerm],
   )
 
-  const isNewLead = (f: Factory) => {
-    if (['Lead', 'Primeiro Contato'].includes(f.funnelStage)) return true
-    if (f.created) {
-      const created = new Date(f.created)
-      const thirtyDaysAgo = new Date()
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-      return created > thirtyDaysAgo
-    }
-    return false
-  }
+  const getOwnerName = (id?: string) => users.find((u) => u.id === id)?.name || ''
 
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
@@ -124,10 +163,16 @@ export function FunilReviewMode() {
     const data: Partial<Factory> = {}
     if (edits.priority) data.priority = edits.priority as Factory['priority']
     if (edits.winProbability !== undefined) data.winProbability = Number(edits.winProbability)
+    if (edits.suggested_approach !== undefined) data.suggested_approach = edits.suggested_approach
+    if (edits.salesOwner !== undefined) {
+      data.salesOwner = edits.salesOwner
+      data.salesOwnerName = getOwnerName(edits.salesOwner)
+    }
+
     if (Object.keys(data).length > 0) {
       updateFactory(id, data)
       try {
-        await updateFactoryPB(id, data)
+        await updateFactoryPB(id, data as any)
       } catch {
         /* noop */
       }
@@ -142,12 +187,18 @@ export function FunilReviewMode() {
   const handleBatchUpdate = async () => {
     const data: Partial<Factory> = {}
     if (batchPriority) data.priority = batchPriority as Factory['priority']
-    if (batchProb) data.winProbability = Number(batchProb)
-    if (Object.keys(data).length === 0) return
+    if (batchProb !== '') data.winProbability = Number(batchProb)
+    if (batchOwner) {
+      data.salesOwner = batchOwner
+      data.salesOwnerName = getOwnerName(batchOwner)
+    }
+
+    if (Object.keys(data).length === 0 || selected.size === 0) return
+
     for (const id of selected) {
       updateFactory(id, data)
       try {
-        await updateFactoryPB(id, data)
+        await updateFactoryPB(id, data as any)
       } catch {
         /* noop */
       }
@@ -155,6 +206,7 @@ export function FunilReviewMode() {
     setSelected(new Set())
     setBatchPriority('')
     setBatchProb('')
+    setBatchOwner('')
   }
 
   const FSelect = ({
@@ -169,11 +221,11 @@ export function FunilReviewMode() {
     options: string[]
   }) => (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-full md:w-[150px] bg-background">
+      <SelectTrigger className="w-full md:w-[140px] bg-background text-xs">
         <SelectValue placeholder={label} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all">Todas</SelectItem>
+        <SelectItem value="all">Todas ({label})</SelectItem>
         {options.map((o) => (
           <SelectItem key={o} value={o}>
             {o}
@@ -185,12 +237,27 @@ export function FunilReviewMode() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2 bg-card p-3 border rounded-xl shadow-subtle">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-muted-foreground" />
+          <Input
+            placeholder="Buscar fábrica, cidade ou vendedor..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8 text-xs h-9"
+          />
+        </div>
         <FSelect
           label="Espécie"
           value={filters.species}
           onChange={(v) => setFilters((p) => ({ ...p, species: v }))}
           options={SPECIES}
+        />
+        <FSelect
+          label="Perfil"
+          value={filters.profile}
+          onChange={(v) => setFilters((p) => ({ ...p, profile: v }))}
+          options={PROFILE_TYPES}
         />
         <FSelect
           label="Status"
@@ -219,127 +286,212 @@ export function FunilReviewMode() {
       </div>
 
       {selected.size > 0 && (
-        <Card className="p-3 flex flex-wrap items-center gap-2 bg-primary/5 border-primary/20">
-          <span className="text-sm font-medium">{selected.size} selecionado(s)</span>
-          <Select value={batchPriority} onValueChange={setBatchPriority}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Prioridade" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="High">Alta</SelectItem>
-              <SelectItem value="Medium">Média</SelectItem>
-              <SelectItem value="Low">Baixa</SelectItem>
-            </SelectContent>
-          </Select>
-          <Input
-            type="number"
-            min={0}
-            max={100}
-            placeholder="Prob. %"
-            value={batchProb}
-            onChange={(e) => setBatchProb(e.target.value)}
-            className="w-[100px]"
-          />
-          <Button size="sm" onClick={handleBatchUpdate} className="gap-1">
-            <Save className="w-4 h-4" /> Aplicar
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
-            Limpar
-          </Button>
+        <Card className="p-3 flex flex-wrap items-center justify-between gap-2 bg-primary/10 border-primary/30">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-bold text-primary">
+              {selected.size} registro(s) selecionado(s)
+            </span>
+            <Select value={batchPriority} onValueChange={setBatchPriority}>
+              <SelectTrigger className="w-[130px] h-8 text-xs bg-background">
+                <SelectValue placeholder="Prioridade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="High">Alta (Verde)</SelectItem>
+                <SelectItem value="Medium">Média (Amarelo)</SelectItem>
+                <SelectItem value="Low">Baixa (Vermelho)</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              placeholder="Prob. %"
+              value={batchProb}
+              onChange={(e) => setBatchProb(e.target.value)}
+              className="w-[90px] h-8 text-xs bg-background"
+            />
+
+            <Select value={batchOwner} onValueChange={setBatchOwner}>
+              <SelectTrigger className="w-[160px] h-8 text-xs bg-background">
+                <SelectValue placeholder="Gestor Técnico" />
+              </SelectTrigger>
+              <SelectContent>
+                {sellers.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name || s.email}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={handleBatchUpdate} className="gap-1.5 h-8 text-xs">
+              <Save className="w-3.5 h-3.5" /> Aplicar em Lote
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelected(new Set())}
+              className="h-8 text-xs"
+            >
+              Cancelar
+            </Button>
+          </div>
         </Card>
       )}
 
-      <div className="overflow-x-auto bg-card border rounded-lg">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50 border-b">
+      <div className="overflow-x-auto bg-card border rounded-xl shadow-subtle">
+        <table className="w-full text-xs">
+          <thead className="bg-muted/60 border-b">
             <tr>
-              <th className="p-2 text-left">
+              <th className="p-3 text-left w-10">
                 <Checkbox
                   checked={selected.size === filtered.length && filtered.length > 0}
                   onCheckedChange={toggleAll}
                 />
               </th>
-              <th className="p-2 text-left font-medium">Fábrica</th>
-              <th className="p-2 text-left font-medium">Espécie</th>
-              <th className="p-2 text-left font-medium">Status</th>
-              <th className="p-2 text-left font-medium">Estágio</th>
-              <th className="p-2 text-left font-medium">Prioridade</th>
-              <th className="p-2 text-left font-medium">Prob. (%)</th>
-              <th className="p-2 text-left font-medium">Potencial</th>
-              <th className="p-2"></th>
+              <th className="p-3 text-left font-semibold">Fábrica / Local</th>
+              <th className="p-3 text-left font-semibold">Perfil & Espécie</th>
+              <th className="p-3 text-left font-semibold">Status / Estágio</th>
+              <th className="p-3 text-left font-semibold w-32">Prioridade</th>
+              <th className="p-3 text-left font-semibold w-24">Prob (%)</th>
+              <th className="p-3 text-left font-semibold">Potencial (R$)</th>
+              <th className="p-3 text-left font-semibold w-48">Gestor Técnico</th>
+              <th className="p-3 text-left font-semibold">Próximos Passos (Abordagem)</th>
+              <th className="p-3 w-12"></th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((f) => {
-              const isNew = isNewLead(f)
               const edits = editValues[f.id] || {}
+              const currentOwner = edits.salesOwner ?? f.salesOwner ?? ''
+              const currentPriority = edits.priority ?? f.priority ?? 'Medium'
+              const currentProb = edits.winProbability ?? f.winProbability
+              const currentNextStep =
+                edits.suggested_approach ?? f.suggested_approach ?? f.notes ?? ''
+
+              const hasEdits =
+                edits.priority !== undefined ||
+                edits.winProbability !== undefined ||
+                edits.salesOwner !== undefined ||
+                edits.suggested_approach !== undefined
+
               return (
-                <tr
-                  key={f.id}
-                  className={`border-b hover:bg-muted/30 ${isNew ? 'bg-primary/5' : ''}`}
-                >
-                  <td className="p-2">
+                <tr key={f.id} className="border-b hover:bg-muted/30 transition-colors">
+                  <td className="p-3">
                     <Checkbox
                       checked={selected.has(f.id)}
                       onCheckedChange={() => toggleSelect(f.id)}
                     />
                   </td>
-                  <td className="p-2 font-medium">
-                    <div className="flex items-center gap-1">
-                      {f.name}
-                      {isNew && (
-                        <Badge className="text-[10px] bg-primary/20 text-primary">Novo</Badge>
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {f.city} • {f.country || 'Brasil'}
+                  <td className="p-3">
+                    <div className="font-bold text-sm text-foreground">{f.name}</div>
+                    <div className="text-[11px] text-muted-foreground">
+                      {f.city} • {f.state || f.country || 'Brasil'}
                     </div>
                   </td>
-                  <td className="p-2">{f.animalSpecies || '-'}</td>
-                  <td className="p-2">{f.status}</td>
-                  <td className="p-2 text-xs">{f.funnelStage}</td>
-                  <td className="p-2">
+                  <td className="p-3 space-y-1">
+                    <Badge variant="outline" className="text-[10px] block w-fit">
+                      {f.profile_type || 'Indústria'}
+                    </Badge>
+                    <span className="text-[11px] text-muted-foreground font-medium block">
+                      {f.animalSpecies || 'Multiespécie'}
+                    </span>
+                  </td>
+                  <td className="p-3 space-y-1">
+                    <Badge
+                      variant={
+                        f.status === 'Atendido'
+                          ? 'default'
+                          : f.status === 'Prospeção'
+                            ? 'secondary'
+                            : 'outline'
+                      }
+                      className="text-[10px]"
+                    >
+                      {f.status}
+                    </Badge>
+                    <div className="text-[10px] text-primary font-semibold">{f.funnelStage}</div>
+                  </td>
+                  <td className="p-3">
                     <Select
-                      value={edits.priority ?? f.priority ?? 'Medium'}
+                      value={currentPriority}
                       onValueChange={(v) =>
                         setEditValues((p) => ({ ...p, [f.id]: { ...p[f.id], priority: v } }))
                       }
                     >
-                      <SelectTrigger className="h-8 w-[100px]">
+                      <SelectTrigger className="h-8 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="High">Alta</SelectItem>
-                        <SelectItem value="Medium">Média</SelectItem>
-                        <SelectItem value="Low">Baixa</SelectItem>
+                        <SelectItem value="High">Alta (Verde)</SelectItem>
+                        <SelectItem value="Medium">Média (Amarelo)</SelectItem>
+                        <SelectItem value="Low">Baixa (Vermelho)</SelectItem>
                       </SelectContent>
                     </Select>
                   </td>
-                  <td className="p-2">
+                  <td className="p-3">
                     <Input
                       type="number"
                       min={0}
                       max={100}
-                      value={edits.winProbability ?? f.winProbability}
+                      value={currentProb}
                       onChange={(e) =>
                         setEditValues((p) => ({
                           ...p,
                           [f.id]: { ...p[f.id], winProbability: e.target.value },
                         }))
                       }
-                      className="h-8 w-[70px]"
+                      className="h-8 w-20 text-xs"
                     />
                   </td>
-                  <td className="p-2 text-xs">{formatCurrency(f.potentialValue)}</td>
-                  <td className="p-2">
-                    {(edits.priority || edits.winProbability !== undefined) && (
+                  <td className="p-3 font-semibold text-primary">
+                    {formatCurrency(f.potentialValue)}
+                  </td>
+                  <td className="p-3">
+                    <Select
+                      value={currentOwner}
+                      onValueChange={(v) =>
+                        setEditValues((p) => ({ ...p, [f.id]: { ...p[f.id], salesOwner: v } }))
+                      }
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Atribuir" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sellers.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name || s.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="p-3 min-w-[200px]">
+                    <Input
+                      value={currentNextStep}
+                      placeholder="Descreva a ação / abordagem..."
+                      onChange={(e) =>
+                        setEditValues((p) => ({
+                          ...p,
+                          [f.id]: { ...p[f.id], suggested_approach: e.target.value },
+                        }))
+                      }
+                      className="h-8 text-xs"
+                    />
+                  </td>
+                  <td className="p-3 text-center">
+                    {hasEdits && (
                       <Button
                         size="sm"
-                        variant="ghost"
+                        variant="default"
                         onClick={() => handleInlineSave(f.id)}
-                        className="h-7 px-2"
+                        className="h-7 w-7 p-0 shadow-sm"
+                        title="Salvar alterações"
                       >
-                        <Save className="w-3 h-3" />
+                        <Save className="w-3.5 h-3.5" />
                       </Button>
                     )}
                   </td>
@@ -348,8 +500,8 @@ export function FunilReviewMode() {
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={9} className="text-center p-8 text-muted-foreground">
-                  Nenhum registro encontrado
+                <td colSpan={10} className="text-center p-8 text-muted-foreground">
+                  Nenhum registro encontrado com os filtros selecionados
                 </td>
               </tr>
             )}

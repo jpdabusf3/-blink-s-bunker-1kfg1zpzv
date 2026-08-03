@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Factory, Region, Status, FunnelStage, ProductLine, Priority } from '@/types'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
@@ -26,14 +27,15 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
   const { user } = useAuth()
   const userIsManager = isManager(user)
   const userArea = user?.geographicArea || ''
-  const defaultStateRegion = factory?.stateRegion || userArea || 'Sul'
   const [users, setUsers] = useState<UserListItem[]>([])
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
   useEffect(() => {
     getUsers()
       .then(setUsers)
       .catch(() => {})
   }, [])
+
   const sellers = users.filter((u) =>
     ['Vendedor', 'Manager', 'Gerente', 'Gestor', 'Diretor', 'CEO', 'Comum'].includes(u.job_title),
   )
@@ -78,6 +80,8 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
       salesOwner: salesOwnerValue || undefined,
       salesOwnerName: salesOwnerName || undefined,
       profile_type: (fd.get('profile_type') as string) || undefined,
+      suggested_approach: (fd.get('suggested_approach') as string) || undefined,
+      notes: (fd.get('notes') as string) || undefined,
     }
 
     if (factory) {
@@ -174,7 +178,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
         </div>
         <div className="space-y-2">
           <Label>Tipo de Perfil (Carteira)</Label>
-          <Select name="profile_type" defaultValue={factory?.profile_type || ''}>
+          <Select name="profile_type" defaultValue={factory?.profile_type || 'Indústria'}>
             <SelectTrigger>
               <SelectValue placeholder="Selecione" />
             </SelectTrigger>
@@ -196,7 +200,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>Setor de Atuação (Especialidades)</Label>
+          <Label>Setor de Atuação</Label>
           <Select name="sector" defaultValue={factory?.sector || 'Ruminantes'} required>
             <SelectTrigger>
               <SelectValue placeholder="Selecione" />
@@ -205,14 +209,12 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
               {[
                 'Aves',
                 'Aves/Suínos',
-                'Aves/Suínos, Pet',
                 'Bovinos de Corte',
                 'Bovinos de Leite',
                 'Geral',
                 'Muitiespecies',
                 'PET',
                 'Ruminantes',
-                'Ruminantes, Pet',
                 'Suínos',
               ].map((s) => (
                 <SelectItem key={s} value={s}>
@@ -328,9 +330,6 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
             name="deadline"
             defaultValue={factory?.deadline ? factory.deadline.split('T')[0] : ''}
           />
-          <p className="text-xs text-muted-foreground mt-1">
-            Será gerado um alerta quando o prazo estiver próximo do fim.
-          </p>
         </div>
         <div className="space-y-2 md:col-span-2">
           <Label>Gestor Técnico / Vendedor Responsável</Label>
@@ -346,6 +345,15 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div className="space-y-2 md:col-span-2">
+          <Label>Próximos Passos / Abordagem Sugerida</Label>
+          <Textarea
+            name="suggested_approach"
+            defaultValue={factory?.suggested_approach || factory?.notes}
+            placeholder="Ex: Agendar reunião presencial para apresentar linha de Adsorventes em Maio..."
+            className="h-20"
+          />
         </div>
       </div>
       <div className="flex justify-end gap-2">

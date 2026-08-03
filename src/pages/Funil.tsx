@@ -3,15 +3,18 @@ import { useScopedFactories } from '@/hooks/use-scoped-data'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  formatCurrency,
-  isStale,
-  exportToCSV,
-  isPassedDeadline,
-  isApproachingDeadline,
-} from '@/lib/utils'
+import { formatCurrency, isStale, isPassedDeadline, isApproachingDeadline } from '@/lib/utils'
+import { exportExecutiveMacroReport } from '@/lib/exportReports'
 import { FunnelStage } from '@/types'
-import { AlertTriangle, Clock, Calendar, Download, ListChecks } from 'lucide-react'
+import {
+  AlertTriangle,
+  Clock,
+  Calendar,
+  Download,
+  ListChecks,
+  ArrowRight,
+  User,
+} from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
 import { FunilReviewMode } from '@/components/FunilReviewMode'
 import { isManager } from '@/lib/user-scope'
@@ -37,15 +40,7 @@ export default function Funil() {
   const [reviewMode, setReviewMode] = useState(false)
 
   const handleExport = () => {
-    const data = factories.map((f) => ({
-      'Nome da Fábrica': f.name,
-      'Estágio Atual': f.funnelStage,
-      'Probabilidade (%)': f.winProbability,
-      'Valor Potencial (R$)': f.potentialValue,
-      'Prazo Negociação': f.deadline ? new Date(f.deadline).toLocaleDateString('pt-BR') : '',
-      'Última Interação': new Date(f.lastInteraction).toLocaleDateString('pt-BR'),
-    }))
-    exportToCSV('funil-vendas.csv', data)
+    exportExecutiveMacroReport(factories)
   }
 
   return (
@@ -54,7 +49,7 @@ export default function Funil() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Funil de Vendas</h1>
           <p className="text-muted-foreground text-sm">
-            Acompanhe as negociações em cada etapa do processo comercial.
+            Acompanhe as negociações, probabilidades e ações em cada etapa comercial.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -66,11 +61,11 @@ export default function Funil() {
               className="gap-2 shadow-sm"
             >
               <ListChecks className="w-4 h-4" />
-              {reviewMode ? 'Modo Kanban' : 'Modo Revisão'}
+              {reviewMode ? 'Modo Kanban' : 'Modo Revisão (Priorização)'}
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={handleExport} className="gap-2 shadow-sm">
-            <Download className="w-4 h-4" /> Exportar
+            <Download className="w-4 h-4" /> Exportar Executivo
           </Button>
         </div>
       </div>
@@ -106,15 +101,27 @@ export default function Funil() {
                       const stale = isStale(f.lastInteraction)
                       const passed = isPassedDeadline(f.deadline)
                       const approaching = isApproachingDeadline(f.deadline)
+                      const nextStep = f.suggested_approach || f.notes
 
                       return (
                         <Card
                           key={f.id}
-                          className={`p-3 shadow-subtle hover:shadow-md transition-shadow cursor-pointer border-l-4 ${stale || passed ? 'border-l-destructive' : 'border-l-primary'}`}
+                          className={`p-3 shadow-subtle hover:shadow-md transition-all cursor-pointer border-l-4 ${
+                            f.priority === 'High'
+                              ? 'border-l-emerald-500'
+                              : f.priority === 'Low'
+                                ? 'border-l-destructive'
+                                : 'border-l-amber-500'
+                          }`}
                         >
-                          <div className="flex justify-between items-start">
-                            <div className="font-semibold text-sm leading-tight line-clamp-2">
-                              {f.name}
+                          <div className="flex justify-between items-start gap-1">
+                            <div>
+                              <div className="font-bold text-sm leading-tight line-clamp-2">
+                                {f.name}
+                              </div>
+                              <div className="text-[11px] text-muted-foreground mt-0.5">
+                                {[f.city, f.profile_type].filter(Boolean).join(' • ')}
+                              </div>
                             </div>
                             {stale && (
                               <AlertTriangle
@@ -123,11 +130,15 @@ export default function Funil() {
                               />
                             )}
                           </div>
-                          <div className="text-xs text-primary font-medium mt-2">
-                            {formatCurrency(f.potentialValue)}
+
+                          <div className="flex items-center justify-between mt-2 pt-2 border-t text-xs">
+                            <span className="text-muted-foreground">Potencial:</span>
+                            <span className="text-primary font-bold">
+                              {formatCurrency(f.potentialValue)}
+                            </span>
                           </div>
 
-                          <div className="mt-3 space-y-1">
+                          <div className="mt-2 space-y-1">
                             <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
                               <span>Probabilidade</span>
                               <span>{f.winProbability}%</span>
@@ -135,17 +146,38 @@ export default function Funil() {
                             <Progress value={f.winProbability} className="h-1.5" />
                           </div>
 
-                          <div className="mt-3 space-y-1">
+                          {f.salesOwnerName && (
+                            <div className="mt-2 text-[10px] text-muted-foreground flex items-center gap-1">
+                              <User className="w-3 h-3 text-primary" />
+                              <span className="truncate">Gestor: {f.salesOwnerName}</span>
+                            </div>
+                          )}
+
+                          {nextStep && (
+                            <div className="mt-2 text-[10px] bg-muted/60 p-1.5 rounded border text-muted-foreground">
+                              <div className="font-semibold text-primary flex items-center gap-1">
+                                <ArrowRight className="w-3 h-3" /> Próximos Passos:
+                              </div>
+                              <p className="line-clamp-2 italic">{nextStep}</p>
+                            </div>
+                          )}
+
+                          <div className="mt-2 pt-2 border-t space-y-1">
                             <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                               <Clock className="w-3 h-3" />
                               <span>
-                                Último cont:{' '}
-                                {new Date(f.lastInteraction).toLocaleDateString('pt-BR')}
+                                Contato: {new Date(f.lastInteraction).toLocaleDateString('pt-BR')}
                               </span>
                             </div>
                             {f.deadline && (
                               <div
-                                className={`flex items-center gap-1 text-[10px] ${passed ? 'text-destructive font-bold' : approaching ? 'text-orange-500 font-bold' : 'text-muted-foreground'}`}
+                                className={`flex items-center gap-1 text-[10px] ${
+                                  passed
+                                    ? 'text-destructive font-bold'
+                                    : approaching
+                                      ? 'text-amber-600 font-bold'
+                                      : 'text-muted-foreground'
+                                }`}
                               >
                                 <Calendar className="w-3 h-3" />
                                 <span>

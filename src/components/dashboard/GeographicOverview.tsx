@@ -19,7 +19,7 @@ import {
 import { GeographicFactoryCard } from '@/components/dashboard/GeographicFactoryCard'
 import { getContinent } from '@/lib/continent-mapping'
 import { formatCompactCurrency } from '@/lib/utils'
-import { exportGeographicReport } from '@/lib/exportReports'
+import { exportExecutiveMacroReport } from '@/lib/exportReports'
 import { Globe2, Building2, DollarSign, Factory as FactoryIcon, Download } from 'lucide-react'
 import type { Factory } from '@/types'
 
@@ -33,6 +33,15 @@ const SPECIES = [
   'Caprinos',
   'Ovinos',
   'Multiespécie',
+]
+const PROFILE_TYPES = [
+  'Indústria',
+  'Cooperativa',
+  'Integradora',
+  'Premixeira',
+  'Produtores',
+  'Distribuidor',
+  'Outros',
 ]
 const CHANNELS = ['Direct', 'Indirect']
 const STATUSES = ['Atendido', 'Não atendido', 'Prospeção']
@@ -56,6 +65,7 @@ export function GeographicOverview() {
     continent: 'all',
     region: 'all',
     species: 'all',
+    profile: 'all',
     channel: 'all',
     status: 'all',
   })
@@ -79,6 +89,7 @@ export function GeographicOverview() {
           return false
         if (filters.region !== 'all' && f.stateRegion !== filters.region) return false
         if (filters.species !== 'all' && f.animalSpecies !== filters.species) return false
+        if (filters.profile !== 'all' && f.profile_type !== filters.profile) return false
         if (filters.channel !== 'all' && f.salesChannel !== filters.channel) return false
         if (filters.status !== 'all' && f.status !== filters.status) return false
         return true
@@ -153,11 +164,11 @@ export function GeographicOverview() {
     options: string[]
   }) => (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-full md:w-[150px] bg-background">
+      <SelectTrigger className="w-full md:w-[140px] bg-background text-xs">
         <SelectValue placeholder={label} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all">Todos</SelectItem>
+        <SelectItem value="all">Todos ({label})</SelectItem>
         {options.map((o) => (
           <SelectItem key={o} value={o}>
             {o}
@@ -169,19 +180,19 @@ export function GeographicOverview() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold">Visão Geográfica</h2>
+      <div className="flex justify-between items-center flex-wrap gap-2">
+        <h2 className="text-xl font-bold">Visão Geográfica & Estratégica</h2>
         <Button
-          variant="outline"
+          variant="default"
           size="sm"
-          onClick={() => exportGeographicReport(filtered)}
-          className="gap-2"
+          onClick={() => exportExecutiveMacroReport(filtered, filters)}
+          className="gap-2 shadow-sm"
         >
-          <Download className="w-4 h-4" /> Exportar Relatório
+          <Download className="w-4 h-4" /> Exportar Relatório Executivo (XLSX)
         </Button>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 bg-card p-3 border rounded-xl shadow-subtle">
         <FSelect
           label="Continente"
           value={filters.continent}
@@ -207,6 +218,12 @@ export function GeographicOverview() {
           options={SPECIES}
         />
         <FSelect
+          label="Perfil"
+          value={filters.profile}
+          onChange={(v) => setFilters((p) => ({ ...p, profile: v }))}
+          options={PROFILE_TYPES}
+        />
+        <FSelect
           label="Canal"
           value={filters.channel}
           onChange={(v) => setFilters((p) => ({ ...p, channel: v }))}
@@ -224,7 +241,7 @@ export function GeographicOverview() {
         {metricCards.map((m) => (
           <Card
             key={m.label}
-            className="shadow-subtle text-center flex flex-col justify-center items-center p-4"
+            className="shadow-subtle text-center flex flex-col justify-center items-center p-4 border-l-4 border-l-primary"
           >
             <m.icon className="w-5 h-5 text-primary mb-1" />
             <div className="text-xl sm:text-2xl font-bold">{m.value}</div>
@@ -239,37 +256,37 @@ export function GeographicOverview() {
       >
         {continentGroups.map((continent) => (
           <AccordionItem key={continent.name} value={continent.name}>
-            <AccordionTrigger className="hover:no-underline">
+            <AccordionTrigger className="hover:no-underline py-4">
               <div className="flex items-center justify-between w-full pr-4">
                 <span className="text-lg font-bold flex items-center gap-2">
                   <Globe2 className="w-5 h-5 text-primary" />
                   {continent.name}
                 </span>
-                <div className="flex gap-4 text-sm font-normal text-muted-foreground">
+                <div className="flex gap-4 text-xs font-normal text-muted-foreground">
                   <span>{continent.countries.length} países</span>
                   <span>{continent.factories.length} fábricas</span>
-                  <span className="text-primary font-semibold">
+                  <span className="text-primary font-bold">
                     {formatCompactCurrency(continent.potential)}
                   </span>
                 </div>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="space-y-4 pt-2">
+            <AccordionContent className="space-y-6 pt-2">
               {continent.countries.map((country) => (
-                <div key={country.name} className="space-y-3">
+                <div key={country.name} className="space-y-3 bg-muted/20 p-4 rounded-xl border">
                   <div className="flex items-center justify-between border-b pb-2 flex-wrap gap-2">
-                    <h4 className="font-semibold text-base flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-muted-foreground" />
+                    <h4 className="font-bold text-base flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-primary" />
                       {country.name}
                     </h4>
                     <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
                       <span>{country.factories.length} fábricas</span>
-                      <span className="text-primary font-semibold">
+                      <span className="text-primary font-bold">
                         {formatCompactCurrency(country.potential)}
                       </span>
                       <span>{country.active} ativas</span>
                       {country.capacity > 0 && (
-                        <span>Cap: {country.capacity.toLocaleString('pt-BR')}t</span>
+                        <span>Cap: {country.capacity.toLocaleString('pt-BR')} t/mês</span>
                       )}
                     </div>
                   </div>

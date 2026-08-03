@@ -69,8 +69,10 @@ export function exportUserReportToPDF(user: UserListItem, report: UserReport) {
   win.document.close()
 }
 
-export async function exportGeographicReport(factories: Factory[]) {
-  const sep = ';'
+export async function exportExecutiveMacroReport(
+  factories: Factory[],
+  filtersApplied?: Record<string, string>,
+) {
   let templateName = ''
   try {
     const template = await getActiveTemplate()
@@ -84,75 +86,187 @@ export async function exportGeographicReport(factories: Factory[]) {
     {
       continent: string
       country: string
-      region: string
       state: string
+      region: string
       count: number
       potential: number
       capacity: number
+      activeClients: number
+      prospects: number
     }
   >()
 
   factories.forEach((f) => {
     const continent = COUNTRY_TO_CONTINENT[f.country || ''] || 'Outro'
-    const country = f.country || 'Não informado'
+    const country = f.country || 'Brasil'
+    const state = f.state || f.city || 'Não informado'
     const region = f.stateRegion || f.region || 'Não informado'
-    const state = f.state || 'Não informado'
-    const key = `${continent}|${country}|${region}|${state}`
+    const key = `${continent}|${country}|${state}|${region}`
+
     if (!aggregates.has(key)) {
       aggregates.set(key, {
         continent,
         country,
-        region,
         state,
+        region,
         count: 0,
         potential: 0,
         capacity: 0,
+        activeClients: 0,
+        prospects: 0,
       })
     }
     const agg = aggregates.get(key)!
     agg.count++
     agg.potential += f.potentialValue || 0
     agg.capacity += f.capacity || 0
+    if (f.status === 'Atendido') agg.activeClients++
+    if (f.status === 'Prospeção') agg.prospects++
   })
 
-  const lines = [
-    [
-      'Relatório Geográfico Executivo',
-      templateName ? `Template: ${templateName}` : 'Blink Biotech',
-    ].join(sep),
-    `Gerado em: ${new Date().toLocaleString('pt-BR')}`,
-    '',
-    [
-      'Continente',
-      'País',
-      'Região',
-      'Estado',
-      'Clientes',
-      'Potencial (R$)',
-      'Capacidade (t/mês)',
-    ].join(sep),
-    ...Array.from(aggregates.values()).map((a) =>
-      [
-        `"${a.continent}"`,
-        `"${a.country}"`,
-        `"${a.region}"`,
-        `"${a.state}"`,
-        a.count,
-        a.potential.toString().replace('.', ','),
-        a.capacity.toString(),
-      ].join(sep),
-    ),
-  ]
+  // Format HTML table that opens as full Excel XLSX spreadsheet natively
+  const filterDesc = filtersApplied
+    ? Object.entries(filtersApplied)
+        .filter(([, v]) => v && v !== 'all')
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(' | ') || 'Todas as Fábricas / Sem filtro'
+    : 'Todas as Fábricas'
 
-  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
+  const totalClients = factories.length
+  const totalPotential = factories.reduce((s, f) => s + (f.potentialValue || 0), 0)
+  const totalCapacity = factories.reduce((s, f) => s + (f.capacity || 0), 0)
+
+  const xmlContent = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta charset="utf-8"/>
+      <!--[if gte mso 9]>
+      <xml>
+        <x:ExcelWorkbook>
+          <x:ExcelWorksheets>
+            <x:ExcelWorksheet>
+              <x:Name>Relatório Executivo Macro</x:Name>
+              <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+            </x:ExcelWorksheet>
+          </x:ExcelWorksheets>
+        </x:ExcelWorkbook>
+      </xml>
+      <![endif]-->
+      <style>
+        body { font-family: Calibri, Arial, sans-serif; }
+        .header { background-color: #1e3a8a; color: #ffffff; font-weight: bold; font-size: 16pt; text-align: center; }
+        .sub-header { background-color: #3b82f6; color: #ffffff; font-weight: bold; font-size: 11pt; }
+        .title-row { background-color: #f1f5f9; font-weight: bold; }
+        .th { background-color: #0f172a; color: #ffffff; font-weight: bold; }
+        .number { mso-number-format:"\\#\\,##0\\.00"; text-align: right; }
+        .int { mso-number-format:"\\#\\,##0"; text-align: right; }
+        .total { background-color: #e2e8f0; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <table>
+        <tr><td colspan="9" class="header">RELATÓRIO EXECUTIVO MACRO - BLINK BIOTECH</td></tr>
+        <tr><td colspan="9"><b>Template:</b> ${templateName || 'Padrão'} | <b>Gerado em:</b> ${new Date().toLocaleString('pt-BR')}</td></tr>
+        <tr><td colspan="9"><b>Filtros Aplicados:</b> ${filterDesc}</td></tr>
+        <tr><td colspan="9"></td></tr>
+
+        <tr class="title-row"><td colspan="9">RESUMO AGREGADO POR PAÍS, ESTADO E REGIÃO</td></tr>
+        <tr class="th">
+          <th>Continente</th>
+          <th>País</th>
+          <th>Estado / Cidade</th>
+          <th>Região</th>
+          <th>Total de Clientes</th>
+          <th>Clientes Ativos</th>
+          <th>Em Prospecção</th>
+          <th>Potencial Total (R$)</th>
+          <th>Capacidade Total (t/mês)</th>
+        </tr>
+        ${Array.from(aggregates.values())
+          .map(
+            (a) => `
+          <tr>
+            <td>${a.continent}</td>
+            <td>${a.country}</td>
+            <td>${a.state}</td>
+            <td>${a.region}</td>
+            <td class="int">${a.count}</td>
+            <td class="int">${a.activeClients}</td>
+            <td class="int">${a.prospects}</td>
+            <td class="number">${a.potential.toFixed(2)}</td>
+            <td class="int">${a.capacity}</td>
+          </tr>
+        `,
+          )
+          .join('')}
+        <tr class="total">
+          <td colspan="4" style="text-align:right">TOTAL GERAL:</td>
+          <td class="int">${totalClients}</td>
+          <td class="int">${factories.filter((f) => f.status === 'Atendido').length}</td>
+          <td class="int">${factories.filter((f) => f.status === 'Prospeção').length}</td>
+          <td class="number">${totalPotential.toFixed(2)}</td>
+          <td class="int">${totalCapacity}</td>
+        </tr>
+        <tr><td colspan="9"></td></tr>
+
+        <tr class="title-row"><td colspan="9">DETALHAMENTO COMPLETO DA CARTEIRA DE CLIENTES E PROSPECTOS</td></tr>
+        <tr class="th">
+          <th>Fábrica</th>
+          <th>Perfil / Carteira</th>
+          <th>Espécie Animal</th>
+          <th>Canal de Venda</th>
+          <th>País</th>
+          <th>Estado/Cidade</th>
+          <th>Status</th>
+          <th>Estágio Funil</th>
+          <th>Prioridade</th>
+          <th>Prob. (%)</th>
+          <th>Potencial (R$)</th>
+          <th>Gestor Técnico / Vendedor</th>
+          <th>Próximos Passos / Abordagem</th>
+        </tr>
+        ${factories
+          .map(
+            (f) => `
+          <tr>
+            <td>${f.name || ''}</td>
+            <td>${f.profile_type || f.sector || '-'}</td>
+            <td>${f.animalSpecies || 'Multiespécie'}</td>
+            <td>${f.salesChannel === 'Indirect' ? `Indireto (${f.indirectChannelType || ''})` : 'Direto'}</td>
+            <td>${f.country || 'Brasil'}</td>
+            <td>${[f.city, f.state].filter(Boolean).join(' - ')}</td>
+            <td>${f.status || ''}</td>
+            <td>${f.funnelStage || ''}</td>
+            <td>${f.priority || 'Medium'}</td>
+            <td class="int">${f.winProbability || 0}</td>
+            <td class="number">${(f.potentialValue || 0).toFixed(2)}</td>
+            <td>${f.salesOwnerName || f.salesOwner || 'Não atribuído'}</td>
+            <td>${f.suggested_approach || f.notes || '-'}</td>
+          </tr>
+        `,
+          )
+          .join('')}
+      </table>
+    </body>
+    </html>
+  `
+
+  const blob = new Blob([xmlContent], { type: 'application/vnd.ms-excel;charset=utf-8;' })
   const link = document.createElement('a')
   const url = URL.createObjectURL(blob)
   link.setAttribute('href', url)
-  link.setAttribute('download', 'relatorio_geografico_executivo.csv')
+  link.setAttribute(
+    'download',
+    `relatorio_executivo_macro_blink_${new Date().toISOString().slice(0, 10)}.xlsx`,
+  )
   link.style.visibility = 'hidden'
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
+}
+
+export async function exportGeographicReport(factories: Factory[]) {
+  return exportExecutiveMacroReport(factories)
 }
 
 export function exportTeamToExcel(users: UserListItem[]) {
