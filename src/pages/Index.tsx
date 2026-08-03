@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAppContext } from '@/store/AppContext'
+import { useScopedFactories } from '@/hooks/use-scoped-data'
 import { useAuth } from '@/hooks/use-auth'
 import { isManager } from '@/lib/user-scope'
 import { Card } from '@/components/ui/card'
@@ -100,7 +101,8 @@ function DraggableBlock({
 }
 
 export default function Index() {
-  const { factories, tasks } = useAppContext()
+  const { tasks } = useAppContext()
+  const factories = useScopedFactories()
   const { user } = useAuth()
   const isLeader = isManager(user)
   const userRegion = user?.geographicArea || ''
@@ -108,6 +110,8 @@ export default function Index() {
   const [regionFilter, setRegionFilter] = useState('Todas as Regiões')
   const [viewMode, setViewMode] = useState<'global' | 'regional' | 'geographic'>('global')
   const [salesOwnerFilter, setSalesOwnerFilter] = useState('all')
+  const [stateFilter, setStateFilter] = useState('all')
+  const [speciesFilter, setSpeciesFilter] = useState('all')
 
   const [blocks, setBlocks] = useState<string[]>(() => {
     const saved = localStorage.getItem('blink_dashboard_order_v5')
@@ -139,7 +143,9 @@ export default function Index() {
       f.region === effectiveRegionFilter ||
       f.stateRegion === effectiveRegionFilter
     const ownerMatch = salesOwnerFilter === 'all' || f.salesOwner === salesOwnerFilter
-    return regionMatch && ownerMatch
+    const stateMatch = stateFilter === 'all' || f.state === stateFilter
+    const speciesMatch = speciesFilter === 'all' || f.animalSpecies === speciesFilter
+    return regionMatch && ownerMatch && stateMatch && speciesMatch
   })
 
   const metrics = {
@@ -367,6 +373,49 @@ export default function Index() {
               onChange={setSalesOwnerFilter}
               className="w-[180px] h-9"
             />
+          )}
+          {isLeader && viewMode !== 'geographic' && (
+            <Select value={stateFilter} onValueChange={setStateFilter}>
+              <SelectTrigger className="w-[150px] h-9">
+                <Filter className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Estados</SelectItem>
+                {Array.from(new Set(factories.map((f) => f.state).filter(Boolean) as string[]))
+                  .sort()
+                  .map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          )}
+          {isLeader && viewMode !== 'geographic' && (
+            <Select value={speciesFilter} onValueChange={setSpeciesFilter}>
+              <SelectTrigger className="w-[150px] h-9">
+                <SelectValue placeholder="Espécie" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Espécies</SelectItem>
+                {[
+                  'Bovinos',
+                  'Suínos',
+                  'Aves',
+                  'Aqua',
+                  'PET',
+                  'Equinos',
+                  'Caprinos',
+                  'Ovinos',
+                  'Multiespécie',
+                ].map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
           {isLeader && viewMode === 'regional' && (
             <Select value={regionFilter} onValueChange={setRegionFilter}>

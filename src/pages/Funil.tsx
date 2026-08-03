@@ -3,6 +3,13 @@ import { useScopedFactories } from '@/hooks/use-scoped-data'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { formatCurrency, isStale, isPassedDeadline, isApproachingDeadline } from '@/lib/utils'
 import { exportExecutiveMacroReport } from '@/lib/exportReports'
 import { FunnelStage } from '@/types'
@@ -20,6 +27,18 @@ import { FunilReviewMode } from '@/components/FunilReviewMode'
 import { UserFilter } from '@/components/UserFilter'
 import { isManager } from '@/lib/user-scope'
 import { useAuth } from '@/hooks/use-auth'
+
+const ANIMAL_SPECIES = [
+  'Bovinos',
+  'Suínos',
+  'Aves',
+  'Aqua',
+  'PET',
+  'Equinos',
+  'Caprinos',
+  'Ovinos',
+  'Multiespécie',
+]
 
 const STAGES: FunnelStage[] = [
   'Lead',
@@ -40,9 +59,17 @@ export default function Funil() {
   const canReview = isManager(user)
   const [reviewMode, setReviewMode] = useState(false)
   const [salesOwnerFilter, setSalesOwnerFilter] = useState('all')
+  const [stateFilter, setStateFilter] = useState('all')
+  const [speciesFilter, setSpeciesFilter] = useState('all')
   const factories = allFactories.filter(
-    (f) => salesOwnerFilter === 'all' || f.salesOwner === salesOwnerFilter,
+    (f) =>
+      (salesOwnerFilter === 'all' || f.salesOwner === salesOwnerFilter) &&
+      (stateFilter === 'all' || f.state === stateFilter) &&
+      (speciesFilter === 'all' || f.animalSpecies === speciesFilter),
   )
+  const uniqueStates = Array.from(
+    new Set(allFactories.map((f) => f.state).filter(Boolean) as string[]),
+  ).sort()
 
   const handleExport = () => {
     exportExecutiveMacroReport(factories)
@@ -63,6 +90,32 @@ export default function Funil() {
             onChange={setSalesOwnerFilter}
             className="w-[180px] h-9"
           />
+          <Select value={stateFilter} onValueChange={setStateFilter}>
+            <SelectTrigger className="w-[150px] h-9">
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Estados</SelectItem>
+              {uniqueStates.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={speciesFilter} onValueChange={setSpeciesFilter}>
+            <SelectTrigger className="w-[150px] h-9">
+              <SelectValue placeholder="Espécie" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as Espécies</SelectItem>
+              {ANIMAL_SPECIES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {canReview && (
             <Button
               variant={reviewMode ? 'default' : 'outline'}

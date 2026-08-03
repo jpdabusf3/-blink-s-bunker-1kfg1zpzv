@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAppContext } from '@/store/AppContext'
+import { useScopedFactories } from '@/hooks/use-scoped-data'
 import { UserFilter } from '@/components/UserFilter'
 import {
   Table,
@@ -15,7 +16,8 @@ import { getMatrixScore, getMatrixClassification } from '@/lib/utils'
 import { Factory } from '@/types'
 
 export default function Matriz() {
-  const { factories, updateFactory } = useAppContext()
+  const { updateFactory } = useAppContext()
+  const factories = useScopedFactories()
   const [salesOwnerFilter, setSalesOwnerFilter] = useState('all')
 
   const update = (id: string, field: keyof Factory['matrix'], val: number) => {

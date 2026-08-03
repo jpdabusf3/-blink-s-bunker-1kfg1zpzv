@@ -8,6 +8,9 @@ import {
   type SetStateAction,
 } from 'react'
 import { mockFactories, mockOrders, mockTasks } from '../data/mock'
+import { getAllFactories } from '@/services/factories'
+import { useRealtime } from '@/hooks/use-realtime'
+import { useAuth } from '@/hooks/use-auth'
 import type { Factory, Order, Task, Visit } from '../types'
 
 interface AppContextData {
@@ -34,8 +37,18 @@ interface AppContextData {
 
 export const AppContext = createContext<AppContextData>({} as AppContextData)
 
+function deduplicateFactories(data: Factory[]): Factory[] {
+  const seen = new Set<string>()
+  return data.filter((f) => {
+    if (seen.has(f.id)) return false
+    seen.add(f.id)
+    return true
+  })
+}
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine)
+  const { isAuthenticated, loading: authLoading } = useAuth()
 
   const [factories, setFactories] = useState<Factory[]>(() => {
     const saved = localStorage.getItem('blink_factories_v3')
@@ -83,6 +96,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     localStorage.setItem('blink_visits_v3', JSON.stringify(visits))
   }, [visits])
+
+  useEffect(() => {
+    if (authLoading || !isAuthenticated) return
+    getAllFactories()
+      .then((data) => setFactories(deduplicateFactories(data)))
+      .catch(() => {})
+  }, [isAuthenticated, authLoading])
+
+  useRealtime(
+    'factories',
+    () => {
+      getAllFactories()
+        .then((data) => setFactories(deduplicateFactories(data)))
+        .catch(() => {})
+    },
+    isAuthenticated && !authLoading,
+  )
 
   const addFactory = (data: Partial<Factory>) => {
     const newFactory: Factory = {

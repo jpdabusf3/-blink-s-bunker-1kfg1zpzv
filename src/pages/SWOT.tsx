@@ -1,4 +1,5 @@
 import { useAppContext } from '@/store/AppContext'
+import { useScopedFactories } from '@/hooks/use-scoped-data'
 import { useState } from 'react'
 import {
   Select,
@@ -17,7 +18,8 @@ import { Save } from 'lucide-react'
 import { UserFilter } from '@/components/UserFilter'
 
 export default function SWOT() {
-  const { factories, updateFactory } = useAppContext()
+  const { updateFactory } = useAppContext()
+  const factories = useScopedFactories()
   const [selectedId, setSelectedId] = useState<string>(factories[0]?.id || '')
   const [salesOwnerFilter, setSalesOwnerFilter] = useState('all')
 
