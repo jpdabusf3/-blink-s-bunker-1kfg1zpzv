@@ -16,6 +16,9 @@ import { useAuth } from '@/hooks/use-auth'
 import { isManager } from '@/lib/user-scope'
 import { getUsers, type UserListItem } from '@/services/users'
 import { COUNTRIES } from '@/lib/countries'
+import { createFactoryPB, updateFactoryPB } from '@/services/factories'
+import { getErrorMessage } from '@/lib/pocketbase/errors'
+import { toast } from 'sonner'
 
 interface FactoryFormProps {
   factory?: Factory
@@ -40,7 +43,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
     ['Vendedor', 'Manager', 'Gerente', 'Gestor', 'Diretor', 'CEO', 'Comum'].includes(u.job_title),
   )
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
 
@@ -84,12 +87,18 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
       notes: (fd.get('notes') as string) || undefined,
     }
 
-    if (factory) {
-      updateFactory(factory.id, data)
-    } else {
-      addFactory(data)
+    try {
+      if (factory) {
+        await updateFactoryPB(factory.id, data)
+        updateFactory(factory.id, data)
+      } else {
+        await createFactoryPB(data)
+        addFactory(data)
+      }
+      onSubmit()
+    } catch (err) {
+      toast.error(getErrorMessage(err))
     }
-    onSubmit()
   }
 
   return (

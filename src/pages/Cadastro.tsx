@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAppContext } from '@/store/AppContext'
-import { useScopedFactories } from '@/hooks/use-scoped-data'
+import { useRealtime } from '@/hooks/use-realtime'
 import { useI18n } from '@/hooks/use-i18n'
+import { getAllFactories, deleteFactoryPB } from '@/services/factories'
 import {
   Table,
   TableBody,
@@ -29,8 +30,9 @@ import { FactoryTasks } from '@/components/FactoryTasks'
 import { FactoryChangeLog } from '@/components/FactoryChangeLog'
 import { FactoryVisits } from '@/components/FactoryVisits'
 import { isStale, formatCurrency, exportToCSV } from '@/lib/utils'
-import { AlertTriangle, Search, Edit2, Trash2, Download, Plus } from 'lucide-react'
+import { AlertTriangle, Search, Edit2, Trash2, Download, Plus, Loader2, X } from 'lucide-react'
 import { Factory } from '@/types'
+import { toast } from 'sonner'
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={className} fill="currentColor">
@@ -38,28 +40,76 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
   </svg>
 )
 
+const ANIMAL_SPECIES = [
+  'Bovinos',
+  'Suínos',
+  'Aves',
+  'Aqua',
+  'PET',
+  'Equinos',
+  'Caprinos',
+  'Ovinos',
+  'Multiespécie',
+]
+
 export default function Cadastro() {
   const { deleteFactory } = useAppContext()
-  const factories = useScopedFactories()
   const { t } = useI18n()
+  const [factories, setFactories] = useState<Factory[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('all')
   const [cityFilter, setCityFilter] = useState('all')
   const [profileTypeFilter, setProfileTypeFilter] = useState('all')
   const [salesOwnerFilter, setSalesOwnerFilter] = useState('all')
+  const [regionFilter, setRegionFilter] = useState('all')
+  const [stateFilter, setStateFilter] = useState('all')
+  const [countryFilter, setCountryFilter] = useState('all')
+  const [animalSpeciesFilter, setAnimalSpeciesFilter] = useState('all')
   const [editing, setEditing] = useState<Factory | null>(null)
   const [creating, setCreating] = useState(false)
 
-  const uniqueCities = Array.from(new Set(factories.map((f) => f.city))).sort()
+  const loadFactories = useCallback(async () => {
+    try {
+      const data = await getAllFactories()
+      const seen = new Set<string>()
+      const unique = data.filter((f) => {
+        if (seen.has(f.id)) return false
+        seen.add(f.id)
+        return true
+      })
+      setFactories(unique)
+    } catch {
+      toast.error('Erro ao carregar fábricas')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadFactories()
+  }, [loadFactories])
+
+  useRealtime('factories', () => {
+    loadFactories()
+  })
+
+  const uniqueCities = Array.from(new Set(factories.map((f) => f.city).filter(Boolean))).sort()
+  const uniqueRegions = Array.from(new Set(factories.map((f) => f.region).filter(Boolean))).sort()
+  const uniqueStates = Array.from(new Set(factories.map((f) => f.state).filter(Boolean))).sort()
+  const uniqueCountries = Array.from(
+    new Set(factories.map((f) => f.country).filter(Boolean)),
+  ).sort()
 
   const filtered = factories.filter((f) => {
+    const q = search.toLowerCase()
     const matchesSearch =
-      f.name.toLowerCase().includes(search.toLowerCase()) ||
-      f.city.toLowerCase().includes(search.toLowerCase()) ||
-      f.sector?.toLowerCase().includes(search.toLowerCase()) ||
-      f.profile_type?.toLowerCase().includes(search.toLowerCase()) ||
-      f.animalSpecies?.toLowerCase().includes(search.toLowerCase()) ||
-      f.contactName?.toLowerCase().includes(search.toLowerCase())
+      f.name.toLowerCase().includes(q) ||
+      f.city.toLowerCase().includes(q) ||
+      f.sector?.toLowerCase().includes(q) ||
+      f.profile_type?.toLowerCase().includes(q) ||
+      f.animalSpecies?.toLowerCase().includes(q) ||
+      f.contactName?.toLowerCase().includes(q)
     const matchesPriority = priorityFilter === 'all' || f.priority === priorityFilter
     const matchesCity = cityFilter === 'all' || f.city === cityFilter
     const matchesProfileType =
@@ -67,18 +117,57 @@ export default function Cadastro() {
       f.profile_type === profileTypeFilter ||
       f.sector === profileTypeFilter
     const matchesOwner = salesOwnerFilter === 'all' || f.salesOwner === salesOwnerFilter
-
-    return matchesSearch && matchesPriority && matchesCity && matchesProfileType && matchesOwner
+    const matchesRegion = regionFilter === 'all' || f.region === regionFilter
+    const matchesState = stateFilter === 'all' || f.state === stateFilter
+    const matchesCountry = countryFilter === 'all' || f.country === countryFilter
+    const matchesSpecies = animalSpeciesFilter === 'all' || f.animalSpecies === animalSpeciesFilter
+    return (
+      matchesSearch &&
+      matchesPriority &&
+      matchesCity &&
+      matchesProfileType &&
+      matchesOwner &&
+      matchesRegion &&
+      matchesState &&
+      matchesCountry &&
+      matchesSpecies
+    )
   })
+
+  const hasActiveFilters =
+    search ||
+    priorityFilter !== 'all' ||
+    cityFilter !== 'all' ||
+    profileTypeFilter !== 'all' ||
+    salesOwnerFilter !== 'all' ||
+    regionFilter !== 'all' ||
+    stateFilter !== 'all' ||
+    countryFilter !== 'all' ||
+    animalSpeciesFilter !== 'all'
+
+  const handleClearFilters = () => {
+    setSearch('')
+    setPriorityFilter('all')
+    setCityFilter('all')
+    setProfileTypeFilter('all')
+    setSalesOwnerFilter('all')
+    setRegionFilter('all')
+    setStateFilter('all')
+    setCountryFilter('all')
+    setAnimalSpeciesFilter('all')
+  }
 
   const handleExport = () => {
     const data = filtered.map((f) => ({
       Nome: f.name,
       Cidade: f.city,
+      Estado: f.state || '',
+      País: f.country || '',
       Região: f.region,
       'Nível Foco': f.focusLevel || '',
       Prioridade: f.priority || '',
       Setor: f.sector || '',
+      'Espécie Animal': f.animalSpecies || '',
       'Linha Blink': f.productLineAffinity || '',
       Status: f.status,
       'Capacidade (t/mês)': f.capacity,
@@ -86,6 +175,7 @@ export default function Cadastro() {
       'Estágio Funil': f.funnelStage,
       Contato: f.contactName,
       Telefone: f.contactPhone,
+      'Vendedor Responsável': f.salesOwnerName || '',
     }))
     exportToCSV('cadastro-fabricas.csv', data)
   }
@@ -93,15 +183,30 @@ export default function Cadastro() {
   const handleWhatsAppShare = () => {
     let text = '*Lista de Fábricas Filtrada*\n\n'
     filtered.slice(0, 30).forEach((f) => {
-      const priorityLabel =
+      const pl =
         f.priority === 'High' ? '🟢 Alta' : f.priority === 'Medium' ? '🟡 Média' : '🔴 Baixa'
-      text += `- ${f.name} (${f.city}) | Nível: ${f.focusLevel} | ${priorityLabel}\n`
+      text += `- ${f.name} (${f.city}) | Nível: ${f.focusLevel} | ${pl}\n`
     })
-    if (filtered.length > 30) {
-      text += `\n... e mais ${filtered.length - 30} empresas.`
+    if (filtered.length > 30) text += `\n... e mais ${filtered.length - 30} empresas.`
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer')
+  }
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteFactoryPB(id)
+      deleteFactory(id)
+      toast.success('Fábrica excluída com sucesso')
+    } catch {
+      toast.error('Erro ao excluir fábrica')
     }
-    const encodedText = encodeURIComponent(text)
-    window.open(`https://wa.me/?text=${encodedText}`, '_blank', 'noopener,noreferrer')
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (
@@ -109,7 +214,9 @@ export default function Cadastro() {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t('cad.title')}</h1>
-          <p className="text-muted-foreground text-sm">{t('cad.subtitle')}</p>
+          <p className="text-muted-foreground text-sm">
+            {t('cad.subtitle')} • {factories.length} fábricas cadastradas
+          </p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
           <Button onClick={() => setCreating(true)} className="gap-2 shadow-sm w-full sm:w-auto">
@@ -131,72 +238,148 @@ export default function Cadastro() {
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-3 bg-muted/30 p-3 rounded-lg border">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder={t('cad.search')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-background"
+      <div className="flex flex-col gap-3 bg-muted/30 p-3 rounded-lg border">
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder={t('cad.search')}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 bg-background"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleExport}
+            title="Exportar para Excel (CSV)"
+            className="bg-background shrink-0"
+          >
+            <Download className="w-4 h-4" />
+          </Button>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Select value={profileTypeFilter} onValueChange={setProfileTypeFilter}>
+            <SelectTrigger className="bg-background">
+              <SelectValue placeholder="Carteira" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as Carteiras</SelectItem>
+              {[
+                'Indústria',
+                'Cooperativa',
+                'Integradora',
+                'Premixeira',
+                'Produtores',
+                'Distribuidor',
+                'Outros',
+              ].map((p) => (
+                <SelectItem key={p} value={p}>
+                  {p}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger className="bg-background">
+              <SelectValue placeholder="Prioridade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('cad.allPri')}</SelectItem>
+              <SelectItem value="High">Alta Prioridade</SelectItem>
+              <SelectItem value="Medium">Média Prioridade</SelectItem>
+              <SelectItem value="Low">Baixa Prioridade</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={regionFilter} onValueChange={setRegionFilter}>
+            <SelectTrigger className="bg-background">
+              <SelectValue placeholder="Região" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as Regiões</SelectItem>
+              {uniqueRegions.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {r}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={stateFilter} onValueChange={setStateFilter}>
+            <SelectTrigger className="bg-background">
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Estados</SelectItem>
+              {uniqueStates.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={cityFilter} onValueChange={setCityFilter}>
+            <SelectTrigger className="bg-background">
+              <SelectValue placeholder="Cidade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('cad.allCities')}</SelectItem>
+              {uniqueCities.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={countryFilter} onValueChange={setCountryFilter}>
+            <SelectTrigger className="bg-background">
+              <SelectValue placeholder="País" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Países</SelectItem>
+              {uniqueCountries.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={animalSpeciesFilter} onValueChange={setAnimalSpeciesFilter}>
+            <SelectTrigger className="bg-background">
+              <SelectValue placeholder="Espécie Animal" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as Espécies</SelectItem>
+              {ANIMAL_SPECIES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <UserFilter
+            value={salesOwnerFilter}
+            onChange={setSalesOwnerFilter}
+            className="bg-background"
           />
         </div>
-        <Select value={profileTypeFilter} onValueChange={setProfileTypeFilter}>
-          <SelectTrigger className="w-full md:w-[180px] bg-background">
-            <SelectValue placeholder="Carteira" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas as Carteiras</SelectItem>
-            <SelectItem value="Indústria">Indústria</SelectItem>
-            <SelectItem value="Cooperativa">Cooperativa</SelectItem>
-            <SelectItem value="Integradora">Integradora</SelectItem>
-            <SelectItem value="Premixeira">Premixeira</SelectItem>
-            <SelectItem value="Produtores">Produtores</SelectItem>
-            <SelectItem value="Distribuidor">Distribuidor</SelectItem>
-            <SelectItem value="Outros">Outros</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-          <SelectTrigger className="w-full md:w-[160px] bg-background">
-            <SelectValue placeholder="Prioridade" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('cad.allPri')}</SelectItem>
-            <SelectItem value="High">Alta Prioridade</SelectItem>
-            <SelectItem value="Medium">Média Prioridade</SelectItem>
-            <SelectItem value="Low">Baixa Prioridade</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={cityFilter} onValueChange={setCityFilter}>
-          <SelectTrigger className="w-full md:w-[220px] bg-background">
-            <SelectValue placeholder="Cidade" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('cad.allCities')}</SelectItem>
-            {uniqueCities.map((city) => (
-              <SelectItem key={city} value={city}>
-                {city}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <UserFilter
-          value={salesOwnerFilter}
-          onChange={setSalesOwnerFilter}
-          className="w-full md:w-[200px] bg-background"
-        />
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={handleExport}
-          title="Exportar para Excel (CSV)"
-          className="hidden md:flex bg-background shrink-0"
-        >
-          <Download className="w-4 h-4" />
-        </Button>
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClearFilters}
+            className="gap-1 self-start"
+          >
+            <X className="w-3 h-3" /> Limpar Filtros
+          </Button>
+        )}
       </div>
 
-      {/* Desktop Table View */}
+      <p className="text-sm text-muted-foreground">
+        Mostrando <span className="font-semibold text-foreground">{filtered.length}</span> de{' '}
+        <span className="font-semibold text-foreground">{factories.length}</span> fábricas
+      </p>
+
       <div className="hidden md:block bg-card border rounded-lg overflow-hidden shadow-subtle">
         <div className="overflow-x-auto">
           <Table>
@@ -226,14 +409,25 @@ export default function Cadastro() {
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">{f.operationTypes}</div>
+                      {f.funnelStage && (
+                        <Badge variant="secondary" className="mt-1 text-xs">
+                          {f.funnelStage}
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       {f.city}
-                      <div className="text-xs text-muted-foreground mt-1">{f.region}</div>
+                      {f.state && (
+                        <span className="text-xs text-muted-foreground"> - {f.state}</span>
+                      )}
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {f.region} • {f.country || 'Brasil'}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="font-medium">{f.sector || '-'}</div>
                       <div className="text-xs text-muted-foreground mt-1">
+                        {f.animalSpecies && <span>{f.animalSpecies} • </span>}
                         Nível: <span className="font-bold">{f.focusLevel || '-'}</span>
                       </div>
                     </TableCell>
@@ -248,6 +442,9 @@ export default function Cadastro() {
                             ? 'Média'
                             : 'Baixa'}
                       </Badge>
+                      {f.salesOwnerName && (
+                        <div className="text-xs text-muted-foreground mt-1">{f.salesOwnerName}</div>
+                      )}
                     </TableCell>
                     <TableCell className="text-right font-semibold">
                       {formatCurrency(f.potentialValue)}
@@ -260,7 +457,7 @@ export default function Cadastro() {
                         <Button variant="ghost" size="icon" onClick={() => setEditing(f)}>
                           <Edit2 className="w-4 h-4 text-primary" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => deleteFactory(f.id)}>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(f.id)}>
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
                       </div>
@@ -280,7 +477,6 @@ export default function Cadastro() {
         </div>
       </div>
 
-      {/* Mobile Card View */}
       <div className="grid grid-cols-1 gap-4 md:hidden">
         {filtered.map((f) => {
           const stale = isStale(f.lastInteraction)
@@ -296,8 +492,10 @@ export default function Cadastro() {
                     {stale && <AlertTriangle className="w-4 h-4 text-destructive" />}
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {f.city} • {f.region}
+                    {f.city}
+                    {f.state ? ` - ${f.state}` : ''} • {f.region}
                   </p>
+                  <p className="text-xs text-muted-foreground">{f.country || 'Brasil'}</p>
                 </div>
                 <Badge
                   variant="outline"
@@ -306,16 +504,29 @@ export default function Cadastro() {
                   {f.priority === 'High' ? 'Alta' : f.priority === 'Medium' ? 'Média' : 'Baixa'}
                 </Badge>
               </div>
-
               <div className="grid grid-cols-2 gap-y-2 text-sm mb-4">
                 <div>
                   <span className="text-muted-foreground block text-xs">Setor</span>
                   <span className="font-medium">{f.sector || '-'}</span>
                 </div>
                 <div>
+                  <span className="text-muted-foreground block text-xs">Espécie</span>
+                  <span className="font-medium">{f.animalSpecies || '-'}</span>
+                </div>
+                <div>
                   <span className="text-muted-foreground block text-xs">Foco</span>
                   <span className="font-medium">{f.focusLevel || '-'}</span>
                 </div>
+                <div>
+                  <span className="text-muted-foreground block text-xs">Funil</span>
+                  <span className="font-medium text-xs">{f.funnelStage || '-'}</span>
+                </div>
+                {f.salesOwnerName && (
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground block text-xs">Vendedor</span>
+                    <span className="font-medium">{f.salesOwnerName}</span>
+                  </div>
+                )}
                 <div className="col-span-2 bg-muted/30 p-2 rounded-md mt-1 border">
                   <span className="text-muted-foreground block text-xs mb-0.5">Potencial</span>
                   <span className="font-semibold text-primary">
@@ -324,7 +535,6 @@ export default function Cadastro() {
                   <span className="text-xs text-muted-foreground ml-2">({f.capacity} t/mês)</span>
                 </div>
               </div>
-
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <Button variant="ghost" size="sm" onClick={() => setEditing(f)} className="gap-2">
                   <Edit2 className="w-4 h-4" /> {t('cad.details')}
@@ -332,7 +542,7 @@ export default function Cadastro() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => deleteFactory(f.id)}
+                  onClick={() => handleDelete(f.id)}
                   className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -373,7 +583,13 @@ export default function Cadastro() {
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="dados" className="pt-4 focus-visible:outline-none">
-                <FactoryForm factory={editing} onSubmit={() => setEditing(null)} />
+                <FactoryForm
+                  factory={editing}
+                  onSubmit={() => {
+                    setEditing(null)
+                    loadFactories()
+                  }}
+                />
               </TabsContent>
               <TabsContent value="visits" className="pt-4 focus-visible:outline-none">
                 <FactoryVisits factoryId={editing.id} />
@@ -389,6 +605,20 @@ export default function Cadastro() {
               </TabsContent>
             </Tabs>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={creating} onOpenChange={setCreating}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Novo Prospecto</DialogTitle>
+          </DialogHeader>
+          <FactoryForm
+            onSubmit={() => {
+              setCreating(false)
+              loadFactories()
+            }}
+          />
         </DialogContent>
       </Dialog>
     </div>
