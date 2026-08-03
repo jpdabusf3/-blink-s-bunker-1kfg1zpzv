@@ -1,6 +1,8 @@
 import { UserListItem, UserReport } from '@/services/users'
-import { ActivityLog } from '@/types'
+import { ActivityLog, Factory } from '@/types'
 import { formatCurrency } from './utils'
+import { COUNTRY_TO_CONTINENT } from './continent-mapping'
+import { getActiveTemplate } from '@/services/excel-templates'
 
 export function exportUserReportToExcel(user: UserListItem, report: UserReport) {
   const sep = ';'
@@ -65,6 +67,92 @@ export function exportUserReportToPDF(user: UserListItem, report: UserReport) {
   </body></html>`
   win.document.write(html)
   win.document.close()
+}
+
+export async function exportGeographicReport(factories: Factory[]) {
+  const sep = ';'
+  let templateName = ''
+  try {
+    const template = await getActiveTemplate()
+    if (template) templateName = template.name
+  } catch {
+    /* noop */
+  }
+
+  const aggregates = new Map<
+    string,
+    {
+      continent: string
+      country: string
+      region: string
+      state: string
+      count: number
+      potential: number
+      capacity: number
+    }
+  >()
+
+  factories.forEach((f) => {
+    const continent = COUNTRY_TO_CONTINENT[f.country || ''] || 'Outro'
+    const country = f.country || 'Não informado'
+    const region = f.stateRegion || f.region || 'Não informado'
+    const state = f.state || 'Não informado'
+    const key = `${continent}|${country}|${region}|${state}`
+    if (!aggregates.has(key)) {
+      aggregates.set(key, {
+        continent,
+        country,
+        region,
+        state,
+        count: 0,
+        potential: 0,
+        capacity: 0,
+      })
+    }
+    const agg = aggregates.get(key)!
+    agg.count++
+    agg.potential += f.potentialValue || 0
+    agg.capacity += f.capacity || 0
+  })
+
+  const lines = [
+    [
+      'Relatório Geográfico Executivo',
+      templateName ? `Template: ${templateName}` : 'Blink Biotech',
+    ].join(sep),
+    `Gerado em: ${new Date().toLocaleString('pt-BR')}`,
+    '',
+    [
+      'Continente',
+      'País',
+      'Região',
+      'Estado',
+      'Clientes',
+      'Potencial (R$)',
+      'Capacidade (t/mês)',
+    ].join(sep),
+    ...Array.from(aggregates.values()).map((a) =>
+      [
+        `"${a.continent}"`,
+        `"${a.country}"`,
+        `"${a.region}"`,
+        `"${a.state}"`,
+        a.count,
+        a.potential.toString().replace('.', ','),
+        a.capacity.toString(),
+      ].join(sep),
+    ),
+  ]
+
+  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  link.setAttribute('href', url)
+  link.setAttribute('download', 'relatorio_geografico_executivo.csv')
+  link.style.visibility = 'hidden'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
 }
 
 export function exportTeamToExcel(users: UserListItem[]) {

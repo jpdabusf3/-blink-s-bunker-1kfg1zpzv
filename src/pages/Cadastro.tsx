@@ -28,7 +28,7 @@ import { FactoryTasks } from '@/components/FactoryTasks'
 import { FactoryChangeLog } from '@/components/FactoryChangeLog'
 import { FactoryVisits } from '@/components/FactoryVisits'
 import { isStale, formatCurrency, exportToCSV } from '@/lib/utils'
-import { AlertTriangle, Search, Edit2, Trash2, Download } from 'lucide-react'
+import { AlertTriangle, Search, Edit2, Trash2, Download, Plus } from 'lucide-react'
 import { Factory } from '@/types'
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
@@ -46,6 +46,7 @@ export default function Cadastro() {
   const [cityFilter, setCityFilter] = useState('all')
   const [profileTypeFilter, setProfileTypeFilter] = useState('all')
   const [editing, setEditing] = useState<Factory | null>(null)
+  const [creating, setCreating] = useState(false)
 
   const uniqueCities = Array.from(new Set(factories.map((f) => f.city))).sort()
 
@@ -108,6 +109,9 @@ export default function Cadastro() {
           <p className="text-muted-foreground text-sm">{t('cad.subtitle')}</p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
+          <Button onClick={() => setCreating(true)} className="gap-2 shadow-sm w-full sm:w-auto">
+            <Plus className="w-4 h-4" /> Novo Prospecto
+          </Button>
           <Button
             onClick={handleWhatsAppShare}
             className="gap-2 shadow-sm bg-[#25D366] hover:bg-[#128C7E] text-white w-full sm:w-auto"

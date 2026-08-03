@@ -178,4 +178,10 @@ export interface Factory {
     urgency: number
     roi: number
   }
+  profile_type?: string
+  salesOwner?: string
+  salesOwnerName?: string
+  created?: string
+  notes?: string
+  suggested_approach?: string
 }

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-03T14:43:59.197Z",
+  "generatedAt": "2026-08-03T14:55:25.352Z",
   "collections": [
     {
       "name": "users",
@@ -296,9 +296,16 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "salesOwner",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX `idx_factories_salesOwner` ON `factories` (salesOwner)"]
     },
     {
       "name": "orders",

@@ -18,21 +18,24 @@ import {
   Users,
   FileText,
   UserPlus,
+  UserCog,
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { useI18n } from '@/hooks/use-i18n'
-import { isMasterOrCeo } from '@/lib/user-scope'
+import { isMasterOrCeo, isManager } from '@/lib/user-scope'
 
 export function AppSidebar() {
   const loc = useLocation()
   const { signOut, user } = useAuth()
   const { t } = useI18n()
   const showMasterOrCeo = isMasterOrCeo(user)
+  const showManager = isManager(user)
   const menu = [
     { name: t('nav.dashboard'), path: '/', icon: Home },
     { name: t('nav.cadastro'), path: '/cadastro', icon: Building2 },
     { name: t('nav.funil'), path: '/funil', icon: BarChart2 },
+    ...(showManager ? [{ name: 'Gestão Técnica', path: '/gestao-tecnica', icon: UserCog }] : []),
     { name: t('nav.pedidos'), path: '/pedidos', icon: ShoppingCart },
     { name: t('nav.swot'), path: '/swot', icon: Target },
     { name: t('nav.prioridade'), path: '/matriz', icon: Grid },

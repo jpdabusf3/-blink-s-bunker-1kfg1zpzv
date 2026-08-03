@@ -2,7 +2,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import type { Factory } from '@/types'
 import { formatCurrency } from '@/lib/utils'
-import { MapPin, TrendingUp, Package } from 'lucide-react'
+import { MapPin, TrendingUp, Package, UserCog } from 'lucide-react'
 
 const PRIORITY_STYLES: Record<string, string> = {
   High: 'bg-red-500/10 text-red-600 border-red-500/20',
@@ -67,6 +67,12 @@ export function GeographicFactoryCard({ factory }: { factory: Factory }) {
             {factory.winProbability}%
           </span>
         </div>
+        {factory.salesOwnerName && (
+          <div className="flex items-center gap-1 text-xs text-primary pt-1">
+            <UserCog className="w-3 h-3 shrink-0" />
+            <span className="truncate font-medium">{factory.salesOwnerName}</span>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

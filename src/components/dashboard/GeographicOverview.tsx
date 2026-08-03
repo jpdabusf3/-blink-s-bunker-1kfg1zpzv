@@ -2,6 +2,14 @@ import { useState, useMemo } from 'react'
 import { useAppContext } from '@/store/AppContext'
 import { useRealtime } from '@/hooks/use-realtime'
 import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Accordion,
   AccordionItem,
@@ -11,18 +19,76 @@ import {
 import { GeographicFactoryCard } from '@/components/dashboard/GeographicFactoryCard'
 import { getContinent } from '@/lib/continent-mapping'
 import { formatCompactCurrency } from '@/lib/utils'
-import { Globe2, Building2, DollarSign, Factory as FactoryIcon } from 'lucide-react'
+import { exportGeographicReport } from '@/lib/exportReports'
+import { Globe2, Building2, DollarSign, Factory as FactoryIcon, Download } from 'lucide-react'
 import type { Factory } from '@/types'
+
+const SPECIES = [
+  'Bovinos',
+  'Suínos',
+  'Aves',
+  'Aqua',
+  'PET',
+  'Equinos',
+  'Caprinos',
+  'Ovinos',
+  'Multiespécie',
+]
+const CHANNELS = ['Direct', 'Indirect']
+const STATUSES = ['Atendido', 'Não atendido', 'Prospeção']
+const REGIONS = [
+  'Sul',
+  'Norte',
+  'Oeste',
+  'Leste',
+  'Nordeste',
+  'Noroeste',
+  'Sudeste',
+  'Sudoeste',
+  'Centro',
+]
 
 export function GeographicOverview() {
   const { factories } = useAppContext()
   const [, setTick] = useState(0)
+  const [filters, setFilters] = useState({
+    country: 'all',
+    continent: 'all',
+    region: 'all',
+    species: 'all',
+    channel: 'all',
+    status: 'all',
+  })
 
   useRealtime('factories', () => setTick((t) => t + 1))
 
+  const countries = useMemo(
+    () => Array.from(new Set(factories.map((f) => f.country).filter(Boolean))),
+    [factories],
+  )
+  const continents = useMemo(
+    () => Array.from(new Set(countries.map((c) => getContinent(c)))),
+    [countries],
+  )
+
+  const filtered = useMemo(
+    () =>
+      factories.filter((f) => {
+        if (filters.country !== 'all' && f.country !== filters.country) return false
+        if (filters.continent !== 'all' && getContinent(f.country || '') !== filters.continent)
+          return false
+        if (filters.region !== 'all' && f.stateRegion !== filters.region) return false
+        if (filters.species !== 'all' && f.animalSpecies !== filters.species) return false
+        if (filters.channel !== 'all' && f.salesChannel !== filters.channel) return false
+        if (filters.status !== 'all' && f.status !== filters.status) return false
+        return true
+      }),
+    [factories, filters],
+  )
+
   const continentGroups = useMemo(() => {
     const continentMap = new Map<string, Map<string, Factory[]>>()
-    factories.forEach((f) => {
+    filtered.forEach((f) => {
       const continent = getContinent(f.country || 'Outro')
       const country = f.country || 'Não informado'
       if (!continentMap.has(continent)) continentMap.set(continent, new Map())
@@ -33,7 +99,7 @@ export function GeographicOverview() {
 
     return Array.from(continentMap.entries())
       .map(([continentName, countryMap]) => {
-        const countries = Array.from(countryMap.entries())
+        const countriesArr = Array.from(countryMap.entries())
           .map(([countryName, facs]) => ({
             name: countryName,
             factories: facs,
@@ -45,24 +111,24 @@ export function GeographicOverview() {
 
         return {
           name: continentName,
-          countries,
-          factories: countries.flatMap((c) => c.factories),
-          potential: countries.reduce((s, c) => s + c.potential, 0),
-          capacity: countries.reduce((s, c) => s + c.capacity, 0),
+          countries: countriesArr,
+          factories: countriesArr.flatMap((c) => c.factories),
+          potential: countriesArr.reduce((s, c) => s + c.potential, 0),
+          capacity: countriesArr.reduce((s, c) => s + c.capacity, 0),
         }
       })
       .sort((a, b) => b.potential - a.potential)
-  }, [factories])
+  }, [filtered])
 
-  const globalMetrics = useMemo(() => {
-    const countries = new Set(factories.map((f) => f.country || 'Não informado'))
-    return {
+  const globalMetrics = useMemo(
+    () => ({
       continents: continentGroups.length,
-      countries: countries.size,
-      total: factories.length,
-      potential: factories.reduce((s, f) => s + f.potentialValue, 0),
-    }
-  }, [factories, continentGroups])
+      countries: new Set(filtered.map((f) => f.country || 'Não informado')).size,
+      total: filtered.length,
+      potential: filtered.reduce((s, f) => s + f.potentialValue, 0),
+    }),
+    [filtered, continentGroups],
+  )
 
   const metricCards = [
     { label: 'Continentes', value: globalMetrics.continents, icon: Globe2 },
@@ -75,8 +141,85 @@ export function GeographicOverview() {
     },
   ]
 
+  const FSelect = ({
+    label,
+    value,
+    onChange,
+    options,
+  }: {
+    label: string
+    value: string
+    onChange: (v: string) => void
+    options: string[]
+  }) => (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="w-full md:w-[150px] bg-background">
+        <SelectValue placeholder={label} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">Todos</SelectItem>
+        {options.map((o) => (
+          <SelectItem key={o} value={o}>
+            {o}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+
   return (
     <div className="space-y-6 animate-fade-in">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-bold">Visão Geográfica</h2>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => exportGeographicReport(filtered)}
+          className="gap-2"
+        >
+          <Download className="w-4 h-4" /> Exportar Relatório
+        </Button>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <FSelect
+          label="Continente"
+          value={filters.continent}
+          onChange={(v) => setFilters((p) => ({ ...p, continent: v }))}
+          options={continents}
+        />
+        <FSelect
+          label="País"
+          value={filters.country}
+          onChange={(v) => setFilters((p) => ({ ...p, country: v }))}
+          options={countries}
+        />
+        <FSelect
+          label="Região"
+          value={filters.region}
+          onChange={(v) => setFilters((p) => ({ ...p, region: v }))}
+          options={REGIONS}
+        />
+        <FSelect
+          label="Espécie"
+          value={filters.species}
+          onChange={(v) => setFilters((p) => ({ ...p, species: v }))}
+          options={SPECIES}
+        />
+        <FSelect
+          label="Canal"
+          value={filters.channel}
+          onChange={(v) => setFilters((p) => ({ ...p, channel: v }))}
+          options={CHANNELS}
+        />
+        <FSelect
+          label="Status"
+          value={filters.status}
+          onChange={(v) => setFilters((p) => ({ ...p, status: v }))}
+          options={STATUSES}
+        />
+      </div>
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {metricCards.map((m) => (
           <Card

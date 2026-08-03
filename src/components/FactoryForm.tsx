@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Factory, Region, Status, FunnelStage, ProductLine, Priority } from '@/types'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,8 @@ import {
 import { useAppContext } from '@/store/AppContext'
 import { useAuth } from '@/hooks/use-auth'
 import { isManager } from '@/lib/user-scope'
+import { getUsers, type UserListItem } from '@/services/users'
+import { COUNTRIES } from '@/lib/countries'
 
 interface FactoryFormProps {
   factory?: Factory
@@ -25,6 +27,16 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
   const userIsManager = isManager(user)
   const userArea = user?.geographicArea || ''
   const defaultStateRegion = factory?.stateRegion || userArea || 'Sul'
+  const [users, setUsers] = useState<UserListItem[]>([])
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  useEffect(() => {
+    getUsers()
+      .then(setUsers)
+      .catch(() => {})
+  }, [])
+  const sellers = users.filter((u) =>
+    ['Vendedor', 'Manager', 'Gerente', 'Gestor', 'Diretor', 'CEO', 'Comum'].includes(u.job_title),
+  )
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -33,6 +45,16 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
     const deadlineValue = fd.get('deadline') as string
     const focusValue = fd.get('focusLevel') as string
     const finalFocus = isNaN(Number(focusValue)) ? focusValue : Number(focusValue)
+    const salesOwnerValue = fd.get('salesOwner') as string
+    const salesOwnerName = users.find((u) => u.id === salesOwnerValue)?.name || ''
+
+    const errors: Record<string, string> = {}
+    if (!fd.get('name')) errors.name = 'Nome é obrigatório'
+    if (!fd.get('city')) errors.city = 'Cidade é obrigatória'
+    const prob = Number(fd.get('winProbability'))
+    if (isNaN(prob) || prob < 0 || prob > 100) errors.winProbability = 'Deve estar entre 0 e 100'
+    setFieldErrors(errors)
+    if (Object.keys(errors).length > 0) return
 
     const data: Partial<Factory> = {
       name: fd.get('name') as string,
@@ -51,6 +73,11 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
       stateRegion: (userIsManager ? fd.get('stateRegion') : userArea) as Factory['stateRegion'],
       deadline: deadlineValue ? new Date(deadlineValue).toISOString() : undefined,
       lastInteraction: factory?.lastInteraction || new Date().toISOString(),
+      country: (fd.get('country') as string) || 'Brasil',
+      state: (fd.get('state') as string) || undefined,
+      salesOwner: salesOwnerValue || undefined,
+      salesOwnerName: salesOwnerName || undefined,
+      profile_type: (fd.get('profile_type') as string) || undefined,
     }
 
     if (factory) {
@@ -67,10 +94,31 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
         <div className="space-y-2">
           <Label>Nome da Fábrica</Label>
           <Input name="name" defaultValue={factory?.name} required />
+          {fieldErrors.name && <p className="text-xs text-destructive">{fieldErrors.name}</p>}
         </div>
         <div className="space-y-2">
           <Label>Cidade</Label>
           <Input name="city" defaultValue={factory?.city} required />
+          {fieldErrors.city && <p className="text-xs text-destructive">{fieldErrors.city}</p>}
+        </div>
+        <div className="space-y-2">
+          <Label>País</Label>
+          <Select name="country" defaultValue={factory?.country || 'Brasil'}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              {COUNTRIES.map((c) => (
+                <SelectItem key={c.name} value={c.name}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Estado (UF)</Label>
+          <Input name="state" defaultValue={factory?.state} placeholder="Ex: SP, PR, MG" />
         </div>
         <div className="space-y-2">
           <Label>Região</Label>
@@ -119,6 +167,29 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
               {['Atendido', 'Não atendido', 'Prospeção'].map((s) => (
                 <SelectItem key={s} value={s}>
                   {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Tipo de Perfil (Carteira)</Label>
+          <Select name="profile_type" defaultValue={factory?.profile_type || ''}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              {[
+                'Indústria',
+                'Cooperativa',
+                'Integradora',
+                'Premixeira',
+                'Produtores',
+                'Distribuidor',
+                'Outros',
+              ].map((p) => (
+                <SelectItem key={p} value={p}>
+                  {p}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -246,6 +317,9 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
             defaultValue={factory?.winProbability || 10}
             required
           />
+          {fieldErrors.winProbability && (
+            <p className="text-xs text-destructive">{fieldErrors.winProbability}</p>
+          )}
         </div>
         <div className="space-y-2 md:col-span-2">
           <Label>Prazo Limite de Negociação</Label>
@@ -257,6 +331,21 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
           <p className="text-xs text-muted-foreground mt-1">
             Será gerado um alerta quando o prazo estiver próximo do fim.
           </p>
+        </div>
+        <div className="space-y-2 md:col-span-2">
+          <Label>Gestor Técnico / Vendedor Responsável</Label>
+          <Select name="salesOwner" defaultValue={factory?.salesOwner || ''}>
+            <SelectTrigger>
+              <SelectValue placeholder="Atribuir vendedor" />
+            </SelectTrigger>
+            <SelectContent>
+              {sellers.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name || s.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <div className="flex justify-end gap-2">

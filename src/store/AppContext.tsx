@@ -106,6 +106,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       contactPhone: data.contactPhone || '',
       operationTypes: data.operationTypes || '',
       productInterests: data.productInterests || '',
+      state: data.state,
+      salesOwner: data.salesOwner,
+      salesOwnerName: data.salesOwnerName,
+      profile_type: data.profile_type,
+      created: new Date().toISOString(),
       swot: data.swot || {
         strengths: '',
         weaknesses: '',
