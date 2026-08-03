@@ -27,6 +27,7 @@ import { FactoriesBySpeciesCard } from '@/components/dashboard/FactoriesBySpecie
 import { HistoricalComparisonCard } from '@/components/dashboard/HistoricalComparisonCard'
 import { TimelineSummaryCard } from '@/components/dashboard/TimelineSummaryCard'
 import { GeographicOverview } from '@/components/dashboard/GeographicOverview'
+import { UserFilter } from '@/components/UserFilter'
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={className} fill="currentColor">
@@ -106,6 +107,7 @@ export default function Index() {
 
   const [regionFilter, setRegionFilter] = useState('Todas as Regiões')
   const [viewMode, setViewMode] = useState<'global' | 'regional' | 'geographic'>('global')
+  const [salesOwnerFilter, setSalesOwnerFilter] = useState('all')
 
   const [blocks, setBlocks] = useState<string[]>(() => {
     const saved = localStorage.getItem('blink_dashboard_order_v5')
@@ -131,12 +133,14 @@ export default function Index() {
 
   const effectiveRegionFilter = isLeader ? regionFilter : userRegion || 'Todas as Regiões'
 
-  const filteredFactories =
-    effectiveRegionFilter === 'Todas as Regiões'
-      ? factories
-      : factories.filter(
-          (f) => f.region === effectiveRegionFilter || f.stateRegion === effectiveRegionFilter,
-        )
+  const filteredFactories = factories.filter((f) => {
+    const regionMatch =
+      effectiveRegionFilter === 'Todas as Regiões' ||
+      f.region === effectiveRegionFilter ||
+      f.stateRegion === effectiveRegionFilter
+    const ownerMatch = salesOwnerFilter === 'all' || f.salesOwner === salesOwnerFilter
+    return regionMatch && ownerMatch
+  })
 
   const metrics = {
     revenue: filteredFactories.reduce((s, f) => s + f.potentialValue, 0),
@@ -356,6 +360,13 @@ export default function Index() {
                 <Compass className="w-4 h-4" /> Geográfico
               </Button>
             </div>
+          )}
+          {isLeader && viewMode !== 'geographic' && (
+            <UserFilter
+              value={salesOwnerFilter}
+              onChange={setSalesOwnerFilter}
+              className="w-[180px] h-9"
+            />
           )}
           {isLeader && viewMode === 'regional' && (
             <Select value={regionFilter} onValueChange={setRegionFilter}>

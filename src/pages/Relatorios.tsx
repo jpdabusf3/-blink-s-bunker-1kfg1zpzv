@@ -37,6 +37,7 @@ import { Loader2, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { exportOrdersToExcel } from '@/lib/exportUtils'
 import { useAppContext } from '@/store/AppContext'
+import { UserFilter } from '@/components/UserFilter'
 
 const STATE_REGIONS = [
   'Sul',
@@ -69,6 +70,7 @@ export default function Relatorios() {
   const [indirectType, setIndirectType] = useState<string>('all')
   const [stateFilter, setStateFilter] = useState<string>('all')
   const [regionFilter, setRegionFilter] = useState<string>('all')
+  const [salesOwnerFilter, setSalesOwnerFilter] = useState<string>('all')
 
   useEffect(() => {
     pb.collection('orders')
@@ -122,6 +124,7 @@ export default function Relatorios() {
 
       if (stateFilter !== 'all' && f.state !== stateFilter) return false
       if (regionFilter !== 'all' && f.stateRegion !== regionFilter) return false
+      if (salesOwnerFilter !== 'all' && f.salesOwner !== salesOwnerFilter) return false
 
       return true
     })
@@ -165,6 +168,19 @@ export default function Relatorios() {
       .slice(0, 10)
   }, [filteredOrders])
 
+  const volumeByOwner = useMemo(() => {
+    const map = new Map<string, number>()
+    filteredOrders.forEach((o) => {
+      const factory = factories.find((f) => f.id === o.factoryId)
+      const ownerName = factory?.salesOwnerName || 'Não atribuído'
+      map.set(ownerName, (map.get(ownerName) || 0) + o.totalValue)
+    })
+    return Array.from(map.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10)
+  }, [filteredOrders, factories])
+
   const COLORS = [
     'hsl(var(--chart-1))',
     'hsl(var(--chart-2))',
@@ -201,7 +217,7 @@ export default function Relatorios() {
       </div>
 
       <Card className="border shadow-subtle">
-        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
           <div className="space-y-2">
             <label className="text-xs font-medium text-muted-foreground">Período</label>
             <Select value={period} onValueChange={setPeriod}>
@@ -296,6 +312,14 @@ export default function Relatorios() {
               </div>
             </div>
           )}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground">Vendedor</label>
+            <UserFilter
+              value={salesOwnerFilter}
+              onChange={setSalesOwnerFilter}
+              className="bg-background"
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -418,6 +442,40 @@ export default function Relatorios() {
                 </TableHeader>
                 <TableBody>
                   {volumeByCustomer.map((c, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="font-medium">{c.name}</TableCell>
+                      <TableCell className="text-right font-bold text-primary">
+                        {formatCurrency(c.value)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground border rounded-lg bg-muted/20">
+              Sem dados para exibir
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-subtle">
+        <CardHeader>
+          <CardTitle>Vendas por Vendedor / Gestor Técnico</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {volumeByOwner.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Vendedor</TableHead>
+                    <TableHead className="text-right">Volume (R$)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {volumeByOwner.map((c, i) => (
                     <TableRow key={i}>
                       <TableCell className="font-medium">{c.name}</TableCell>
                       <TableCell className="text-right font-bold text-primary">

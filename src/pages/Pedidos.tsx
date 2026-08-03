@@ -46,6 +46,7 @@ import { useAppContext } from '@/store/AppContext'
 import { formatCurrency } from '@/lib/utils'
 import { exportOrdersToExcel, exportOrdersToPDF } from '@/lib/exportUtils'
 import { OrderForm } from '@/components/OrderForm'
+import { UserFilter } from '@/components/UserFilter'
 import { Plus, Edit2, Trash2, Filter, Download } from 'lucide-react'
 import { Order } from '@/types'
 import { useToast } from '@/hooks/use-toast'
@@ -64,6 +65,7 @@ export default function Pedidos() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [productLine, setProductLine] = useState('all')
+  const [salesOwnerFilter, setSalesOwnerFilter] = useState('all')
 
   useEffect(() => {
     if (isNewParam) {
@@ -78,6 +80,12 @@ export default function Pedidos() {
     if (factoryIdParam !== 'all') {
       res = res.filter((o) => o.factoryId === factoryIdParam)
     }
+    if (salesOwnerFilter !== 'all') {
+      const allowedFactoryIds = new Set(
+        factories.filter((f) => f.salesOwner === salesOwnerFilter).map((f) => f.id),
+      )
+      res = res.filter((o) => allowedFactoryIds.has(o.factoryId))
+    }
     if (productLine !== 'all') {
       res = res.filter((o) => o.line === productLine)
     }
@@ -90,7 +98,7 @@ export default function Pedidos() {
       res = res.filter((o) => new Date(o.orderDate) <= end)
     }
     return res.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime())
-  }, [orders, factoryIdParam, productLine, startDate, endDate])
+  }, [orders, factoryIdParam, productLine, startDate, endDate, salesOwnerFilter, factories])
 
   const handleDelete = () => {
     if (deletingId) {
@@ -107,6 +115,7 @@ export default function Pedidos() {
     setStartDate('')
     setEndDate('')
     setProductLine('all')
+    setSalesOwnerFilter('all')
     setSearchParams({})
   }
 
@@ -177,7 +186,7 @@ export default function Pedidos() {
             <Filter className="w-5 h-5 text-primary" /> Filtros Avançados
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4 items-end">
           <div className="space-y-2 lg:col-span-1">
             <Label>Data Inicial</Label>
             <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
@@ -185,6 +194,14 @@ export default function Pedidos() {
           <div className="space-y-2 lg:col-span-1">
             <Label>Data Final</Label>
             <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          </div>
+          <div className="space-y-2 lg:col-span-1">
+            <Label>Vendedor</Label>
+            <UserFilter
+              value={salesOwnerFilter}
+              onChange={setSalesOwnerFilter}
+              className="bg-background"
+            />
           </div>
           <div className="space-y-2 lg:col-span-1">
             <Label>Fábrica</Label>
@@ -223,7 +240,7 @@ export default function Pedidos() {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 lg:col-span-2 w-full">
+          <div className="flex flex-col sm:flex-row gap-2 lg:col-span-1 w-full">
             <Button
               variant="outline"
               onClick={clearFilters}

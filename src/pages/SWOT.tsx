@@ -14,12 +14,18 @@ import { Button } from '@/components/ui/button'
 import { toast } from '@/hooks/use-toast'
 import { Card, CardContent } from '@/components/ui/card'
 import { Save } from 'lucide-react'
+import { UserFilter } from '@/components/UserFilter'
 
 export default function SWOT() {
   const { factories, updateFactory } = useAppContext()
   const [selectedId, setSelectedId] = useState<string>(factories[0]?.id || '')
+  const [salesOwnerFilter, setSalesOwnerFilter] = useState('all')
 
-  const factory = factories.find((f) => f.id === selectedId)
+  const filteredFactories =
+    salesOwnerFilter === 'all'
+      ? factories
+      : factories.filter((f) => f.salesOwner === salesOwnerFilter)
+  const factory = filteredFactories.find((f) => f.id === selectedId)
 
   const handleSave = () => {
     toast({
@@ -40,18 +46,25 @@ export default function SWOT() {
             Avalie forças, fraquezas, oportunidades e ameaças.
           </p>
         </div>
-        <Select value={selectedId} onValueChange={setSelectedId}>
-          <SelectTrigger className="w-full sm:w-[300px] bg-card">
-            <SelectValue placeholder="Selecione uma fábrica" />
-          </SelectTrigger>
-          <SelectContent>
-            {factories.map((f) => (
-              <SelectItem key={f.id} value={f.id}>
-                {f.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+          <UserFilter
+            value={salesOwnerFilter}
+            onChange={setSalesOwnerFilter}
+            className="w-full sm:w-[200px] bg-card"
+          />
+          <Select value={selectedId} onValueChange={setSelectedId}>
+            <SelectTrigger className="w-full sm:w-[300px] bg-card">
+              <SelectValue placeholder="Selecione uma fábrica" />
+            </SelectTrigger>
+            <SelectContent>
+              {filteredFactories.map((f) => (
+                <SelectItem key={f.id} value={f.id}>
+                  {f.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {factory && (

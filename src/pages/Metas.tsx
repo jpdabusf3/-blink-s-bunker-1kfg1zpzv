@@ -41,6 +41,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { formatCurrency } from '@/lib/utils'
+import { useAppContext } from '@/store/AppContext'
+import { UserFilter } from '@/components/UserFilter'
 
 const targetSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
@@ -54,10 +56,12 @@ const targetSchema = z.object({
 type TargetForm = z.infer<typeof targetSchema>
 
 export default function Metas() {
+  const { orders } = useAppContext()
   const [targets, setTargets] = useState<Target[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [salesOwnerFilter, setSalesOwnerFilter] = useState('all')
 
   const form = useForm<TargetForm>({
     resolver: zodResolver(targetSchema),
@@ -274,6 +278,47 @@ export default function Metas() {
         </Dialog>
       </div>
 
+      {!loading && targets.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="shadow-subtle">
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground mb-1">Total de Metas</p>
+              <p className="text-2xl font-bold">{targets.length}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {formatCurrency(targets.reduce((s, t) => s + t.targetValue, 0))}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="shadow-subtle">
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground mb-1">Vendas Realizadas</p>
+              <p className="text-2xl font-bold text-primary">
+                {formatCurrency(orders.reduce((s, o) => s + (o.totalValue || 0), 0))}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="shadow-subtle">
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground mb-1">Taxa de Conclusão</p>
+              <p className="text-2xl font-bold text-accent">
+                {targets.reduce((s, t) => s + t.targetValue, 0) > 0
+                  ? (
+                      (orders.reduce((s, o) => s + (o.totalValue || 0), 0) /
+                        targets.reduce((s, t) => s + t.targetValue, 0)) *
+                      100
+                    ).toFixed(1)
+                  : '0'}
+                %
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      <div className="flex items-center gap-3">
+        <UserFilter value={salesOwnerFilter} onChange={setSalesOwnerFilter} className="w-[240px]" />
+      </div>
+
       <Card className="shadow-subtle">
         <CardContent className="p-0">
           {loading ? (
@@ -290,6 +335,7 @@ export default function Metas() {
                   <TableHead>Valor</TableHead>
                   <TableHead>Categoria</TableHead>
                   <TableHead>Período</TableHead>
+                  <TableHead>Progresso</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -306,6 +352,35 @@ export default function Metas() {
                     <TableCell>
                       {new Date(t.startDate).toLocaleDateString('pt-BR')} até{' '}
                       {new Date(t.endDate).toLocaleDateString('pt-BR')}
+                    </TableCell>
+                    <TableCell>
+                      {(() => {
+                        const relevantOrders = orders.filter((o) => {
+                          if (t.categoryType === 'General') return true
+                          if (t.categoryType === 'Region') return o.region === t.categoryValue
+                          if (t.categoryType === 'ProductLine') return o.line === t.categoryValue
+                          return false
+                        })
+                        const achieved = relevantOrders.reduce((s, o) => s + (o.totalValue || 0), 0)
+                        const pct =
+                          t.targetValue > 0 ? Math.min((achieved / t.targetValue) * 100, 100) : 0
+                        return (
+                          <div className="space-y-1">
+                            <div className="text-xs font-medium">
+                              {formatCurrency(achieved)} / {formatCurrency(t.targetValue)}
+                            </div>
+                            <div className="w-full bg-muted rounded-full h-1.5">
+                              <div
+                                className="bg-primary rounded-full h-1.5 transition-all"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                              {pct.toFixed(0)}%
+                            </div>
+                          </div>
+                        )
+                      })()}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(t)}>

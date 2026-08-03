@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/accordion'
 import { formatCurrency } from '@/lib/utils'
 import { MapPin, UserCog, Loader2, Search, CheckCircle2 } from 'lucide-react'
+import { UserFilter } from '@/components/UserFilter'
 
 const REGIONS = [
   'Sul',
@@ -42,6 +43,7 @@ export default function GestaoTecnica() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedRegion, setSelectedRegion] = useState('all')
+  const [salesOwnerFilter, setSalesOwnerFilter] = useState('all')
 
   useEffect(() => {
     getUsers()
@@ -69,6 +71,7 @@ export default function GestaoTecnica() {
       ) {
         return false
       }
+      if (salesOwnerFilter !== 'all' && f.salesOwner !== salesOwnerFilter) return false
       if (searchTerm) {
         const q = searchTerm.toLowerCase()
         const nameMatch = f.name.toLowerCase().includes(q)
@@ -78,7 +81,7 @@ export default function GestaoTecnica() {
       }
       return true
     })
-  }, [factories, selectedRegion, searchTerm])
+  }, [factories, selectedRegion, searchTerm, salesOwnerFilter])
 
   const groupedBySpecies = useMemo(() => {
     const map = new Map<string, typeof factories>()
@@ -158,6 +161,11 @@ export default function GestaoTecnica() {
               ))}
             </SelectContent>
           </Select>
+          <UserFilter
+            value={salesOwnerFilter}
+            onChange={setSalesOwnerFilter}
+            className="w-[180px] h-9 text-xs"
+          />
         </div>
       </div>
 

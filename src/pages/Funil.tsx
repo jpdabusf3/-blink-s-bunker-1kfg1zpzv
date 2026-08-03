@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
 import { FunilReviewMode } from '@/components/FunilReviewMode'
+import { UserFilter } from '@/components/UserFilter'
 import { isManager } from '@/lib/user-scope'
 import { useAuth } from '@/hooks/use-auth'
 
@@ -34,10 +35,14 @@ const STAGES: FunnelStage[] = [
 ]
 
 export default function Funil() {
-  const factories = useScopedFactories()
+  const allFactories = useScopedFactories()
   const { user } = useAuth()
   const canReview = isManager(user)
   const [reviewMode, setReviewMode] = useState(false)
+  const [salesOwnerFilter, setSalesOwnerFilter] = useState('all')
+  const factories = allFactories.filter(
+    (f) => salesOwnerFilter === 'all' || f.salesOwner === salesOwnerFilter,
+  )
 
   const handleExport = () => {
     exportExecutiveMacroReport(factories)
@@ -53,6 +58,11 @@ export default function Funil() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <UserFilter
+            value={salesOwnerFilter}
+            onChange={setSalesOwnerFilter}
+            className="w-[180px] h-9"
+          />
           {canReview && (
             <Button
               variant={reviewMode ? 'default' : 'outline'}

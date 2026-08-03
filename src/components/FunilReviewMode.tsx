@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/utils'
 import { Save, UserCheck, Search, Filter } from 'lucide-react'
+import { UserFilter } from '@/components/UserFilter'
 import type { Factory } from '@/types'
 
 const SPECIES = [
@@ -81,6 +82,7 @@ export function FunilReviewMode() {
     country: 'all',
     region: 'all',
     profile: 'all',
+    owner: 'all',
   })
 
   const [editValues, setEditValues] = useState<
@@ -132,6 +134,7 @@ export function FunilReviewMode() {
         if (filters.country !== 'all' && f.country !== filters.country) return false
         if (filters.region !== 'all' && f.stateRegion !== filters.region) return false
         if (filters.profile !== 'all' && f.profile_type !== filters.profile) return false
+        if (filters.owner !== 'all' && f.salesOwner !== filters.owner) return false
         return true
       }),
     [factories, filters, searchTerm],
@@ -282,6 +285,11 @@ export function FunilReviewMode() {
           value={filters.region}
           onChange={(v) => setFilters((p) => ({ ...p, region: v }))}
           options={REGIONS}
+        />
+        <UserFilter
+          value={filters.owner}
+          onChange={(v) => setFilters((p) => ({ ...p, owner: v }))}
+          className="w-full md:w-[140px] bg-background text-xs h-9"
         />
       </div>
 

@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { useAppContext } from '@/store/AppContext'
+import { UserFilter } from '@/components/UserFilter'
 import {
   Table,
   TableBody,
@@ -14,6 +16,7 @@ import { Factory } from '@/types'
 
 export default function Matriz() {
   const { factories, updateFactory } = useAppContext()
+  const [salesOwnerFilter, setSalesOwnerFilter] = useState('all')
 
   const update = (id: string, field: keyof Factory['matrix'], val: number) => {
     const f = factories.find((x) => x.id === id)
@@ -28,7 +31,11 @@ export default function Matriz() {
   }
 
   // Sort by score descending
-  const sorted = [...factories].sort((a, b) => getMatrixScore(b.matrix) - getMatrixScore(a.matrix))
+  const filtered =
+    salesOwnerFilter === 'all'
+      ? factories
+      : factories.filter((f) => f.salesOwner === salesOwnerFilter)
+  const sorted = [...filtered].sort((a, b) => getMatrixScore(b.matrix) - getMatrixScore(a.matrix))
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
@@ -37,6 +44,10 @@ export default function Matriz() {
         <p className="text-muted-foreground text-sm">
           Atribua notas de 0 a 10 para ranquear automaticamente as melhores oportunidades.
         </p>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <UserFilter value={salesOwnerFilter} onChange={setSalesOwnerFilter} className="w-[240px]" />
       </div>
 
       <div className="bg-card border rounded-lg shadow-subtle overflow-hidden">

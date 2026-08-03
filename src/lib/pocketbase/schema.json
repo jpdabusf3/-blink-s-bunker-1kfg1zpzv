@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-03T17:36:24.257Z",
+  "generatedAt": "2026-08-03T17:53:28.234Z",
   "collections": [
     {
       "name": "users",
@@ -459,11 +459,11 @@
       "name": "activity_logs",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || user = @request.auth.id",
-        "view": "@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || user = @request.auth.id",
+        "list": "@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || @request.auth.email = 'joaopedro_zoo@hotmail.com' || user = @request.auth.id",
+        "view": "@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || @request.auth.email = 'joaopedro_zoo@hotmail.com' || user = @request.auth.id",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager'",
-        "delete": "@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager'"
+        "update": "@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || @request.auth.email = 'joaopedro_zoo@hotmail.com'",
+        "delete": "@request.auth.job_title = 'CEO' || @request.auth.job_title = 'Diretor' || @request.auth.job_title = 'Gestor' || @request.auth.job_title = 'Gerente' || @request.auth.job_title = 'Manager' || @request.auth.email = 'joaopedro_zoo@hotmail.com'"
       },
       "fields": [
         {

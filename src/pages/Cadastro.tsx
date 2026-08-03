@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { FactoryForm } from '@/components/FactoryForm'
+import { UserFilter } from '@/components/UserFilter'
 import { FactoryDocuments } from '@/components/FactoryDocuments'
 import { FactoryTasks } from '@/components/FactoryTasks'
 import { FactoryChangeLog } from '@/components/FactoryChangeLog'
@@ -45,6 +46,7 @@ export default function Cadastro() {
   const [priorityFilter, setPriorityFilter] = useState('all')
   const [cityFilter, setCityFilter] = useState('all')
   const [profileTypeFilter, setProfileTypeFilter] = useState('all')
+  const [salesOwnerFilter, setSalesOwnerFilter] = useState('all')
   const [editing, setEditing] = useState<Factory | null>(null)
   const [creating, setCreating] = useState(false)
 
@@ -64,8 +66,9 @@ export default function Cadastro() {
       profileTypeFilter === 'all' ||
       f.profile_type === profileTypeFilter ||
       f.sector === profileTypeFilter
+    const matchesOwner = salesOwnerFilter === 'all' || f.salesOwner === salesOwnerFilter
 
-    return matchesSearch && matchesPriority && matchesCity && matchesProfileType
+    return matchesSearch && matchesPriority && matchesCity && matchesProfileType && matchesOwner
   })
 
   const handleExport = () => {
@@ -177,6 +180,11 @@ export default function Cadastro() {
             ))}
           </SelectContent>
         </Select>
+        <UserFilter
+          value={salesOwnerFilter}
+          onChange={setSalesOwnerFilter}
+          className="w-full md:w-[200px] bg-background"
+        />
         <Button
           variant="outline"
           size="icon"
