@@ -11,7 +11,7 @@ export const getActivityLogsByRecord = (recordId: string, collectionName: string
   pb.collection('activity_logs').getFullList<ActivityLog>({
     sort: '-created',
     expand: 'user',
-    filter: `recordId = "${recordId}" && collectionName = "${collectionName}"`,
+    filter: `recordId = "${recordId}" && target_collection = "${collectionName}"`,
   })
 
 export const logActivity = (

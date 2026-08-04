@@ -1,4 +1,5 @@
 import pb from '@/lib/pocketbase/client'
+import type { ActivityLog } from '@/types'
 
 export interface UserListItem {
   id: string
@@ -8,6 +9,7 @@ export interface UserListItem {
   geographicArea: string
   country: string
   created: string
+  deactivated?: boolean
 }
 
 export interface UserReportLog {
@@ -30,7 +32,25 @@ export interface UserReport {
 }
 
 export const getUsers = (): Promise<UserListItem[]> =>
-  pb.send('/backend/v1/users', { method: 'GET' })
+  pb.collection('users').getFullList({ sort: 'created' })
 
 export const getUserReport = (userId: string): Promise<UserReport> =>
   pb.send(`/backend/v1/users/${userId}/report`, { method: 'GET' })
+
+export const manageUser = (
+  userId: string,
+  action: 'edit' | 'deactivate' | 'reactivate',
+  data?: { name?: string; job_title?: string; geographicArea?: string; country?: string },
+): Promise<{ success: boolean }> =>
+  pb.send(`/backend/v1/users/${userId}/manage`, {
+    method: 'POST',
+    body: JSON.stringify({ action, ...data }),
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+export const getUserHistory = (userId: string): Promise<ActivityLog[]> =>
+  pb.collection('activity_logs').getFullList<ActivityLog>({
+    sort: '-created',
+    expand: 'user',
+    filter: `recordId = "${userId}" && target_collection = "users"`,
+  })

@@ -101,6 +101,7 @@ export interface ActivityLog {
   details: string
   recordId?: string
   collectionName?: string
+  target_collection?: string
   created: string
   updated: string
   expand?: {

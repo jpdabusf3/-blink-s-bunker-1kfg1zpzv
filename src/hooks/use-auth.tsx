@@ -38,6 +38,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (pb.authStore.isValid) {
       pb.collection('users')
         .authRefresh()
+        .then((result: any) => {
+          if (result?.record?.deactivated) {
+            pb.authStore.clear()
+          }
+        })
         .catch(() => pb.authStore.clear())
         .finally(() => setLoading(false))
     } else {
@@ -83,7 +88,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      await pb.collection('users').authWithPassword(email, password)
+      const authResult = (await pb.collection('users').authWithPassword(email, password)) as any
+      if (authResult?.record?.deactivated) {
+        pb.authStore.clear()
+        throw new Error('Esta conta foi desativada. Entre em contato com o administrador.')
+      }
       try {
         await pb.send('/backend/v1/check-invitation', { method: 'POST' })
       } catch {

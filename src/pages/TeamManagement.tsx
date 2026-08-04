@@ -14,10 +14,19 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Users as UsersIcon, UserPlus, Trash2, Loader2, Download, BarChart3 } from 'lucide-react'
+import {
+  Users as UsersIcon,
+  UserPlus,
+  Trash2,
+  Loader2,
+  Download,
+  BarChart3,
+  Pencil,
+} from 'lucide-react'
 import { InvitationForm } from '@/components/InvitationForm'
 import { TeamPerformanceDashboard } from '@/components/TeamPerformanceDashboard'
 import { UserActivityDialog } from '@/components/UserActivityDialog'
+import { UserEditDialog } from '@/components/UserEditDialog'
 import { toast } from 'sonner'
 import { exportTeamToExcel } from '@/lib/exportReports'
 
@@ -29,6 +38,8 @@ export default function TeamManagement() {
   const [exporting, setExporting] = useState(false)
   const [selectedUser, setSelectedUser] = useState<UserListItem | null>(null)
   const [showUserDialog, setShowUserDialog] = useState(false)
+  const [editingUser, setEditingUser] = useState<UserListItem | null>(null)
+  const [showEditDialog, setShowEditDialog] = useState(false)
 
   const loadData = async () => {
     try {
@@ -100,6 +111,11 @@ export default function TeamManagement() {
     setShowUserDialog(true)
   }
 
+  const handleEditClick = (user: UserListItem) => {
+    setEditingUser(user)
+    setShowEditDialog(true)
+  }
+
   return (
     <div className="space-y-6 animate-fade-in pb-10">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -167,12 +183,14 @@ export default function TeamManagement() {
                         <TableHead>Cargo</TableHead>
                         <TableHead>Região</TableHead>
                         <TableHead>País</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-center">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {users.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center text-muted-foreground h-16">
+                          <TableCell colSpan={7} className="text-center text-muted-foreground h-16">
                             Nenhum usuário encontrado.
                           </TableCell>
                         </TableRow>
@@ -190,6 +208,31 @@ export default function TeamManagement() {
                             </TableCell>
                             <TableCell>{u.geographicArea || 'N/A'}</TableCell>
                             <TableCell>{u.country || 'N/A'}</TableCell>
+                            <TableCell>
+                              {u.deactivated ? (
+                                <Badge className="bg-red-100 text-red-800 border-transparent">
+                                  Desativado
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-green-100 text-green-800 border-transparent">
+                                  Ativo
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex justify-center">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleEditClick(u)
+                                  }}
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
                           </TableRow>
                         ))
                       )}
@@ -270,6 +313,12 @@ export default function TeamManagement() {
         user={selectedUser}
         open={showUserDialog}
         onOpenChange={setShowUserDialog}
+      />
+      <UserEditDialog
+        user={editingUser}
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        onSuccess={loadData}
       />
     </div>
   )
