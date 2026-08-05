@@ -41,15 +41,24 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 )
 
 const ANIMAL_SPECIES = [
-  'Bovinos',
-  'Suínos',
+  'Ruminantes',
   'Aves',
+  'Suinos',
+  'Pet',
   'Aqua',
-  'PET',
   'Equinos',
-  'Caprinos',
-  'Ovinos',
-  'Multiespécie',
+  'Outros',
+  'Multi espécie',
+]
+
+const CARTEIRA_OPTIONS = [
+  'Indústria',
+  'Cooperativa',
+  'Integradora',
+  'Premixeira',
+  'Produtores',
+  'Outros',
+  'Distribuidor',
 ]
 
 export default function Cadastro() {
@@ -266,15 +275,7 @@ export default function Cadastro() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas as Carteiras</SelectItem>
-              {[
-                'Indústria',
-                'Cooperativa',
-                'Integradora',
-                'Premixeira',
-                'Produtores',
-                'Distribuidor',
-                'Outros',
-              ].map((p) => (
+              {CARTEIRA_OPTIONS.map((p) => (
                 <SelectItem key={p} value={p}>
                   {p}
                 </SelectItem>

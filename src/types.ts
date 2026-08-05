@@ -124,7 +124,16 @@ export interface Factory {
   region: Region
   sector?: string
   specialty?: string
-  animalSpecies?: string
+  animalSpecies?:
+    | 'Ruminantes'
+    | 'Aves'
+    | 'Suinos'
+    | 'Pet'
+    | 'Aqua'
+    | 'Equinos'
+    | 'Outros'
+    | 'Multi espécie'
+    | string
   productLineAffinity?: ProductLine
   capacity: number
   potentialValue: number
@@ -179,7 +188,15 @@ export interface Factory {
     urgency: number
     roi: number
   }
-  profile_type?: string
+  profile_type?:
+    | 'Indústria'
+    | 'Cooperativa'
+    | 'Integradora'
+    | 'Premixeira'
+    | 'Produtores'
+    | 'Outros'
+    | 'Distribuidor'
+    | string
   salesOwner?: string
   salesOwnerName?: string
   technicalManager?: string

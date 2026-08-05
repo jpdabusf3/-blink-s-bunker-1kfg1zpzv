@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-05T03:16:57.812Z",
+  "generatedAt": "2026-08-05T03:27:28.023Z",
   "collections": [
     {
       "name": "users",
@@ -256,15 +256,14 @@
           "required": false,
           "system": false,
           "selectValues": [
-            "Bovinos",
-            "Suínos",
+            "Ruminantes",
             "Aves",
+            "Suinos",
+            "Pet",
             "Aqua",
-            "PET",
             "Equinos",
-            "Caprinos",
-            "Ovinos",
-            "Multiespécie"
+            "Outros",
+            "Multi espécie"
           ]
         },
         {

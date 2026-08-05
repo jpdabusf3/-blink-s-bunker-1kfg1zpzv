@@ -17,13 +17,36 @@ import { isManager } from '@/lib/user-scope'
 import { getUsers, type UserListItem } from '@/services/users'
 import { COUNTRIES } from '@/lib/countries'
 import { createFactoryPB, updateFactoryPB } from '@/services/factories'
+import { logActivity } from '@/services/activity-logs'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
+import { UserCog } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface FactoryFormProps {
   factory?: Factory
   onSubmit: () => void
 }
+
+const SPECIES_OPTIONS = [
+  'Ruminantes',
+  'Aves',
+  'Suinos',
+  'Pet',
+  'Aqua',
+  'Equinos',
+  'Outros',
+  'Multi espécie',
+]
+
+const CARTEIRA_OPTIONS = [
+  'Indústria',
+  'Cooperativa',
+  'Integradora',
+  'Premixeira',
+  'Produtores',
+  'Outros',
+  'Distribuidor',
+]
 
 export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
   const { addFactory, updateFactory } = useAppContext()
@@ -32,6 +55,11 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
   const userArea = user?.geographicArea || ''
   const [users, setUsers] = useState<UserListItem[]>([])
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+  const [techManager, setTechManager] = useState<string>(factory?.technicalManager || '')
+  const [sellerOwner, setSellerOwner] = useState<string>(factory?.salesOwner || '')
+  const [species, setSpecies] = useState<string>(factory?.animalSpecies || 'Ruminantes')
+  const [carteira, setCarteira] = useState<string>(factory?.profile_type || 'Indústria')
   const [salesChannelState, setSalesChannelState] = useState<string>(
     (factory?.salesChannel as string) || '',
   )
@@ -42,14 +70,6 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
       .catch(() => {})
   }, [])
 
-  const sellers = users.filter((u) =>
-    ['Vendedor', 'Manager', 'Gerente', 'Gestor', 'Diretor', 'CEO', 'Comum'].includes(u.job_title),
-  )
-
-  const managers = users.filter((u) =>
-    ['Manager', 'Gerente', 'Gestor', 'Diretor', 'CEO'].includes(u.job_title),
-  )
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
@@ -57,10 +77,9 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
     const deadlineValue = fd.get('deadline') as string
     const focusValue = fd.get('focusLevel') as string
     const finalFocus = isNaN(Number(focusValue)) ? focusValue : Number(focusValue)
-    const salesOwnerValue = fd.get('salesOwner') as string
-    const salesOwnerName = users.find((u) => u.id === salesOwnerValue)?.name || ''
-    const technicalManagerValue = fd.get('technicalManager') as string
-    const technicalManagerName = users.find((u) => u.id === technicalManagerValue)?.name || ''
+
+    const techManagerUser = users.find((u) => u.id === techManager)
+    const sellerUser = users.find((u) => u.id === sellerOwner)
 
     const errors: Record<string, string> = {}
     if (!fd.get('name')) errors.name = 'Nome é obrigatório'
@@ -75,7 +94,8 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
       city: fd.get('city') as string,
       region: fd.get('region') as Region,
       sector: fd.get('sector') as string,
-      animalSpecies: fd.get('animalSpecies') as string,
+      animalSpecies: species,
+      profile_type: carteira,
       priority: fd.get('priority') as Priority,
       focusLevel: finalFocus,
       productLineAffinity: fd.get('productLineAffinity') as ProductLine,
@@ -89,14 +109,13 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
       lastInteraction: factory?.lastInteraction || new Date().toISOString(),
       country: (fd.get('country') as string) || 'Brasil',
       state: (fd.get('state') as string) || undefined,
-      salesOwner: salesOwnerValue || undefined,
-      salesOwnerName: salesOwnerName || undefined,
-      technicalManager: technicalManagerValue || undefined,
-      technicalManagerName: technicalManagerName || undefined,
+      salesOwner: sellerOwner && sellerOwner !== 'none' ? sellerOwner : undefined,
+      salesOwnerName: sellerUser?.name || undefined,
+      technicalManager: techManager && techManager !== 'none' ? techManager : undefined,
+      technicalManagerName: techManagerUser?.name || undefined,
       salesChannel: (salesChannelState as Factory['salesChannel']) || undefined,
       indirectChannelType:
         (fd.get('indirectChannelType') as Factory['indirectChannelType']) || undefined,
-      profile_type: (fd.get('profile_type') as string) || undefined,
       suggested_approach: (fd.get('suggested_approach') as string) || undefined,
       notes: (fd.get('notes') as string) || undefined,
     }
@@ -105,9 +124,23 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
       if (factory) {
         await updateFactoryPB(factory.id, data)
         updateFactory(factory.id, data)
+        logActivity(
+          `Fábrica atualizada: ${data.name}`,
+          `Gestor Técnico: ${techManagerUser?.name || 'Não atribuído'}, Vendedor: ${sellerUser?.name || 'Não atribuído'}, Espécie: ${species}, Carteira: ${carteira}`,
+          factory.id,
+          'factories',
+        ).catch(() => {})
+        toast.success('Fábrica atualizada com sucesso')
       } else {
-        await createFactoryPB(data)
-        addFactory(data)
+        const created = await createFactoryPB(data)
+        addFactory({ ...data, id: created.id })
+        logActivity(
+          `Nova fábrica cadastrada: ${data.name}`,
+          `Gestor Técnico: ${techManagerUser?.name || 'Não atribuído'}, Vendedor: ${sellerUser?.name || 'Não atribuído'}, Espécie: ${species}, Carteira: ${carteira}`,
+          created.id,
+          'factories',
+        ).catch(() => {})
+        toast.success('Fábrica cadastrada com sucesso')
       }
       onSubmit()
     } catch (err) {
@@ -119,7 +152,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
     <form onSubmit={handleSubmit} className="space-y-6 mt-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>Nome da Fábrica</Label>
+          <Label>Nome da Fábrica / Cliente</Label>
           <Input name="name" defaultValue={factory?.name} required />
           {fieldErrors.name && <p className="text-xs text-destructive">{fieldErrors.name}</p>}
         </div>
@@ -163,6 +196,36 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
           </Select>
         </div>
         <div className="space-y-2">
+          <Label>Espécie Animal</Label>
+          <Select value={species} onValueChange={setSpecies}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione a Espécie" />
+            </SelectTrigger>
+            <SelectContent>
+              {SPECIES_OPTIONS.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Carteira (Tipo de Perfil)</Label>
+          <Select value={carteira} onValueChange={setCarteira}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione a Carteira" />
+            </SelectTrigger>
+            <SelectContent>
+              {CARTEIRA_OPTIONS.map((p) => (
+                <SelectItem key={p} value={p}>
+                  {p}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
           <Label>Prioridade</Label>
           <Select name="priority" defaultValue={factory?.priority || 'Medium'} required>
             <SelectTrigger>
@@ -200,77 +263,8 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>Tipo de Perfil (Carteira)</Label>
-          <Select name="profile_type" defaultValue={factory?.profile_type || 'Indústria'}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {[
-                'Indústria',
-                'Cooperativa',
-                'Integradora',
-                'Premixeira',
-                'Produtores',
-                'Distribuidor',
-                'Outros',
-              ].map((p) => (
-                <SelectItem key={p} value={p}>
-                  {p}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
           <Label>Setor de Atuação</Label>
-          <Select name="sector" defaultValue={factory?.sector || 'Ruminantes'} required>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {[
-                'Aves',
-                'Aves/Suínos',
-                'Bovinos de Corte',
-                'Bovinos de Leite',
-                'Geral',
-                'Muitiespecies',
-                'PET',
-                'Ruminantes',
-                'Suínos',
-              ].map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Espécie Animal</Label>
-          <Select name="animalSpecies" defaultValue={factory?.animalSpecies || 'Bovinos'}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {[
-                'Bovinos',
-                'Suínos',
-                'Aves',
-                'Aqua',
-                'PET',
-                'Equinos',
-                'Caprinos',
-                'Ovinos',
-                'Multiespécie',
-              ].map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Input name="sector" defaultValue={factory?.sector || 'Ruminantes'} required />
         </div>
         <div className="space-y-2">
           <Label>Tendência de Linha (Blink)</Label>
@@ -354,36 +348,48 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
             defaultValue={factory?.deadline ? factory.deadline.split('T')[0] : ''}
           />
         </div>
-        <div className="space-y-2">
-          <Label>Gestor Técnico</Label>
-          <Select name="technicalManager" defaultValue={factory?.technicalManager || ''}>
-            <SelectTrigger>
-              <SelectValue placeholder="Atribuir gestor técnico" />
-            </SelectTrigger>
-            <SelectContent>
-              {managers.map((m) => (
-                <SelectItem key={m.id} value={m.id}>
-                  {m.name || m.email}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+
+        {/* Dedicated Responsibility Assignment UI */}
+        <div className="space-y-4 md:col-span-2 p-4 border rounded-lg bg-muted/20">
+          <h3 className="font-semibold text-sm flex items-center gap-2 text-foreground">
+            <UserCog className="w-4 h-4 text-primary" /> Atribuição de Responsáveis
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Gestor Técnico</Label>
+              <Select value={techManager || 'none'} onValueChange={setTechManager}>
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Selecione Gestor Técnico" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum / Não atribuído</SelectItem>
+                  {users.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name || u.email} {u.job_title ? `(${u.job_title})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Vendedor Responsável</Label>
+              <Select value={sellerOwner || 'none'} onValueChange={setSellerOwner}>
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Selecione Vendedor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum / Não atribuído</SelectItem>
+                  {users.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name || u.email} {u.job_title ? `(${u.job_title})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label>Vendedor Responsável</Label>
-          <Select name="salesOwner" defaultValue={factory?.salesOwner || ''}>
-            <SelectTrigger>
-              <SelectValue placeholder="Atribuir vendedor" />
-            </SelectTrigger>
-            <SelectContent>
-              {sellers.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name || s.email}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+
         <div className="space-y-2">
           <Label>Canal de Vendas</Label>
           <Select
