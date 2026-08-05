@@ -24,6 +24,7 @@ import {
   Pencil,
 } from 'lucide-react'
 import { InvitationForm } from '@/components/InvitationForm'
+import { SellerRegistrationForm } from '@/components/SellerRegistrationForm'
 import { TeamPerformanceDashboard } from '@/components/TeamPerformanceDashboard'
 import { UserActivityDialog } from '@/components/UserActivityDialog'
 import { UserEditDialog } from '@/components/UserEditDialog'
@@ -35,6 +36,7 @@ export default function TeamManagement() {
   const [invitations, setInvitations] = useState<Invitation[]>([])
   const [loading, setLoading] = useState(true)
   const [showInvite, setShowInvite] = useState(false)
+  const [showSellerForm, setShowSellerForm] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [selectedUser, setSelectedUser] = useState<UserListItem | null>(null)
   const [showUserDialog, setShowUserDialog] = useState(false)
@@ -143,6 +145,9 @@ export default function TeamManagement() {
               <Download className="w-4 h-4" />
             )}
             Exportar Relatório
+          </Button>
+          <Button onClick={() => setShowSellerForm(true)} variant="secondary" className="gap-2">
+            <UserPlus className="w-4 h-4" /> Cadastrar Vendedor
           </Button>
           <Button onClick={() => setShowInvite(true)} className="gap-2">
             <UserPlus className="w-4 h-4" /> Convidar Usuário
@@ -309,6 +314,11 @@ export default function TeamManagement() {
       )}
 
       <InvitationForm open={showInvite} onOpenChange={setShowInvite} onSuccess={loadData} />
+      <SellerRegistrationForm
+        open={showSellerForm}
+        onOpenChange={setShowSellerForm}
+        onSuccess={loadData}
+      />
       <UserActivityDialog
         user={selectedUser}
         open={showUserDialog}

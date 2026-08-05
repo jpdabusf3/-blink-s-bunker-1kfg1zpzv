@@ -32,6 +32,9 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
   const userArea = user?.geographicArea || ''
   const [users, setUsers] = useState<UserListItem[]>([])
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [salesChannelState, setSalesChannelState] = useState<string>(
+    (factory?.salesChannel as string) || '',
+  )
 
   useEffect(() => {
     getUsers()
@@ -43,6 +46,10 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
     ['Vendedor', 'Manager', 'Gerente', 'Gestor', 'Diretor', 'CEO', 'Comum'].includes(u.job_title),
   )
 
+  const managers = users.filter((u) =>
+    ['Manager', 'Gerente', 'Gestor', 'Diretor', 'CEO'].includes(u.job_title),
+  )
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
@@ -52,6 +59,8 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
     const finalFocus = isNaN(Number(focusValue)) ? focusValue : Number(focusValue)
     const salesOwnerValue = fd.get('salesOwner') as string
     const salesOwnerName = users.find((u) => u.id === salesOwnerValue)?.name || ''
+    const technicalManagerValue = fd.get('technicalManager') as string
+    const technicalManagerName = users.find((u) => u.id === technicalManagerValue)?.name || ''
 
     const errors: Record<string, string> = {}
     if (!fd.get('name')) errors.name = 'Nome é obrigatório'
@@ -82,6 +91,11 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
       state: (fd.get('state') as string) || undefined,
       salesOwner: salesOwnerValue || undefined,
       salesOwnerName: salesOwnerName || undefined,
+      technicalManager: technicalManagerValue || undefined,
+      technicalManagerName: technicalManagerName || undefined,
+      salesChannel: (salesChannelState as Factory['salesChannel']) || undefined,
+      indirectChannelType:
+        (fd.get('indirectChannelType') as Factory['indirectChannelType']) || undefined,
       profile_type: (fd.get('profile_type') as string) || undefined,
       suggested_approach: (fd.get('suggested_approach') as string) || undefined,
       notes: (fd.get('notes') as string) || undefined,
@@ -340,8 +354,23 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
             defaultValue={factory?.deadline ? factory.deadline.split('T')[0] : ''}
           />
         </div>
-        <div className="space-y-2 md:col-span-2">
-          <Label>Gestor Técnico / Vendedor Responsável</Label>
+        <div className="space-y-2">
+          <Label>Gestor Técnico</Label>
+          <Select name="technicalManager" defaultValue={factory?.technicalManager || ''}>
+            <SelectTrigger>
+              <SelectValue placeholder="Atribuir gestor técnico" />
+            </SelectTrigger>
+            <SelectContent>
+              {managers.map((m) => (
+                <SelectItem key={m.id} value={m.id}>
+                  {m.name || m.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Vendedor Responsável</Label>
           <Select name="salesOwner" defaultValue={factory?.salesOwner || ''}>
             <SelectTrigger>
               <SelectValue placeholder="Atribuir vendedor" />
@@ -355,6 +384,41 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
             </SelectContent>
           </Select>
         </div>
+        <div className="space-y-2">
+          <Label>Canal de Vendas</Label>
+          <Select
+            name="salesChannel"
+            value={salesChannelState}
+            onValueChange={setSalesChannelState}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o canal" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Direct">Direto</SelectItem>
+              <SelectItem value="Indirect">Indireto</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {salesChannelState === 'Indirect' && (
+          <div className="space-y-2">
+            <Label>Tipo de Canal Indireto</Label>
+            <Select name="indirectChannelType" defaultValue={factory?.indirectChannelType || ''}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                {['Representantes', 'Distribuidores', 'Revendas', 'Cooperativas', 'Indústrias'].map(
+                  (t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ),
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <div className="space-y-2 md:col-span-2">
           <Label>Próximos Passos / Abordagem Sugerida</Label>
           <Textarea

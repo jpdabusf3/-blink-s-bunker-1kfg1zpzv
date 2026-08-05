@@ -8,6 +8,7 @@ const PB_EXCLUDED = [
   'documents',
   'coordinates',
   'salesOwnerName',
+  'technicalManagerName',
   'deadline',
 ]
 
@@ -49,6 +50,8 @@ function mapRecordToFactory(record: any): Factory {
     contact_email: record.contact_email,
     salesOwner: record.salesOwner,
     salesOwnerName: record.expand?.salesOwner?.name || '',
+    technicalManager: record.technicalManager,
+    technicalManagerName: record.expand?.technicalManager?.name || '',
     created: record.created,
     swot: {
       strengths: '',
@@ -73,7 +76,7 @@ function mapRecordToFactory(record: any): Factory {
 export async function getAllFactories(): Promise<Factory[]> {
   const records = await pb.collection('factories').getFullList({
     sort: '-created',
-    expand: 'salesOwner',
+    expand: 'salesOwner,technicalManager',
   })
   return records.map(mapRecordToFactory)
 }

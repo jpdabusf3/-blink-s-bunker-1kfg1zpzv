@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-04T14:25:46.574Z",
+  "generatedAt": "2026-08-05T03:16:57.812Z",
   "collections": [
     {
       "name": "users",
@@ -309,9 +309,19 @@
           "required": false,
           "system": false,
           "collectionRef": "users"
+        },
+        {
+          "name": "technicalManager",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
         }
       ],
-      "indexes": ["CREATE INDEX `idx_factories_salesOwner` ON `factories` (salesOwner)"]
+      "indexes": [
+        "CREATE INDEX `idx_factories_salesOwner` ON `factories` (salesOwner)",
+        "CREATE INDEX `idx_factories_technicalManager` ON `factories` (technicalManager)"
+      ]
     },
     {
       "name": "orders",

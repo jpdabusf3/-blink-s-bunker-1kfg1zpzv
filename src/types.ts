@@ -182,6 +182,8 @@ export interface Factory {
   profile_type?: string
   salesOwner?: string
   salesOwnerName?: string
+  technicalManager?: string
+  technicalManagerName?: string
   created?: string
   notes?: string
   suggested_approach?: string
