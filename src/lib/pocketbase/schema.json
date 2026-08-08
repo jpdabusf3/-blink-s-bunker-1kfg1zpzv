@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-08T22:50:55.786Z",
+  "generatedAt": "2026-08-08T23:10:01.015Z",
   "collections": [
     {
       "name": "users",
@@ -1079,11 +1079,28 @@
           "type": "date",
           "required": false,
           "system": false
+        },
+        {
+          "name": "gestor_tecnico_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "gestao_tecnica"
+        },
+        {
+          "name": "especie",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["BOVINO", "SUINO", "AVE", "PET", "AQUA"]
         }
       ],
       "indexes": [
         "CREATE INDEX `idx_metas_vendedor_id` ON `metas` (vendedor_id)",
-        "CREATE INDEX `idx_metas_vendedor_id_periodo` ON `metas` (vendedor_id, periodo)"
+        "CREATE INDEX `idx_metas_vendedor_id_periodo` ON `metas` (vendedor_id, periodo)",
+        "CREATE INDEX `idx_metas_gestor_tecnico_id` ON `metas` (gestor_tecnico_id)",
+        "CREATE INDEX `idx_metas_especie` ON `metas` (especie)",
+        "CREATE INDEX `idx_metas_periodo` ON `metas` (periodo)"
       ]
     },
     {

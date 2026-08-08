@@ -3,6 +3,8 @@ import pb from '@/lib/pocketbase/client'
 export interface Meta {
   id: string
   vendedor_id: string
+  gestor_tecnico_id?: string
+  especie?: string
   periodo: string
   meta_valor: number
   valor_realizado: number
@@ -11,17 +13,20 @@ export interface Meta {
   updated: string
   expand?: {
     vendedor_id?: { id: string; nome: string; funcao: string; regiao: string }
+    gestor_tecnico_id?: { id: string; nome: string; funcao: string; regiao: string }
   }
 }
 
 export const getMetas = () =>
   pb.collection('metas').getFullList<Meta>({
     sort: '-created',
-    expand: 'vendedor_id',
+    expand: 'vendedor_id,gestor_tecnico_id',
   })
 
 export const createMeta = (data: {
   vendedor_id: string
+  gestor_tecnico_id?: string | null
+  especie?: string | null
   periodo: string
   meta_valor: number
   valor_realizado?: number
@@ -31,6 +36,8 @@ export const updateMeta = (
   id: string,
   data: Partial<{
     vendedor_id: string
+    gestor_tecnico_id: string | null
+    especie: string | null
     periodo: string
     meta_valor: number
     valor_realizado: number
