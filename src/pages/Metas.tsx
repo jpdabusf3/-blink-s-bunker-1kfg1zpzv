@@ -2,9 +2,6 @@ import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import pb from '@/lib/pocketbase/client'
-import { Target } from '@/types'
-import { useRealtime } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -31,8 +28,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { toast } from 'sonner'
-import { Loader2, Plus, Trash2, Edit } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -40,48 +35,40 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { Progress } from '@/components/ui/progress'
+import { toast } from 'sonner'
+import { Loader2, Plus, Trash2, Edit, Target } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-import { useAppContext } from '@/store/AppContext'
-import { UserFilter } from '@/components/UserFilter'
+import { useRealtime } from '@/hooks/use-realtime'
+import { useUsers } from '@/hooks/use-users'
+import { getMetas, createMeta, updateMeta, deleteMeta, type Meta } from '@/services/metas'
 
-const targetSchema = z.object({
-  name: z.string().min(1, 'Nome é obrigatório'),
-  targetValue: z.coerce.number().min(0, 'Valor deve ser positivo'),
-  categoryType: z.enum(['General', 'Region', 'Channel', 'ProductLine']),
-  categoryValue: z.string().optional(),
-  startDate: z.string().min(1, 'Data de início é obrigatória'),
-  endDate: z.string().min(1, 'Data de fim é obrigatória'),
+const metaSchema = z.object({
+  vendedor_id: z.string().min(1, 'Vendedor é obrigatório'),
+  periodo: z.string().min(1, 'Período é obrigatório'),
+  meta_valor: z.coerce.number().min(0, 'Valor deve ser positivo'),
+  valor_realizado: z.coerce.number().min(0, 'Valor deve ser positivo'),
 })
 
-type TargetForm = z.infer<typeof targetSchema>
+type MetaForm = z.infer<typeof metaSchema>
 
 export default function Metas() {
-  const { orders } = useAppContext()
-  const [targets, setTargets] = useState<Target[]>([])
+  const { users } = useUsers()
+  const [metas, setMetas] = useState<Meta[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [salesOwnerFilter, setSalesOwnerFilter] = useState('all')
 
-  const form = useForm<TargetForm>({
-    resolver: zodResolver(targetSchema),
-    defaultValues: {
-      name: '',
-      targetValue: 0,
-      categoryType: 'General',
-      categoryValue: '',
-      startDate: '',
-      endDate: '',
-    },
+  const form = useForm<MetaForm>({
+    resolver: zodResolver(metaSchema),
+    defaultValues: { vendedor_id: '', periodo: '', meta_valor: 0, valor_realizado: 0 },
   })
 
-  const loadTargets = async () => {
+  const loadData = async () => {
     try {
-      const records = await pb.collection('targets').getFullList<Target>({
-        sort: '-created',
-      })
-      setTargets(records)
-    } catch (e) {
+      const records = await getMetas()
+      setMetas(records)
+    } catch {
       toast.error('Erro ao carregar metas')
     } finally {
       setLoading(false)
@@ -89,71 +76,73 @@ export default function Metas() {
   }
 
   useEffect(() => {
-    loadTargets()
+    loadData()
   }, [])
 
-  useRealtime('targets', () => {
-    loadTargets()
+  useRealtime('metas', () => {
+    loadData()
   })
 
-  const onSubmit = async (data: TargetForm) => {
+  const onSubmit = async (data: MetaForm) => {
     try {
-      const payload = {
-        ...data,
-        startDate: new Date(data.startDate + 'T00:00:00.000Z').toISOString(),
-        endDate: new Date(data.endDate + 'T23:59:59.000Z').toISOString(),
-      }
-
       if (editingId) {
-        await pb.collection('targets').update(editingId, payload)
-        toast.success('Meta atualizada com sucesso')
+        await updateMeta(editingId, data)
+        toast.success('Meta atualizada')
       } else {
-        await pb.collection('targets').create(payload)
-        toast.success('Meta criada com sucesso')
+        await createMeta(data)
+        toast.success('Meta criada')
       }
       setOpen(false)
       form.reset()
       setEditingId(null)
-    } catch (e) {
+    } catch {
       toast.error('Erro ao salvar meta')
     }
   }
 
+  const handleEdit = (meta: Meta) => {
+    form.reset({
+      vendedor_id: meta.vendedor_id,
+      periodo: meta.periodo,
+      meta_valor: meta.meta_valor,
+      valor_realizado: meta.valor_realizado,
+    })
+    setEditingId(meta.id)
+    setOpen(true)
+  }
+
   const handleDelete = async (id: string) => {
-    if (!confirm('Deseja realmente excluir esta meta?')) return
+    if (!confirm('Excluir esta meta?')) return
     try {
-      await pb.collection('targets').delete(id)
-      toast.success('Meta excluída com sucesso')
-    } catch (e) {
-      toast.error('Erro ao excluir meta')
+      await deleteMeta(id)
+      toast.success('Meta excluída')
+    } catch {
+      toast.error('Erro ao excluir')
     }
   }
 
-  const handleEdit = (target: Target) => {
-    form.reset({
-      name: target.name,
-      targetValue: target.targetValue,
-      categoryType: target.categoryType,
-      categoryValue: target.categoryValue,
-      startDate: target.startDate.split('T')[0],
-      endDate: target.endDate.split('T')[0],
-    })
-    setEditingId(target.id)
-    setOpen(true)
+  const getVendorName = (id: string) => {
+    const u = users.find((u) => u.id === id)
+    return u?.name || u?.email || 'N/A'
   }
 
   return (
     <div className="space-y-6 pb-10 animate-fade-in">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Metas de Vendas</h1>
-          <p className="text-muted-foreground text-sm">Gerencie os objetivos e alvos de vendas.</p>
+        <div className="flex items-center gap-3">
+          <div className="bg-primary p-2 rounded-lg">
+            <Target className="w-6 h-6 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Metas</h1>
+            <p className="text-muted-foreground text-sm">Metas mensais por vendedor.</p>
+          </div>
         </div>
         <Dialog
           open={open}
-          onOpenChange={(val) => {
-            setOpen(val)
-            if (!val) {
+          onOpenChange={(v) => {
+            setOpen(v)
+            if (!v) {
               form.reset()
               setEditingId(null)
             }
@@ -172,25 +161,36 @@ export default function Metas() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="name"
+                  name="vendedor_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nome da Meta</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: Meta Q3 Norte" {...field} />
-                      </FormControl>
+                      <FormLabel>Vendedor</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {users.map((u) => (
+                            <SelectItem key={u.id} value={u.id}>
+                              {u.name || u.email}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <FormField
                   control={form.control}
-                  name="targetValue"
+                  name="periodo"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Valor Alvo (R$)</FormLabel>
+                      <FormLabel>Período</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.01" {...field} />
+                        <Input placeholder="Ex: Agosto 2026" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -199,124 +199,41 @@ export default function Metas() {
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="categoryType"
+                    name="meta_valor"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Categoria</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="General">Geral</SelectItem>
-                            <SelectItem value="Region">Região</SelectItem>
-                            <SelectItem value="Channel">Canal</SelectItem>
-                            <SelectItem value="ProductLine">Linha de Produto</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <FormLabel>Meta (R$)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                   <FormField
                     control={form.control}
-                    name="categoryValue"
+                    name="valor_realizado"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Valor da Categoria</FormLabel>
+                        <FormLabel>Realizado (R$)</FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="Ex: Norte, Representantes..."
-                            {...field}
-                            disabled={form.watch('categoryType') === 'General'}
-                          />
+                          <Input type="number" step="0.01" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="startDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Data Início</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="endDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Data Fim</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="flex justify-end gap-2 pt-4">
+                <div className="flex justify-end gap-2 pt-2">
                   <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                     Cancelar
                   </Button>
-                  <Button type="submit">Salvar Meta</Button>
+                  <Button type="submit">Salvar</Button>
                 </div>
               </form>
             </Form>
           </DialogContent>
         </Dialog>
-      </div>
-
-      {!loading && targets.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="shadow-subtle">
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground mb-1">Total de Metas</p>
-              <p className="text-2xl font-bold">{targets.length}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {formatCurrency(targets.reduce((s, t) => s + t.targetValue, 0))}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="shadow-subtle">
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground mb-1">Vendas Realizadas</p>
-              <p className="text-2xl font-bold text-primary">
-                {formatCurrency(orders.reduce((s, o) => s + (o.totalValue || 0), 0))}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="shadow-subtle">
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground mb-1">Taxa de Conclusão</p>
-              <p className="text-2xl font-bold text-accent">
-                {targets.reduce((s, t) => s + t.targetValue, 0) > 0
-                  ? (
-                      (orders.reduce((s, o) => s + (o.totalValue || 0), 0) /
-                        targets.reduce((s, t) => s + t.targetValue, 0)) *
-                      100
-                    ).toFixed(1)
-                  : '0'}
-                %
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      <div className="flex items-center gap-3">
-        <UserFilter value={salesOwnerFilter} onChange={setSalesOwnerFilter} className="w-[240px]" />
       </div>
 
       <Card className="shadow-subtle">
@@ -325,78 +242,56 @@ export default function Metas() {
             <div className="flex justify-center p-8">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
-          ) : targets.length === 0 ? (
+          ) : metas.length === 0 ? (
             <div className="text-center p-8 text-muted-foreground">Nenhuma meta cadastrada.</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Categoria</TableHead>
+                  <TableHead>Vendedor</TableHead>
                   <TableHead>Período</TableHead>
-                  <TableHead>Progresso</TableHead>
+                  <TableHead className="text-right">Meta</TableHead>
+                  <TableHead className="text-right">Realizado</TableHead>
+                  <TableHead className="min-w-[140px]">Progresso</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {targets.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="font-medium">{t.name}</TableCell>
-                    <TableCell>{formatCurrency(t.targetValue)}</TableCell>
-                    <TableCell>
-                      {t.categoryType === 'General'
-                        ? 'Geral'
-                        : `${t.categoryType}: ${t.categoryValue}`}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(t.startDate).toLocaleDateString('pt-BR')} até{' '}
-                      {new Date(t.endDate).toLocaleDateString('pt-BR')}
-                    </TableCell>
-                    <TableCell>
-                      {(() => {
-                        const relevantOrders = orders.filter((o) => {
-                          if (t.categoryType === 'General') return true
-                          if (t.categoryType === 'Region') return o.region === t.categoryValue
-                          if (t.categoryType === 'ProductLine') return o.line === t.categoryValue
-                          return false
-                        })
-                        const achieved = relevantOrders.reduce((s, o) => s + (o.totalValue || 0), 0)
-                        const pct =
-                          t.targetValue > 0 ? Math.min((achieved / t.targetValue) * 100, 100) : 0
-                        return (
-                          <div className="space-y-1">
-                            <div className="text-xs font-medium">
-                              {formatCurrency(achieved)} / {formatCurrency(t.targetValue)}
-                            </div>
-                            <div className="w-full bg-muted rounded-full h-1.5">
-                              <div
-                                className="bg-primary rounded-full h-1.5 transition-all"
-                                style={{ width: `${pct}%` }}
-                              />
-                            </div>
-                            <div className="text-[10px] text-muted-foreground">
-                              {pct.toFixed(0)}%
-                            </div>
-                          </div>
-                        )
-                      })()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(t)}>
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(t.id)}
-                        className="text-destructive hover:text-destructive/80"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {metas.map((m) => {
+                  const pct =
+                    m.meta_valor > 0 ? Math.min((m.valor_realizado / m.meta_valor) * 100, 100) : 0
+                  return (
+                    <TableRow key={m.id}>
+                      <TableCell className="font-medium">{getVendorName(m.vendedor_id)}</TableCell>
+                      <TableCell>{m.periodo}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(m.meta_valor)}</TableCell>
+                      <TableCell className="text-right text-primary">
+                        {formatCurrency(m.valor_realizado)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <Progress value={pct} className="h-2" />
+                          <span className="text-[10px] text-muted-foreground">
+                            {pct.toFixed(0)}%
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(m)}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(m.id)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           )}

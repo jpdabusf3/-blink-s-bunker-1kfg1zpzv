@@ -16,6 +16,9 @@ import { AppProvider } from './store/AppContext'
 import { AuthProvider } from './hooks/use-auth'
 import { I18nProvider } from './hooks/use-i18n'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import HistoricoPedidos from './pages/HistoricoPedidos'
+import PedidosCarteira from './pages/PedidosCarteira'
+import MatrizVendas from './pages/MatrizVendas'
 import Relatorios from './pages/Relatorios'
 import Documents from './pages/Documents'
 import AdminLogs from './pages/AdminLogs'
@@ -47,6 +50,9 @@ const App = () => (
                     <Route path="/swot" element={<SWOT />} />
                     <Route path="/matriz" element={<Matriz />} />
                     <Route path="/pedidos" element={<Pedidos />} />
+                    <Route path="/historico-pedidos" element={<HistoricoPedidos />} />
+                    <Route path="/pedidos-carteira" element={<PedidosCarteira />} />
+                    <Route path="/matriz-vendas" element={<MatrizVendas />} />
                     <Route path="/metas" element={<Metas />} />
                     <Route path="/relatorios" element={<Relatorios />} />
                     <Route path="/gestao-tecnica" element={<GestaoTecnica />} />
