@@ -206,4 +206,27 @@ export interface Factory {
   suggested_approach?: string
   contact_email?: string
   address?: string
+  ultima_edicao_origem?: 'manual' | 'audio' | 'excel'
+}
+
+export interface Atividade {
+  id: string
+  cliente_id: string
+  vendedor_id: string
+  tipo_atividade: string
+  etapa_funil: string
+  valor_estimado: number
+  descricao: string
+  proximo_passo: string
+  data_proxima_acao: string
+  pendencias: string
+  origem: 'audio' | 'manual' | 'excel'
+  audio_transcrito: string
+  confianca: number
+  created: string
+  updated: string
+  expand?: {
+    cliente_id?: { id: string; name: string; city: string; state: string }
+    vendedor_id?: { id: string; name: string }
+  }
 }

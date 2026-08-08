@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-08T20:49:44.706Z",
+  "generatedAt": "2026-08-08T20:56:37.680Z",
   "collections": [
     {
       "name": "users",
@@ -328,6 +328,13 @@
           "required": false,
           "system": false,
           "selectValues": ["Cliente", "Prospecto"]
+        },
+        {
+          "name": "ultima_edicao_origem",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["manual", "audio", "excel"]
         }
       ],
       "indexes": [

@@ -27,6 +27,7 @@ import { FunilReviewMode } from '@/components/FunilReviewMode'
 import { UserFilter } from '@/components/UserFilter'
 import { isManager } from '@/lib/user-scope'
 import { useAuth } from '@/hooks/use-auth'
+import { Link } from 'react-router-dom'
 
 const ANIMAL_SPECIES = [
   'Bovinos',
@@ -127,6 +128,9 @@ export default function Funil() {
               {reviewMode ? 'Modo Kanban' : 'Modo Revisão (Priorização)'}
             </Button>
           )}
+          <Button variant="outline" size="sm" asChild className="gap-2 shadow-sm">
+            <Link to="/atividades">Atividades</Link>
+          </Button>
           <Button variant="outline" size="sm" onClick={handleExport} className="gap-2 shadow-sm">
             <Download className="w-4 h-4" /> Exportar Executivo
           </Button>

@@ -157,9 +157,10 @@ routerAdd('POST', '/backend/v1/confirmar-whatsapp', (e) => {
           observacoes: interp.observacoes || '',
           confianca: typeof interp.confianca === 'number' ? interp.confianca : 0,
           audio_transcrito: audioTxt || '',
+          origem: 'audio',
         }
         var res = $http.send({
-          url: pbUrl + '/backend/v1/gravar-atividade',
+          url: pbUrl + '/backend/v1/validar-e-gravar',
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: superuserToken },
           body: JSON.stringify(payload),
@@ -198,7 +199,7 @@ routerAdd('POST', '/backend/v1/confirmar-whatsapp', (e) => {
 
     if (replyText.toUpperCase() === 'SIM') {
       var gravarResult = callGravarAtividade(storedInterpretacao, storedAudioTranscrito)
-      if (gravarResult && gravarResult.success !== false) {
+      if (gravarResult && gravarResult.success !== false && !gravarResult.precisa_confirmacao) {
         pendingRecord.set('status', 'confirmed')
         $app.save(pendingRecord)
         sendWhatsAppMessage(from, '✅ Atividade registrada com sucesso no CRM Blink.')
@@ -280,7 +281,7 @@ routerAdd('POST', '/backend/v1/confirmar-whatsapp', (e) => {
 
     if (newConfianca >= 0.8 && newClienteNome && newTipoAtividade) {
       var gravarResult2 = callGravarAtividade(updatedInterpretacao, correctedText)
-      if (gravarResult2 && gravarResult2.success !== false) {
+      if (gravarResult2 && gravarResult2.success !== false && !gravarResult2.precisa_confirmacao) {
         pendingRecord.set('status', 'corrected')
         pendingRecord.set('json_interpretacao', JSON.stringify(updatedInterpretacao))
         pendingRecord.set('audio_transcrito', correctedText)
