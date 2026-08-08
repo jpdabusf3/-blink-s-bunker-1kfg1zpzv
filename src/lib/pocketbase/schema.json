@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-08T22:17:32.872Z",
+  "generatedAt": "2026-08-08T22:26:36.779Z",
   "collections": [
     {
       "name": "users",
@@ -348,13 +348,29 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "gestor_tecnico_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "gestao_tecnica"
+        },
+        {
+          "name": "vendedor_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "gestao_tecnica"
         }
       ],
       "indexes": [
         "CREATE INDEX `idx_factories_salesOwner` ON `factories` (salesOwner)",
         "CREATE INDEX `idx_factories_technicalManager` ON `factories` (technicalManager)",
         "CREATE INDEX `idx_factories_cnpj` ON `factories` (cnpj)",
-        "CREATE INDEX `idx_factories_tipo` ON `factories` (tipo)"
+        "CREATE INDEX `idx_factories_tipo` ON `factories` (tipo)",
+        "CREATE INDEX `idx_factories_gestor_tecnico_id` ON `factories` (gestor_tecnico_id)",
+        "CREATE INDEX `idx_factories_vendedor_id` ON `factories` (vendedor_id)"
       ]
     },
     {
@@ -1020,13 +1036,6 @@
       },
       "fields": [
         {
-          "name": "vendedor_id",
-          "type": "relation",
-          "required": false,
-          "system": false,
-          "collectionRef": "users"
-        },
-        {
           "name": "periodo",
           "type": "text",
           "required": false,
@@ -1057,10 +1066,23 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "vendedor_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "gestao_tecnica"
+        },
+        {
+          "name": "atualizado_em",
+          "type": "date",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
-        "CREATE INDEX idx_metas_vendedor_id ON metas (vendedor_id)",
+        "CREATE INDEX `idx_metas_vendedor_id` ON `metas` (vendedor_id)",
         "CREATE INDEX `idx_metas_vendedor_id_periodo` ON `metas` (vendedor_id, periodo)"
       ]
     },
@@ -1359,6 +1381,66 @@
       "indexes": [
         "CREATE INDEX idx_matriz_vendas_pais_carteira_mes ON matriz_vendas (pais, carteira, mes)"
       ]
+    },
+    {
+      "name": "gestao_tecnica",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "nome",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "funcao",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["gestor_tecnico", "vendedor"]
+        },
+        {
+          "name": "regiao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "carteira",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["AVES", "PETS", "RUMINANTES", "SUINOS", "AQUA"]
+        },
+        {
+          "name": "ativo",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_gestao_tecnica_funcao ON gestao_tecnica (funcao)"]
     }
   ]
 }

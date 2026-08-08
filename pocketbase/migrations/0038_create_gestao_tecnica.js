@@ -61,6 +61,11 @@ migrate(
     metasCol.removeIndex('idx_metas_vendedor_id')
     metasCol.removeIndex('idx_metas_vendedor_id_periodo')
     metasCol.fields.removeByName('vendedor_id')
+    app.save(metasCol)
+
+    app.db().newQuery('DELETE FROM metas').execute()
+
+    metasCol = app.findCollectionByNameOrId('metas')
     metasCol.fields.add(
       new RelationField({
         name: 'vendedor_id',
@@ -92,6 +97,9 @@ migrate(
     metasCol.removeIndex('idx_metas_vendedor_id_periodo')
     metasCol.fields.removeByName('vendedor_id')
     metasCol.fields.removeByName('atualizado_em')
+    app.save(metasCol)
+
+    metasCol = app.findCollectionByNameOrId('metas')
     metasCol.fields.add(
       new RelationField({
         name: 'vendedor_id',
