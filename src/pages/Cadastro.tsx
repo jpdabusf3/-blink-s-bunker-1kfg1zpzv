@@ -30,9 +30,22 @@ import { FactoryTasks } from '@/components/FactoryTasks'
 import { FactoryChangeLog } from '@/components/FactoryChangeLog'
 import { FactoryVisits } from '@/components/FactoryVisits'
 import { isStale, formatCurrency, exportToCSV } from '@/lib/utils'
-import { AlertTriangle, Search, Edit2, Trash2, Download, Plus, Loader2, X } from 'lucide-react'
+import {
+  AlertTriangle,
+  Search,
+  Edit2,
+  Trash2,
+  Download,
+  Plus,
+  Loader2,
+  X,
+  Upload,
+  FileSpreadsheet,
+} from 'lucide-react'
 import { Factory } from '@/types'
 import { toast } from 'sonner'
+import { ImportExcelDialog } from '@/components/ImportExcelDialog'
+import { downloadImportTemplate } from '@/services/import-excel'
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={className} fill="currentColor">
@@ -77,6 +90,7 @@ export default function Cadastro() {
   const [animalSpeciesFilter, setAnimalSpeciesFilter] = useState('all')
   const [editing, setEditing] = useState<Factory | null>(null)
   const [creating, setCreating] = useState(false)
+  const [showImport, setShowImport] = useState(false)
 
   const loadFactories = useCallback(async () => {
     try {
@@ -228,6 +242,20 @@ export default function Cadastro() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
+          <Button
+            onClick={() => setShowImport(true)}
+            variant="outline"
+            className="gap-2 shadow-sm w-full sm:w-auto"
+          >
+            <Upload className="w-4 h-4" /> Importar Excel
+          </Button>
+          <Button
+            onClick={downloadImportTemplate}
+            variant="outline"
+            className="gap-2 shadow-sm w-full sm:w-auto"
+          >
+            <FileSpreadsheet className="w-4 h-4" /> Baixar Modelo
+          </Button>
           <Button onClick={() => setCreating(true)} className="gap-2 shadow-sm w-full sm:w-auto">
             <Plus className="w-4 h-4" /> Novo Prospecto
           </Button>
@@ -622,6 +650,12 @@ export default function Cadastro() {
           />
         </DialogContent>
       </Dialog>
+
+      <ImportExcelDialog
+        open={showImport}
+        onOpenChange={setShowImport}
+        onImported={loadFactories}
+      />
     </div>
   )
 }
