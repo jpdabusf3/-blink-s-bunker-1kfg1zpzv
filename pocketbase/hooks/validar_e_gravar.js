@@ -206,6 +206,20 @@ routerAdd(
       $app
         .logger()
         .info('validar-e-gravar: saved', 'id', atividadeId, 'cliente', clienteId, 'origem', origem)
+
+      if (origem === 'audio') {
+        try {
+          var logCol2 = $app.findCollectionByNameOrId('activity_logs')
+          var logRec2 = new Record(logCol2)
+          logRec2.set('user', vendedorId)
+          logRec2.set('action', 'audio_gravado')
+          logRec2.set('details', 'Atividade gravada para cliente: ' + (clienteNome || ''))
+          logRec2.set('recordId', atividadeId)
+          logRec2.set('target_collection', 'atividades')
+          $app.save(logRec2)
+        } catch (_) {}
+      }
+
       return e.json(200, { success: true, atividade_id: atividadeId, cliente_id: clienteId })
     } catch (err) {
       if (err instanceof BadRequestError) throw err

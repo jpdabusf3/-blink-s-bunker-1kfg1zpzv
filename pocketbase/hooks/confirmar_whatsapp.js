@@ -202,7 +202,30 @@ routerAdd('POST', '/backend/v1/confirmar-whatsapp', (e) => {
       if (gravarResult && gravarResult.success !== false && !gravarResult.precisa_confirmacao) {
         pendingRecord.set('status', 'confirmed')
         $app.save(pendingRecord)
-        sendWhatsAppMessage(from, '✅ Atividade registrada com sucesso no CRM Blink.')
+        var vConfirm =
+          typeof storedInterpretacao.valor_estimado === 'number'
+            ? String(storedInterpretacao.valor_estimado).replace('.', ',')
+            : '0,00'
+        var cConfirm =
+          storedInterpretacao.cliente && storedInterpretacao.cliente.nome
+            ? storedInterpretacao.cliente.nome
+            : ''
+        var tConfirm = storedInterpretacao.tipo_atividade || ''
+        var eConfirm = storedInterpretacao.etapa_funil || ''
+        var pConfirm = storedInterpretacao.proximo_passo || ''
+        sendWhatsAppMessage(
+          from,
+          '✅ Atividade registrada no CRM Blink!\nCliente: ' +
+            cConfirm +
+            '\nTipo: ' +
+            tConfirm +
+            '\nEtapa: ' +
+            eConfirm +
+            '\nValor: R$ ' +
+            vConfirm +
+            '\nPróximo passo: ' +
+            pConfirm,
+        )
         return e.json(200, { status: 'confirmado', from: from })
       } else {
         $app.logger().error('confirmar-whatsapp: gravar-atividade failed on SIM')
@@ -231,7 +254,7 @@ routerAdd('POST', '/backend/v1/confirmar-whatsapp', (e) => {
     var aiReply
     try {
       aiReply = $ai.chat({
-        model: 'reasoning',
+        model: 'fast',
         messages: [
           {
             role: 'system',
@@ -286,7 +309,27 @@ routerAdd('POST', '/backend/v1/confirmar-whatsapp', (e) => {
         pendingRecord.set('json_interpretacao', JSON.stringify(updatedInterpretacao))
         pendingRecord.set('audio_transcrito', correctedText)
         $app.save(pendingRecord)
-        sendWhatsAppMessage(from, '✅ Atividade registrada com sucesso no CRM Blink.')
+        var vCorr =
+          typeof updatedInterpretacao.valor_estimado === 'number'
+            ? String(updatedInterpretacao.valor_estimado).replace('.', ',')
+            : '0,00'
+        var cCorr = newClienteNome || ''
+        var tCorr = newTipoAtividade || ''
+        var eCorr = updatedInterpretacao.etapa_funil || ''
+        var pCorr = updatedInterpretacao.proximo_passo || ''
+        sendWhatsAppMessage(
+          from,
+          '✅ Atividade registrada no CRM Blink!\nCliente: ' +
+            cCorr +
+            '\nTipo: ' +
+            tCorr +
+            '\nEtapa: ' +
+            eCorr +
+            '\nValor: R$ ' +
+            vCorr +
+            '\nPróximo passo: ' +
+            pCorr,
+        )
         return e.json(200, { status: 'corrigido_e_registrado', from: from })
       } else {
         $app.logger().error('confirmar-whatsapp: gravar-atividade failed on correction')

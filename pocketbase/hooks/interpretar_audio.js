@@ -37,7 +37,7 @@ routerAdd(
         ']'
 
       var aiReply = $ai.chat({
-        model: 'reasoning',
+        model: 'fast',
         messages: [
           {
             role: 'system',

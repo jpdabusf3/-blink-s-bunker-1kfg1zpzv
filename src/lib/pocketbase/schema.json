@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-08T21:01:44.196Z",
+  "generatedAt": "2026-08-08T21:14:45.320Z",
   "collections": [
     {
       "name": "users",
@@ -1079,6 +1079,59 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_confirmacoes_pendentes_from ON confirmacoes_pendentes (from)"]
+    },
+    {
+      "name": "fila_processamento",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "payload",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["aguardando", "processando", "sucesso", "erro"]
+        },
+        {
+          "name": "tentativas",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ultimo_erro",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_fila_processamento_status ON fila_processamento (status)"]
     }
   ]
 }
