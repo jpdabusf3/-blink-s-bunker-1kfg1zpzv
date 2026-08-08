@@ -39,3 +39,40 @@ export const interpretarAudio = (textoTranscrito: string) =>
     body: JSON.stringify({ textoTranscrito }),
     headers: { 'Content-Type': 'application/json' },
   })
+
+export interface GravarAtividadeRequest {
+  cliente: {
+    nome: string | null
+    cnpj: string | null
+    cidade: string | null
+    estado: string | null
+  }
+  vendedor: string | null
+  tipo_atividade: string | null
+  etapa_funil: string | null
+  valor_estimado: number | null
+  descricao: string | null
+  proximo_passo: string | null
+  data_proxima_acao: string | null
+  pendencias: string[] | null
+  observacoes: string | null
+  confianca: number
+  precisa_confirmacao?: boolean
+  audio_transcrito?: string
+}
+
+export interface GravarAtividadeResponse {
+  success: boolean
+  atividade_id?: string
+  cliente_id?: string
+  precisa_confirmacao?: boolean
+  message?: string
+  error?: string
+}
+
+export const gravarAtividade = (data: GravarAtividadeRequest) =>
+  pb.send<GravarAtividadeResponse>('/backend/v1/gravar-atividade', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    headers: { 'Content-Type': 'application/json' },
+  })
