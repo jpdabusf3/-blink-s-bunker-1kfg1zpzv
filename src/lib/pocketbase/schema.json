@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-05T03:27:28.023Z",
+  "generatedAt": "2026-08-08T20:26:10.150Z",
   "collections": [
     {
       "name": "users",
@@ -315,11 +315,26 @@
           "required": false,
           "system": false,
           "collectionRef": "users"
+        },
+        {
+          "name": "cnpj",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tipo",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Cliente", "Prospecto"]
         }
       ],
       "indexes": [
         "CREATE INDEX `idx_factories_salesOwner` ON `factories` (salesOwner)",
-        "CREATE INDEX `idx_factories_technicalManager` ON `factories` (technicalManager)"
+        "CREATE INDEX `idx_factories_technicalManager` ON `factories` (technicalManager)",
+        "CREATE INDEX `idx_factories_cnpj` ON `factories` (cnpj)",
+        "CREATE INDEX `idx_factories_tipo` ON `factories` (tipo)"
       ]
     },
     {
@@ -843,6 +858,167 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_excel_templates_user ON excel_templates (userId)"]
+    },
+    {
+      "name": "atividades",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "cliente_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "factories"
+        },
+        {
+          "name": "vendedor_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "tipo_atividade",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["visita", "ligacao", "proposta", "follow_up", "reuniao"]
+        },
+        {
+          "name": "etapa_funil",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_estimado",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "descricao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "proximo_passo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_proxima_acao",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "pendencias",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "origem",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["audio", "manual", "excel"]
+        },
+        {
+          "name": "audio_transcrito",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "confianca",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_atividades_cliente_id ON atividades (cliente_id)",
+        "CREATE INDEX idx_atividades_vendedor_id ON atividades (vendedor_id)",
+        "CREATE INDEX idx_atividades_created ON atividades (created DESC)"
+      ]
+    },
+    {
+      "name": "metas",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "vendedor_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "periodo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "meta_valor",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_realizado",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_metas_vendedor_id ON metas (vendedor_id)"]
     }
   ]
 }

@@ -18,6 +18,7 @@ import { toast } from 'sonner'
 import { extractFieldErrors, getErrorMessage } from '@/lib/pocketbase/errors'
 import { isAllowedDomain } from '@/lib/user-scope'
 import { COUNTRIES } from '@/lib/countries'
+import { testIntegration } from '@/services/integration-test'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -34,6 +35,8 @@ export default function Login() {
     stateRegion: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [integrationLoading, setIntegrationLoading] = useState(false)
+  const [integrationResult, setIntegrationResult] = useState<string | null>(null)
 
   const selectedCountry = COUNTRIES.find((c) => c.name === regData.country)
 
@@ -89,6 +92,22 @@ export default function Login() {
     } else {
       toast.success(t('login.regOk'))
       navigate('/')
+    }
+  }
+
+  const handleTestIntegration = async () => {
+    setIntegrationLoading(true)
+    setIntegrationResult(null)
+    try {
+      const result = await testIntegration()
+      const collectionsList = Object.entries(result.collections || {})
+        .map(([k, v]) => `${k}: ${v ? 'OK' : 'AUSENTE'}`)
+        .join(', ')
+      setIntegrationResult(`✅ ${result.status} — ${result.banco} | ${collectionsList}`)
+    } catch (err) {
+      setIntegrationResult(`❌ Erro: ${err instanceof Error ? err.message : 'falha na conexão'}`)
+    } finally {
+      setIntegrationLoading(false)
     }
   }
 
@@ -239,6 +258,22 @@ export default function Login() {
             </form>
           </TabsContent>
         </Tabs>
+
+        <div className="mt-6 pt-6 border-t">
+          <Button
+            variant="outline"
+            className="w-full gap-2"
+            onClick={handleTestIntegration}
+            disabled={integrationLoading}
+          >
+            {integrationLoading ? 'Testando...' : 'Testar Integração'}
+          </Button>
+          {integrationResult && (
+            <p className="mt-2 text-sm text-center text-muted-foreground whitespace-pre-wrap">
+              {integrationResult}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )

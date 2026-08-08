@@ -29,6 +29,8 @@ import { HistoricalComparisonCard } from '@/components/dashboard/HistoricalCompa
 import { TimelineSummaryCard } from '@/components/dashboard/TimelineSummaryCard'
 import { GeographicOverview } from '@/components/dashboard/GeographicOverview'
 import { UserFilter } from '@/components/UserFilter'
+import { testIntegration } from '@/services/integration-test'
+import { toast } from 'sonner'
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={className} fill="currentColor">
@@ -112,6 +114,7 @@ export default function Index() {
   const [salesOwnerFilter, setSalesOwnerFilter] = useState('all')
   const [stateFilter, setStateFilter] = useState('all')
   const [speciesFilter, setSpeciesFilter] = useState('all')
+  const [integrationLoading, setIntegrationLoading] = useState(false)
 
   const [blocks, setBlocks] = useState<string[]>(() => {
     const saved = localStorage.getItem('blink_dashboard_order_v5')
@@ -201,6 +204,23 @@ export default function Index() {
 
     const encodedText = encodeURIComponent(text)
     window.open(`https://wa.me/?text=${encodedText}`, '_blank', 'noopener,noreferrer')
+  }
+
+  const handleTestIntegration = async () => {
+    setIntegrationLoading(true)
+    try {
+      const result = await testIntegration()
+      const collectionsList = Object.entries(result.collections || {})
+        .map(([k, v]) => `${k}: ${v ? 'OK' : 'AUSENTE'}`)
+        .join(' | ')
+      toast.success(`Integração OK — ${result.banco}`, { description: collectionsList })
+    } catch (err) {
+      toast.error('Erro na integração', {
+        description: err instanceof Error ? err.message : 'falha na conexão',
+      })
+    } finally {
+      setIntegrationLoading(false)
+    }
   }
 
   const renderBlock = (id: string) => {
@@ -453,6 +473,14 @@ export default function Index() {
             className="gap-2 shadow-sm w-full sm:w-auto"
           >
             <Download className="w-5 h-5 md:w-4 md:h-4" /> Exportar Snapshot PDF
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleTestIntegration}
+            disabled={integrationLoading}
+            className="gap-2 shadow-sm w-full sm:w-auto"
+          >
+            {integrationLoading ? 'Testando...' : 'Testar Integração'}
           </Button>
         </div>
       </div>
