@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/table'
 import { Loader2, History } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { useRealtime } from '@/hooks/use-realtime'
 import { getHistoricoPedidos, type HistoricoPedido } from '@/services/historico-pedidos'
 
 export default function HistoricoPedidos() {
@@ -30,6 +31,8 @@ export default function HistoricoPedidos() {
   useEffect(() => {
     loadData()
   }, [])
+
+  useRealtime('historico_pedidos', () => loadData())
 
   const totalGeral = data.reduce((sum, r) => sum + (r.valor || 0), 0)
 

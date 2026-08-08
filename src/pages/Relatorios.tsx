@@ -32,12 +32,13 @@ import {
   Pie,
   Cell,
 } from 'recharts'
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import { ChartContainer } from '@/components/ui/chart'
 import { Loader2, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { exportOrdersToExcel } from '@/lib/exportUtils'
 import { useAppContext } from '@/store/AppContext'
 import { UserFilter } from '@/components/UserFilter'
+import { MatrizVendasReport } from '@/components/MatrizVendasReport'
 
 const STATE_REGIONS = [
   'Sul',
@@ -493,6 +494,8 @@ export default function Relatorios() {
           )}
         </CardContent>
       </Card>
+
+      <MatrizVendasReport />
     </div>
   )
 }

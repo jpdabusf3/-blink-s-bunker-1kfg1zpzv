@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-08T21:58:26.434Z",
+  "generatedAt": "2026-08-08T22:13:51.499Z",
   "collections": [
     {
       "name": "users",
@@ -1059,7 +1059,10 @@
           "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
-      "indexes": ["CREATE INDEX idx_metas_vendedor_id ON metas (vendedor_id)"]
+      "indexes": [
+        "CREATE INDEX idx_metas_vendedor_id ON metas (vendedor_id)",
+        "CREATE INDEX `idx_metas_vendedor_id_periodo` ON `metas` (vendedor_id, periodo)"
+      ]
     },
     {
       "name": "confirmacoes_pendentes",
