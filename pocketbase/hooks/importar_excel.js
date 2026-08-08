@@ -1,4 +1,3 @@
-// @deps xlsx@0.18.5
 routerAdd(
   'POST',
   '/backend/v1/importar-excel',
@@ -8,20 +7,10 @@ routerAdd(
       if (!userId) return e.unauthorizedError('auth required')
 
       var body = e.requestInfo().body || {}
-      var base64Data = body.base64 || ''
-      if (!base64Data) return e.badRequestError('file data is required')
-
-      var XLSX = require('xlsx')
-      var workbook
-      try {
-        workbook = XLSX.read(base64Data, { type: 'base64' })
-      } catch (parseErr) {
-        return e.json(400, { error: 'Arquivo inválido ou corrompido: ' + String(parseErr) })
+      var rows = body.rows
+      if (!rows || !Array.isArray(rows) || rows.length === 0) {
+        return e.badRequestError('rows array is required')
       }
-
-      var sheetName = workbook.SheetNames[0]
-      if (!sheetName) return e.json(400, { error: 'Planilha sem abas' })
-      var rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
 
       function cleanCnpj(c) {
         return String(c || '').replace(/\D/g, '')

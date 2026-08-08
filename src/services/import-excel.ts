@@ -1,3 +1,4 @@
+import * as XLSX from 'xlsx'
 import pb from '@/lib/pocketbase/client'
 
 export interface ImportError {
@@ -13,62 +14,38 @@ export interface ImportResult {
   total: number
 }
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      const result = reader.result as string
-      resolve(result.split(',')[1] || '')
-    }
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
-
 export async function importExcel(file: File): Promise<ImportResult> {
-  const base64 = await fileToBase64(file)
-  if (!base64) throw new Error('Não foi possível ler o arquivo')
-  return pb.send<ImportResult>('/backend/v1/importar-excel', {
+  const arrayBuffer = await file.arrayBuffer()
+  const workbook = XLSX.read(arrayBuffer, { type: 'array' })
+  const sheetName = workbook.SheetNames[0]
+  if (!sheetName) throw new Error('Planilha sem abas')
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[sheetName], {
+    defval: '',
+  })
+  return pb.send('/backend/v1/importar-excel', {
     method: 'POST',
-    body: JSON.stringify({ base64, filename: file.name }),
+    body: JSON.stringify({ rows }),
     headers: { 'Content-Type': 'application/json' },
   })
 }
 
-export function downloadImportTemplate() {
-  const headers = [
-    'nome',
-    'cnpj',
-    'tipo',
-    'cidade',
-    'estado',
-    'telefone',
-    'email',
-    'etapa_funil',
-    'valor_potencial',
-    'observacoes',
+export function downloadImportTemplate(): void {
+  const template = [
+    {
+      nome: 'Exemplo Indústria',
+      tipo: 'Prospecto',
+      cnpj: '12.345.678/0001-90',
+      cidade: 'São Paulo',
+      estado: 'SP',
+      telefone: '(11) 99999-9999',
+      email: 'contato@exemplo.com',
+      etapa_funil: 'prospeccao',
+      valor_potencial: 50000,
+      observacoes: 'Cliente em potencial',
+    },
   ]
-  const example = [
-    'Fábrica Exemplo Ltda',
-    '11.222.333/0001-81',
-    'prospecto',
-    'São Paulo',
-    'SP',
-    '(11) 99999-9999',
-    'contato@exemplo.com',
-    'prospeccao',
-    '150000',
-    'Cliente em potencial para linha de adsorventes',
-  ]
-  const csv = [headers.join(';'), example.map((c) => `"${c}"`).join(';')].join('\n')
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = 'modelo_importacao_blink.csv'
-  link.style.visibility = 'hidden'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
+  const ws = XLSX.utils.json_to_sheet(template)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Template')
+  XLSX.writeFile(wb, 'template_importacao.xlsx')
 }
