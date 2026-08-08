@@ -19,6 +19,7 @@ import {
   FileText,
   UserPlus,
   UserCog,
+  ClipboardList,
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
@@ -41,6 +42,7 @@ export function AppSidebar() {
     { name: t('nav.prioridade'), path: '/matriz', icon: Grid },
     { name: t('nav.metas'), path: '/metas', icon: Target },
     { name: t('nav.relatorios'), path: '/relatorios', icon: BarChart2 },
+    { name: 'Rel. Atividades', path: '/relatorio-atividades', icon: ClipboardList },
     ...(showMasterOrCeo ? [{ name: 'Equipe', path: '/equipe', icon: UserPlus }] : []),
     ...(showMasterOrCeo ? [{ name: 'Documentos', path: '/documentos', icon: FileText }] : []),
     ...(showMasterOrCeo
