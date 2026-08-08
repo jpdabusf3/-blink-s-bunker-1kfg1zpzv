@@ -209,6 +209,21 @@ export interface Factory {
   ultima_edicao_origem?: 'manual' | 'audio' | 'excel'
   carteira?: string
   grupo_cliente?: string
+  gestor_tecnico_id?: string
+  gestor_tecnico_name?: string
+  vendedor_id?: string
+  vendedor_name?: string
+}
+
+export interface GestaoTecnica {
+  id: string
+  nome: string
+  funcao: 'gestor_tecnico' | 'vendedor'
+  regiao: string
+  carteira?: string
+  ativo: boolean
+  created: string
+  updated: string
 }
 
 export interface Atividade {

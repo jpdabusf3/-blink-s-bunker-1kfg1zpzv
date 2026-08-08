@@ -129,6 +129,30 @@ routerAdd(
             if (observacoes) rec.set('notes', observacoes)
             if (carteira) rec.set('carteira', carteira.toUpperCase())
             if (grupoCliente) rec.set('grupo_cliente', grupoCliente)
+
+            var gestorNomeUpd = String(row.gestor_tecnico || '').trim()
+            var vendedorNomeUpd = String(row.vendedor || '').trim()
+            if (gestorNomeUpd) {
+              try {
+                var gtUpd = $app.findFirstRecordByFilter(
+                  'gestao_tecnica',
+                  "nome = '" +
+                    gestorNomeUpd.replace(/'/g, "\\'") +
+                    "' && funcao = 'gestor_tecnico'",
+                )
+                rec.set('gestor_tecnico_id', gtUpd.id)
+              } catch (_) {}
+            }
+            if (vendedorNomeUpd) {
+              try {
+                var vdUpd = $app.findFirstRecordByFilter(
+                  'gestao_tecnica',
+                  "nome = '" + vendedorNomeUpd.replace(/'/g, "\\'") + "' && funcao = 'vendedor'",
+                )
+                rec.set('vendedor_id', vdUpd.id)
+              } catch (_) {}
+            }
+
             rec.set('ultima_edicao_origem', 'excel')
             $app.save(rec)
             updated++
@@ -150,6 +174,30 @@ routerAdd(
             if (observacoes) newRec.set('notes', observacoes)
             if (carteira) newRec.set('carteira', carteira.toUpperCase())
             if (grupoCliente) newRec.set('grupo_cliente', grupoCliente)
+
+            var gestorNomeNew = String(row.gestor_tecnico || '').trim()
+            var vendedorNomeNew = String(row.vendedor || '').trim()
+            if (gestorNomeNew) {
+              try {
+                var gtNew = $app.findFirstRecordByFilter(
+                  'gestao_tecnica',
+                  "nome = '" +
+                    gestorNomeNew.replace(/'/g, "\\'") +
+                    "' && funcao = 'gestor_tecnico'",
+                )
+                newRec.set('gestor_tecnico_id', gtNew.id)
+              } catch (_) {}
+            }
+            if (vendedorNomeNew) {
+              try {
+                var vdNew = $app.findFirstRecordByFilter(
+                  'gestao_tecnica',
+                  "nome = '" + vendedorNomeNew.replace(/'/g, "\\'") + "' && funcao = 'vendedor'",
+                )
+                newRec.set('vendedor_id', vdNew.id)
+              } catch (_) {}
+            }
+
             newRec.set('ultima_edicao_origem', 'excel')
             $app.save(newRec)
             created++

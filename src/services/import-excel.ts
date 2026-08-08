@@ -44,6 +44,8 @@ export function downloadImportTemplate(): void {
       etapa_funil: 'prospeccao',
       valor_potencial: 50000,
       observacoes: 'Cliente em potencial',
+      gestor_tecnico: 'Rodrigo Garginal',
+      vendedor: 'Felipe Leão',
     },
   ]
   const ws = XLSX.utils.json_to_sheet(template)

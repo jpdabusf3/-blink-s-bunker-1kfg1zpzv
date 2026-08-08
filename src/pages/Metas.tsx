@@ -40,7 +40,7 @@ import { toast } from 'sonner'
 import { Loader2, Plus, Trash2, Edit, Target } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { useRealtime } from '@/hooks/use-realtime'
-import { useUsers } from '@/hooks/use-users'
+import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { getMetas, createMeta, updateMeta, deleteMeta, type Meta } from '@/services/metas'
 
 const metaSchema = z.object({
@@ -53,7 +53,7 @@ const metaSchema = z.object({
 type MetaForm = z.infer<typeof metaSchema>
 
 export default function Metas() {
-  const { users } = useUsers()
+  const [vendedores, setVendedores] = useState<GestaoTecnica[]>([])
   const [metas, setMetas] = useState<Meta[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -77,10 +77,19 @@ export default function Metas() {
 
   useEffect(() => {
     loadData()
+    getGestaoTecnica()
+      .then((all) => setVendedores(all.filter((g) => g.funcao === 'vendedor')))
+      .catch(() => {})
   }, [])
 
   useRealtime('metas', () => {
     loadData()
+  })
+
+  useRealtime('gestao_tecnica', () => {
+    getGestaoTecnica()
+      .then((all) => setVendedores(all.filter((g) => g.funcao === 'vendedor')))
+      .catch(() => {})
   })
 
   const onSubmit = async (data: MetaForm) => {
@@ -122,8 +131,8 @@ export default function Metas() {
   }
 
   const getVendorName = (id: string) => {
-    const u = users.find((u) => u.id === id)
-    return u?.name || u?.email || 'N/A'
+    const v = vendedores.find((v) => v.id === id)
+    return v?.nome || 'N/A'
   }
 
   return (
@@ -172,9 +181,9 @@ export default function Metas() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {users.map((u) => (
-                            <SelectItem key={u.id} value={u.id}>
-                              {u.name || u.email}
+                          {vendedores.map((v) => (
+                            <SelectItem key={v.id} value={v.id}>
+                              {v.nome}
                             </SelectItem>
                           ))}
                         </SelectContent>

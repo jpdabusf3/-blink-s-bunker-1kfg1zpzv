@@ -1,12 +1,25 @@
-import { useState, useEffect, useMemo } from 'react'
-import { useScopedFactories } from '@/hooks/use-scoped-data'
-import { useAppContext } from '@/store/AppContext'
-import { updateFactoryPB } from '@/services/factories'
-import { getUsers, type UserListItem } from '@/services/users'
-import { logActivity } from '@/services/activity-logs'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { useState, useEffect } from 'react'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import {
   Select,
   SelectContent,
@@ -14,154 +27,100 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-} from '@/components/ui/accordion'
-import { formatCurrency } from '@/lib/utils'
-import { MapPin, UserCog, Loader2, Search, CheckCircle2, UserCheck } from 'lucide-react'
-import { UserFilter } from '@/components/UserFilter'
+import { Loader2, Plus, Trash2, Edit, UserCog } from 'lucide-react'
 import { toast } from 'sonner'
+import { useRealtime } from '@/hooks/use-realtime'
+import {
+  getGestaoTecnica,
+  createGestaoTecnica,
+  updateGestaoTecnica,
+  deleteGestaoTecnica,
+  type GestaoTecnica,
+} from '@/services/gestao-tecnica'
 
-const REGIONS = [
-  'Sul',
-  'Norte',
-  'Oeste',
-  'Leste',
-  'Nordeste',
-  'Noroeste',
-  'Sudeste',
-  'Sudoeste',
-  'Centro',
-]
+const CARTEIRAS = ['AVES', 'PETS', 'RUMINANTES', 'SUINOS', 'AQUA']
 
 export default function GestaoTecnica() {
-  const factories = useScopedFactories()
-  const { updateFactory } = useAppContext()
-  const [users, setUsers] = useState<UserListItem[]>([])
+  const [members, setMembers] = useState<GestaoTecnica[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedRegion, setSelectedRegion] = useState('all')
-  const [salesOwnerFilter, setSalesOwnerFilter] = useState('all')
+  const [open, setOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [form, setForm] = useState({
+    nome: '',
+    funcao: 'gestor_tecnico' as 'gestor_tecnico' | 'vendedor',
+    regiao: 'MT',
+    carteira: '',
+    ativo: true,
+  })
+
+  const loadData = async () => {
+    try {
+      const data = await getGestaoTecnica()
+      setMembers(data)
+    } catch {
+      setMembers([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    getUsers()
-      .then(setUsers)
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    loadData()
   }, [])
 
-  const getUserName = (id?: string) => users.find((u) => u.id === id)?.name || ''
+  useRealtime('gestao_tecnica', () => loadData())
 
-  const filteredFactories = useMemo(() => {
-    return factories.filter((f) => {
-      if (
-        selectedRegion !== 'all' &&
-        f.stateRegion !== selectedRegion &&
-        f.region !== selectedRegion
-      ) {
-        return false
-      }
-      if (salesOwnerFilter !== 'all' && f.salesOwner !== salesOwnerFilter) return false
-      if (searchTerm) {
-        const q = searchTerm.toLowerCase()
-        const nameMatch = f.name.toLowerCase().includes(q)
-        const cityMatch = f.city?.toLowerCase().includes(q)
-        const ownerMatch = f.salesOwnerName?.toLowerCase().includes(q)
-        const techMatch = f.technicalManagerName?.toLowerCase().includes(q)
-        if (!nameMatch && !cityMatch && !ownerMatch && !techMatch) return false
-      }
-      return true
-    })
-  }, [factories, selectedRegion, searchTerm, salesOwnerFilter])
-
-  const groupedBySpecies = useMemo(() => {
-    const map = new Map<string, typeof factories>()
-    filteredFactories.forEach((f) => {
-      const species = f.animalSpecies || 'Multi espécie'
-      if (!map.has(species)) map.set(species, [])
-      map.get(species)!.push(f)
-    })
-    return Array.from(map.entries()).sort((a, b) => b[1].length - a[1].length)
-  }, [filteredFactories])
-
-  const handleAssignTechnicalManager = async (factoryId: string, userId: string) => {
-    const targetUserId = userId === 'none' ? '' : userId
-    const managerName = getUserName(targetUserId)
-    updateFactory(factoryId, { technicalManager: targetUserId, technicalManagerName: managerName })
+  const handleSubmit = async () => {
+    if (!form.nome.trim()) {
+      toast.error('Nome é obrigatório')
+      return
+    }
     try {
-      await updateFactoryPB(factoryId, { technicalManager: targetUserId } as any)
-      logActivity(
-        'Atribuição de Gestor Técnico',
-        `Gestor Técnico ${managerName || 'Removido'} atribuído à fábrica`,
-        factoryId,
-        'factories',
-      ).catch(() => {})
-      toast.success('Gestor Técnico atualizado')
+      const payload = {
+        ...form,
+        carteira: form.carteira || undefined,
+      }
+      if (editingId) {
+        await updateGestaoTecnica(editingId, payload)
+        toast.success('Membro atualizado')
+      } else {
+        await createGestaoTecnica(payload)
+        toast.success('Membro criado')
+      }
+      setOpen(false)
+      setEditingId(null)
+      setForm({ nome: '', funcao: 'gestor_tecnico', regiao: 'MT', carteira: '', ativo: true })
+      loadData()
     } catch {
-      toast.error('Erro ao atualizar Gestor Técnico')
+      toast.error('Erro ao salvar')
     }
   }
 
-  const handleAssignSalesOwner = async (factoryId: string, userId: string) => {
-    const targetUserId = userId === 'none' ? '' : userId
-    const ownerName = getUserName(targetUserId)
-    updateFactory(factoryId, { salesOwner: targetUserId, salesOwnerName: ownerName })
+  const handleEdit = (m: GestaoTecnica) => {
+    setForm({
+      nome: m.nome,
+      funcao: m.funcao,
+      regiao: m.regiao,
+      carteira: m.carteira || '',
+      ativo: m.ativo,
+    })
+    setEditingId(m.id)
+    setOpen(true)
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Excluir este membro?')) return
     try {
-      await updateFactoryPB(factoryId, { salesOwner: targetUserId } as any)
-      logActivity(
-        'Atribuição de Vendedor',
-        `Vendedor ${ownerName || 'Removido'} atribuído à fábrica`,
-        factoryId,
-        'factories',
-      ).catch(() => {})
-      toast.success('Vendedor atualizado')
+      await deleteGestaoTecnica(id)
+      toast.success('Membro excluído')
+      loadData()
     } catch {
-      toast.error('Erro ao atualizar Vendedor')
+      toast.error('Erro ao excluir')
     }
   }
 
-  const handleBatchAssignTech = async (speciesFacs: typeof factories, userId: string) => {
-    if (!userId || userId === 'none') return
-    const managerName = getUserName(userId)
-    for (const f of speciesFacs) {
-      updateFactory(f.id, { technicalManager: userId, technicalManagerName: managerName })
-      try {
-        await updateFactoryPB(f.id, { technicalManager: userId } as any)
-        logActivity(
-          'Atribuição em Lote de Gestor Técnico',
-          `Gestor Técnico ${managerName} atribuído em lote (${f.animalSpecies})`,
-          f.id,
-          'factories',
-        ).catch(() => {})
-      } catch {
-        /* noop */
-      }
-    }
-    toast.success(`Gestor Técnico atribuído para ${speciesFacs.length} fábrica(s)`)
-  }
-
-  const handleBatchAssignSales = async (speciesFacs: typeof factories, userId: string) => {
-    if (!userId || userId === 'none') return
-    const ownerName = getUserName(userId)
-    for (const f of speciesFacs) {
-      updateFactory(f.id, { salesOwner: userId, salesOwnerName: ownerName })
-      try {
-        await updateFactoryPB(f.id, { salesOwner: userId } as any)
-        logActivity(
-          'Atribuição em Lote de Vendedor',
-          `Vendedor ${ownerName} atribuído em lote (${f.animalSpecies})`,
-          f.id,
-          'factories',
-        ).catch(() => {})
-      } catch {
-        /* noop */
-      }
-    }
-    toast.success(`Vendedor atribuído para ${speciesFacs.length} fábrica(s)`)
-  }
+  const gestores = members.filter((m) => m.funcao === 'gestor_tecnico')
+  const vendedores = members.filter((m) => m.funcao === 'vendedor')
 
   if (loading) {
     return (
@@ -173,211 +132,186 @@ export default function GestaoTecnica() {
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Gestão Técnica e Comercial por Espécie
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Atribua Gestores Técnicos e Vendedores Responsáveis por espécie animal e área
-            geográfica.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-muted-foreground" />
-            <Input
-              placeholder="Buscar fábrica ou gestor/vendedor..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 text-xs h-9"
-            />
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <div className="bg-primary p-2 rounded-lg">
+            <UserCog className="w-6 h-6 text-primary-foreground" />
           </div>
-
-          <Select value={selectedRegion} onValueChange={setSelectedRegion}>
-            <SelectTrigger className="w-[150px] h-9 text-xs">
-              <SelectValue placeholder="Região" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as Regiões</SelectItem>
-              {REGIONS.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {r}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <UserFilter
-            value={salesOwnerFilter}
-            onChange={setSalesOwnerFilter}
-            className="w-[180px] h-9 text-xs"
-          />
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Gestão Técnica</h1>
+            <p className="text-muted-foreground text-sm">
+              Gestores técnicos e vendedores por região.
+            </p>
+          </div>
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {groupedBySpecies.map(([species, facs]) => {
-          const assignedCount = facs.filter((f) => f.salesOwner || f.technicalManager).length
-          return (
-            <Card
-              key={species}
-              className="shadow-subtle p-4 text-center border-l-4 border-l-primary"
-            >
-              <div className="text-2xl font-bold text-primary">{facs.length}</div>
-              <div className="text-xs font-semibold text-foreground mt-0.5">{species}</div>
-              <div className="text-[11px] text-muted-foreground mt-1">
-                {assignedCount} de {facs.length} com responsável
+        <Dialog
+          open={open}
+          onOpenChange={(v) => {
+            setOpen(v)
+            if (!v) {
+              setEditingId(null)
+              setForm({
+                nome: '',
+                funcao: 'gestor_tecnico',
+                regiao: 'MT',
+                carteira: '',
+                ativo: true,
+              })
+            }
+          }}
+        >
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="w-4 h-4" /> Novo Membro
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingId ? 'Editar Membro' : 'Novo Membro'}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Nome</Label>
+                <Input
+                  value={form.nome}
+                  onChange={(e) => setForm({ ...form, nome: e.target.value })}
+                />
               </div>
-            </Card>
-          )
-        })}
-      </div>
-
-      <Accordion
-        type="multiple"
-        defaultValue={groupedBySpecies.length > 0 ? [groupedBySpecies[0][0]] : []}
-      >
-        {groupedBySpecies.map(([species, facs]) => (
-          <AccordionItem
-            key={species}
-            value={species}
-            className="border rounded-xl px-4 bg-card mb-3"
-          >
-            <AccordionTrigger className="hover:no-underline py-4">
-              <div className="flex items-center justify-between w-full pr-4">
-                <span className="text-lg font-bold flex items-center gap-2 text-foreground">
-                  <UserCog className="w-5 h-5 text-primary" />
-                  {species}
-                </span>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <Badge variant="outline" className="font-mono">
-                    {facs.length} fábrica(s)
-                  </Badge>
+              <div className="space-y-2">
+                <Label>Função</Label>
+                <Select
+                  value={form.funcao}
+                  onValueChange={(v) => setForm({ ...form, funcao: v as any })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gestor_tecnico">Gestor Técnico</SelectItem>
+                    <SelectItem value="vendedor">Vendedor</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Região</Label>
+                  <Input
+                    value={form.regiao}
+                    onChange={(e) => setForm({ ...form, regiao: e.target.value })}
+                  />
                 </div>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="space-y-4 pt-2 pb-4">
-              <div className="flex items-center justify-between bg-muted/40 p-3 rounded-lg border text-xs flex-wrap gap-3">
-                <span className="font-semibold text-foreground">
-                  Atribuição em lote para todas as fábricas de {species}:
-                </span>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Select onValueChange={(v) => handleBatchAssignTech(facs, v)}>
-                    <SelectTrigger className="h-8 w-[190px] text-xs bg-background">
-                      <SelectValue placeholder="Lote: Gestor Técnico" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {users.map((u) => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.name || u.email}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select onValueChange={(v) => handleBatchAssignSales(facs, v)}>
-                    <SelectTrigger className="h-8 w-[190px] text-xs bg-background">
-                      <SelectValue placeholder="Lote: Vendedor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {users.map((u) => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.name || u.email}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                {facs.map((f) => (
-                  <Card
-                    key={f.id}
-                    className="shadow-subtle p-4 flex flex-col items-start justify-between gap-3 border"
+                <div className="space-y-2">
+                  <Label>Carteira</Label>
+                  <Select
+                    value={form.carteira || 'none'}
+                    onValueChange={(v) => setForm({ ...form, carteira: v === 'none' ? '' : v })}
                   >
-                    <div className="w-full flex justify-between items-start">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-sm truncate">{f.name}</h4>
-                          {(f.salesOwner || f.technicalManager) && (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-primary shrink-0" />
-                          {[f.city, f.state || f.stateRegion, f.country]
-                            .filter(Boolean)
-                            .join(', ') || 'N/A'}
-                        </p>
-                      </div>
-                      <Badge variant="outline" className="text-[10px] shrink-0">
-                        {f.profile_type || f.status}
-                      </Badge>
-                    </div>
-
-                    <div className="w-full flex items-center justify-between text-xs pt-1 border-t">
-                      <span className="font-bold text-primary">
-                        {formatCurrency(f.potentialValue)}
-                      </span>
-                      <span className="text-muted-foreground">{f.capacity} t/mês</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full pt-1">
-                      <div className="space-y-1">
-                        <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
-                          <UserCog className="w-3 h-3 text-primary" />
-                          Gestor Técnico:
-                        </span>
-                        <Select
-                          value={f.technicalManager || 'none'}
-                          onValueChange={(v) => handleAssignTechnicalManager(f.id, v)}
-                        >
-                          <SelectTrigger className="h-8 text-xs bg-background">
-                            <SelectValue placeholder="Atribuir Técnico" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Nenhum / Não atribuído</SelectItem>
-                            {users.map((u) => (
-                              <SelectItem key={u.id} value={u.id}>
-                                {u.name || u.email}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-1">
-                        <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
-                          <UserCheck className="w-3 h-3 text-emerald-600" />
-                          Vendedor:
-                        </span>
-                        <Select
-                          value={f.salesOwner || 'none'}
-                          onValueChange={(v) => handleAssignSalesOwner(f.id, v)}
-                        >
-                          <SelectTrigger className="h-8 text-xs bg-background">
-                            <SelectValue placeholder="Atribuir Vendedor" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Nenhum / Não atribuído</SelectItem>
-                            {users.map((u) => (
-                              <SelectItem key={u.id} value={u.id}>
-                                {u.name || u.email}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
+                    <SelectTrigger>
+                      <SelectValue placeholder="Nenhuma" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhuma</SelectItem>
+                      {CARTEIRAS.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={form.ativo}
+                  onCheckedChange={(v) => setForm({ ...form, ativo: v })}
+                />
+                <Label>Ativo</Label>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSubmit}>Salvar</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <Card className="shadow-subtle">
+          <CardContent className="p-4 text-center">
+            <p className="text-3xl font-bold text-primary">{gestores.length}</p>
+            <p className="text-xs text-muted-foreground">Gestores Técnicos</p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-subtle">
+          <CardContent className="p-4 text-center">
+            <p className="text-3xl font-bold text-primary">{vendedores.length}</p>
+            <p className="text-xs text-muted-foreground">Vendedores</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="shadow-subtle">
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Função</TableHead>
+                <TableHead>Região</TableHead>
+                <TableHead>Carteira</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {members.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground h-16">
+                    Nenhum membro cadastrado.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                members.map((m) => (
+                  <TableRow key={m.id}>
+                    <TableCell className="font-medium">{m.nome}</TableCell>
+                    <TableCell>
+                      <Badge variant={m.funcao === 'gestor_tecnico' ? 'default' : 'secondary'}>
+                        {m.funcao === 'gestor_tecnico' ? 'Gestor Técnico' : 'Vendedor'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{m.regiao}</TableCell>
+                    <TableCell>{m.carteira || '-'}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={m.ativo ? 'outline' : 'destructive'}
+                        className={m.ativo ? 'text-emerald-600' : ''}
+                      >
+                        {m.ativo ? 'Ativo' : 'Inativo'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(m)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(m.id)}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   )
 }

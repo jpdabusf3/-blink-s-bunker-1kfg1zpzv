@@ -24,7 +24,7 @@ import { getMatrizVendas, type MatrizVenda } from '@/services/matriz-vendas'
 
 const PAISES = ['Brasil', 'Paraguai', 'Chile']
 const CARTEIRAS = ['AVES', 'PETS', 'RUMINANTES', 'SUINOS', 'AQUA']
-const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto']
+const MESES = ['janeiro', 'fevereiro', 'maro', 'abril', 'maio', 'junho', 'julho', 'agosto']
 
 export function MatrizVendasReport() {
   const [data, setData] = useState<MatrizVenda[]>([])

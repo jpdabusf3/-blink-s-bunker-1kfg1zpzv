@@ -6,10 +6,11 @@ export interface Meta {
   periodo: string
   meta_valor: number
   valor_realizado: number
+  atualizado_em?: string
   created: string
   updated: string
   expand?: {
-    vendedor_id?: { id: string; name: string; email: string; job_title: string }
+    vendedor_id?: { id: string; nome: string; funcao: string; regiao: string }
   }
 }
 

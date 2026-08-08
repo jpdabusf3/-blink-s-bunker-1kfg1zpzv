@@ -14,7 +14,11 @@ import {
 import { useAppContext } from '@/store/AppContext'
 import { useAuth } from '@/hooks/use-auth'
 import { isManager } from '@/lib/user-scope'
-import { getUsers, type UserListItem } from '@/services/users'
+import {
+  getGestoresTecnicos,
+  getVendedoresGestao,
+  type GestaoTecnica,
+} from '@/services/gestao-tecnica'
 import { COUNTRIES } from '@/lib/countries'
 import { createFactoryPB, updateFactoryPB } from '@/services/factories'
 import { logActivity } from '@/services/activity-logs'
@@ -53,11 +57,12 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
   const { user } = useAuth()
   const userIsManager = isManager(user)
   const userArea = user?.geographicArea || ''
-  const [users, setUsers] = useState<UserListItem[]>([])
+  const [gestores, setGestores] = useState<GestaoTecnica[]>([])
+  const [vendedores, setVendedores] = useState<GestaoTecnica[]>([])
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
-  const [techManager, setTechManager] = useState<string>(factory?.technicalManager || '')
-  const [sellerOwner, setSellerOwner] = useState<string>(factory?.salesOwner || '')
+  const [gestorTecnicoId, setGestorTecnicoId] = useState<string>(factory?.gestor_tecnico_id || '')
+  const [vendedorId, setVendedorId] = useState<string>(factory?.vendedor_id || '')
   const [species, setSpecies] = useState<string>(factory?.animalSpecies || 'Ruminantes')
   const [carteira, setCarteira] = useState<string>(factory?.profile_type || 'Indústria')
   const [carteiraSegmento, setCarteiraSegmento] = useState<string>(factory?.carteira || '')
@@ -67,8 +72,11 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
   )
 
   useEffect(() => {
-    getUsers()
-      .then(setUsers)
+    Promise.all([getGestoresTecnicos(), getVendedoresGestao()])
+      .then(([g, v]) => {
+        setGestores(g)
+        setVendedores(v)
+      })
       .catch(() => {})
   }, [])
 
@@ -80,8 +88,8 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
     const focusValue = fd.get('focusLevel') as string
     const finalFocus = isNaN(Number(focusValue)) ? focusValue : Number(focusValue)
 
-    const techManagerUser = users.find((u) => u.id === techManager)
-    const sellerUser = users.find((u) => u.id === sellerOwner)
+    const gestorTecnico = gestores.find((g) => g.id === gestorTecnicoId)
+    const vendedor = vendedores.find((v) => v.id === vendedorId)
 
     const errors: Record<string, string> = {}
     if (!fd.get('name')) errors.name = 'Nome é obrigatório'
@@ -111,10 +119,11 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
       lastInteraction: factory?.lastInteraction || new Date().toISOString(),
       country: (fd.get('country') as string) || 'Brasil',
       state: (fd.get('state') as string) || undefined,
-      salesOwner: sellerOwner && sellerOwner !== 'none' ? sellerOwner : undefined,
-      salesOwnerName: sellerUser?.name || undefined,
-      technicalManager: techManager && techManager !== 'none' ? techManager : undefined,
-      technicalManagerName: techManagerUser?.name || undefined,
+      gestor_tecnico_id:
+        gestorTecnicoId && gestorTecnicoId !== 'none' ? gestorTecnicoId : undefined,
+      gestor_tecnico_name: gestorTecnico?.nome || undefined,
+      vendedor_id: vendedorId && vendedorId !== 'none' ? vendedorId : undefined,
+      vendedor_name: vendedor?.nome || undefined,
       salesChannel: (salesChannelState as Factory['salesChannel']) || undefined,
       indirectChannelType:
         (fd.get('indirectChannelType') as Factory['indirectChannelType']) || undefined,
@@ -130,7 +139,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
         updateFactory(factory.id, data)
         logActivity(
           `Fábrica atualizada: ${data.name}`,
-          `Gestor Técnico: ${techManagerUser?.name || 'Não atribuído'}, Vendedor: ${sellerUser?.name || 'Não atribuído'}, Espécie: ${species}, Carteira: ${carteira}`,
+          `Gestor Técnico: ${gestorTecnico?.nome || 'Não atribuído'}, Vendedor: ${vendedor?.nome || 'Não atribuído'}, Espécie: ${species}, Carteira: ${carteira}`,
           factory.id,
           'factories',
         ).catch(() => {})
@@ -140,7 +149,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
         addFactory({ ...data, id: created.id })
         logActivity(
           `Nova fábrica cadastrada: ${data.name}`,
-          `Gestor Técnico: ${techManagerUser?.name || 'Não atribuído'}, Vendedor: ${sellerUser?.name || 'Não atribuído'}, Espécie: ${species}, Carteira: ${carteira}`,
+          `Gestor Técnico: ${gestorTecnico?.nome || 'Não atribuído'}, Vendedor: ${vendedor?.nome || 'Não atribuído'}, Espécie: ${species}, Carteira: ${carteira}`,
           created.id,
           'factories',
         ).catch(() => {})
@@ -361,15 +370,15 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Gestor Técnico</Label>
-              <Select value={techManager || 'none'} onValueChange={setTechManager}>
+              <Select value={gestorTecnicoId || 'none'} onValueChange={setGestorTecnicoId}>
                 <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Selecione Gestor Técnico" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Nenhum / Não atribuído</SelectItem>
-                  {users.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.name || u.email} {u.job_title ? `(${u.job_title})` : ''}
+                  {gestores.map((g) => (
+                    <SelectItem key={g.id} value={g.id}>
+                      {g.nome}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -377,15 +386,15 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
             </div>
             <div className="space-y-2">
               <Label>Vendedor Responsável</Label>
-              <Select value={sellerOwner || 'none'} onValueChange={setSellerOwner}>
+              <Select value={vendedorId || 'none'} onValueChange={setVendedorId}>
                 <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Selecione Vendedor" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Nenhum / Não atribuído</SelectItem>
-                  {users.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.name || u.email} {u.job_title ? `(${u.job_title})` : ''}
+                  {vendedores.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.nome}
                     </SelectItem>
                   ))}
                 </SelectContent>
