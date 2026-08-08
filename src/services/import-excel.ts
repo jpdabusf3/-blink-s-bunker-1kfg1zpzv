@@ -35,6 +35,8 @@ export function downloadImportTemplate(): void {
       nome: 'Exemplo Indústria',
       tipo: 'Prospecto',
       cnpj: '12.345.678/0001-90',
+      carteira: 'RUMINANTES',
+      grupo_cliente: 'Indústrias',
       cidade: 'São Paulo',
       estado: 'SP',
       telefone: '(11) 99999-9999',

@@ -33,6 +33,8 @@ const TIPOS = [
   { value: 'proposta', label: 'Proposta' },
   { value: 'follow_up', label: 'Follow-up' },
   { value: 'reuniao', label: 'Reunião' },
+  { value: 'pedido', label: 'Pedido' },
+  { value: 'outro', label: 'Outro' },
 ]
 
 const ETAPAS = [

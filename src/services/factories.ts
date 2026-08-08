@@ -53,6 +53,8 @@ function mapRecordToFactory(record: any): Factory {
     technicalManager: record.technicalManager,
     technicalManagerName: record.expand?.technicalManager?.name || '',
     ultima_edicao_origem: record.ultima_edicao_origem,
+    carteira: record.carteira,
+    grupo_cliente: record.grupo_cliente,
     created: record.created,
     swot: {
       strengths: '',

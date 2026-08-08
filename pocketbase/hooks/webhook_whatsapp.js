@@ -110,5 +110,5 @@ routerAdd('POST', '/backend/v1/webhook-whatsapp', (e) => {
 
   $app.logger().info('webhook-whatsapp: enqueued', 'fila_id', filaRec.id, 'from', from)
 
-  return e.json(200, { status: 'enfileirado', fila_id: filaRec.id })
+  return e.json(200, { status: 'recebido', from: from, fila_id: filaRec.id })
 })

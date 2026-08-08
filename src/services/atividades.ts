@@ -21,6 +21,8 @@ export interface ValidarEGravarRequest {
   observacoes?: string
   confianca?: number
   audio_transcrito?: string
+  carteira?: string
+  grupo_cliente?: string
 }
 
 export interface ValidarEGravarResponse {

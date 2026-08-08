@@ -60,6 +60,8 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
   const [sellerOwner, setSellerOwner] = useState<string>(factory?.salesOwner || '')
   const [species, setSpecies] = useState<string>(factory?.animalSpecies || 'Ruminantes')
   const [carteira, setCarteira] = useState<string>(factory?.profile_type || 'Indústria')
+  const [carteiraSegmento, setCarteiraSegmento] = useState<string>(factory?.carteira || '')
+  const [grupoCliente, setGrupoCliente] = useState<string>(factory?.grupo_cliente || '')
   const [salesChannelState, setSalesChannelState] = useState<string>(
     (factory?.salesChannel as string) || '',
   )
@@ -118,6 +120,8 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
         (fd.get('indirectChannelType') as Factory['indirectChannelType']) || undefined,
       suggested_approach: (fd.get('suggested_approach') as string) || undefined,
       notes: (fd.get('notes') as string) || undefined,
+      carteira: carteiraSegmento || undefined,
+      grupo_cliente: grupoCliente || undefined,
     }
 
     try {
@@ -425,6 +429,38 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
             </Select>
           </div>
         )}
+        <div className="space-y-2">
+          <Label>Carteira (Segmento de Negócio)</Label>
+          <Select value={carteiraSegmento} onValueChange={setCarteiraSegmento}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Não informada</SelectItem>
+              <SelectItem value="AVES">Aves</SelectItem>
+              <SelectItem value="PETS">Pets</SelectItem>
+              <SelectItem value="RUMINANTES">Ruminantes</SelectItem>
+              <SelectItem value="SUINOS">Suínos</SelectItem>
+              <SelectItem value="AQUA">Aqua</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Grupo de Cliente</Label>
+          <Select value={grupoCliente} onValueChange={setGrupoCliente}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Não informado</SelectItem>
+              <SelectItem value="Indústrias">Indústrias</SelectItem>
+              <SelectItem value="Distribuidores Diretos">Distribuidores Diretos</SelectItem>
+              <SelectItem value="Produtores Diretos">Produtores Diretos</SelectItem>
+              <SelectItem value="Premixeras">Premixeras</SelectItem>
+              <SelectItem value="Cooperativas">Cooperativas</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="space-y-2 md:col-span-2">
           <Label>Próximos Passos / Abordagem Sugerida</Label>
           <Textarea

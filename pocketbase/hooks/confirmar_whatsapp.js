@@ -158,6 +158,8 @@ routerAdd('POST', '/backend/v1/confirmar-whatsapp', (e) => {
           confianca: typeof interp.confianca === 'number' ? interp.confianca : 0,
           audio_transcrito: audioTxt || '',
           origem: 'audio',
+          carteira: interp.carteira || '',
+          grupo_cliente: interp.grupo_cliente || '',
         }
         var res = $http.send({
           url: pbUrl + '/backend/v1/validar-e-gravar',
@@ -236,17 +238,41 @@ routerAdd('POST', '/backend/v1/confirmar-whatsapp', (e) => {
     var correctedText = storedAudioTranscrito + '\nCorreção: ' + replyText
 
     var prompt =
-      'Você é um assistente de CRM especializado em produção de gado de corte.\n' +
-      'Interprete o áudio transcrito de um vendedor e extraia os dados em JSON.\n' +
-      'Não invente dados que não foram ditos. Se um campo não foi mencionado, use null.\n' +
-      'Retorne SOMENTE o JSON, sem texto adicional.\n\n' +
+      'Você é um assistente de CRM especializado em produção de gado de corte e\n' +
+      'nutrição animal. Interprete o áudio transcrito de um vendedor e extraia os\n' +
+      'dados em JSON. Não invente dados. Se um campo não foi mencionado, use null.\n' +
+      'Retorne SOMENTE o JSON.\n\n' +
+      'GLOSSÁRIO DO SETOR:\n' +
+      '- Recria: criação de bezerros até a engorda\n' +
+      '- Engorda: fase final antes do abate\n' +
+      '- Confinamento: engorda intensiva com alta densidade\n' +
+      '- Terminação: fase final de acabamento\n' +
+      '- Arroba (@): unidade de peso (15 kg de carcaça)\n' +
+      '- GTA: Guia de Trânsito Animal\n' +
+      '- ICMS: imposto sobre circulação de mercadorias\n' +
+      '- Premix: mistura de vitaminas e minerais para ração\n' +
+      '- Núcleo: concentrado proteico-mineral\n' +
+      '- Cabeça: unidade de animal (ex.: lote de 500 cabeças)\n' +
+      '- Carteira (AVES/PETS/RUMINANTES/SUINOS/AQUA): segmentos de negócio\n' +
+      '- Grupo de cliente: Indústrias/Distribuidores Diretos/Produtores Diretos/\n' +
+      '  Premixeras/Cooperativas\n\n' +
       'SCHEMA:\n' +
-      '{\n  cliente: { nome, cnpj, cidade, estado },\n  vendedor: nome,\n' +
-      '  tipo_atividade: visita|ligacao|proposta|follow_up|reuniao|outro,\n' +
+      '{\n' +
+      '  cliente: { nome, cnpj, cidade, estado },\n' +
+      '  carteira: AVES|PETS|RUMINANTES|SUINOS|AQUA|null,\n' +
+      '  grupo_cliente: Indústrias|Distribuidores Diretos|Produtores Diretos|\n' +
+      '    Premixeras|Cooperativas|null,\n' +
+      '  vendedor: nome,\n' +
+      '  tipo_atividade: visita|ligacao|proposta|follow_up|reuniao|pedido|outro,\n' +
       '  etapa_funil: prospeccao|qualificacao|proposta|fechamento|pos_venda,\n' +
-      '  valor_estimado: numero em reais,\n  descricao: resumo conciso,\n' +
-      '  proximo_passo: proxima acao,\n  data_proxima_acao: AAAA-MM-DD,\n' +
-      '  pendencias: [lista],\n  observacoes: texto,\n  confianca: numero de 0 a 1\n}\n\n' +
+      '  valor_estimado: numero em reais,\n' +
+      '  descricao: resumo conciso,\n' +
+      '  proximo_passo: proxima acao,\n' +
+      '  data_proxima_acao: AAAA-MM-DD,\n' +
+      '  pendencias: [lista],\n' +
+      '  observacoes: texto,\n' +
+      '  confianca: numero de 0 a 1\n' +
+      '}\n\n' +
       'ÁUDIO TRANSCRITO: [' +
       correctedText +
       ']'
@@ -259,7 +285,7 @@ routerAdd('POST', '/backend/v1/confirmar-whatsapp', (e) => {
           {
             role: 'system',
             content:
-              'Setor: produção de gado de corte (recria, engorda, confinamento, terminação). Empresa: Blink Biotech (soluções biotech).',
+              'Setor: produção de gado de corte e nutrição animal (recria, engorda, confinamento, terminação). Empresa: Blink Biotech (soluções biotech).',
           },
           { role: 'user', content: prompt },
         ],

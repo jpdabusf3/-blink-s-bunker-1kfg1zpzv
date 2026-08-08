@@ -22,6 +22,26 @@ const TIPOS = [
   { value: 'proposta', label: 'Proposta' },
   { value: 'follow_up', label: 'Follow-up' },
   { value: 'reuniao', label: 'Reunião' },
+  { value: 'pedido', label: 'Pedido' },
+  { value: 'outro', label: 'Outro' },
+]
+
+const CARTEIRAS = [
+  { value: '', label: 'Não informada' },
+  { value: 'AVES', label: 'Aves' },
+  { value: 'PETS', label: 'Pets' },
+  { value: 'RUMINANTES', label: 'Ruminantes' },
+  { value: 'SUINOS', label: 'Suínos' },
+  { value: 'AQUA', label: 'Aqua' },
+]
+
+const GRUPOS_CLIENTE = [
+  { value: '', label: 'Não informado' },
+  { value: 'Indústrias', label: 'Indústrias' },
+  { value: 'Distribuidores Diretos', label: 'Distribuidores Diretos' },
+  { value: 'Produtores Diretos', label: 'Produtores Diretos' },
+  { value: 'Premixeras', label: 'Premixeras' },
+  { value: 'Cooperativas', label: 'Cooperativas' },
 ]
 
 const ETAPAS = [
@@ -43,6 +63,8 @@ export function AtividadeForm({ onSuccess }: AtividadeFormProps) {
   const [tipoAtividade, setTipoAtividade] = useState('')
   const [etapaFunil, setEtapaFunil] = useState('')
   const [vendedorId, setVendedorId] = useState('')
+  const [carteira, setCarteira] = useState('')
+  const [grupoCliente, setGrupoCliente] = useState('')
 
   useEffect(() => {
     getUsers()
@@ -73,6 +95,8 @@ export function AtividadeForm({ onSuccess }: AtividadeFormProps) {
       proximo_passo: (fd.get('proximoPasso') as string) || '',
       data_proxima_acao: (fd.get('dataProximaAcao') as string) || '',
       pendencias: (fd.get('pendencias') as string) || '',
+      carteira: carteira || undefined,
+      grupo_cliente: grupoCliente || undefined,
     }
 
     try {
@@ -186,6 +210,36 @@ export function AtividadeForm({ onSuccess }: AtividadeFormProps) {
         <div className="space-y-1">
           <Label>Pendências</Label>
           <Input name="pendencias" placeholder="Pendências (separadas por ;)" />
+        </div>
+        <div className="space-y-1">
+          <Label>Carteira (Segmento)</Label>
+          <Select value={carteira} onValueChange={setCarteira}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              {CARTEIRAS.map((c) => (
+                <SelectItem key={c.value} value={c.value}>
+                  {c.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label>Grupo de Cliente</Label>
+          <Select value={grupoCliente} onValueChange={setGrupoCliente}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              {GRUPOS_CLIENTE.map((g) => (
+                <SelectItem key={g.value} value={g.value}>
+                  {g.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <div className="flex justify-end gap-2 pt-2">

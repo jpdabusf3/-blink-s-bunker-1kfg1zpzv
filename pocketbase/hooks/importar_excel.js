@@ -77,6 +77,8 @@ routerAdd(
         var etapaFunil = String(row.etapa_funil || row.funnelStage || '').trim()
         var valorPotencial = parseNumber(row.valor_potencial || row.potentialValue)
         var observacoes = String(row.observacoes || row.notes || '').trim()
+        var carteira = String(row.carteira || '').trim()
+        var grupoCliente = String(row.grupo_cliente || row.grupoCliente || '').trim()
 
         if (!nome) {
           errors.push({ linha: rowNum, erro: 'nome é obrigatório' })
@@ -92,6 +94,11 @@ routerAdd(
         }
         if (etapaFunil && VALID_STAGES.indexOf(etapaFunil.toLowerCase()) === -1) {
           errors.push({ linha: rowNum, erro: 'etapa_funil inválida: ' + etapaFunil })
+          continue
+        }
+        var VALID_CARTEIRAS = ['AVES', 'PETS', 'RUMINANTES', 'SUINOS', 'AQUA']
+        if (carteira && VALID_CARTEIRAS.indexOf(carteira.toUpperCase()) === -1) {
+          errors.push({ linha: rowNum, erro: 'carteira inválida: ' + carteira })
           continue
         }
 
@@ -120,6 +127,8 @@ routerAdd(
             if (etapaFunil) rec.set('funnelStage', etapaFunil)
             if (valorPotencial) rec.set('potentialValue', valorPotencial)
             if (observacoes) rec.set('notes', observacoes)
+            if (carteira) rec.set('carteira', carteira.toUpperCase())
+            if (grupoCliente) rec.set('grupo_cliente', grupoCliente)
             rec.set('ultima_edicao_origem', 'excel')
             $app.save(rec)
             updated++
@@ -139,6 +148,8 @@ routerAdd(
             }
             if (valorPotencial) newRec.set('potentialValue', valorPotencial)
             if (observacoes) newRec.set('notes', observacoes)
+            if (carteira) newRec.set('carteira', carteira.toUpperCase())
+            if (grupoCliente) newRec.set('grupo_cliente', grupoCliente)
             newRec.set('ultima_edicao_origem', 'excel')
             $app.save(newRec)
             created++

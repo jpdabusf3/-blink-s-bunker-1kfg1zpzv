@@ -8,7 +8,7 @@ routerAdd(
 
       var body = e.requestInfo().body || {}
 
-      var VALID_TIPOS = ['visita', 'ligacao', 'proposta', 'follow_up', 'reuniao']
+      var VALID_TIPOS = ['visita', 'ligacao', 'proposta', 'follow_up', 'reuniao', 'pedido', 'outro']
       var VALID_ETAPAS = ['prospeccao', 'qualificacao', 'proposta', 'fechamento', 'pos_venda']
       var VALID_ORIGENS = ['audio', 'manual', 'excel']
 
@@ -104,6 +104,8 @@ routerAdd(
       var audioTranscrito = body.audio_transcrito || ''
       var clienteCidade = cliente.cidade || ''
       var clienteEstado = cliente.estado || ''
+      var carteira = body.carteira || ''
+      var grupoCliente = body.grupo_cliente || ''
 
       var existingClient = null
       if (clienteCnpj) {
@@ -165,6 +167,8 @@ routerAdd(
           if (clienteCidade) client.set('city', clienteCidade)
           if (clienteEstado) client.set('state', clienteEstado)
           if (clienteCnpj) client.set('cnpj', clienteCnpj)
+          if (carteira) client.set('carteira', carteira)
+          if (grupoCliente) client.set('grupo_cliente', grupoCliente)
           if (!client.get('tipo')) client.set('tipo', 'Cliente')
         } else {
           client = new Record(factoriesCol)
@@ -174,6 +178,8 @@ routerAdd(
           if (clienteEstado) client.set('state', clienteEstado)
           client.set('funnelStage', etapaFunil)
           if (valorEstimado > 0) client.set('potentialValue', valorEstimado)
+          if (carteira) client.set('carteira', carteira)
+          if (grupoCliente) client.set('grupo_cliente', grupoCliente)
           client.set('tipo', 'Prospecto')
         }
         client.set('ultima_edicao_origem', origem)
@@ -193,6 +199,8 @@ routerAdd(
         atividade.set('origem', origem)
         atividade.set('audio_transcrito', audioTranscrito)
         atividade.set('confianca', confianca)
+        if (carteira) atividade.set('carteira', carteira)
+        if (grupoCliente) atividade.set('grupo_cliente', grupoCliente)
         txApp.save(atividade)
         atividadeId = atividade.id
 
@@ -207,23 +215,32 @@ routerAdd(
         .logger()
         .info('validar-e-gravar: saved', 'id', atividadeId, 'cliente', clienteId, 'origem', origem)
 
-      if (origem === 'audio') {
-        try {
-          var logCol2 = $app.findCollectionByNameOrId('activity_logs')
-          var logRec2 = new Record(logCol2)
-          logRec2.set('user', vendedorId)
-          logRec2.set('action', 'audio_gravado')
-          logRec2.set('details', 'Atividade gravada para cliente: ' + (clienteNome || ''))
-          logRec2.set('recordId', atividadeId)
-          logRec2.set('target_collection', 'atividades')
-          $app.save(logRec2)
-        } catch (_) {}
-      }
+      try {
+        var logCol2 = $app.findCollectionByNameOrId('activity_logs')
+        var logRec2 = new Record(logCol2)
+        logRec2.set('user', vendedorId)
+        logRec2.set('action', 'gravado')
+        logRec2.set(
+          'details',
+          'Atividade gravada (' + origem + ') para cliente: ' + (clienteNome || ''),
+        )
+        logRec2.set('recordId', atividadeId)
+        logRec2.set('target_collection', 'atividades')
+        $app.save(logRec2)
+      } catch (_) {}
 
       return e.json(200, { success: true, atividade_id: atividadeId, cliente_id: clienteId })
     } catch (err) {
       if (err instanceof BadRequestError) throw err
       $app.logger().error('validar-e-gravar: error', 'error', String(err))
+      try {
+        var logColErr = $app.findCollectionByNameOrId('activity_logs')
+        var logRecErr = new Record(logColErr)
+        logRecErr.set('user', userId)
+        logRecErr.set('action', 'gravado_erro')
+        logRecErr.set('details', 'Erro ao gravar: ' + String(err).substring(0, 200))
+        $app.save(logRecErr)
+      } catch (_) {}
       return e.json(500, { error: 'unexpected error' })
     }
   },

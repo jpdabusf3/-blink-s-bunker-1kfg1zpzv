@@ -10,6 +10,8 @@ export interface InterpretarAudioCliente {
 export interface InterpretarAudioResult {
   cliente: InterpretarAudioCliente
   vendedor: string | null
+  carteira: string | null
+  grupo_cliente: string | null
   tipo_atividade: string | null
   etapa_funil: string | null
   valor_estimado: number | null
@@ -59,6 +61,8 @@ export interface GravarAtividadeRequest {
   confianca: number
   precisa_confirmacao?: boolean
   audio_transcrito?: string
+  carteira?: string | null
+  grupo_cliente?: string | null
 }
 
 export interface GravarAtividadeResponse {

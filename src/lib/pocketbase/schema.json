@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-08T21:47:33.602Z",
+  "generatedAt": "2026-08-08T21:58:26.434Z",
   "collections": [
     {
       "name": "users",
@@ -335,6 +335,19 @@
           "required": false,
           "system": false,
           "selectValues": ["manual", "audio", "excel"]
+        },
+        {
+          "name": "carteira",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["AVES", "PETS", "RUMINANTES", "SUINOS", "AQUA"]
+        },
+        {
+          "name": "grupo_cliente",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -892,13 +905,6 @@
           "collectionRef": "users"
         },
         {
-          "name": "tipo_atividade",
-          "type": "select",
-          "required": false,
-          "system": false,
-          "selectValues": ["visita", "ligacao", "proposta", "follow_up", "reuniao"]
-        },
-        {
           "name": "etapa_funil",
           "type": "text",
           "required": false,
@@ -966,6 +972,34 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "tipo_atividade",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "visita",
+            "ligacao",
+            "proposta",
+            "follow_up",
+            "reuniao",
+            "pedido",
+            "outro"
+          ]
+        },
+        {
+          "name": "carteira",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["AVES", "PETS", "RUMINANTES", "SUINOS", "AQUA"]
+        },
+        {
+          "name": "grupo_cliente",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [

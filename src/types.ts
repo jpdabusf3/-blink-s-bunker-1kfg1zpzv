@@ -207,6 +207,8 @@ export interface Factory {
   contact_email?: string
   address?: string
   ultima_edicao_origem?: 'manual' | 'audio' | 'excel'
+  carteira?: string
+  grupo_cliente?: string
 }
 
 export interface Atividade {
@@ -223,6 +225,8 @@ export interface Atividade {
   origem: 'audio' | 'manual' | 'excel'
   audio_transcrito: string
   confianca: number
+  carteira?: string
+  grupo_cliente?: string
   created: string
   updated: string
   expand?: {
