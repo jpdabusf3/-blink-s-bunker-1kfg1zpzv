@@ -20,8 +20,6 @@ import {
   UserPlus,
   UserCog,
   ClipboardList,
-  History,
-  Wallet,
   TrendingUp,
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
@@ -41,9 +39,7 @@ export function AppSidebar() {
     { name: t('nav.funil'), path: '/funil', icon: BarChart2 },
     ...(showManager ? [{ name: 'Gestão Técnica', path: '/gestao-tecnica', icon: UserCog }] : []),
     { name: t('nav.pedidos'), path: '/pedidos', icon: ShoppingCart },
-    { name: 'Hist. Pedidos', path: '/historico-pedidos', icon: History },
-    { name: 'Pedidos Carteira', path: '/pedidos-carteira', icon: Wallet },
-    { name: 'Matriz Vendas', path: '/matriz-vendas', icon: TrendingUp },
+    { name: 'Histórico de Vendas', path: '/historico-vendas', icon: TrendingUp },
     { name: t('nav.swot'), path: '/swot', icon: Target },
     { name: t('nav.prioridade'), path: '/matriz', icon: Grid },
     { name: t('nav.metas'), path: '/metas', icon: Target },

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-08T22:26:36.779Z",
+  "generatedAt": "2026-08-08T22:43:27.016Z",
   "collections": [
     {
       "name": "users",
@@ -1441,6 +1441,113 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_gestao_tecnica_funcao ON gestao_tecnica (funcao)"]
+    },
+    {
+      "name": "historico_vendas",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "data",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cliente",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "especie",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["BOVINO", "SUINO", "AVE", "PET", "AQUA", "OUTRO"]
+        },
+        {
+          "name": "gestor_tecnico_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "gestao_tecnica"
+        },
+        {
+          "name": "vendedor_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "gestao_tecnica"
+        },
+        {
+          "name": "canal_vendas",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Direto",
+            "Distribuidor",
+            "Indústria",
+            "Premixera",
+            "Cooperativa",
+            "Online"
+          ]
+        },
+        {
+          "name": "valor",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "observacoes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "origem",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["manual", "upload"]
+        },
+        {
+          "name": "atualizado_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_historico_vendas_data ON historico_vendas (data)",
+        "CREATE INDEX idx_historico_vendas_especie ON historico_vendas (especie)",
+        "CREATE INDEX idx_historico_vendas_gestor_tecnico_id ON historico_vendas (gestor_tecnico_id)",
+        "CREATE INDEX idx_historico_vendas_vendedor_id ON historico_vendas (vendedor_id)",
+        "CREATE INDEX idx_historico_vendas_canal_vendas ON historico_vendas (canal_vendas)",
+        "CREATE UNIQUE INDEX idx_historico_vendas_data_cliente_valor ON historico_vendas (data, cliente, valor)"
+      ]
     }
   ]
 }
