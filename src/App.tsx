@@ -25,6 +25,7 @@ import TeamManagement from './pages/TeamManagement'
 import GestaoTecnica from './pages/GestaoTecnica'
 import Atividades from './pages/Atividades'
 import RelatorioAtividades from './pages/RelatorioAtividades'
+import PerformanceReport from './pages/PerformanceReport'
 import { SuperAdminRoute } from './components/SuperAdminRoute'
 import { ThemeProvider } from './components/ThemeProvider'
 
@@ -54,6 +55,7 @@ const App = () => (
                     <Route path="/gestao-tecnica" element={<GestaoTecnica />} />
                     <Route path="/atividades" element={<Atividades />} />
                     <Route path="/relatorio-atividades" element={<RelatorioAtividades />} />
+                    <Route path="/relatorio-performance" element={<PerformanceReport />} />
                     <Route path="/documentos" element={<Documents />} />
                     <Route element={<SuperAdminRoute />}>
                       <Route path="/usuarios" element={<UsersPage />} />
