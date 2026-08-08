@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-08T22:43:27.016Z",
+  "generatedAt": "2026-08-08T22:47:49.278Z",
   "collections": [
     {
       "name": "users",
@@ -1376,10 +1376,26 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "gestor_tecnico_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "gestao_tecnica"
+        },
+        {
+          "name": "vendedor_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "gestao_tecnica"
         }
       ],
       "indexes": [
-        "CREATE INDEX idx_matriz_vendas_pais_carteira_mes ON matriz_vendas (pais, carteira, mes)"
+        "CREATE INDEX idx_matriz_vendas_pais_carteira_mes ON matriz_vendas (pais, carteira, mes)",
+        "CREATE INDEX `idx_matriz_vendas_gestor_tecnico_id` ON `matriz_vendas` (gestor_tecnico_id)",
+        "CREATE INDEX `idx_matriz_vendas_vendedor_id` ON `matriz_vendas` (vendedor_id)"
       ]
     },
     {

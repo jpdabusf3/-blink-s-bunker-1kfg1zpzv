@@ -11,11 +11,18 @@ export interface MatrizVenda {
   atualizado_em: string
   created: string
   updated: string
+  gestor_tecnico_id?: string
+  vendedor_id?: string
+  expand?: {
+    gestor_tecnico_id?: { id: string; nome: string }
+    vendedor_id?: { id: string; nome: string }
+  }
 }
 
 export const getMatrizVendas = () =>
   pb.collection('matriz_vendas').getFullList<MatrizVenda>({
     sort: 'pais,carteira,mes',
+    expand: 'gestor_tecnico_id,vendedor_id',
   })
 
 export const createMatrizVenda = (data: Partial<MatrizVenda>) =>
