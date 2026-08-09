@@ -213,6 +213,13 @@ export interface Factory {
   gestor_tecnico_name?: string
   vendedor_id?: string
   vendedor_name?: string
+  status_funil?: 'Inativo' | 'Mensal' | 'Ativo'
+  valor_medio?: number
+  valor_atual?: number
+  ultimo_pedido?: string
+  proximos_passos?: string
+  acao?: string
+  data_importacao?: string
 }
 
 export interface GestaoTecnica {

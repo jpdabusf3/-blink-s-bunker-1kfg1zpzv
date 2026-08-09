@@ -61,6 +61,13 @@ function mapRecordToFactory(record: any): Factory {
     ultima_edicao_origem: record.ultima_edicao_origem,
     carteira: record.carteira,
     grupo_cliente: record.grupo_cliente,
+    status_funil: record.status_funil,
+    valor_medio: record.valor_medio || 0,
+    valor_atual: record.valor_atual || 0,
+    ultimo_pedido: record.ultimo_pedido,
+    proximos_passos: record.proximos_passos,
+    acao: record.acao,
+    data_importacao: record.data_importacao,
     created: record.created,
     swot: {
       strengths: '',

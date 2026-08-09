@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-09T02:23:45.600Z",
+  "generatedAt": "2026-08-09T02:47:00.506Z",
   "collections": [
     {
       "name": "users",
@@ -362,6 +362,49 @@
           "required": false,
           "system": false,
           "collectionRef": "gestao_tecnica"
+        },
+        {
+          "name": "valor_medio",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_atual",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status_funil",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Inativo", "Mensal", "Ativo"]
+        },
+        {
+          "name": "ultimo_pedido",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "proximos_passos",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "acao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_importacao",
+          "type": "date",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -370,7 +413,9 @@
         "CREATE INDEX `idx_factories_cnpj` ON `factories` (cnpj)",
         "CREATE INDEX `idx_factories_tipo` ON `factories` (tipo)",
         "CREATE INDEX `idx_factories_gestor_tecnico_id` ON `factories` (gestor_tecnico_id)",
-        "CREATE INDEX `idx_factories_vendedor_id` ON `factories` (vendedor_id)"
+        "CREATE INDEX `idx_factories_vendedor_id` ON `factories` (vendedor_id)",
+        "CREATE INDEX `idx_factories_status_funil` ON `factories` (status_funil)",
+        "CREATE INDEX `idx_factories_animalSpecies` ON `factories` (animalSpecies)"
       ]
     },
     {

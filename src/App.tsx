@@ -6,6 +6,7 @@ import Layout from './components/Layout'
 import Index from './pages/Index'
 import Cadastro from './pages/Cadastro'
 import Funil from './pages/Funil'
+import FunilVendas from './pages/FunilVendas'
 import SWOT from './pages/SWOT'
 import Matriz from './pages/Matriz'
 import Pedidos from './pages/Pedidos'
@@ -46,6 +47,7 @@ const App = () => (
                     <Route path="/" element={<Index />} />
                     <Route path="/cadastro" element={<Cadastro />} />
                     <Route path="/funil" element={<Funil />} />
+                    <Route path="/funil-vendas" element={<FunilVendas />} />
                     <Route path="/swot" element={<SWOT />} />
                     <Route path="/matriz" element={<Matriz />} />
                     <Route path="/pedidos" element={<Pedidos />} />
