@@ -1,6 +1,6 @@
-import { getMetas, type Meta } from '@/services/metas'
-import { getHistoricoVendas, type HistoricoVenda } from '@/services/historico-vendas'
-import { getGestaoTecnica } from '@/services/gestao-tecnica'
+import { getMetas } from '@/services/metas'
+import { getHistoricoVendas } from '@/services/historico-vendas'
+import { getGestoresTecnicos } from '@/services/gestao-tecnica'
 import { getAllFactories } from '@/services/factories'
 import type { Factory } from '@/types'
 
@@ -31,10 +31,22 @@ export interface VendorRanking {
   achievementPct: number
 }
 
+export interface GestorRanking {
+  id: string
+  nome: string
+  metaValor: number
+  valorRealizado: number
+  achievementPct: number
+  totalSales: number
+  curMonthSales: number
+  prevMonthSales: number
+}
+
 export interface ConsolidatedData {
   kpis: ConsolidatedKPIs
   monthComparisons: MonthComparison[]
   vendorRanking: VendorRanking[]
+  gestorRanking: GestorRanking[]
 }
 
 const MONTH_LABELS = [
@@ -61,10 +73,10 @@ function isSameMonth(d: Date, ref: Date) {
 }
 
 export async function fetchConsolidatedData(): Promise<ConsolidatedData> {
-  const [metas, vendas, , factories] = await Promise.all([
+  const [metas, vendas, gestores, factories] = await Promise.all([
     getMetas(),
     getHistoricoVendas(),
-    getGestaoTecnica(),
+    getGestoresTecnicos(),
     getAllFactories(),
   ])
 
@@ -113,7 +125,7 @@ export async function fetchConsolidatedData(): Promise<ConsolidatedData> {
   vendas.forEach((v) => {
     const vid = v.vendedor_id || ''
     if (!vid) return
-    const existing = vMap.get(vid) || {
+    const ex = vMap.get(vid) || {
       id: vid,
       nome: v.expand?.vendedor_id?.nome || 'N/A',
       totalSales: 0,
@@ -121,13 +133,13 @@ export async function fetchConsolidatedData(): Promise<ConsolidatedData> {
       valorRealizado: 0,
       achievementPct: 0,
     }
-    existing.totalSales += v.valor || 0
-    vMap.set(vid, existing)
+    ex.totalSales += v.valor || 0
+    vMap.set(vid, ex)
   })
   metas.forEach((m) => {
     const vid = m.vendedor_id || ''
     if (!vid) return
-    const existing = vMap.get(vid) || {
+    const ex = vMap.get(vid) || {
       id: vid,
       nome: m.expand?.vendedor_id?.nome || 'N/A',
       totalSales: 0,
@@ -135,13 +147,11 @@ export async function fetchConsolidatedData(): Promise<ConsolidatedData> {
       valorRealizado: 0,
       achievementPct: 0,
     }
-    existing.metaValor += m.meta_valor || 0
-    existing.valorRealizado += m.valor_realizado || 0
-    if (existing.nome === 'N/A' && m.expand?.vendedor_id?.nome)
-      existing.nome = m.expand.vendedor_id.nome
-    vMap.set(vid, existing)
+    ex.metaValor += m.meta_valor || 0
+    ex.valorRealizado += m.valor_realizado || 0
+    if (ex.nome === 'N/A' && m.expand?.vendedor_id?.nome) ex.nome = m.expand.vendedor_id.nome
+    vMap.set(vid, ex)
   })
-
   const vendorRanking = Array.from(vMap.values())
     .map((v) => ({
       ...v,
@@ -150,5 +160,45 @@ export async function fetchConsolidatedData(): Promise<ConsolidatedData> {
     .sort((a, b) => b.achievementPct - a.achievementPct)
     .slice(0, 10)
 
-  return { kpis, monthComparisons, vendorRanking }
+  const gMap = new Map<string, GestorRanking>()
+  gestores.forEach((g) =>
+    gMap.set(g.id, {
+      id: g.id,
+      nome: g.nome,
+      metaValor: 0,
+      valorRealizado: 0,
+      achievementPct: 0,
+      totalSales: 0,
+      curMonthSales: 0,
+      prevMonthSales: 0,
+    }),
+  )
+  metas.forEach((m) => {
+    const gid = m.gestor_tecnico_id || ''
+    if (!gid || !gMap.has(gid)) return
+    const g = gMap.get(gid)!
+    g.metaValor += m.meta_valor || 0
+    g.valorRealizado += m.valor_realizado || 0
+  })
+  vendas.forEach((v) => {
+    const gid = v.gestor_tecnico_id || ''
+    if (!gid || !gMap.has(gid)) return
+    const g = gMap.get(gid)!
+    g.totalSales += v.valor || 0
+    const vd = new Date(v.data)
+    if (isSameMonth(vd, now)) g.curMonthSales += v.valor || 0
+    if (isSameMonth(vd, prev)) g.prevMonthSales += v.valor || 0
+  })
+  const gestorRanking = Array.from(gMap.values())
+    .map((g) => ({
+      ...g,
+      achievementPct: g.metaValor > 0 ? (g.valorRealizado / g.metaValor) * 100 : 0,
+    }))
+    .sort((a, b) => b.achievementPct - a.achievementPct)
+
+  return { kpis, monthComparisons, vendorRanking, gestorRanking }
+}
+
+export async function fetchGestorComparison(): Promise<GestorRanking[]> {
+  return (await fetchConsolidatedData()).gestorRanking
 }

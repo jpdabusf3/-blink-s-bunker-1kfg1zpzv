@@ -5,11 +5,23 @@ import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'
 import { useRealtime } from '@/hooks/use-realtime'
 import { fetchConsolidatedData, type ConsolidatedData } from '@/services/consolidated-dashboard'
 import { formatCompactCurrency, formatCurrency } from '@/lib/utils'
-import { Loader2, TrendingUp, TrendingDown, Trophy, Target, DollarSign, Layers } from 'lucide-react'
+import {
+  Loader2,
+  TrendingUp,
+  TrendingDown,
+  Trophy,
+  Target,
+  DollarSign,
+  Layers,
+  Users,
+  UserCog,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 export function ConsolidatedDashboard() {
   const [data, setData] = useState<ConsolidatedData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [perfView, setPerfView] = useState<'vendedor' | 'gestor'>('vendedor')
 
   const loadData = useCallback(async () => {
     try {
@@ -36,10 +48,13 @@ export function ConsolidatedDashboard() {
     )
   if (!data) return null
 
-  const { kpis, monthComparisons, vendorRanking } = data
-  const salesDelta = monthComparisons[1].sales - monthComparisons[0].sales
+  const { kpis, monthComparisons, vendorRanking, gestorRanking } = data
+  const salesDelta = (monthComparisons[1]?.sales || 0) - (monthComparisons[0]?.sales || 0)
   const salesDeltaPct =
-    monthComparisons[0].sales > 0 ? (salesDelta / monthComparisons[0].sales) * 100 : 0
+    (monthComparisons[0]?.sales || 0) > 0
+      ? (salesDelta / (monthComparisons[0]?.sales || 1)) * 100
+      : 0
+  const ranking = perfView === 'vendedor' ? vendorRanking : gestorRanking
 
   return (
     <div className="space-y-4">
@@ -157,35 +172,61 @@ export function ConsolidatedDashboard() {
 
         <Card className="shadow-subtle">
           <CardHeader>
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-primary" /> Ranking de Vendedores
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm flex items-center gap-2">
+                {perfView === 'vendedor' ? (
+                  <>
+                    <Trophy className="w-4 h-4 text-primary" /> Ranking de Vendedores
+                  </>
+                ) : (
+                  <>
+                    <UserCog className="w-4 h-4 text-primary" /> Ranking de Gestores
+                  </>
+                )}
+              </CardTitle>
+              <div className="flex gap-1 bg-muted rounded-lg p-0.5">
+                <Button
+                  size="sm"
+                  variant={perfView === 'vendedor' ? 'default' : 'ghost'}
+                  onClick={() => setPerfView('vendedor')}
+                  className="h-7 px-2 text-xs gap-1"
+                >
+                  <Users className="w-3 h-3" /> Vendedor
+                </Button>
+                <Button
+                  size="sm"
+                  variant={perfView === 'gestor' ? 'default' : 'ghost'}
+                  onClick={() => setPerfView('gestor')}
+                  className="h-7 px-2 text-xs gap-1"
+                >
+                  <UserCog className="w-3 h-3" /> Gestor
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-2 max-h-[240px] overflow-y-auto">
-              {vendorRanking.length === 0 && (
-                <p className="text-center text-muted-foreground text-sm py-4">
-                  Sem dados de vendedores
-                </p>
+              {ranking.length === 0 && (
+                <p className="text-center text-muted-foreground text-sm py-4">Sem dados</p>
               )}
-              {vendorRanking.map((v, i) => (
+              {ranking.map((r, i) => (
                 <div
-                  key={v.id}
+                  key={r.id}
                   className="flex items-center justify-between p-2 rounded-lg bg-muted/30"
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-lg font-bold text-muted-foreground w-6">{i + 1}º</span>
                     <div>
-                      <div className="font-medium text-sm">{v.nome}</div>
+                      <div className="font-medium text-sm">{r.nome}</div>
                       <div className="text-[10px] text-muted-foreground">
-                        {formatCurrency(v.totalSales)} em vendas
+                        {formatCurrency(r.totalSales)} em vendas
                       </div>
                     </div>
                   </div>
                   <span
-                    className={`font-bold text-sm ${v.achievementPct >= 100 ? 'text-green-500' : v.achievementPct >= 50 ? 'text-yellow-500' : 'text-red-500'}`}
+                    className={`font-bold text-sm ${r.achievementPct >= 100 ? 'text-green-500' : r.achievementPct >= 50 ? 'text-yellow-500' : 'text-red-500'}`}
                   >
-                    {v.achievementPct.toFixed(0)}%
+                    {r.achievementPct.toFixed(0)}%
                   </span>
                 </div>
               ))}

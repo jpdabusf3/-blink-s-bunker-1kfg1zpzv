@@ -29,6 +29,10 @@ import { HistoricalComparisonCard } from '@/components/dashboard/HistoricalCompa
 import { TimelineSummaryCard } from '@/components/dashboard/TimelineSummaryCard'
 import { GeographicOverview } from '@/components/dashboard/GeographicOverview'
 import { ExecutiveDashboardCard } from '@/components/dashboard/ExecutiveDashboardCard'
+import { ConsolidatedDashboard } from '@/components/dashboard/ConsolidatedDashboard'
+import { GestorTecnicoComparisonCard } from '@/components/dashboard/GestorTecnicoComparisonCard'
+import { DashboardCustomizer } from '@/components/dashboard/DashboardCustomizer'
+import { useDashboardPreferences } from '@/hooks/use-dashboard-preferences'
 import { UserFilter } from '@/components/UserFilter'
 import { testIntegration } from '@/services/integration-test'
 import { toast } from 'sonner'
@@ -42,6 +46,7 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 const DEFAULT_BLOCKS = [
   'metrics',
   'executive',
+  'consolidated',
   'targets',
   'role-widgets',
   'maps',
@@ -49,6 +54,7 @@ const DEFAULT_BLOCKS = [
   'charts',
   'historical',
   'list',
+  'gestor-comparison',
 ]
 
 function DraggableBlock({
@@ -118,20 +124,7 @@ export default function Index() {
   const [speciesFilter, setSpeciesFilter] = useState('all')
   const [integrationLoading, setIntegrationLoading] = useState(false)
 
-  const [blocks, setBlocks] = useState<string[]>(() => {
-    const saved = localStorage.getItem('blink_dashboard_order_v6')
-    if (saved) {
-      const parsed = JSON.parse(saved)
-      const valid = parsed.filter((b: string) => DEFAULT_BLOCKS.includes(b))
-      const missing = DEFAULT_BLOCKS.filter((b) => !valid.includes(b))
-      return [...valid, ...missing]
-    }
-    return DEFAULT_BLOCKS
-  })
-
-  useEffect(() => {
-    localStorage.setItem('blink_dashboard_order_v6', JSON.stringify(blocks))
-  }, [blocks])
+  const { blocks, setBlocks, toggleBlock, reset } = useDashboardPreferences()
 
   const moveBlock = (fromIndex: number, toIndex: number) => {
     const newBlocks = [...blocks]
@@ -229,6 +222,10 @@ export default function Index() {
     switch (id) {
       case 'executive':
         return <ExecutiveDashboardCard />
+      case 'consolidated':
+        return <ConsolidatedDashboard />
+      case 'gestor-comparison':
+        return <GestorTecnicoComparisonCard />
       case 'metrics':
         return (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 print:grid-cols-4 print:gap-4 print:mb-8">
@@ -465,6 +462,7 @@ export default function Index() {
           )}
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          <DashboardCustomizer blocks={blocks} onToggle={toggleBlock} onReset={reset} />
           <Button
             onClick={handleWhatsAppShare}
             className="gap-2 shadow-sm bg-[#25D366] hover:bg-[#128C7E] text-white w-full sm:w-auto"

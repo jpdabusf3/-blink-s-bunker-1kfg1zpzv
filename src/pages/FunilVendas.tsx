@@ -5,7 +5,9 @@ import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
 import { getVendedoresGestao, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { logActivity } from '@/services/activity-logs'
-import { exportFunilVendasToExcel, exportFunilVendasToPDF } from '@/lib/exportFunilVendas'
+import { exportFunilVendasToExcel } from '@/lib/exportFunilVendas'
+import { exportFullDashboardToPDF } from '@/lib/exportFullDashboard'
+import { fetchConsolidatedData, type ConsolidatedData } from '@/services/consolidated-dashboard'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -39,6 +41,7 @@ export default function FunilVendas() {
   const [vendedores, setVendedores] = useState<GestaoTecnica[]>([])
   const [filters, setFilters] = useState({ vendedor: 'all', especie: 'all', status: 'all' })
   const [importOpen, setImportOpen] = useState(false)
+  const [dashboardData, setDashboardData] = useState<ConsolidatedData | null>(null)
 
   const loadData = useCallback(async () => {
     try {
@@ -57,6 +60,22 @@ export default function FunilVendas() {
 
   useRealtime('factories', () => {
     loadData()
+  })
+
+  useEffect(() => {
+    fetchConsolidatedData()
+      .then(setDashboardData)
+      .catch(() => {})
+  }, [])
+  useRealtime('metas', () => {
+    fetchConsolidatedData()
+      .then(setDashboardData)
+      .catch(() => {})
+  })
+  useRealtime('historico_vendas', () => {
+    fetchConsolidatedData()
+      .then(setDashboardData)
+      .catch(() => {})
   })
 
   const scoped = useMemo(() => getScopedFactories(factories, user), [factories, user])
@@ -119,10 +138,10 @@ export default function FunilVendas() {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => exportFunilVendasToPDF(filtered)}
+            onClick={() => exportFullDashboardToPDF(filtered, dashboardData, filters)}
             className="gap-2"
           >
-            <FileText className="w-4 h-4" /> PDF
+            <FileText className="w-4 h-4" /> PDF Dashboard
           </Button>
           <Button size="sm" onClick={() => setImportOpen(true)} className="gap-2">
             <Upload className="w-4 h-4" /> Importar Funil (Excel)
