@@ -4,6 +4,7 @@ export interface DashboardPreferences {
   id: string
   userId: string
   blocks: string[]
+  period_view?: string
   created: string
   updated: string
 }
@@ -33,14 +34,32 @@ export async function getDashboardPreferences(): Promise<DashboardPreferences | 
   }
 }
 
-export async function saveDashboardPreferences(blocks: string[]): Promise<void> {
+export async function saveDashboardPreferences(
+  blocks: string[],
+  periodView?: string,
+): Promise<void> {
   const existing = await getDashboardPreferences()
+  const data: Record<string, unknown> = { blocks }
+  if (periodView !== undefined) data.period_view = periodView
   if (existing) {
-    await pb.collection('dashboard_preferences').update(existing.id, { blocks })
+    await pb.collection('dashboard_preferences').update(existing.id, data)
   } else {
     await pb.collection('dashboard_preferences').create({
       userId: pb.authStore.record?.id,
-      blocks,
+      ...data,
+    })
+  }
+}
+
+export async function savePeriodView(periodView: string): Promise<void> {
+  const existing = await getDashboardPreferences()
+  if (existing) {
+    await pb.collection('dashboard_preferences').update(existing.id, { period_view: periodView })
+  } else {
+    await pb.collection('dashboard_preferences').create({
+      userId: pb.authStore.record?.id,
+      blocks: DEFAULT_DASHBOARD_BLOCKS,
+      period_view: periodView,
     })
   }
 }

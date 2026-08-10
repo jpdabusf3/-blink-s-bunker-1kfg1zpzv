@@ -6,6 +6,7 @@ export function exportFullDashboardToPDF(
   funnelItems: Factory[],
   dashboardData: ConsolidatedData | null,
   filters: { vendedor: string; especie: string; status: string },
+  periodView: 'mensal' | 'trimestral' = 'mensal',
 ) {
   const win = window.open('', '_blank')
   if (!win) return
@@ -13,7 +14,12 @@ export function exportFullDashboardToPDF(
   const kpis = dashboardData?.kpis
   const vendorRanking = dashboardData?.vendorRanking || []
   const gestorRanking = dashboardData?.gestorRanking || []
-  const monthComparisons = dashboardData?.monthComparisons || []
+  const comparisonData =
+    periodView === 'trimestral'
+      ? dashboardData?.quarterlyComparisons || []
+      : dashboardData?.monthComparisons || []
+  const comparisonTitle =
+    periodView === 'trimestral' ? 'Comparativo Trimestral' : 'Comparativo Mensal'
 
   const funnelRows = funnelItems
     .map(
@@ -36,7 +42,7 @@ export function exportFullDashboardToPDF(
     )
     .join('')
 
-  const monthRows = monthComparisons
+  const comparisonRows = comparisonData
     .map(
       (m) =>
         `<tr><td>${m.label}</td><td class="r">${formatCurrency(m.sales)}</td><td class="r">${formatCurrency(m.target)}</td><td class="r">${formatCurrency(m.achieved)}</td></tr>`,
@@ -71,7 +77,7 @@ export function exportFullDashboardToPDF(
   <div class="kpi"><b>${formatCompactCurrency(kpis.totalSales)}</b><span>Total Vendas</span></div></div>`
       : ''
   }
-  ${monthRows ? `<h2>Comparativo Mensal</h2><table><thead><tr><th>Mês</th><th class="r">Vendas</th><th class="r">Meta</th><th class="r">Realizado</th></tr></thead><tbody>${monthRows}</tbody></table>` : ''}
+  ${comparisonRows ? `<h2>${comparisonTitle}</h2><table><thead><tr><th>Período</th><th class="r">Vendas</th><th class="r">Meta</th><th class="r">Realizado</th></tr></thead><tbody>${comparisonRows}</tbody></table>` : ''}
   ${vendorRows ? `<h2>Ranking de Vendedores</h2><table><thead><tr><th>#</th><th>Vendedor</th><th class="r">Vendas</th><th class="r">Meta</th><th class="r">Realizado</th><th class="r">%</th></tr></thead><tbody>${vendorRows}</tbody></table>` : ''}
   ${gestorRows ? `<h2>Comparativo por Gestor Técnico</h2><table><thead><tr><th>#</th><th>Gestor</th><th class="r">Meta</th><th class="r">Realizado</th><th class="r">Vendas</th><th class="r">%</th></tr></thead><tbody>${gestorRows}</tbody></table>` : ''}
   <h2>Funil de Vendas</h2><table><thead><tr><th>Cliente</th><th class="r">Valor Médio</th><th class="r">Valor Atual</th><th>Status Funil</th><th>Próximos Passos</th><th>Ação</th></tr></thead><tbody>${funnelRows}</tbody></table>

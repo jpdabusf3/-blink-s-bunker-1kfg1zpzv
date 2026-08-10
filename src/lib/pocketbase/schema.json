@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-10T11:23:20.771Z",
+  "generatedAt": "2026-08-10T11:53:11.034Z",
   "collections": [
     {
       "name": "users",
@@ -710,7 +710,9 @@
           "system": false
         }
       ],
-      "indexes": []
+      "indexes": [
+        "CREATE INDEX `idx_notifications_milestone_type` ON `notifications` (milestone, type)"
+      ]
     },
     {
       "name": "documents",
@@ -1670,6 +1672,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "period_view",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE INDEX idx_dashboard_preferences_userId ON dashboard_preferences (userId)"]

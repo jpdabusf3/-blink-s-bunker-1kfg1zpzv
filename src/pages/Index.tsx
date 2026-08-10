@@ -124,7 +124,8 @@ export default function Index() {
   const [speciesFilter, setSpeciesFilter] = useState('all')
   const [integrationLoading, setIntegrationLoading] = useState(false)
 
-  const { blocks, setBlocks, toggleBlock, reset } = useDashboardPreferences()
+  const { blocks, setBlocks, toggleBlock, reset, periodView, setPeriodView } =
+    useDashboardPreferences()
 
   const moveBlock = (fromIndex: number, toIndex: number) => {
     const newBlocks = [...blocks]
@@ -223,7 +224,7 @@ export default function Index() {
       case 'executive':
         return <ExecutiveDashboardCard />
       case 'consolidated':
-        return <ConsolidatedDashboard />
+        return <ConsolidatedDashboard periodView={periodView} onPeriodViewChange={setPeriodView} />
       case 'gestor-comparison':
         return <GestorTecnicoComparisonCard />
       case 'metrics':

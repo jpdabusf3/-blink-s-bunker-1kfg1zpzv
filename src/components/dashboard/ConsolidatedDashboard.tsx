@@ -15,10 +15,20 @@ import {
   Layers,
   Users,
   UserCog,
+  Calendar,
+  CalendarDays,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-export function ConsolidatedDashboard() {
+interface ConsolidatedDashboardProps {
+  periodView?: 'mensal' | 'trimestral'
+  onPeriodViewChange?: (view: 'mensal' | 'trimestral') => void
+}
+
+export function ConsolidatedDashboard({
+  periodView = 'mensal',
+  onPeriodViewChange,
+}: ConsolidatedDashboardProps) {
   const [data, setData] = useState<ConsolidatedData | null>(null)
   const [loading, setLoading] = useState(true)
   const [perfView, setPerfView] = useState<'vendedor' | 'gestor'>('vendedor')
@@ -39,6 +49,7 @@ export function ConsolidatedDashboard() {
   useRealtime('metas', loadData)
   useRealtime('historico_vendas', loadData)
   useRealtime('factories', loadData)
+  useRealtime('notifications', loadData)
 
   if (loading)
     return (
@@ -48,16 +59,46 @@ export function ConsolidatedDashboard() {
     )
   if (!data) return null
 
-  const { kpis, monthComparisons, vendorRanking, gestorRanking } = data
-  const salesDelta = (monthComparisons[1]?.sales || 0) - (monthComparisons[0]?.sales || 0)
-  const salesDeltaPct =
-    (monthComparisons[0]?.sales || 0) > 0
-      ? (salesDelta / (monthComparisons[0]?.sales || 1)) * 100
-      : 0
+  const { kpis, monthComparisons, quarterlyComparisons, vendorRanking, gestorRanking } = data
+  const isQuarterly = periodView === 'trimestral'
+  const comparisonData = isQuarterly ? quarterlyComparisons : monthComparisons
+  const curSales = comparisonData[1]?.sales || 0
+  const prevSales = comparisonData[0]?.sales || 0
+  const salesDelta = curSales - prevSales
+  const salesDeltaPct = prevSales > 0 ? (salesDelta / prevSales) * 100 : 0
   const ranking = perfView === 'vendedor' ? vendorRanking : gestorRanking
+
+  const achievementPct = isQuarterly
+    ? (comparisonData[1]?.target || 0) > 0
+      ? ((comparisonData[1]?.achieved || 0) / (comparisonData[1]?.target || 1)) * 100
+      : 0
+    : kpis.achievementPct
+  const achievementAchieved = isQuarterly ? comparisonData[1]?.achieved || 0 : kpis.totalAchieved
+  const achievementTarget = isQuarterly ? comparisonData[1]?.target || 0 : kpis.totalTarget
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-end gap-2">
+        <div className="flex gap-1 bg-muted rounded-lg p-0.5">
+          <Button
+            size="sm"
+            variant={!isQuarterly ? 'default' : 'ghost'}
+            onClick={() => onPeriodViewChange?.('mensal')}
+            className="h-7 px-2 text-xs gap-1"
+          >
+            <Calendar className="w-3 h-3" /> Mensal
+          </Button>
+          <Button
+            size="sm"
+            variant={isQuarterly ? 'default' : 'ghost'}
+            onClick={() => onPeriodViewChange?.('trimestral')}
+            className="h-7 px-2 text-xs gap-1"
+          >
+            <CalendarDays className="w-3 h-3" /> Trimestral
+          </Button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card className="shadow-subtle p-4">
           <div className="flex items-center gap-2 mb-1">
@@ -90,23 +131,24 @@ export function ConsolidatedDashboard() {
           <div className="flex items-center gap-2 mb-1">
             <TrendingUp className="w-4 h-4 text-primary" />
             <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground">
-              Atingimento Meta
+              Atingimento Meta{isQuarterly ? ' (Trim.)' : ''}
             </h3>
           </div>
-          <div className="text-lg sm:text-2xl font-bold">{kpis.achievementPct.toFixed(1)}%</div>
+          <div className="text-lg sm:text-2xl font-bold">{achievementPct.toFixed(1)}%</div>
           <div className="text-[10px] text-muted-foreground">
-            {formatCompactCurrency(kpis.totalAchieved)} / {formatCompactCurrency(kpis.totalTarget)}
+            {formatCompactCurrency(achievementAchieved)} /{' '}
+            {formatCompactCurrency(achievementTarget)}
           </div>
         </Card>
         <Card className="shadow-subtle p-4">
           <div className="flex items-center gap-2 mb-1">
             <DollarSign className="w-4 h-4 text-primary" />
             <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground">
-              Total Vendas
+              Total Vendas{isQuarterly ? ' (Trim. Atual)' : ''}
             </h3>
           </div>
           <div className="text-lg sm:text-2xl font-bold text-primary">
-            {formatCompactCurrency(kpis.totalSales)}
+            {formatCompactCurrency(curSales)}
           </div>
           <div className="flex items-center gap-1 text-[10px]">
             {salesDelta >= 0 ? (
@@ -118,7 +160,9 @@ export function ConsolidatedDashboard() {
               {salesDelta >= 0 ? '+' : ''}
               {salesDeltaPct.toFixed(1)}%
             </span>
-            <span className="text-muted-foreground">vs mês anterior</span>
+            <span className="text-muted-foreground">
+              vs {isQuarterly ? 'trim. anterior' : 'mês anterior'}
+            </span>
           </div>
         </Card>
       </div>
@@ -126,8 +170,12 @@ export function ConsolidatedDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="shadow-subtle">
           <CardHeader>
-            <CardTitle className="text-sm">Comparativo Mensal</CardTitle>
-            <CardDescription>Vendas e Atingimento</CardDescription>
+            <CardTitle className="text-sm">
+              {isQuarterly ? 'Comparativo Trimestral' : 'Comparativo Mensal'}
+            </CardTitle>
+            <CardDescription>
+              {isQuarterly ? 'Vendas e Atingimento por Trimestre' : 'Vendas e Atingimento'}
+            </CardDescription>
           </CardHeader>
           <CardContent className="h-[240px]">
             <ChartContainer
@@ -137,7 +185,7 @@ export function ConsolidatedDashboard() {
               }}
               className="h-full w-full"
             >
-              <BarChart data={monthComparisons} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
+              <BarChart data={comparisonData} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                 <XAxis
                   dataKey="label"
