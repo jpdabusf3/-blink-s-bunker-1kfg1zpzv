@@ -28,6 +28,7 @@ import { FactoriesBySpeciesCard } from '@/components/dashboard/FactoriesBySpecie
 import { HistoricalComparisonCard } from '@/components/dashboard/HistoricalComparisonCard'
 import { TimelineSummaryCard } from '@/components/dashboard/TimelineSummaryCard'
 import { GeographicOverview } from '@/components/dashboard/GeographicOverview'
+import { ExecutiveDashboardCard } from '@/components/dashboard/ExecutiveDashboardCard'
 import { UserFilter } from '@/components/UserFilter'
 import { testIntegration } from '@/services/integration-test'
 import { toast } from 'sonner'
@@ -40,6 +41,7 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 
 const DEFAULT_BLOCKS = [
   'metrics',
+  'executive',
   'targets',
   'role-widgets',
   'maps',
@@ -117,7 +119,7 @@ export default function Index() {
   const [integrationLoading, setIntegrationLoading] = useState(false)
 
   const [blocks, setBlocks] = useState<string[]>(() => {
-    const saved = localStorage.getItem('blink_dashboard_order_v5')
+    const saved = localStorage.getItem('blink_dashboard_order_v6')
     if (saved) {
       const parsed = JSON.parse(saved)
       const valid = parsed.filter((b: string) => DEFAULT_BLOCKS.includes(b))
@@ -128,7 +130,7 @@ export default function Index() {
   })
 
   useEffect(() => {
-    localStorage.setItem('blink_dashboard_order_v5', JSON.stringify(blocks))
+    localStorage.setItem('blink_dashboard_order_v6', JSON.stringify(blocks))
   }, [blocks])
 
   const moveBlock = (fromIndex: number, toIndex: number) => {
@@ -225,6 +227,8 @@ export default function Index() {
 
   const renderBlock = (id: string) => {
     switch (id) {
+      case 'executive':
+        return <ExecutiveDashboardCard />
       case 'metrics':
         return (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 print:grid-cols-4 print:gap-4 print:mb-8">

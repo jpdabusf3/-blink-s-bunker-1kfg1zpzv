@@ -1,9 +1,11 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { getAllFactories } from '@/services/factories'
+import { getAllFactories, updateFactoryPB } from '@/services/factories'
 import { getScopedFactories } from '@/lib/user-scope'
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
 import { getVendedoresGestao, type GestaoTecnica } from '@/services/gestao-tecnica'
+import { logActivity } from '@/services/activity-logs'
+import { exportFunilVendasToExcel, exportFunilVendasToPDF } from '@/lib/exportFunilVendas'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,7 +18,7 @@ import {
 } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/utils'
 import { ImportFunilDialog } from '@/components/ImportFunilDialog'
-import { Upload, Filter, User, ArrowRight } from 'lucide-react'
+import { Upload, Filter, User, ArrowRight, Download, FileText } from 'lucide-react'
 import type { Factory } from '@/types'
 
 const STATUS_COLUMNS = ['Inativo', 'Mensal', 'Ativo'] as const
@@ -71,6 +73,31 @@ export default function FunilVendas() {
     [scoped, filters],
   )
 
+  const handleStatusChange = async (factoryId: string, newStatus: string, oldStatus: string) => {
+    if (newStatus === oldStatus) return
+    const factory = factories.find((f) => f.id === factoryId)
+    setFactories((prev) =>
+      prev.map((f) =>
+        f.id === factoryId ? { ...f, status_funil: newStatus as Factory['status_funil'] } : f,
+      ),
+    )
+    try {
+      await updateFactoryPB(factoryId, { status_funil: newStatus } as any)
+      await logActivity(
+        `Status Funil: ${oldStatus} → ${newStatus}`,
+        `Cliente: ${factory?.name || ''}`,
+        factoryId,
+        'factories',
+      )
+    } catch {
+      setFactories((prev) =>
+        prev.map((f) =>
+          f.id === factoryId ? { ...f, status_funil: oldStatus as Factory['status_funil'] } : f,
+        ),
+      )
+    }
+  }
+
   return (
     <div className="flex flex-col h-full animate-fade-in space-y-4">
       <div className="flex justify-between items-start flex-wrap gap-2">
@@ -80,9 +107,27 @@ export default function FunilVendas() {
             Gestão de clientes por status do funil comercial.
           </p>
         </div>
-        <Button size="sm" onClick={() => setImportOpen(true)} className="gap-2">
-          <Upload className="w-4 h-4" /> Importar Funil (Excel)
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => exportFunilVendasToExcel(filtered)}
+            className="gap-2"
+          >
+            <Download className="w-4 h-4" /> Excel
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => exportFunilVendasToPDF(filtered)}
+            className="gap-2"
+          >
+            <FileText className="w-4 h-4" /> PDF
+          </Button>
+          <Button size="sm" onClick={() => setImportOpen(true)} className="gap-2">
+            <Upload className="w-4 h-4" /> Importar Funil (Excel)
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -202,6 +247,21 @@ export default function FunilVendas() {
                           <span className="truncate">{f.vendedor_name}</span>
                         </div>
                       )}
+
+                      <div className="flex gap-1 mt-2 pt-2 border-t">
+                        {STATUS_COLUMNS.map((s) => (
+                          <Button
+                            key={s}
+                            size="sm"
+                            variant={f.status_funil === s ? 'default' : 'outline'}
+                            className="h-6 text-[10px] flex-1 px-1"
+                            disabled={f.status_funil === s}
+                            onClick={() => handleStatusChange(f.id, s, f.status_funil || '')}
+                          >
+                            {s}
+                          </Button>
+                        ))}
+                      </div>
                     </Card>
                   ))}
                   {items.length === 0 && (

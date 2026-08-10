@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-09T02:47:00.506Z",
+  "generatedAt": "2026-08-10T10:21:58.202Z",
   "collections": [
     {
       "name": "users",
@@ -883,6 +883,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "followup_inactivity_days",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []
