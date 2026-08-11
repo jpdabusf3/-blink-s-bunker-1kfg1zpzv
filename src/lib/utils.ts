@@ -6,6 +6,26 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export function normalizeArray(val: any): string[] {
+  if (!val) return []
+  if (Array.isArray(val)) return val
+  if (typeof val === 'string') {
+    if (val.startsWith('[') && val.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(val)
+        if (Array.isArray(parsed)) return parsed
+      } catch {
+        /* intentionally ignored */
+      }
+    }
+    return val
+      .split(',')
+      .map((item: string) => item.trim())
+      .filter(Boolean)
+  }
+  return [String(val)]
+}
+
 export function isStale(dateStr?: string) {
   if (!dateStr) return false
   const diffTime = Math.abs(new Date().getTime() - new Date(dateStr).getTime())
