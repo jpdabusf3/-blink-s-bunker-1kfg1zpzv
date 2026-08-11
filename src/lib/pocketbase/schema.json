@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-11T14:56:56.793Z",
+  "generatedAt": "2026-08-11T19:51:28.541Z",
   "collections": [
     {
       "name": "users",
@@ -121,24 +121,6 @@
           ]
         },
         {
-          "name": "region",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "sector",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "productLineAffinity",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
           "name": "capacity",
           "type": "number",
           "required": false,
@@ -147,18 +129,6 @@
         {
           "name": "potentialValue",
           "type": "number",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "status",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "priority",
-          "type": "text",
           "required": false,
           "system": false
         },
@@ -251,22 +221,6 @@
           "system": false
         },
         {
-          "name": "animalSpecies",
-          "type": "select",
-          "required": false,
-          "system": false,
-          "selectValues": [
-            "Ruminantes",
-            "Aves",
-            "Suinos",
-            "Pet",
-            "Aqua",
-            "Equinos",
-            "Outros",
-            "Multi espécie"
-          ]
-        },
-        {
           "name": "address",
           "type": "text",
           "required": false,
@@ -274,12 +228,6 @@
         },
         {
           "name": "specialty",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "profile_type",
           "type": "text",
           "required": false,
           "system": false
@@ -405,6 +353,77 @@
           "type": "date",
           "required": false,
           "system": false
+        },
+        {
+          "name": "region",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Norte", "Nordeste", "Centro-Oeste", "Sudeste", "Sul"]
+        },
+        {
+          "name": "animalSpecies",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Ruminantes",
+            "Aves",
+            "Suinos",
+            "Pet",
+            "Aqua",
+            "Equinos",
+            "Outros",
+            "Multi espécie"
+          ]
+        },
+        {
+          "name": "profile_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Indústria",
+            "Industria",
+            "Produtor",
+            "Representantes",
+            "Distribuidores",
+            "Revendas",
+            "Cooperativas",
+            "Indústrias",
+            "Integradora",
+            "Premixeira",
+            "Produtores",
+            "Outros",
+            "Distribuidor"
+          ]
+        },
+        {
+          "name": "productLineAffinity",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Adsorventes",
+            "Prebióticos",
+            "Minerais Orgânicos",
+            "Blends",
+            "Ingredientes"
+          ]
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Atendido", "Não atendido", "Prospeção"]
+        },
+        {
+          "name": "priority",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["High", "Medium", "Low"]
         }
       ],
       "indexes": [

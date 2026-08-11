@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Factory, Region, Status, FunnelStage, ProductLine, Priority } from '@/types'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { MultiSelect, MultiSelectOption } from '@/components/ui/multi-select'
 import { useAppContext } from '@/store/AppContext'
 import { useAuth } from '@/hooks/use-auth'
 import { isManager } from '@/lib/user-scope'
@@ -23,6 +24,7 @@ import { COUNTRIES } from '@/lib/countries'
 import { createFactoryPB, updateFactoryPB } from '@/services/factories'
 import { logActivity } from '@/services/activity-logs'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
+import { normalizeArray } from '@/lib/utils'
 import { UserCog } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -42,14 +44,44 @@ const SPECIES_OPTIONS = [
   'Multi espécie',
 ]
 
-const CARTEIRA_OPTIONS = [
+const REGION_OPTIONS = ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul']
+
+const PRIORITY_OPTIONS: MultiSelectOption[] = [
+  { label: 'Alta (Verde)', value: 'High' },
+  { label: 'Média (Amarelo)', value: 'Medium' },
+  { label: 'Baixa (Vermelho)', value: 'Low' },
+]
+
+const STATUS_OPTIONS = ['Atendido', 'Não atendido', 'Prospeção']
+
+const PRODUCT_LINE_OPTIONS = [
+  'Adsorventes',
+  'Prebióticos',
+  'Minerais Orgânicos',
+  'Blends',
+  'Ingredientes',
+]
+
+const CARTEIRA_DIRECT_OPTIONS = ['Indústria', 'Produtor']
+
+const CARTEIRA_INDIRECT_OPTIONS = [
+  'Representantes',
+  'Distribuidores',
+  'Revendas',
+  'Cooperativas',
+  'Indústrias',
+]
+
+const CARTEIRA_DEFAULT_OPTIONS = [
   'Indústria',
-  'Cooperativa',
+  'Produtor',
+  'Representantes',
+  'Distribuidores',
+  'Revendas',
+  'Cooperativas',
   'Integradora',
   'Premixeira',
-  'Produtores',
   'Outros',
-  'Distribuidor',
 ]
 
 export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
@@ -63,13 +95,41 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
 
   const [gestorTecnicoId, setGestorTecnicoId] = useState<string>(factory?.gestor_tecnico_id || '')
   const [vendedorId, setVendedorId] = useState<string>(factory?.vendedor_id || '')
-  const [species, setSpecies] = useState<string>(factory?.animalSpecies || 'Ruminantes')
-  const [carteira, setCarteira] = useState<string>(factory?.profile_type || 'Indústria')
+
+  const [species, setSpecies] = useState<string[]>(() =>
+    factory?.animalSpecies ? normalizeArray(factory.animalSpecies) : ['Ruminantes'],
+  )
+  const [regions, setRegions] = useState<string[]>(() =>
+    factory?.region ? normalizeArray(factory.region) : ['Norte'],
+  )
+  const [priorities, setPriorities] = useState<string[]>(() =>
+    factory?.priority ? normalizeArray(factory.priority) : ['Medium'],
+  )
+  const [statuses, setStatuses] = useState<string[]>(() =>
+    factory?.status ? normalizeArray(factory.status) : ['Prospeção'],
+  )
+  const [productLines, setProductLines] = useState<string[]>(() =>
+    factory?.productLineAffinity ? normalizeArray(factory.productLineAffinity) : ['Adsorventes'],
+  )
+  const [carteira, setCarteira] = useState<string[]>(() =>
+    factory?.profile_type ? normalizeArray(factory.profile_type) : ['Indústria'],
+  )
+
   const [carteiraSegmento, setCarteiraSegmento] = useState<string>(factory?.carteira || '')
   const [grupoCliente, setGrupoCliente] = useState<string>(factory?.grupo_cliente || '')
   const [salesChannelState, setSalesChannelState] = useState<string>(
     (factory?.salesChannel as string) || '',
   )
+
+  const carteiraProfileOptions = useMemo(() => {
+    if (salesChannelState === 'Direct') {
+      return CARTEIRA_DIRECT_OPTIONS
+    }
+    if (salesChannelState === 'Indirect') {
+      return CARTEIRA_INDIRECT_OPTIONS
+    }
+    return CARTEIRA_DEFAULT_OPTIONS
+  }, [salesChannelState])
 
   useEffect(() => {
     Promise.all([getGestoresTecnicos(), getVendedoresGestao()])
@@ -94,6 +154,13 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
     const errors: Record<string, string> = {}
     if (!fd.get('name')) errors.name = 'Nome é obrigatório'
     if (!fd.get('city')) errors.city = 'Cidade é obrigatória'
+    if (species.length === 0) errors.species = 'Selecione ao menos uma espécie'
+    if (regions.length === 0) errors.regions = 'Selecione ao menos uma região'
+    if (carteira.length === 0) errors.carteira = 'Selecione ao menos um perfil em carteira'
+    if (priorities.length === 0) errors.priorities = 'Selecione ao menos uma prioridade'
+    if (statuses.length === 0) errors.statuses = 'Selecione ao menos um status'
+    if (productLines.length === 0) errors.productLines = 'Selecione ao menos uma tendência de linha'
+
     const prob = Number(fd.get('winProbability'))
     if (isNaN(prob) || prob < 0 || prob > 100) errors.winProbability = 'Deve estar entre 0 e 100'
     setFieldErrors(errors)
@@ -102,16 +169,15 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
     const data: Partial<Factory> = {
       name: fd.get('name') as string,
       city: fd.get('city') as string,
-      region: fd.get('region') as Region,
-      sector: fd.get('sector') as string,
-      animalSpecies: species,
-      profile_type: carteira,
-      priority: fd.get('priority') as Priority,
+      region: regions as unknown as Region,
+      animalSpecies: species as unknown as Factory['animalSpecies'],
+      profile_type: carteira as unknown as Factory['profile_type'],
+      priority: priorities as unknown as Priority,
       focusLevel: finalFocus,
-      productLineAffinity: fd.get('productLineAffinity') as ProductLine,
+      productLineAffinity: productLines as unknown as ProductLine,
       capacity: Number(fd.get('capacity')),
       potentialValue: Number(fd.get('potentialValue')),
-      status: fd.get('status') as Status,
+      status: statuses as unknown as Status,
       funnelStage: fd.get('funnelStage') as FunnelStage,
       winProbability: Number(fd.get('winProbability')),
       stateRegion: (userIsManager ? fd.get('stateRegion') : userArea) as Factory['stateRegion'],
@@ -139,7 +205,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
         updateFactory(factory.id, data)
         logActivity(
           `Fábrica atualizada: ${data.name}`,
-          `Gestor Técnico: ${gestorTecnico?.nome || 'Não atribuído'}, Vendedor: ${vendedor?.nome || 'Não atribuído'}, Espécie: ${species}, Carteira: ${carteira}`,
+          `Gestor Técnico: ${gestorTecnico?.nome || 'Não atribuído'}, Vendedor: ${vendedor?.nome || 'Não atribuído'}, Espécies: ${species.join(', ')}, Carteira: ${carteira.join(', ')}`,
           factory.id,
           'factories',
         ).catch(() => {})
@@ -149,7 +215,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
         addFactory({ ...data, id: created.id })
         logActivity(
           `Nova fábrica cadastrada: ${data.name}`,
-          `Gestor Técnico: ${gestorTecnico?.nome || 'Não atribuído'}, Vendedor: ${vendedor?.nome || 'Não atribuído'}, Espécie: ${species}, Carteira: ${carteira}`,
+          `Gestor Técnico: ${gestorTecnico?.nome || 'Não atribuído'}, Vendedor: ${vendedor?.nome || 'Não atribuído'}, Espécies: ${species.join(', ')}, Carteira: ${carteira.join(', ')}`,
           created.id,
           'factories',
         ).catch(() => {})
@@ -193,64 +259,72 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
           <Label>Estado (UF)</Label>
           <Input name="state" defaultValue={factory?.state} placeholder="Ex: SP, PR, MG" />
         </div>
+
         <div className="space-y-2">
-          <Label>Região</Label>
-          <Select name="region" defaultValue={factory?.region || 'Norte'} required>
+          <Label>Região (Múltipla Seleção)</Label>
+          <MultiSelect
+            options={REGION_OPTIONS}
+            value={regions}
+            onChange={setRegions}
+            placeholder="Selecione as Regiões"
+          />
+          {fieldErrors.regions && <p className="text-xs text-destructive">{fieldErrors.regions}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <Label>Espécie Animal (Múltipla Seleção)</Label>
+          <MultiSelect
+            options={SPECIES_OPTIONS}
+            value={species}
+            onChange={setSpecies}
+            placeholder="Selecione as Espécies"
+          />
+          {fieldErrors.species && <p className="text-xs text-destructive">{fieldErrors.species}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <Label>Canal de Vendas</Label>
+          <Select
+            name="salesChannel"
+            value={salesChannelState}
+            onValueChange={setSalesChannelState}
+          >
             <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
+              <SelectValue placeholder="Selecione o canal" />
             </SelectTrigger>
             <SelectContent>
-              {['Norte', 'Sul', 'Leste', 'Oeste', 'Médio-Norte'].map((r) => (
-                <SelectItem key={r} value={r}>
-                  {r}
-                </SelectItem>
-              ))}
+              <SelectItem value="Direct">Direto</SelectItem>
+              <SelectItem value="Indirect">Indireto</SelectItem>
             </SelectContent>
           </Select>
         </div>
+
         <div className="space-y-2">
-          <Label>Espécie Animal</Label>
-          <Select value={species} onValueChange={setSpecies}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione a Espécie" />
-            </SelectTrigger>
-            <SelectContent>
-              {SPECIES_OPTIONS.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label>Carteira - Tipo de Perfil (Múltipla Seleção)</Label>
+          <MultiSelect
+            options={carteiraProfileOptions}
+            value={carteira}
+            onChange={setCarteira}
+            placeholder="Selecione o Perfil do Cliente"
+          />
+          {fieldErrors.carteira && (
+            <p className="text-xs text-destructive">{fieldErrors.carteira}</p>
+          )}
         </div>
+
         <div className="space-y-2">
-          <Label>Carteira (Tipo de Perfil)</Label>
-          <Select value={carteira} onValueChange={setCarteira}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione a Carteira" />
-            </SelectTrigger>
-            <SelectContent>
-              {CARTEIRA_OPTIONS.map((p) => (
-                <SelectItem key={p} value={p}>
-                  {p}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label>Prioridade (Múltipla Seleção)</Label>
+          <MultiSelect
+            options={PRIORITY_OPTIONS}
+            value={priorities}
+            onChange={setPriorities}
+            placeholder="Selecione as Prioridades"
+          />
+          {fieldErrors.priorities && (
+            <p className="text-xs text-destructive">{fieldErrors.priorities}</p>
+          )}
         </div>
-        <div className="space-y-2">
-          <Label>Prioridade</Label>
-          <Select name="priority" defaultValue={factory?.priority || 'Medium'} required>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="High">Alta (Verde)</SelectItem>
-              <SelectItem value="Medium">Média (Amarelo)</SelectItem>
-              <SelectItem value="Low">Baixa (Vermelho)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+
         <div className="space-y-2">
           <Label>Nível de Foco (1-5 ou 'Cliente')</Label>
           <Input
@@ -260,46 +334,33 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
             required
           />
         </div>
+
         <div className="space-y-2">
-          <Label>Status</Label>
-          <Select name="status" defaultValue={factory?.status || 'Prospeção'} required>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {['Atendido', 'Não atendido', 'Prospeção'].map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label>Status (Múltipla Seleção)</Label>
+          <MultiSelect
+            options={STATUS_OPTIONS}
+            value={statuses}
+            onChange={setStatuses}
+            placeholder="Selecione os Status"
+          />
+          {fieldErrors.statuses && (
+            <p className="text-xs text-destructive">{fieldErrors.statuses}</p>
+          )}
         </div>
+
         <div className="space-y-2">
-          <Label>Setor de Atuação</Label>
-          <Input name="sector" defaultValue={factory?.sector || 'Ruminantes'} required />
+          <Label>Tendência de Linha - Blink (Múltipla Seleção)</Label>
+          <MultiSelect
+            options={PRODUCT_LINE_OPTIONS}
+            value={productLines}
+            onChange={setProductLines}
+            placeholder="Selecione as Linhas"
+          />
+          {fieldErrors.productLines && (
+            <p className="text-xs text-destructive">{fieldErrors.productLines}</p>
+          )}
         </div>
-        <div className="space-y-2">
-          <Label>Tendência de Linha (Blink)</Label>
-          <Select
-            name="productLineAffinity"
-            defaultValue={factory?.productLineAffinity || 'Adsorventes'}
-            required
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {['Adsorventes', 'Prebióticos', 'Minerais Orgânicos', 'Blends', 'Ingredientes'].map(
-                (s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ),
-              )}
-            </SelectContent>
-          </Select>
-        </div>
+
         <div className="space-y-2">
           <Label>Capacidade (ton/mês)</Label>
           <Input type="number" name="capacity" defaultValue={factory?.capacity} required />
@@ -403,24 +464,8 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label>Canal de Vendas</Label>
-          <Select
-            name="salesChannel"
-            value={salesChannelState}
-            onValueChange={setSalesChannelState}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o canal" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Direct">Direto</SelectItem>
-              <SelectItem value="Indirect">Indireto</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
         {salesChannelState === 'Indirect' && (
-          <div className="space-y-2">
+          <div className="space-y-2 md:col-span-2">
             <Label>Tipo de Canal Indireto</Label>
             <Select name="indirectChannelType" defaultValue={factory?.indirectChannelType || ''}>
               <SelectTrigger>

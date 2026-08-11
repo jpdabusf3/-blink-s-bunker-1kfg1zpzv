@@ -18,6 +18,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
 import { getAllFactories, deleteFactoryPB } from '@/services/factories'
 import { getScopedFactories } from '@/lib/user-scope'
+import { normalizeArray } from '@/lib/utils'
 import { FactoryForm } from '@/components/FactoryForm'
 import { ImportExcelDialog } from '@/components/ImportExcelDialog'
 import type { Factory } from '@/types'
@@ -153,9 +154,17 @@ export default function Cadastro() {
                           {[f.city, f.state].filter(Boolean).join('/') || '-'}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="text-xs">
-                            {f.animalSpecies || '-'}
-                          </Badge>
+                          <div className="flex flex-wrap gap-1">
+                            {normalizeArray(f.animalSpecies).length === 0 ? (
+                              <span className="text-muted-foreground">-</span>
+                            ) : (
+                              normalizeArray(f.animalSpecies).map((sp) => (
+                                <Badge key={sp} variant="outline" className="text-xs">
+                                  {sp}
+                                </Badge>
+                              ))
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-xs">{f.funnelStage}</TableCell>
                         <TableCell className="text-sm">

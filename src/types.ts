@@ -1,4 +1,4 @@
-export type Region = 'Norte' | 'Sul' | 'Leste' | 'Oeste' | 'Médio-Norte'
+export type Region = 'Norte' | 'Nordeste' | 'Centro-Oeste' | 'Sudeste' | 'Sul'
 export type Status = 'Atendido' | 'Não atendido' | 'Prospeção'
 export type FunnelStage =
   | 'Lead'
@@ -121,7 +121,7 @@ export interface Factory {
   name: string
   city: string
   country?: string
-  region: Region
+  region: Region | Region[] | string | string[]
   sector?: string
   specialty?: string
   animalSpecies?:
@@ -134,11 +134,12 @@ export interface Factory {
     | 'Outros'
     | 'Multi espécie'
     | string
-  productLineAffinity?: ProductLine
+    | string[]
+  productLineAffinity?: ProductLine | ProductLine[] | string | string[]
   capacity: number
   potentialValue: number
-  status: Status
-  priority?: Priority
+  status: Status | Status[] | string | string[]
+  priority?: Priority | Priority[] | string | string[]
   focusLevel?: number | string
   lastInteraction: string
   contactName: string
