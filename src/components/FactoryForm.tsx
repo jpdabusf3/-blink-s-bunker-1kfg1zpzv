@@ -129,8 +129,8 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
         (fd.get('indirectChannelType') as Factory['indirectChannelType']) || undefined,
       suggested_approach: (fd.get('suggested_approach') as string) || undefined,
       notes: (fd.get('notes') as string) || undefined,
-      carteira: carteiraSegmento || undefined,
-      grupo_cliente: grupoCliente || undefined,
+      carteira: carteiraSegmento && carteiraSegmento !== 'none' ? carteiraSegmento : undefined,
+      grupo_cliente: grupoCliente && grupoCliente !== 'none' ? grupoCliente : undefined,
     }
 
     try {
@@ -445,7 +445,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
               <SelectValue placeholder="Selecione" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Não informada</SelectItem>
+              <SelectItem value="none">Não informada</SelectItem>
               <SelectItem value="AVES">Aves</SelectItem>
               <SelectItem value="PETS">Pets</SelectItem>
               <SelectItem value="RUMINANTES">Ruminantes</SelectItem>
@@ -461,7 +461,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
               <SelectValue placeholder="Selecione" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Não informado</SelectItem>
+              <SelectItem value="none">Não informado</SelectItem>
               <SelectItem value="Indústrias">Indústrias</SelectItem>
               <SelectItem value="Distribuidores Diretos">Distribuidores Diretos</SelectItem>
               <SelectItem value="Produtores Diretos">Produtores Diretos</SelectItem>
