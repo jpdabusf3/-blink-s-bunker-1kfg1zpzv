@@ -87,8 +87,11 @@ export default function Metas() {
         vendedor_id: data.vendedor_id,
         gestor_tecnico_id: data.gestor_tecnico_id === 'all' ? '' : data.gestor_tecnico_id,
         especie: data.especie === 'all' ? '' : data.especie,
+        canal_vendas: data.canal_vendas === 'all' ? '' : data.canal_vendas,
         periodo: data.periodo,
         meta_valor: data.meta_valor,
+        acrescimo_percentual: data.acrescimo_percentual || 0,
+        decrecimo_percentual: data.decrecimo_percentual || 0,
       }
       if (editingId) {
         await updateMeta(editingId, payload)
@@ -159,10 +162,14 @@ export default function Metas() {
       <Card className="shadow-subtle">
         <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <CardTitle className="text-lg">Matriz de Metas × Realizado</CardTitle>
-          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'especie' | 'gestor')}>
+          <Tabs
+            value={viewMode}
+            onValueChange={(v) => setViewMode(v as 'especie' | 'gestor' | 'canal')}
+          >
             <TabsList>
               <TabsTrigger value="especie">Por Espécie</TabsTrigger>
               <TabsTrigger value="gestor">Por Gestor</TabsTrigger>
+              <TabsTrigger value="canal">Por Canal</TabsTrigger>
             </TabsList>
           </Tabs>
         </CardHeader>
