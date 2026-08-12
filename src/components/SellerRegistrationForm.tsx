@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select'
 import { COUNTRIES } from '@/lib/countries'
 import { createSeller } from '@/services/sellers'
+import type { GestaoFuncao } from '@/services/gestao-tecnica'
 import { extractFieldErrors, getErrorMessage, type FieldErrors } from '@/lib/pocketbase/errors'
 import { toast } from 'sonner'
 import { Loader2, Copy } from 'lucide-react'
@@ -40,6 +41,9 @@ export function SellerRegistrationForm({
   const [submitting, setSubmitting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [generatedPassword, setGeneratedPassword] = useState('')
+  const [funcao, setFuncao] = useState<GestaoFuncao>('vendedor')
+  const [subclassificacao, setSubclassificacao] = useState<string>('none')
+  const [canalVendas, setCanalVendas] = useState<string>('none')
 
   const selectedCountry = COUNTRIES.find((c) => c.name === country)
 
