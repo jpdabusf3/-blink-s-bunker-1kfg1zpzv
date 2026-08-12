@@ -4,13 +4,6 @@ routerAdd(
   (e) => {
     var auth = e.auth
     if (!auth) return e.unauthorizedError('auth required')
-    if (
-      auth.email !== 'joaopedro_zoo@hotmail.com' &&
-      auth.getString('job_title') !== 'CEO' &&
-      auth.getString('job_title') !== 'Diretor'
-    ) {
-      return e.forbiddenError('CEO or Diretor only')
-    }
 
     var query = e.requestInfo().query || {}
     var startDate = query.startDate || ''
