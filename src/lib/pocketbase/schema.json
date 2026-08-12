@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-12T13:15:14.418Z",
+  "generatedAt": "2026-08-12T13:38:32.444Z",
   "collections": [
     {
       "name": "users",
@@ -1165,6 +1165,32 @@
           "required": false,
           "system": false,
           "selectValues": ["BOVINO", "SUINO", "AVE", "PET", "AQUA"]
+        },
+        {
+          "name": "acrescimo_percentual",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "decrecimo_percentual",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "canal_vendas",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Direto",
+            "Distribuidor",
+            "Indústria",
+            "Premixera",
+            "Cooperativa",
+            "Online"
+          ]
         }
       ],
       "indexes": [
@@ -1172,7 +1198,8 @@
         "CREATE INDEX `idx_metas_vendedor_id_periodo` ON `metas` (vendedor_id, periodo)",
         "CREATE INDEX `idx_metas_gestor_tecnico_id` ON `metas` (gestor_tecnico_id)",
         "CREATE INDEX `idx_metas_especie` ON `metas` (especie)",
-        "CREATE INDEX `idx_metas_periodo` ON `metas` (periodo)"
+        "CREATE INDEX `idx_metas_periodo` ON `metas` (periodo)",
+        "CREATE INDEX `idx_metas_canal_vendas` ON `metas` (canal_vendas)"
       ]
     },
     {
@@ -1505,13 +1532,6 @@
           "system": false
         },
         {
-          "name": "funcao",
-          "type": "select",
-          "required": true,
-          "system": false,
-          "selectValues": ["gestor_tecnico", "vendedor"]
-        },
-        {
           "name": "regiao",
           "type": "text",
           "required": false,
@@ -1543,6 +1563,34 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "funcao",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "gestor_tecnico",
+            "vendedor",
+            "gestor_comercial",
+            "gestor_especie",
+            "diretor",
+            "ceo"
+          ]
+        },
+        {
+          "name": "subclassificacao",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["indiretos", "diretos"]
+        },
+        {
+          "name": "canal_vendas",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["indireto", "direto"]
         }
       ],
       "indexes": ["CREATE INDEX idx_gestao_tecnica_funcao ON gestao_tecnica (funcao)"]

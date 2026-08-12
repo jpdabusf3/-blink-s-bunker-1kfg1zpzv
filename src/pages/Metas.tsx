@@ -24,7 +24,7 @@ export default function Metas() {
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<'especie' | 'gestor'>('especie')
+  const [viewMode, setViewMode] = useState<'especie' | 'gestor' | 'canal'>('especie')
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
   const loadData = async () => {

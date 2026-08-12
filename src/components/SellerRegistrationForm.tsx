@@ -49,6 +49,9 @@ export function SellerRegistrationForm({
       setEmail('')
       setCountry('Brasil')
       setGeographicArea('')
+      setFuncao('vendedor')
+      setSubclassificacao('none')
+      setCanalVendas('none')
       setFieldErrors({})
       setGeneratedPassword('')
     }
@@ -78,6 +81,10 @@ export function SellerRegistrationForm({
         email: email.trim(),
         geographicArea,
         country,
+        funcao,
+        subclassificacao:
+          funcao === 'gestor_comercial' && subclassificacao !== 'none' ? subclassificacao : '',
+        canal_vendas: canalVendas !== 'none' ? canalVendas : '',
       })
       setGeneratedPassword(result.password)
       toast.success('Vendedor cadastrado com sucesso! Senha temporária gerada.')

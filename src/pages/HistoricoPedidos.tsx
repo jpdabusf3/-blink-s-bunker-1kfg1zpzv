@@ -43,9 +43,9 @@ export default function HistoricoPedidos() {
           <History className="w-6 h-6 text-primary-foreground" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Histórico de Pedidos</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Implantação de Novos Pedidos</h1>
           <p className="text-muted-foreground text-sm">
-            Acompanhe o histórico de pedidos por marca e mês.
+            Acompanhe a implantação de novos pedidos por marca e mês.
           </p>
         </div>
       </div>

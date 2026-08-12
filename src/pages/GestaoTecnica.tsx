@@ -35,23 +35,49 @@ import {
   createGestaoTecnica,
   updateGestaoTecnica,
   deleteGestaoTecnica,
+  type GestaoFuncao,
   type GestaoTecnica,
 } from '@/services/gestao-tecnica'
 
 const CARTEIRAS = ['AVES', 'PETS', 'RUMINANTES', 'SUINOS', 'AQUA']
+
+const FUNCAO_LABELS: Record<GestaoFuncao, string> = {
+  gestor_tecnico: 'Gestor Técnico',
+  vendedor: 'Vendedor',
+  gestor_comercial: 'Gestor Comercial',
+  gestor_especie: 'Gestor de Espécie',
+  diretor: 'Diretor',
+  ceo: 'CEO',
+}
+
+const FUNCAO_OPTIONS = Object.entries(FUNCAO_LABELS) as [GestaoFuncao, string][]
+
+interface FormState {
+  nome: string
+  funcao: GestaoFuncao
+  regiao: string
+  carteira: string
+  ativo: boolean
+  subclassificacao: string
+  canal_vendas: string
+}
+
+const EMPTY_FORM: FormState = {
+  nome: '',
+  funcao: 'gestor_tecnico',
+  regiao: 'MT',
+  carteira: '',
+  ativo: true,
+  subclassificacao: 'none',
+  canal_vendas: 'none',
+}
 
 export default function GestaoTecnica() {
   const [members, setMembers] = useState<GestaoTecnica[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [form, setForm] = useState({
-    nome: '',
-    funcao: 'gestor_tecnico' as 'gestor_tecnico' | 'vendedor',
-    regiao: 'MT',
-    carteira: '',
-    ativo: true,
-  })
+  const [form, setForm] = useState<FormState>(EMPTY_FORM)
 
   const loadData = async () => {
     try {
@@ -77,8 +103,16 @@ export default function GestaoTecnica() {
     }
     try {
       const payload = {
-        ...form,
+        nome: form.nome,
+        funcao: form.funcao,
+        regiao: form.regiao,
         carteira: form.carteira || undefined,
+        ativo: form.ativo,
+        subclassificacao:
+          form.funcao === 'gestor_comercial' && form.subclassificacao !== 'none'
+            ? form.subclassificacao
+            : '',
+        canal_vendas: form.canal_vendas !== 'none' ? form.canal_vendas : '',
       }
       if (editingId) {
         await updateGestaoTecnica(editingId, payload)
@@ -89,7 +123,7 @@ export default function GestaoTecnica() {
       }
       setOpen(false)
       setEditingId(null)
-      setForm({ nome: '', funcao: 'gestor_tecnico', regiao: 'MT', carteira: '', ativo: true })
+      setForm(EMPTY_FORM)
       loadData()
     } catch {
       toast.error('Erro ao salvar')
@@ -103,6 +137,8 @@ export default function GestaoTecnica() {
       regiao: m.regiao,
       carteira: m.carteira || '',
       ativo: m.ativo,
+      subclassificacao: m.subclassificacao || 'none',
+      canal_vendas: m.canal_vendas || 'none',
     })
     setEditingId(m.id)
     setOpen(true)
@@ -140,7 +176,7 @@ export default function GestaoTecnica() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Gestão Técnica</h1>
             <p className="text-muted-foreground text-sm">
-              Gestores técnicos e vendedores por região.
+              Gestores técnicos, vendedores e demais cargos por região.
             </p>
           </div>
         </div>
@@ -150,13 +186,7 @@ export default function GestaoTecnica() {
             setOpen(v)
             if (!v) {
               setEditingId(null)
-              setForm({
-                nome: '',
-                funcao: 'gestor_tecnico',
-                regiao: 'MT',
-                carteira: '',
-                ativo: true,
-              })
+              setForm(EMPTY_FORM)
             }
           }}
         >
@@ -181,17 +211,38 @@ export default function GestaoTecnica() {
                 <Label>Função</Label>
                 <Select
                   value={form.funcao}
-                  onValueChange={(v) => setForm({ ...form, funcao: v as any })}
+                  onValueChange={(v) => setForm({ ...form, funcao: v as GestaoFuncao })}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="gestor_tecnico">Gestor Técnico</SelectItem>
-                    <SelectItem value="vendedor">Vendedor</SelectItem>
+                    {FUNCAO_OPTIONS.map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
+              {form.funcao === 'gestor_comercial' && (
+                <div className="space-y-2">
+                  <Label>Subclassificação</Label>
+                  <Select
+                    value={form.subclassificacao}
+                    onValueChange={(v) => setForm({ ...form, subclassificacao: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Nenhuma" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhuma</SelectItem>
+                      <SelectItem value="indiretos">Indiretos</SelectItem>
+                      <SelectItem value="diretos">Diretos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Região</Label>
@@ -219,6 +270,22 @@ export default function GestaoTecnica() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Canal de Vendas</Label>
+                <Select
+                  value={form.canal_vendas}
+                  onValueChange={(v) => setForm({ ...form, canal_vendas: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Nenhum" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    <SelectItem value="indireto">Indireto</SelectItem>
+                    <SelectItem value="direto">Direto</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex items-center gap-2">
                 <Switch
@@ -260,6 +327,8 @@ export default function GestaoTecnica() {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>Função</TableHead>
+                <TableHead>Subclassificação</TableHead>
+                <TableHead>Canal</TableHead>
                 <TableHead>Região</TableHead>
                 <TableHead>Carteira</TableHead>
                 <TableHead>Status</TableHead>
@@ -269,7 +338,7 @@ export default function GestaoTecnica() {
             <TableBody>
               {members.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground h-16">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground h-16">
                     Nenhum membro cadastrado.
                   </TableCell>
                 </TableRow>
@@ -279,8 +348,22 @@ export default function GestaoTecnica() {
                     <TableCell className="font-medium">{m.nome}</TableCell>
                     <TableCell>
                       <Badge variant={m.funcao === 'gestor_tecnico' ? 'default' : 'secondary'}>
-                        {m.funcao === 'gestor_tecnico' ? 'Gestor Técnico' : 'Vendedor'}
+                        {FUNCAO_LABELS[m.funcao] || m.funcao}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {m.subclassificacao
+                        ? m.subclassificacao === 'indiretos'
+                          ? 'Indiretos'
+                          : 'Diretos'
+                        : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {m.canal_vendas
+                        ? m.canal_vendas === 'indireto'
+                          ? 'Indireto'
+                          : 'Direto'
+                        : '-'}
                     </TableCell>
                     <TableCell>{m.regiao}</TableCell>
                     <TableCell>{m.carteira || '-'}</TableCell>

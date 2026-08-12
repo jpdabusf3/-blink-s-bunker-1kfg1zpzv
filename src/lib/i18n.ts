@@ -172,7 +172,7 @@ const es: T = {
   'nav.dashboard': 'Panel',
   'nav.cadastro': 'Registro',
   'nav.funil': 'Embudo',
-  'nav.pedidos': 'Historial de Pedidos',
+  'nav.pedidos': 'Implantación de Nuevos Pedidos',
   'nav.swot': 'Matriz SWOT',
   'nav.prioridade': 'Prioridad',
   'nav.metas': 'Metas',

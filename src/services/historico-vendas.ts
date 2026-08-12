@@ -52,6 +52,17 @@ export const updateHistoricoVenda = (id: string, data: Partial<HistoricoVenda>) 
 
 export const deleteHistoricoVenda = (id: string) => pb.collection('historico_vendas').delete(id)
 
+export async function uploadPedidoPdf(
+  pdfText: string,
+  rows: Record<string, unknown>[],
+): Promise<UploadPedidoResult & { campos_ausentes?: string[] }> {
+  return pb.send('/backend/v1/processar-pedido-pdf', {
+    method: 'POST',
+    body: JSON.stringify({ pdfText, rows }),
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
 export async function uploadPedido(file: File): Promise<UploadPedidoResult> {
   const arrayBuffer = await file.arrayBuffer()
   const workbook = XLSX.read(arrayBuffer, { type: 'array' })
@@ -78,6 +89,7 @@ export function downloadPedidoModel(): void {
       canal_vendas: 'Direto',
       valor: 15000.5,
       observacoes: 'Pedido de exemplo',
+      linhas_portfolio: 'Adsorventes; Prebióticos',
     },
   ]
   const ws = XLSX.utils.json_to_sheet(template)

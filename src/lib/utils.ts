@@ -54,6 +54,18 @@ export function formatCurrency(value: number) {
   }).format(value)
 }
 
+export function formatDateTime(value: string | number | Date) {
+  const d = typeof value === 'string' || typeof value === 'number' ? new Date(value) : value
+  if (isNaN(d.getTime())) return '—'
+  return d.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export function formatCompactCurrency(value: number) {
   const isNegative = value < 0
   const absValue = Math.abs(value)

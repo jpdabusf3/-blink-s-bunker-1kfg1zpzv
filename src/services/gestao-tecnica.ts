@@ -1,12 +1,22 @@
 import pb from '@/lib/pocketbase/client'
 
+export type GestaoFuncao =
+  | 'gestor_tecnico'
+  | 'vendedor'
+  | 'gestor_comercial'
+  | 'gestor_especie'
+  | 'diretor'
+  | 'ceo'
+
 export interface GestaoTecnica {
   id: string
   nome: string
-  funcao: 'gestor_tecnico' | 'vendedor'
+  funcao: GestaoFuncao
   regiao: string
   carteira?: string
   ativo: boolean
+  subclassificacao?: 'indiretos' | 'diretos' | string
+  canal_vendas?: 'indireto' | 'direto' | string
   created: string
   updated: string
 }
@@ -22,10 +32,15 @@ export const getGestoresTecnicos = () =>
 
 export const getVendedoresGestao = () =>
   pb.collection('gestao_tecnica').getFullList<GestaoTecnica>({
-    filter: "funcao = 'vendedor'",
+    filter: "funcao = 'vendedor' && ativo = true",
     sort: 'nome',
   })
 
+export const getGestoresGestao = () =>
+  pb.collection('gestao_tecnica').getFullList<GestaoTecnica>({
+    filter: "funcao = 'gestor_tecnico' && ativo = true",
+    sort: 'nome',
+  })
 export const createGestaoTecnica = (data: Partial<GestaoTecnica>) =>
   pb.collection('gestao_tecnica').create(data)
 

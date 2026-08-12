@@ -41,7 +41,7 @@ export function AppSidebar() {
     { name: t('nav.funil'), path: '/funil', icon: BarChart2 },
     { name: 'Funil de Vendas', path: '/funil-vendas', icon: Layers },
     ...(showManager ? [{ name: 'Gestão Técnica', path: '/gestao-tecnica', icon: UserCog }] : []),
-    { name: t('nav.pedidos'), path: '/pedidos', icon: ShoppingCart },
+    { name: 'Implantação de Novos Pedidos', path: '/pedidos', icon: ShoppingCart },
     { name: 'Histórico de Vendas', path: '/historico-vendas', icon: TrendingUp },
     { name: t('nav.swot'), path: '/swot', icon: Target },
     { name: t('nav.prioridade'), path: '/matriz', icon: Grid },

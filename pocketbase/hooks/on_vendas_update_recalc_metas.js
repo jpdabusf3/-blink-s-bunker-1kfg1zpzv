@@ -27,6 +27,7 @@ onRecordAfterUpdateSuccess((e) => {
       var mGest = meta.getString('gestor_tecnico_id') || ''
       var mEsp = meta.getString('especie') || ''
       var mPer = meta.getString('periodo') || ''
+      var mCanal = meta.getString('canal_vendas') || ''
 
       var total = 0
       for (var j = 0; j < allSales.length; j++) {
@@ -41,6 +42,7 @@ onRecordAfterUpdateSuccess((e) => {
         if (mVend && mVend !== (sale.getString('vendedor_id') || '')) continue
         if (mGest && mGest !== (sale.getString('gestor_tecnico_id') || '')) continue
         if (mEsp && mEsp !== (sale.getString('especie') || '')) continue
+        if (mCanal && mCanal !== (sale.getString('canal_vendas') || '')) continue
         total += sale.getFloat('valor') || 0
       }
 

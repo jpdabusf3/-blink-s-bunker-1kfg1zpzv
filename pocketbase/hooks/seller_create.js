@@ -50,6 +50,19 @@ routerAdd(
     record.set('deactivated', true)
     $app.save(record)
 
+    // Mirror the new member into gestao_tecnica with the supplied classification.
+    try {
+      var gtCol = $app.findCollectionByNameOrId('gestao_tecnica')
+      var gtRec = new Record(gtCol)
+      gtRec.set('nome', body.name.trim())
+      gtRec.set('funcao', body.funcao || 'vendedor')
+      gtRec.set('regiao', body.geographicArea || '')
+      gtRec.set('ativo', false)
+      if (body.subclassificacao) gtRec.set('subclassificacao', body.subclassificacao)
+      if (body.canal_vendas) gtRec.set('canal_vendas', body.canal_vendas)
+      $app.save(gtRec)
+    } catch (_) {}
+
     var logsCol = $app.findCollectionByNameOrId('activity_logs')
     var log = new Record(logsCol)
     log.set('user', e.auth.id)

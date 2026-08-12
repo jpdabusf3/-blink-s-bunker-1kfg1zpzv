@@ -45,9 +45,10 @@ import { Label } from '@/components/ui/label'
 import { useAppContext } from '@/store/AppContext'
 import { formatCurrency } from '@/lib/utils'
 import { exportOrdersToExcel, exportOrdersToPDF } from '@/lib/exportUtils'
+import { UploadPedidoDialog } from '@/components/UploadPedidoDialog'
 import { OrderForm } from '@/components/OrderForm'
 import { UserFilter } from '@/components/UserFilter'
-import { Plus, Edit2, Trash2, Filter, Download } from 'lucide-react'
+import { Plus, Edit2, Trash2, Filter, Download, Upload } from 'lucide-react'
 import { Order } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 
@@ -157,27 +158,35 @@ export default function Pedidos() {
     <div className="space-y-6 animate-fade-in pb-10">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Histórico de Pedidos</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Implantação de Novos Pedidos</h1>
           <p className="text-muted-foreground text-sm">
-            Acompanhe o histórico de compras e registre novos pedidos.
+            Implante novos pedidos via upload de PDF de nota fiscal + modelo Excel, com extração
+            automática por IA.
           </p>
         </div>
-        <Dialog open={isNewDialogOpen} onOpenChange={setIsNewDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 shadow-sm">
-              <Plus className="w-4 h-4" /> Registrar Pedido
+        <div className="flex gap-2">
+          <UploadPedidoDialog onImported={() => window.location.reload()}>
+            <Button variant="outline" className="gap-2 shadow-sm">
+              <Upload className="w-4 h-4" /> Importar PDF + Excel
             </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Registrar Novo Pedido</DialogTitle>
-            </DialogHeader>
-            <OrderForm
-              onSubmit={() => setIsNewDialogOpen(false)}
-              initialFactoryId={factoryIdParam !== 'all' ? factoryIdParam : undefined}
-            />
-          </DialogContent>
-        </Dialog>
+          </UploadPedidoDialog>
+          <Dialog open={isNewDialogOpen} onOpenChange={setIsNewDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2 shadow-sm">
+                <Plus className="w-4 h-4" /> Registrar Pedido
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Registrar Novo Pedido</DialogTitle>
+              </DialogHeader>
+              <OrderForm
+                onSubmit={() => setIsNewDialogOpen(false)}
+                initialFactoryId={factoryIdParam !== 'all' ? factoryIdParam : undefined}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Card className="shadow-subtle mb-6">

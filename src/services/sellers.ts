@@ -1,10 +1,15 @@
 import pb from '@/lib/pocketbase/client'
 
+import type { GestaoFuncao } from '@/services/gestao-tecnica'
+
 export interface SellerRegistration {
   name: string
   email: string
   geographicArea?: string
   country?: string
+  funcao?: GestaoFuncao
+  subclassificacao?: 'indiretos' | 'diretos' | string
+  canal_vendas?: 'indireto' | 'direto' | string
 }
 
 export interface SellerRegistrationResult {

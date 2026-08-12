@@ -6,6 +6,7 @@ onRecordAfterCreateSuccess((e) => {
     var mGest = meta.getString('gestor_tecnico_id') || ''
     var mEsp = meta.getString('especie') || ''
     var mPer = meta.getString('periodo') || ''
+    var mCanal = meta.getString('canal_vendas') || ''
 
     var allSales = $app.findRecordsByFilter('historico_vendas', '1=1', '-data', 50000, 0)
     var MONTHS = [
@@ -36,6 +37,7 @@ onRecordAfterCreateSuccess((e) => {
       if (mVend && mVend !== (sale.getString('vendedor_id') || '')) continue
       if (mGest && mGest !== (sale.getString('gestor_tecnico_id') || '')) continue
       if (mEsp && mEsp !== (sale.getString('especie') || '')) continue
+      if (mCanal && mCanal !== (sale.getString('canal_vendas') || '')) continue
       total += sale.getFloat('valor') || 0
     }
 

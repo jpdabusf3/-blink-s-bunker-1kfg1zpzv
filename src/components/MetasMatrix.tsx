@@ -11,6 +11,7 @@ import { cn, formatCompactCurrency } from '@/lib/utils'
 import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 import type { Meta } from '@/services/metas'
 import type { GestaoTecnica } from '@/services/gestao-tecnica'
+import { CANAL_VENDAS_OPTIONS } from '@/services/metas'
 
 const ESPECIES = ['BOVINO', 'SUINO', 'AVE', 'PET', 'AQUA']
 
@@ -73,13 +74,23 @@ interface MetasMatrixProps {
   metas: Meta[]
   vendedores: GestaoTecnica[]
   gestores: GestaoTecnica[]
-  viewMode: 'especie' | 'gestor'
+  viewMode: 'especie' | 'gestor' | 'canal'
 }
 
 export function MetasMatrix({ metas, vendedores, gestores, viewMode }: MetasMatrixProps) {
   const { columns, labels, matrix, rowTotals, colTotals, grandTotal } = useMemo(() => {
-    const cols = viewMode === 'especie' ? ESPECIES : gestores.map((g) => g.id)
-    const lbls = viewMode === 'especie' ? ESPECIES : gestores.map((g) => g.nome)
+    const cols =
+      viewMode === 'especie'
+        ? ESPECIES
+        : viewMode === 'canal'
+          ? [...CANAL_VENDAS_OPTIONS]
+          : gestores.map((g) => g.id)
+    const lbls =
+      viewMode === 'especie'
+        ? ESPECIES
+        : viewMode === 'canal'
+          ? [...CANAL_VENDAS_OPTIONS]
+          : gestores.map((g) => g.nome)
     const m: Record<string, Record<string, CellData>> = {}
     const rt: Record<string, CellData> = {}
     const ct: Record<string, CellData> = {}
@@ -96,7 +107,12 @@ export function MetasMatrix({ metas, vendedores, gestores, viewMode }: MetasMatr
 
     for (const meta of metas) {
       if (!meta.vendedor_id) continue
-      const colKey = viewMode === 'especie' ? meta.especie : meta.gestor_tecnico_id
+      const colKey =
+        viewMode === 'especie'
+          ? meta.especie
+          : viewMode === 'canal'
+            ? meta.canal_vendas
+            : meta.gestor_tecnico_id
       if (!colKey || !cols.includes(colKey)) continue
       if (!m[meta.vendedor_id]) {
         m[meta.vendedor_id] = {}
