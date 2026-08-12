@@ -50,10 +50,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine)
   const { isAuthenticated, loading: authLoading } = useAuth()
 
-  const [factories, setFactories] = useState<Factory[]>(() => {
-    const saved = localStorage.getItem('blink_factories_v3')
-    return saved ? JSON.parse(saved) : mockFactories
-  })
+  const [factories, setFactories] = useState<Factory[]>([])
 
   const [orders, setOrders] = useState<Order[]>(() => {
     const saved = localStorage.getItem('blink_orders_v3')

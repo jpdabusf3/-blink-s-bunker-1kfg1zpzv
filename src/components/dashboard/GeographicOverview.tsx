@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/accordion'
 import { GeographicFactoryCard } from '@/components/dashboard/GeographicFactoryCard'
 import { getContinent } from '@/lib/continent-mapping'
-import { formatCompactCurrency } from '@/lib/utils'
+import { formatCompactCurrency, normalizeArray } from '@/lib/utils'
 import { exportExecutiveMacroReport } from '@/lib/exportReports'
 import { Globe2, Building2, DollarSign, Factory as FactoryIcon, Download } from 'lucide-react'
 import type { Factory } from '@/types'
@@ -87,11 +87,23 @@ export function GeographicOverview() {
         if (filters.country !== 'all' && f.country !== filters.country) return false
         if (filters.continent !== 'all' && getContinent(f.country || '') !== filters.continent)
           return false
-        if (filters.region !== 'all' && f.stateRegion !== filters.region) return false
-        if (filters.species !== 'all' && f.animalSpecies !== filters.species) return false
-        if (filters.profile !== 'all' && f.profile_type !== filters.profile) return false
+        if (filters.region !== 'all') {
+          const rArr = normalizeArray(f.region)
+          if (!rArr.includes(filters.region) && f.stateRegion !== filters.region) return false
+        }
+        if (filters.species !== 'all') {
+          const spArr = normalizeArray(f.animalSpecies)
+          if (!spArr.includes(filters.species)) return false
+        }
+        if (filters.profile !== 'all') {
+          const profArr = normalizeArray(f.profile_type)
+          if (!profArr.includes(filters.profile)) return false
+        }
         if (filters.channel !== 'all' && f.salesChannel !== filters.channel) return false
-        if (filters.status !== 'all' && f.status !== filters.status) return false
+        if (filters.status !== 'all') {
+          const stArr = normalizeArray(f.status)
+          if (!stArr.includes(filters.status)) return false
+        }
         return true
       }),
     [factories, filters],

@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
+import { normalizeArray } from '@/lib/utils'
 import { PieChart, Pie, Cell, Tooltip } from 'recharts'
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'
 import { useAppContext } from '@/store/AppContext'
@@ -31,8 +32,14 @@ export function FactoriesBySpeciesCard({
 
     const map = new Map<string, number>()
     filtered.forEach((f) => {
-      const species = f.animalSpecies || 'Não informado'
-      map.set(species, (map.get(species) || 0) + 1)
+      const speciesArr = normalizeArray(f.animalSpecies)
+      if (speciesArr.length === 0) {
+        map.set('Não informado', (map.get('Não informado') || 0) + 1)
+      } else {
+        speciesArr.forEach((sp) => {
+          map.set(sp, (map.get(sp) || 0) + 1)
+        })
+      }
     })
 
     return Array.from(map.entries())

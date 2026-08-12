@@ -18,6 +18,7 @@ import { getOrders } from '@/services/orders'
 import { getTargets } from '@/services/targets'
 import { Order, Target } from '@/types'
 import { useRealtime } from '@/hooks/use-realtime'
+import { normalizeArray } from '@/lib/utils'
 
 const COLORS = [
   'hsl(var(--chart-1))',
@@ -72,11 +73,26 @@ export function DashboardCharts({ regionFilter = 'Todas as Regiões' }: { region
     }))
     .filter((d) => d.value > 0)
 
-  const regionData = ['Norte', 'Sul', 'Leste', 'Oeste', 'Médio-Norte']
-    .map((region) => ({
-      name: region,
+  const regionData = [
+    'Norte',
+    'Nordeste',
+    'Centro-Oeste',
+    'Sudeste',
+    'Sul',
+    'Oeste',
+    'Leste',
+    'Médio-Norte',
+    'Noroeste',
+    'Sudoeste',
+    'Centro',
+  ]
+    .map((regionName) => ({
+      name: regionName,
       value: filteredFactories
-        .filter((f) => f.region === region)
+        .filter((f) => {
+          const rArr = normalizeArray(f.region)
+          return rArr.includes(regionName) || f.stateRegion === regionName
+        })
         .reduce((s, f) => s + f.potentialValue, 0),
     }))
     .filter((d) => d.value > 0)
@@ -90,7 +106,10 @@ export function DashboardCharts({ regionFilter = 'Todas as Regiões' }: { region
     .map((line) => ({
       name: line,
       value: filteredFactories
-        .filter((f) => f.productLineAffinity === line)
+        .filter((f) => {
+          const lines = normalizeArray(f.productLineAffinity)
+          return lines.includes(line)
+        })
         .reduce((s, f) => s + f.potentialValue, 0),
     }))
     .filter((d) => d.value > 0)

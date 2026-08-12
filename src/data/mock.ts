@@ -127,7 +127,9 @@ function getRegionForCity(city: string): Region {
   return 'Norte'
 }
 
-export const mockFactories: Factory[] = rawData.map((row, index) => {
+export const mockFactories: Factory[] = []
+
+export const mockFactoriesDeprecated: Factory[] = rawData.map((row, index) => {
   const id = (index + 1).toString()
   const name = row[0]
   const focusLevel = row[1]

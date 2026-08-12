@@ -12,7 +12,17 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Loader2, Plus, Trash2, Edit, Building2, Search, Upload } from 'lucide-react'
+import {
+  Loader2,
+  Plus,
+  Trash2,
+  Edit,
+  Building2,
+  Search,
+  Upload,
+  Filter,
+  RotateCcw,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
@@ -21,7 +31,37 @@ import { getScopedFactories } from '@/lib/user-scope'
 import { normalizeArray } from '@/lib/utils'
 import { FactoryForm } from '@/components/FactoryForm'
 import { ImportExcelDialog } from '@/components/ImportExcelDialog'
+import { MultiSelect } from '@/components/ui/multi-select'
 import type { Factory } from '@/types'
+
+const REGION_OPTIONS = ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul']
+const SPECIES_OPTIONS = [
+  'Ruminantes',
+  'Aves',
+  'Suinos',
+  'Pet',
+  'Aqua',
+  'Equinos',
+  'Outros',
+  'Multi espécie',
+]
+const STATUS_OPTIONS = ['Atendido', 'Não atendido', 'Prospeção']
+const PROFILE_OPTIONS = [
+  'Indústria',
+  'Cooperativa',
+  'Integradora',
+  'Premixeira',
+  'Produtores',
+  'Distribuidor',
+  'Outros',
+]
+const PRODUCT_LINE_OPTIONS = [
+  'Adsorventes',
+  'Prebióticos',
+  'Minerais Orgânicos',
+  'Blends',
+  'Ingredientes',
+]
 
 export default function Cadastro() {
   const { user } = useAuth()
@@ -31,6 +71,13 @@ export default function Cadastro() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [editingFactory, setEditingFactory] = useState<Factory | undefined>(undefined)
+
+  // Multi-select filters
+  const [selectedRegions, setSelectedRegions] = useState<string[]>([])
+  const [selectedSpecies, setSelectedSpecies] = useState<string[]>([])
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
+  const [selectedProfiles, setSelectedProfiles] = useState<string[]>([])
+  const [selectedProductLines, setSelectedProductLines] = useState<string[]>([])
 
   const loadData = async () => {
     try {
@@ -49,17 +96,82 @@ export default function Cadastro() {
 
   useRealtime('factories', () => loadData())
 
+  const clearFilters = () => {
+    setSearch('')
+    setSelectedRegions([])
+    setSelectedSpecies([])
+    setSelectedStatuses([])
+    setSelectedProfiles([])
+    setSelectedProductLines([])
+  }
+
+  const hasActiveFilters =
+    search.trim() !== '' ||
+    selectedRegions.length > 0 ||
+    selectedSpecies.length > 0 ||
+    selectedStatuses.length > 0 ||
+    selectedProfiles.length > 0 ||
+    selectedProductLines.length > 0
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return factories
-    const q = search.toLowerCase()
-    return factories.filter(
-      (f) =>
-        f.name.toLowerCase().includes(q) ||
-        f.city?.toLowerCase().includes(q) ||
-        f.gestor_tecnico_name?.toLowerCase().includes(q) ||
-        f.vendedor_name?.toLowerCase().includes(q),
-    )
-  }, [factories, search])
+    return factories.filter((f) => {
+      // Search text match
+      if (search.trim()) {
+        const q = search.toLowerCase()
+        const matchText =
+          f.name.toLowerCase().includes(q) ||
+          f.city?.toLowerCase().includes(q) ||
+          f.gestor_tecnico_name?.toLowerCase().includes(q) ||
+          f.vendedor_name?.toLowerCase().includes(q)
+        if (!matchText) return false
+      }
+
+      // Region multi-match (any selected matches any in factory)
+      if (selectedRegions.length > 0) {
+        const factoryRegions = normalizeArray(f.region)
+        const hasRegion = selectedRegions.some((r) => factoryRegions.includes(r))
+        if (!hasRegion) return false
+      }
+
+      // Species multi-match
+      if (selectedSpecies.length > 0) {
+        const factorySpecies = normalizeArray(f.animalSpecies)
+        const hasSpecies = selectedSpecies.some((s) => factorySpecies.includes(s))
+        if (!hasSpecies) return false
+      }
+
+      // Status multi-match
+      if (selectedStatuses.length > 0) {
+        const factoryStatuses = normalizeArray(f.status)
+        const hasStatus = selectedStatuses.some((st) => factoryStatuses.includes(st))
+        if (!hasStatus) return false
+      }
+
+      // Profile type multi-match
+      if (selectedProfiles.length > 0) {
+        const factoryProfiles = normalizeArray(f.profile_type)
+        const hasProfile = selectedProfiles.some((p) => factoryProfiles.includes(p))
+        if (!hasProfile) return false
+      }
+
+      // Product line affinity multi-match
+      if (selectedProductLines.length > 0) {
+        const factoryLines = normalizeArray(f.productLineAffinity)
+        const hasLine = selectedProductLines.some((l) => factoryLines.includes(l))
+        if (!hasLine) return false
+      }
+
+      return true
+    })
+  }, [
+    factories,
+    search,
+    selectedRegions,
+    selectedSpecies,
+    selectedStatuses,
+    selectedProfiles,
+    selectedProductLines,
+  ])
 
   const handleEdit = (f: Factory) => {
     setEditingFactory(f)
@@ -111,16 +223,94 @@ export default function Cadastro() {
           <CardTitle>Fábricas Cadastradas</CardTitle>
           <CardDescription>{filtered.length} fábrica(s)</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome, cidade, gestor ou vendedor..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
+        <CardContent className="space-y-4">
+          <div className="space-y-3 p-3 bg-muted/20 border rounded-lg">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <Filter className="w-4 h-4 text-primary" />
+                Filtros Multi-Seleção
+              </div>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" /> Limpar Filtros
+                </Button>
+              )}
+            </div>
+
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome, cidade, gestor ou vendedor..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 bg-background"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2.5">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  Região
+                </label>
+                <MultiSelect
+                  options={REGION_OPTIONS}
+                  value={selectedRegions}
+                  onChange={setSelectedRegions}
+                  placeholder="Todas as regiões"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  Espécie Animal
+                </label>
+                <MultiSelect
+                  options={SPECIES_OPTIONS}
+                  value={selectedSpecies}
+                  onChange={setSelectedSpecies}
+                  placeholder="Todas as espécies"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  Status
+                </label>
+                <MultiSelect
+                  options={STATUS_OPTIONS}
+                  value={selectedStatuses}
+                  onChange={setSelectedStatuses}
+                  placeholder="Todos os status"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  Perfil / Carteira
+                </label>
+                <MultiSelect
+                  options={PROFILE_OPTIONS}
+                  value={selectedProfiles}
+                  onChange={setSelectedProfiles}
+                  placeholder="Todos os perfis"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  Linha de Produtos
+                </label>
+                <MultiSelect
+                  options={PRODUCT_LINE_OPTIONS}
+                  value={selectedProductLines}
+                  onChange={setSelectedProductLines}
+                  placeholder="Todas as linhas"
+                />
+              </div>
+            </div>
           </div>
+
           {loading ? (
             <div className="flex justify-center p-8">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
