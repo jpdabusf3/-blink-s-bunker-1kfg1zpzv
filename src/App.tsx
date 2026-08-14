@@ -58,9 +58,9 @@ const App = () => (
                     <Route path="/atividades" element={<Atividades />} />
                     <Route path="/relatorio-atividades" element={<RelatorioAtividades />} />
                     <Route path="/relatorio-performance" element={<PerformanceReport />} />
+                    <Route path="/usuarios" element={<UsersPage />} />
                     <Route path="/documentos" element={<Documents />} />
                     <Route element={<SuperAdminRoute />}>
-                      <Route path="/usuarios" element={<UsersPage />} />
                       <Route path="/equipe" element={<TeamManagement />} />
                       <Route path="/admin/logs" element={<AdminLogs />} />
                     </Route>

@@ -49,12 +49,12 @@ export function AppSidebar() {
     { name: t('nav.relatorios'), path: '/relatorios', icon: BarChart2 },
     { name: 'Rel. Atividades', path: '/relatorio-atividades', icon: ClipboardList },
     { name: 'Rel. Performance', path: '/relatorio-performance', icon: Award },
+    { name: t('nav.usuarios'), path: '/usuarios', icon: Users },
     ...(showMasterOrCeo ? [{ name: 'Equipe', path: '/equipe', icon: UserPlus }] : []),
     ...(showMasterOrCeo ? [{ name: 'Documentos', path: '/documentos', icon: FileText }] : []),
     ...(showMasterOrCeo
       ? [{ name: t('nav.auditoria'), path: '/admin/logs', icon: ScrollText }]
       : []),
-    ...(showMasterOrCeo ? [{ name: t('nav.usuarios'), path: '/usuarios', icon: Users }] : []),
   ]
 
   return (
