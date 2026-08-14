@@ -19,6 +19,15 @@ import { extractFieldErrors, getErrorMessage } from '@/lib/pocketbase/errors'
 import { isAllowedDomain } from '@/lib/user-scope'
 import { COUNTRIES } from '@/lib/countries'
 import { testIntegration } from '@/services/integration-test'
+import pb from '@/lib/pocketbase/client'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -37,6 +46,9 @@ export default function Login() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [integrationLoading, setIntegrationLoading] = useState(false)
   const [integrationResult, setIntegrationResult] = useState<string | null>(null)
+  const [resetOpen, setResetOpen] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetLoading, setResetLoading] = useState(false)
 
   const selectedCountry = COUNTRIES.find((c) => c.name === regData.country)
 
@@ -274,6 +286,35 @@ export default function Login() {
             </p>
           )}
         </div>
+
+        <Dialog open={resetOpen} onOpenChange={setResetOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Esqueci minha senha</DialogTitle>
+              <DialogDescription>
+                Informe seu email e enviaremos um link para redefinir sua senha.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handlePasswordReset} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="reset-email">{t('login.email')}</Label>
+                <Input
+                  id="reset-email"
+                  type="email"
+                  required
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  placeholder={t('login.emailPh')}
+                />
+              </div>
+              <DialogFooter>
+                <Button type="submit" className="w-full" disabled={resetLoading}>
+                  {resetLoading ? 'Enviando...' : 'Enviar email de redefinição'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )

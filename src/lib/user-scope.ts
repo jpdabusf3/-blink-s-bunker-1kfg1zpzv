@@ -3,10 +3,9 @@ import type { Factory, Order, Target } from '@/types'
 const ALLOWED_DOMAINS = ['blinkbiotech.com']
 const SUPER_ADMIN_EMAIL = 'joaopedro_zoo@hotmail.com'
 
-export function isAllowedDomain(email: string): boolean {
-  const normalizedEmail = email.toLowerCase().trim()
-  const domain = normalizedEmail.split('@')[1] || ''
-  return ALLOWED_DOMAINS.includes(domain) || normalizedEmail === SUPER_ADMIN_EMAIL
+export function isAllowedDomain(_email: string): boolean {
+  // Acesso liberado para qualquer domínio de email.
+  return true
 }
 
 const LEADERSHIP_TITLES = ['ceo', 'diretor', 'gestor', 'gerente', 'manager']
