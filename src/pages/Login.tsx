@@ -123,6 +123,21 @@ export default function Login() {
     }
   }
 
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setResetLoading(true)
+    try {
+      await pb.collection('users').requestPasswordReset(resetEmail)
+      toast.success('Email de redefinição enviado')
+      setResetOpen(false)
+      setResetEmail('')
+    } catch (err) {
+      toast.error(getErrorMessage(err))
+    } finally {
+      setResetLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
       <div className="w-full max-w-md bg-card p-8 rounded-xl shadow-lg border">
