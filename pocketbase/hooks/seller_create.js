@@ -2,15 +2,6 @@ routerAdd(
   'POST',
   '/backend/v1/sellers/create',
   (e) => {
-    var authEmail = ''
-    try {
-      authEmail = e.auth.email() || ''
-    } catch (_) {}
-    authEmail = authEmail.toLowerCase().trim()
-    if (authEmail !== 'joaopedro_zoo@hotmail.com') {
-      return e.forbiddenError('Apenas o gestor pode cadastrar vendedores')
-    }
-
     var body = e.requestInfo().body || {}
     var errors = {}
 

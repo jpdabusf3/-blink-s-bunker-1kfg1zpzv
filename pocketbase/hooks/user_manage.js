@@ -6,15 +6,6 @@ routerAdd(
     const body = e.requestInfo().body || {}
     const action = body.action
 
-    var authEmail = ''
-    try {
-      authEmail = e.auth.email() || ''
-    } catch (_) {}
-    authEmail = authEmail.toLowerCase().trim()
-    if (authEmail !== 'joaopedro_zoo@hotmail.com') {
-      return e.forbiddenError('Apenas o gestor pode gerenciar usuários')
-    }
-
     if (id === e.auth.id) {
       return e.badRequestError('Você não pode modificar sua própria conta por esta via')
     }
