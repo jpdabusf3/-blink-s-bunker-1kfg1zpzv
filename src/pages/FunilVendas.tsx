@@ -172,6 +172,13 @@ export default function FunilVendas() {
         `Cliente: ${factory?.name || ''}`,
         factoryId,
         'factories',
+        undefined,
+        {
+          tipo: 'status',
+          status_anterior: oldStatus,
+          status_novo: newStatus,
+          origem: 'funil_vendas',
+        },
       )
     } catch {
       setFactories((prev) =>
@@ -530,13 +537,27 @@ export default function FunilVendas() {
             </div>
           )}
 
-          <SheetFooter className="gap-2">
-            <Button variant="outline" onClick={closePanel} className="gap-2">
-              <X className="w-4 h-4" /> Cancelar
+          <SheetFooter className="gap-2 flex-col">
+            <Button
+              variant="secondary"
+              className="gap-2 w-full"
+              onClick={() => {
+                if (selectedFactory) {
+                  setHistoryFactory(selectedFactory)
+                  setHistoryOpen(true)
+                }
+              }}
+            >
+              <History className="w-4 h-4" /> Ver Histórico de Ações
             </Button>
-            <Button onClick={handlePanelSave} className="gap-2">
-              <Save className="w-4 h-4" /> Salvar
-            </Button>
+            <div className="flex gap-2 w-full">
+              <Button variant="outline" onClick={closePanel} className="gap-2 flex-1">
+                <X className="w-4 h-4" /> Cancelar
+              </Button>
+              <Button onClick={handlePanelSave} className="gap-2 flex-1">
+                <Save className="w-4 h-4" /> Salvar
+              </Button>
+            </div>
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -545,6 +566,13 @@ export default function FunilVendas() {
         open={importOpen}
         onOpenChange={setImportOpen}
         onImported={() => loadData()}
+      />
+
+      <ClientHistoryDialog
+        factory={historyFactory}
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        origin="funil_vendas"
       />
     </div>
   )

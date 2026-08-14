@@ -33,12 +33,20 @@ import {
   Cell,
 } from 'recharts'
 import { ChartContainer } from '@/components/ui/chart'
-import { Loader2, FileSpreadsheet } from 'lucide-react'
+import { Loader2, FileSpreadsheet, FileText, Download, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { exportOrdersToExcel } from '@/lib/exportUtils'
 import { useAppContext } from '@/store/AppContext'
 import { UserFilter } from '@/components/UserFilter'
 import { MatrizVendasReport } from '@/components/MatrizVendasReport'
+import {
+  getClientReports,
+  downloadClientReportFile,
+  deleteClientReport,
+  type ClientReport,
+} from '@/services/client-reports'
+import { useToast } from '@/hooks/use-toast'
+import { formatDateTime } from '@/lib/utils'
 
 const STATE_REGIONS = [
   'Sul',
@@ -62,9 +70,24 @@ const INDIRECT_TYPES = [
 export default function Relatorios() {
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [clientReports, setClientReports] = useState<ClientReport[]>([])
+  const [reportsLoading, setReportsLoading] = useState(true)
   const { factories } = useAppContext()
   const { user } = useAuth()
   const isLeadership = isManager(user)
+  const { toast } = useToast()
+
+  const loadClientReports = () => {
+    setReportsLoading(true)
+    getClientReports()
+      .then(setClientReports)
+      .catch(() => setClientReports([]))
+      .finally(() => setReportsLoading(false))
+  }
+
+  useEffect(() => {
+    loadClientReports()
+  }, [])
 
   const [period, setPeriod] = useState<string>('monthly')
   const [channel, setChannel] = useState<string>('all')

@@ -14,14 +14,29 @@ export const getActivityLogsByRecord = (recordId: string, collectionName: string
     filter: `recordId = "${recordId}" && target_collection = "${collectionName}"`,
   })
 
+export interface ActivityLogMeta {
+  tipo?: string
+  proximo_passo?: string
+  status_anterior?: string
+  status_novo?: string
+  origem?: string
+}
+
 export const logActivity = (
   action: string,
   details: string = '',
   recordId?: string,
   collectionName?: string,
+  meta?: ActivityLogMeta,
 ) =>
   pb.send('/backend/v1/log-activity', {
     method: 'POST',
-    body: JSON.stringify({ action, details, recordId, collectionName }),
+    body: JSON.stringify({
+      action,
+      details,
+      recordId,
+      collectionName,
+      ...(meta || {}),
+    }),
     headers: { 'Content-Type': 'application/json' },
   })

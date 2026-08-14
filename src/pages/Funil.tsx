@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select'
 import { formatCurrency, isStale, isPassedDeadline, isApproachingDeadline } from '@/lib/utils'
 import { exportExecutiveMacroReport } from '@/lib/exportReports'
-import { FunnelStage } from '@/types'
+import { FunnelStage, type Factory } from '@/types'
 import {
   AlertTriangle,
   Clock,
@@ -28,6 +28,7 @@ import { UserFilter } from '@/components/UserFilter'
 import { isManager } from '@/lib/user-scope'
 import { useAuth } from '@/hooks/use-auth'
 import { Link } from 'react-router-dom'
+import { ClientHistoryDialog } from '@/components/ClientHistoryDialog'
 
 const ANIMAL_SPECIES = [
   'Bovinos',
@@ -62,6 +63,8 @@ export default function Funil() {
   const [salesOwnerFilter, setSalesOwnerFilter] = useState('all')
   const [stateFilter, setStateFilter] = useState('all')
   const [speciesFilter, setSpeciesFilter] = useState('all')
+  const [historyFactory, setHistoryFactory] = useState<Factory | null>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const factories = allFactories.filter(
     (f) =>
       (salesOwnerFilter === 'all' || f.salesOwner === salesOwnerFilter) &&
@@ -173,6 +176,10 @@ export default function Funil() {
                       return (
                         <Card
                           key={f.id}
+                          onClick={() => {
+                            setHistoryFactory(f)
+                            setHistoryOpen(true)
+                          }}
                           className={`p-3 shadow-subtle hover:shadow-md transition-all cursor-pointer border-l-4 ${
                             f.priority === 'High'
                               ? 'border-l-emerald-500'
@@ -268,6 +275,13 @@ export default function Funil() {
           </div>
         </div>
       )}
+
+      <ClientHistoryDialog
+        factory={historyFactory}
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        origin="funil"
+      />
     </div>
   )
 }
