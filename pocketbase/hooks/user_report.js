@@ -2,12 +2,6 @@ routerAdd(
   'GET',
   '/backend/v1/users/{userId}/report',
   (e) => {
-    var auth = e.auth
-    if (!auth) return e.unauthorizedError('auth required')
-    if (auth.email !== 'joaopedro_zoo@hotmail.com' && auth.getString('job_title') !== 'CEO') {
-      return e.forbiddenError('master or CEO only')
-    }
-
     var userId = e.request.pathValue('userId')
 
     var userRecord = null
