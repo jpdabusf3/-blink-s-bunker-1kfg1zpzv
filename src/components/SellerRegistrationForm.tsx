@@ -44,6 +44,8 @@ export function SellerRegistrationForm({
   const [funcao, setFuncao] = useState<GestaoFuncao>('vendedor')
   const [subclassificacao, setSubclassificacao] = useState<string>('none')
   const [canalVendas, setCanalVendas] = useState<string>('none')
+  const [whatsapp, setWhatsapp] = useState('')
+  const [whatsappValidated, setWhatsappValidated] = useState(false)
 
   const selectedCountry = COUNTRIES.find((c) => c.name === country)
 
@@ -56,6 +58,8 @@ export function SellerRegistrationForm({
       setFuncao('vendedor')
       setSubclassificacao('none')
       setCanalVendas('none')
+      setWhatsapp('')
+      setWhatsappValidated(false)
       setFieldErrors({})
       setGeneratedPassword('')
     }
@@ -89,6 +93,8 @@ export function SellerRegistrationForm({
         subclassificacao:
           funcao === 'gestor_comercial' && subclassificacao !== 'none' ? subclassificacao : '',
         canal_vendas: canalVendas !== 'none' ? canalVendas : '',
+        whatsapp: whatsapp.trim(),
+        whatsapp_validated: whatsappValidated,
       })
       setGeneratedPassword(result.password)
       toast.success('Vendedor cadastrado com sucesso! Senha temporária gerada.')
@@ -209,6 +215,32 @@ export function SellerRegistrationForm({
                   placeholder="Região"
                 />
               )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="seller-whatsapp">WhatsApp</Label>
+              <Input
+                id="seller-whatsapp"
+                value={whatsapp}
+                onChange={(e) => setWhatsapp(e.target.value)}
+                placeholder="+55 (00) 00000-0000"
+                inputMode="tel"
+              />
+            </div>
+            <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-3">
+              <Checkbox
+                id="seller-whatsapp-validated"
+                checked={whatsappValidated}
+                onCheckedChange={(v) => setWhatsappValidated(v === true)}
+                className="mt-0.5"
+              />
+              <div className="space-y-0.5">
+                <Label htmlFor="seller-whatsapp-validated" className="cursor-pointer">
+                  Validado por WhatsApp
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Marque se o número de WhatsApp informado foi validado.
+                </p>
+              </div>
             </div>
             <DialogFooter>
               <Button type="submit" disabled={submitting} className="w-full">

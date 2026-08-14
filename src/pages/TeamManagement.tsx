@@ -195,7 +195,7 @@ export default function TeamManagement() {
                     <TableBody>
                       {users.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center text-muted-foreground h-16">
+                          <TableCell colSpan={8} className="text-center text-muted-foreground h-16">
                             Nenhum usuário encontrado.
                           </TableCell>
                         </TableRow>
@@ -213,6 +213,25 @@ export default function TeamManagement() {
                             </TableCell>
                             <TableCell>{u.geographicArea || 'N/A'}</TableCell>
                             <TableCell>{u.country || 'N/A'}</TableCell>
+                            <TableCell>
+                              {u.whatsapp ? (
+                                <div className="flex items-center gap-2">
+                                  <MessageCircle className="w-4 h-4 text-muted-foreground shrink-0" />
+                                  <span className="text-sm whitespace-nowrap">{u.whatsapp}</span>
+                                  {u.whatsapp_validated ? (
+                                    <Badge className="bg-green-100 text-green-800 border-transparent gap-1">
+                                      <CheckCircle2 className="w-3 h-3" /> Validado
+                                    </Badge>
+                                  ) : (
+                                    <Badge className="bg-amber-100 text-amber-800 border-transparent gap-1">
+                                      <XCircle className="w-3 h-3" /> Não validado
+                                    </Badge>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">—</span>
+                              )}
+                            </TableCell>
                             <TableCell>
                               {u.deactivated ? (
                                 <Badge className="bg-red-100 text-red-800 border-transparent">

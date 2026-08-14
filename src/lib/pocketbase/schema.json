@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-14T18:43:54.355Z",
+  "generatedAt": "2026-08-14T18:48:32.228Z",
   "collections": [
     {
       "name": "users",
@@ -64,6 +64,18 @@
         },
         {
           "name": "deactivated",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "whatsapp",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "whatsapp_validated",
           "type": "bool",
           "required": false,
           "system": false

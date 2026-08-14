@@ -20,6 +20,8 @@ routerAdd(
         job_title: u.getString('job_title'),
         geographicArea: u.getString('geographicArea'),
         country: u.getString('country'),
+        whatsapp: u.getString('whatsapp'),
+        whatsapp_validated: u.getBool('whatsapp_validated'),
         created: u.getString('created'),
       })
     }

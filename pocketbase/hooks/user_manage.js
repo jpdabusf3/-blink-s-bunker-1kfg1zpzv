@@ -34,13 +34,17 @@ routerAdd(
       job_title: 'Cargo',
       geographicArea: 'Região',
       country: 'País',
+      whatsapp: 'WhatsApp',
+      whatsapp_validated: 'Validado por WhatsApp',
     }
 
     if (action === 'edit') {
       var changes = []
-      var fields = ['name', 'job_title', 'geographicArea', 'country']
-      for (var i = 0; i < fields.length; i++) {
-        var field = fields[i]
+
+      // Text fields handled with string comparison.
+      var textFields = ['name', 'job_title', 'geographicArea', 'country', 'whatsapp']
+      for (var i = 0; i < textFields.length; i++) {
+        var field = textFields[i]
         if (body[field] !== undefined) {
           var oldVal = user.getString(field)
           var newVal = String(body[field])
@@ -49,6 +53,22 @@ routerAdd(
             changes.push(label + ': "' + oldVal + '" → "' + newVal + '"')
             user.set(field, newVal)
           }
+        }
+      }
+
+      // Bool field: WhatsApp validation toggle.
+      if (body.whatsapp_validated !== undefined) {
+        var oldBool = user.getBool('whatsapp_validated')
+        var newBool = !!body.whatsapp_validated
+        if (oldBool !== newBool) {
+          changes.push(
+            fieldLabels.whatsapp_validated +
+              ': ' +
+              (oldBool ? 'Sim' : 'Não') +
+              ' → ' +
+              (newBool ? 'Sim' : 'Não'),
+          )
+          user.set('whatsapp_validated', newBool)
         }
       }
       if (changes.length > 0) {

@@ -48,6 +48,10 @@ routerAdd(
     record.set('geographicArea', body.geographicArea || '')
     record.set('country', body.country || 'Brasil')
     record.set('deactivated', true)
+    if (body.whatsapp !== undefined && body.whatsapp !== null) {
+      record.set('whatsapp', String(body.whatsapp).trim())
+    }
+    record.set('whatsapp_validated', !!body.whatsapp_validated)
     $app.save(record)
 
     // Mirror the new member into gestao_tecnica with the supplied classification.

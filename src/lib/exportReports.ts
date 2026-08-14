@@ -271,7 +271,16 @@ export async function exportGeographicReport(factories: Factory[]) {
 
 export function exportTeamToExcel(users: UserListItem[]) {
   const sep = ';'
-  const headers = ['Nome', 'Email', 'Cargo', 'Área de Atuação', 'País', 'Data de Cadastro']
+  const headers = [
+    'Nome',
+    'Email',
+    'Cargo',
+    'Área de Atuação',
+    'País',
+    'WhatsApp',
+    'Validado por WhatsApp',
+    'Data de Cadastro',
+  ]
   const lines = [
     headers.join(sep),
     ...users.map((u) =>
@@ -281,6 +290,8 @@ export function exportTeamToExcel(users: UserListItem[]) {
         `"${(u.job_title || 'N/A').replace(/"/g, '""')}"`,
         `"${(u.geographicArea || 'N/A').replace(/"/g, '""')}"`,
         `"${(u.country || 'N/A').replace(/"/g, '""')}"`,
+        `"${(u.whatsapp || '').replace(/"/g, '""')}"`,
+        `"${u.whatsapp_validated ? 'Sim' : 'Não'}"`,
         new Date(u.created).toLocaleDateString('pt-BR'),
       ].join(sep),
     ),

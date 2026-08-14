@@ -10,6 +10,8 @@ export interface UserListItem {
   country: string
   created: string
   deactivated?: boolean
+  whatsapp?: string
+  whatsapp_validated?: boolean
 }
 
 export interface UserReportLog {
@@ -40,7 +42,14 @@ export const getUserReport = (userId: string): Promise<UserReport> =>
 export const manageUser = (
   userId: string,
   action: 'edit' | 'deactivate' | 'reactivate',
-  data?: { name?: string; job_title?: string; geographicArea?: string; country?: string },
+  data?: {
+    name?: string
+    job_title?: string
+    geographicArea?: string
+    country?: string
+    whatsapp?: string
+    whatsapp_validated?: boolean
+  },
 ): Promise<{ success: boolean }> =>
   pb.send(`/backend/v1/users/${userId}/manage`, {
     method: 'POST',

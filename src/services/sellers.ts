@@ -10,6 +10,8 @@ export interface SellerRegistration {
   funcao?: GestaoFuncao
   subclassificacao?: 'indiretos' | 'diretos' | string
   canal_vendas?: 'indireto' | 'direto' | string
+  whatsapp?: string
+  whatsapp_validated?: boolean
 }
 
 export interface SellerRegistrationResult {

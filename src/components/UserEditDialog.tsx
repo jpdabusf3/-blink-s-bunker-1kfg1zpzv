@@ -19,6 +19,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -63,6 +64,8 @@ export function UserEditDialog({
   const [country, setCountry] = useState('Brasil')
   const [geoArea, setGeoArea] = useState('')
   const [deactivated, setDeactivated] = useState(false)
+  const [whatsapp, setWhatsapp] = useState('')
+  const [whatsappValidated, setWhatsappValidated] = useState(false)
   const [history, setHistory] = useState<ActivityLog[]>([])
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -231,7 +234,14 @@ export function UserEditDialog({
           )}
           <Button
             onClick={() =>
-              handleAction('edit', { name, job_title: jobTitle, geographicArea: geoArea, country })
+              handleAction('edit', {
+                name,
+                job_title: jobTitle,
+                geographicArea: geoArea,
+                country,
+                whatsapp,
+                whatsapp_validated: whatsappValidated,
+              })
             }
             disabled={submitting}
             className="gap-2"
