@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/sheet'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { ImportFunilDialog } from '@/components/ImportFunilDialog'
+import { ClientHistoryDialog } from '@/components/ClientHistoryDialog'
 import { Upload, Filter, User, ArrowRight, Download, FileText, Save, X } from 'lucide-react'
 import type { Factory } from '@/types'
 
