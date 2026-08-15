@@ -197,6 +197,11 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
       notes: (fd.get('notes') as string) || undefined,
       carteira: carteiraSegmento && carteiraSegmento !== 'none' ? carteiraSegmento : undefined,
       grupo_cliente: grupoCliente && grupoCliente !== 'none' ? grupoCliente : undefined,
+      contato: (fd.get('contato') as string) || undefined,
+      status_contato:
+        (fd.get('status_contato') as string) && fd.get('status_contato') !== 'none'
+          ? (fd.get('status_contato') as Factory['status_contato'])
+          : undefined,
     }
 
     try {
@@ -512,6 +517,30 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
               <SelectItem value="Produtores Diretos">Produtores Diretos</SelectItem>
               <SelectItem value="Premixeras">Premixeras</SelectItem>
               <SelectItem value="Cooperativas">Cooperativas</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Contato (Pessoa no Prospect)</Label>
+          <Input
+            name="contato"
+            defaultValue={factory?.contato}
+            placeholder="Nome da pessoa de contato"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Status do Contato</Label>
+          <Select name="status_contato" defaultValue={factory?.status_contato || 'none'}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Não informado</SelectItem>
+              <SelectItem value="Champion">Champion</SelectItem>
+              <SelectItem value="Stakeholder">Stakeholder</SelectItem>
+              <SelectItem value="Decisor">Decisor</SelectItem>
+              <SelectItem value="Influenciador">Influenciador</SelectItem>
+              <SelectItem value="Gatekeepers">Gatekeepers</SelectItem>
             </SelectContent>
           </Select>
         </div>

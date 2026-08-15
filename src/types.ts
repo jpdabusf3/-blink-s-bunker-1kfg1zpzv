@@ -221,6 +221,8 @@ export interface Factory {
   proximos_passos?: string
   acao?: string
   data_importacao?: string
+  contato?: string
+  status_contato?: 'Champion' | 'Stakeholder' | 'Decisor' | 'Influenciador' | 'Gatekeepers'
 }
 
 export type GestaoFuncao =

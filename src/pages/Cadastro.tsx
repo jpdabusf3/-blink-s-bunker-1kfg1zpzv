@@ -46,6 +46,13 @@ const SPECIES_OPTIONS = [
   'Multi espécie',
 ]
 const STATUS_OPTIONS = ['Atendido', 'Não atendido', 'Prospeção']
+const STATUS_CONTATO_OPTIONS = [
+  'Champion',
+  'Stakeholder',
+  'Decisor',
+  'Influenciador',
+  'Gatekeepers',
+]
 const PROFILE_OPTIONS = [
   'Indústria',
   'Cooperativa',
@@ -110,6 +117,7 @@ export default function Cadastro() {
     selectedRegions.length > 0 ||
     selectedSpecies.length > 0 ||
     selectedStatuses.length > 0 ||
+    selectedStatusContatos.length > 0 ||
     selectedProfiles.length > 0 ||
     selectedProductLines.length > 0
 
@@ -288,6 +296,17 @@ export default function Cadastro() {
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  Status do Contato
+                </label>
+                <MultiSelect
+                  options={STATUS_CONTATO_OPTIONS}
+                  value={selectedStatusContatos}
+                  onChange={setSelectedStatusContatos}
+                  placeholder="Todos os status"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
                   Perfil / Carteira
                 </label>
                 <MultiSelect
@@ -324,6 +343,8 @@ export default function Cadastro() {
                     <TableHead>Cidade/UF</TableHead>
                     <TableHead>Espécie</TableHead>
                     <TableHead>Funil</TableHead>
+                    <TableHead>Contato</TableHead>
+                    <TableHead>Status do Contato</TableHead>
                     <TableHead>Gestor Técnico</TableHead>
                     <TableHead>Vendedor</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
@@ -332,7 +353,7 @@ export default function Cadastro() {
                 <TableBody>
                   {filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground h-16">
+                      <TableCell colSpan={9} className="text-center text-muted-foreground h-16">
                         Nenhuma fábrica encontrada.
                       </TableCell>
                     </TableRow>
@@ -357,6 +378,18 @@ export default function Cadastro() {
                           </div>
                         </TableCell>
                         <TableCell className="text-xs">{f.funnelStage}</TableCell>
+                        <TableCell className="text-sm">
+                          {f.contato || <span className="text-muted-foreground">-</span>}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {f.status_contato ? (
+                            <Badge variant="outline" className="text-xs">
+                              {f.status_contato}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-sm">
                           {f.gestor_tecnico_name || (
                             <span className="text-muted-foreground">-</span>

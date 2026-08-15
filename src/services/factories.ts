@@ -68,6 +68,8 @@ function mapRecordToFactory(record: any): Factory {
     proximos_passos: record.proximos_passos,
     acao: record.acao,
     data_importacao: record.data_importacao,
+    contato: record.contato,
+    status_contato: record.status_contato,
     created: record.created,
     swot: {
       strengths: '',

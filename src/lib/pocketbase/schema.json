@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-15T04:51:02.204Z",
+  "generatedAt": "2026-08-15T04:58:13.558Z",
   "collections": [
     {
       "name": "users",
@@ -436,6 +436,19 @@
           "required": false,
           "system": false,
           "selectValues": ["High", "Medium", "Low"]
+        },
+        {
+          "name": "contato",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status_contato",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Champion", "Stakeholder", "Decisor", "Influenciador", "Gatekeepers"]
         }
       ],
       "indexes": [
