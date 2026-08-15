@@ -33,8 +33,9 @@ import {
   Cell,
 } from 'recharts'
 import { ChartContainer } from '@/components/ui/chart'
-import { Loader2, FileSpreadsheet, FileText, Download, Trash2 } from 'lucide-react'
+import { Loader2, FileSpreadsheet, FileText, Download, Trash2, FileArchive } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { exportOrdersToExcel } from '@/lib/exportUtils'
 import { useAppContext } from '@/store/AppContext'
 import { UserFilter } from '@/components/UserFilter'
@@ -47,6 +48,16 @@ import {
 } from '@/services/client-reports'
 import { useToast } from '@/hooks/use-toast'
 import { formatDateTime } from '@/lib/utils'
+import {
+  REPORT_TEMPLATES,
+  DEFAULT_REPORT_TEMPLATE,
+  type ReportTemplateKey,
+} from '@/lib/reportTemplates'
+import {
+  getReportTemplatePreference,
+  saveReportTemplatePreference,
+} from '@/services/report-template-preferences'
+import { exportBatchClientReportsZip, logBatchReportExport } from '@/lib/batchReportExport'
 
 const STATE_REGIONS = [
   'Sul',
@@ -76,6 +87,27 @@ export default function Relatorios() {
   const { user } = useAuth()
   const isLeadership = isManager(user)
   const { toast } = useToast()
+
+  // Persisted "Modelo Visual" report template preference (per user).
+  const [reportTemplate, setReportTemplate] = useState<ReportTemplateKey>(DEFAULT_REPORT_TEMPLATE)
+  const [templateLoading, setTemplateLoading] = useState(true)
+
+  // Multi-selection of clients (Top Clientes) for batch export.
+  const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set())
+  const [batchExporting, setBatchExporting] = useState(false)
+
+  useEffect(() => {
+    getReportTemplatePreference()
+      .then(setReportTemplate)
+      .catch(() => {})
+      .finally(() => setTemplateLoading(false))
+  }, [])
+
+  const handleTemplateChange = (value: string) => {
+    if (value !== 'executivo' && value !== 'tecnico' && value !== 'comercial') return
+    setReportTemplate(value)
+    saveReportTemplatePreference(value).catch(() => {})
+  }
 
   const loadClientReports = () => {
     setReportsLoading(true)
@@ -181,15 +213,18 @@ export default function Relatorios() {
   }, [filteredOrders])
 
   const volumeByCustomer = useMemo(() => {
-    const map = new Map<string, number>()
+    const map = new Map<string, { name: string; value: number; factoryId?: string }>()
     filteredOrders.forEach((o) => {
+      const fid = o.factoryId
       const c = o.expand?.factoryId?.name || 'Desconhecido'
-      map.set(c, (map.get(c) || 0) + o.totalValue)
+      const key = fid ? fid : c
+      const cur = map.get(key) || { name: c, value: 0, factoryId: fid }
+      cur.value += o.totalValue
+      map.set(key, cur)
     })
-    return Array.from(map.entries())
-      .map(([name, value]) => ({ name, value }))
+    return Array.from(map.values())
       .sort((a, b) => b.value - a.value)
-      .slice(0, 10)
+      .slice(0, 50)
   }, [filteredOrders])
 
   const volumeByOwner = useMemo(() => {
@@ -230,14 +265,37 @@ export default function Relatorios() {
             Analise volumes e performance por diversos recortes.
           </p>
         </div>
-        <Button
-          onClick={() => exportOrdersToExcel(filteredOrders, factories)}
-          variant="outline"
-          className="gap-2"
-        >
-          <FileSpreadsheet className="w-4 h-4" />
-          Exportar para Excel (.csv)
-        </Button>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">
+              Modelo Visual (Word)
+            </label>
+            <Select
+              value={reportTemplate}
+              onValueChange={handleTemplateChange}
+              disabled={templateLoading}
+            >
+              <SelectTrigger className="w-[200px] h-9">
+                <SelectValue placeholder="Modelo..." />
+              </SelectTrigger>
+              <SelectContent>
+                {REPORT_TEMPLATES.map((t) => (
+                  <SelectItem key={t.key} value={t.key}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            onClick={() => exportOrdersToExcel(filteredOrders, factories)}
+            variant="outline"
+            className="gap-2"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            Exportar para Excel (.csv)
+          </Button>
+        </div>
       </div>
 
       <Card className="border shadow-subtle">
@@ -452,7 +510,65 @@ export default function Relatorios() {
 
       <Card className="shadow-subtle">
         <CardHeader>
-          <CardTitle>Top Clientes</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>Top Clientes</CardTitle>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                {selectedClientIds.size} selecionado(s)
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-2"
+                disabled={
+                  selectedClientIds.size === 0 ||
+                  batchExporting ||
+                  volumeByCustomer.filter((c) => c.factoryId).length === 0
+                }
+                onClick={async () => {
+                  const clients = volumeByCustomer.filter(
+                    (c) => c.factoryId && selectedClientIds.has(c.factoryId),
+                  )
+                  if (clients.length === 0) return
+                  setBatchExporting(true)
+                  try {
+                    const solicitante = user?.name || user?.email || ''
+                    await exportBatchClientReportsZip(
+                      clients.map((c) => ({ id: c.factoryId!, name: c.name })),
+                      { modelo: reportTemplate, solicitante },
+                    )
+                    await logBatchReportExport({
+                      solicitante,
+                      solicitanteId: user?.id,
+                      clienteIds: clients.map((c) => c.factoryId!),
+                      modelo: reportTemplate,
+                    })
+                    toast({
+                      title: 'Relatórios em lote gerados',
+                      description: `${clients.length} relatório(s) .docx empacotados em ZIP (modelo ${reportTemplate}).`,
+                    })
+                    setSelectedClientIds(new Set())
+                  } catch (err) {
+                    toast({
+                      title: 'Erro na exportação em lote',
+                      description:
+                        err instanceof Error ? err.message : 'Não foi possível gerar o ZIP.',
+                      variant: 'destructive',
+                    })
+                  } finally {
+                    setBatchExporting(false)
+                  }
+                }}
+              >
+                {batchExporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <FileArchive className="w-4 h-4" />
+                )}
+                Gerar Relatórios em Lote (ZIP)
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {volumeByCustomer.length > 0 ? (
@@ -460,19 +576,62 @@ export default function Relatorios() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={
+                          volumeByCustomer.filter((c) => c.factoryId).length > 0 &&
+                          volumeByCustomer
+                            .filter((c) => c.factoryId)
+                            .every((c) => selectedClientIds.has(c.factoryId!))
+                        }
+                        onCheckedChange={(checked) => {
+                          const ids = volumeByCustomer
+                            .filter((c) => c.factoryId)
+                            .map((c) => c.factoryId!)
+                          setSelectedClientIds((prev) => {
+                            const next = new Set(prev)
+                            if (checked) ids.forEach((id) => next.add(id))
+                            else ids.forEach((id) => next.delete(id))
+                            return next
+                          })
+                        }}
+                        aria-label="Selecionar todos"
+                      />
+                    </TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead className="text-right">Volume (R$)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {volumeByCustomer.map((c, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="font-medium">{c.name}</TableCell>
-                      <TableCell className="text-right font-bold text-primary">
-                        {formatCurrency(c.value)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {volumeByCustomer.map((c, i) => {
+                    const fid = c.factoryId
+                    const selectable = !!fid
+                    const checked = !!fid && selectedClientIds.has(fid)
+                    return (
+                      <TableRow key={i}>
+                        <TableCell>
+                          <Checkbox
+                            checked={checked}
+                            disabled={!selectable}
+                            onCheckedChange={(v) => {
+                              if (!fid) return
+                              setSelectedClientIds((prev) => {
+                                const next = new Set(prev)
+                                if (v) next.add(fid)
+                                else next.delete(fid)
+                                return next
+                              })
+                            }}
+                            aria-label={`Selecionar ${c.name}`}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium">{c.name}</TableCell>
+                        <TableCell className="text-right font-bold text-primary">
+                          {formatCurrency(c.value)}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>

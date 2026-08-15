@@ -36,8 +36,32 @@ import {
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { ImportFunilDialog } from '@/components/ImportFunilDialog'
 import { ClientHistoryDialog } from '@/components/ClientHistoryDialog'
-import { Upload, Filter, User, ArrowRight, Download, FileText, Save, X } from 'lucide-react'
+import {
+  Upload,
+  Filter,
+  User,
+  ArrowRight,
+  Download,
+  FileText,
+  Save,
+  X,
+  FileArchive,
+  Loader2,
+  History,
+} from 'lucide-react'
 import type { Factory } from '@/types'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  REPORT_TEMPLATES,
+  DEFAULT_REPORT_TEMPLATE,
+  type ReportTemplateKey,
+} from '@/lib/reportTemplates'
+import {
+  getReportTemplatePreference,
+  saveReportTemplatePreference,
+} from '@/services/report-template-preferences'
+import { exportBatchClientReportsZip, logBatchReportExport } from '@/lib/batchReportExport'
+import { useToast } from '@/hooks/use-toast'
 
 const STATUS_COLUMNS = ['Inativo', 'Mensal', 'Ativo'] as const
 const SPECIES = [
@@ -61,6 +85,7 @@ const CANAL_VENDAS_OPTIONS = [
 
 export default function FunilVendas() {
   const { user } = useAuth()
+  const { toast } = useToast()
   const [factories, setFactories] = useState<Factory[]>([])
   const [vendedores, setVendedores] = useState<GestaoTecnica[]>([])
   const [gestores, setGestores] = useState<GestaoTecnica[]>([])
@@ -85,6 +110,27 @@ export default function FunilVendas() {
     acao: '',
     status_funil: 'Inativo',
   })
+
+  // Persisted "Modelo Visual" report template preference (per user).
+  const [reportTemplate, setReportTemplate] = useState<ReportTemplateKey>(DEFAULT_REPORT_TEMPLATE)
+  const [templateLoading, setTemplateLoading] = useState(true)
+
+  // Multi-selection of clients (kanban cards) for batch export.
+  const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set())
+  const [batchExporting, setBatchExporting] = useState(false)
+
+  useEffect(() => {
+    getReportTemplatePreference()
+      .then(setReportTemplate)
+      .catch(() => {})
+      .finally(() => setTemplateLoading(false))
+  }, [])
+
+  const handleTemplateChange = (value: string) => {
+    if (value !== 'executivo' && value !== 'tecnico' && value !== 'comercial') return
+    setReportTemplate(value)
+    saveReportTemplatePreference(value).catch(() => {})
+  }
 
   const loadData = useCallback(async () => {
     try {
@@ -242,12 +288,33 @@ export default function FunilVendas() {
             Gestão de clientes por status do funil comercial (apenas com pedidos).
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-end">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">
+              Modelo Visual (Word)
+            </label>
+            <Select
+              value={reportTemplate}
+              onValueChange={handleTemplateChange}
+              disabled={templateLoading}
+            >
+              <SelectTrigger className="w-[180px] h-9">
+                <SelectValue placeholder="Modelo..." />
+              </SelectTrigger>
+              <SelectContent>
+                {REPORT_TEMPLATES.map((t) => (
+                  <SelectItem key={t.key} value={t.key}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Button
             size="sm"
             variant="outline"
             onClick={() => exportFunilVendasToExcel(filtered)}
-            className="gap-2"
+            className="gap-2 h-9"
           >
             <Download className="w-4 h-4" /> Excel
           </Button>
@@ -255,11 +322,55 @@ export default function FunilVendas() {
             size="sm"
             variant="outline"
             onClick={() => exportFullDashboardToPDF(filtered, dashboardData, filters)}
-            className="gap-2"
+            className="gap-2 h-9"
           >
             <FileText className="w-4 h-4" /> PDF Dashboard
           </Button>
-          <Button size="sm" onClick={() => setImportOpen(true)} className="gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            className="gap-2 h-9"
+            disabled={selectedClientIds.size === 0 || batchExporting}
+            onClick={async () => {
+              const clients = filtered.filter((f) => selectedClientIds.has(f.id))
+              if (clients.length === 0) return
+              setBatchExporting(true)
+              try {
+                const solicitante = user?.name || user?.email || ''
+                await exportBatchClientReportsZip(
+                  clients.map((f) => ({ id: f.id, name: f.name })),
+                  { modelo: reportTemplate, solicitante },
+                )
+                await logBatchReportExport({
+                  solicitante,
+                  solicitanteId: user?.id,
+                  clienteIds: clients.map((f) => f.id),
+                  modelo: reportTemplate,
+                })
+                toast({
+                  title: 'Relatórios em lote gerados',
+                  description: `${clients.length} relatório(s) .docx empacotados em ZIP (modelo ${reportTemplate}).`,
+                })
+                setSelectedClientIds(new Set())
+              } catch (err) {
+                toast({
+                  title: 'Erro na exportação em lote',
+                  description: err instanceof Error ? err.message : 'Não foi possível gerar o ZIP.',
+                  variant: 'destructive',
+                })
+              } finally {
+                setBatchExporting(false)
+              }
+            }}
+          >
+            {batchExporting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <FileArchive className="w-4 h-4" />
+            )}
+            Gerar em Lote ({selectedClientIds.size})
+          </Button>
+          <Button size="sm" onClick={() => setImportOpen(true)} className="gap-2 h-9">
             <Upload className="w-4 h-4" /> Importar Funil (Excel)
           </Button>
         </div>
@@ -379,7 +490,30 @@ export default function FunilVendas() {
                       className="p-3 shadow-subtle hover:shadow-md transition-all cursor-pointer"
                       onClick={() => openPanel(f.id)}
                     >
-                      <div className="font-bold text-sm leading-tight line-clamp-2">{f.name}</div>
+                      <div className="flex items-start gap-2">
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedClientIds((prev) => {
+                              const next = new Set(prev)
+                              if (next.has(f.id)) next.delete(f.id)
+                              else next.add(f.id)
+                              return next
+                            })
+                          }}
+                          className="pt-0.5"
+                        >
+                          <Checkbox
+                            checked={selectedClientIds.has(f.id)}
+                            aria-label={`Selecionar ${f.name}`}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-sm leading-tight line-clamp-2">
+                            {f.name}
+                          </div>
+                        </div>
+                      </div>
                       <div className="text-[11px] text-muted-foreground mt-0.5">
                         {[f.city, f.animalSpecies].filter(Boolean).join(' • ')}
                       </div>

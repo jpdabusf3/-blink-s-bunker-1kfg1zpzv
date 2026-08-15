@@ -24,6 +24,8 @@ import {
 } from '@/services/client-reports'
 import { FileText, Plus, Loader2, History, ArrowRight } from 'lucide-react'
 import type { Factory } from '@/types'
+import { getReportTemplatePreference } from '@/services/report-template-preferences'
+import { REPORT_TEMPLATE_LABEL } from '@/lib/reportTemplates'
 
 interface ClientHistoryDialogProps {
   factory: Factory | null
@@ -120,13 +122,15 @@ export function ClientHistoryDialog({
     if (!factory) return
     setGenerating(true)
     try {
+      const modeloKey = await getReportTemplatePreference()
       await generateAndStoreClientWordReport(factory.id, factory.name, {
         titulo: `Relatório de Histórico — ${factory.name}`,
+        modelo: modeloKey,
+        solicitante: user?.name || user?.email || '',
       })
       toast({
         title: 'Relatório Word gerado',
-        description:
-          'O arquivo .docx foi baixado e também salvo na aba de Relatórios para acesso posterior.',
+        description: `Modelo ${REPORT_TEMPLATE_LABEL[modeloKey]}. O arquivo .docx foi baixado e também salvo na aba de Relatórios para acesso posterior.`,
       })
     } catch {
       toast({

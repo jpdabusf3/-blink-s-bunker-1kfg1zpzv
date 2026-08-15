@@ -4,9 +4,13 @@
 // client (standard SDK multipart upload) so it appears in the Relatórios tab.
 //
 // POST /backend/v1/client-reports/word
-// body: { clientId, titulo?, periodoInicio?, periodoFim? }
+// body: { clientId, titulo?, periodoInicio?, periodoFim?, modelo?, solicitante? }
+//   - modelo: "executivo" | "tecnico" | "comercial" (default: executivo)
+//   - solicitante: name of the requesting user (falls back to auth user)
 //   - gathers activity_logs for the client
 //   - builds a minimal valid .docx (OOXML zip, stored/uncompressed, no deps)
+//   - the Blink Biotech logo is always embedded (header/cover) regardless of template
+//   - colours / styles follow the chosen visual template
 //   - responds with the binary blob
 routerAdd(
   'POST',
@@ -166,6 +170,113 @@ routerAdd(
       }
     }
 
+    // base64 -> bytes (for embedding the logo image fetched via $http)
+    function base64ToBytes(b64) {
+      var lookup = (function () {
+        var t = new Array(256)
+        for (var i = 0; i < 256; i++) t[i] = -1
+        var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+        for (var j = 0; j < chars.length; j++) t[chars.charCodeAt(j)] = j
+        t['='.charCodeAt(0)] = 0
+        return t
+      })()
+      var cleaned = String(b64 || '').replace(/[^A-Za-z0-9+/=]/g, '')
+      var len = cleaned.length
+      var out = []
+      var i = 0
+      while (i < len) {
+        var a = lookup[cleaned.charCodeAt(i++)]
+        var b = lookup[cleaned.charCodeAt(i++)]
+        var c = lookup[cleaned.charCodeAt(i++)]
+        var d = lookup[cleaned.charCodeAt(i++)]
+        var n = (a << 18) | (b << 12) | (c << 6) | d
+        out.push((n >> 16) & 0xff)
+        out.push((n >> 8) & 0xff)
+        out.push(n & 0xff)
+      }
+      // trim padding
+      var padCount = 0
+      if (cleaned.length >= 1 && cleaned.charAt(cleaned.length - 1) === '=') padCount++
+      if (cleaned.length >= 2 && cleaned.charAt(cleaned.length - 2) === '=') padCount++
+      while (padCount-- > 0) out.pop()
+      return out
+    }
+
+    // ---------- visual templates ----------
+    // Each template defines colours + an HTML cover/header block and table styling.
+    var TEMPLATES = {
+      executivo: {
+        label: 'Executivo',
+        primary: '#1f2937',
+        accent: '#6b7280',
+        headerBg: '#1f2937',
+        headerColor: '#ffffff',
+        tableHeaderBg: '#e5e7eb',
+        kpiBg: '#f9fafb',
+        kpiBorder: '#d1d5db',
+        coverTitleSize: '26pt',
+        bodyFont: "Georgia, 'Times New Roman', serif",
+        fontStyle:
+          'body{font-family:Georgia,Times,serif;font-size:11pt;color:#1f2937;}' +
+          'h1{color:#1f2937;font-size:20pt;border-bottom:2px solid #1f2937;padding-bottom:4px;}' +
+          'h2{color:#374151;font-size:14pt;}' +
+          'table{font-size:10pt;}' +
+          '.kpi{background:#f9fafb;border:1px solid #d1d5db;border-radius:6px;padding:10px;display:inline-block;margin:6px;text-align:center;}' +
+          '.kpi b{display:block;font-size:18pt;color:#1f2937;}' +
+          '.cover{background:#1f2937;color:#fff;padding:40px;border-radius:8px;}' +
+          '.cover h1{color:#fff;border:none;font-size:26pt;}' +
+          '.cover .sub{color:#d1d5db;font-size:12pt;margin-top:8px;}',
+      },
+      tecnico: {
+        label: 'Técnico',
+        primary: '#1e3a8a',
+        accent: '#2563eb',
+        headerBg: '#1e3a8a',
+        headerColor: '#ffffff',
+        tableHeaderBg: '#dbeafe',
+        kpiBg: '#eff6ff',
+        kpiBorder: '#2563eb',
+        coverTitleSize: '24pt',
+        bodyFont: "'Segoe UI', Calibri, Arial, sans-serif",
+        fontStyle:
+          "body{font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11pt;color:#0f172a;}" +
+          'h1{color:#1e3a8a;font-size:20pt;border-left:5px solid #2563eb;padding-left:10px;}' +
+          'h2{color:#1e3a8a;font-size:14pt;border-bottom:1px solid #2563eb;}' +
+          'table{font-size:10pt;border:1px solid #cbd5e1;}' +
+          'th{background:#dbeafe;color:#1e3a8a;}' +
+          'td{border:1px solid #cbd5e1;}' +
+          '.kpi{background:#eff6ff;border:1px solid #2563eb;border-radius:6px;padding:10px;display:inline-block;margin:6px;text-align:center;}' +
+          '.kpi b{display:block;font-size:18pt;color:#1e3a8a;}' +
+          '.cover{background:#1e3a8a;color:#fff;padding:40px;border-radius:8px;}' +
+          '.cover h1{color:#fff;border:none;font-size:24pt;}' +
+          '.cover .sub{color:#bfdbfe;font-size:12pt;margin-top:8px;}',
+      },
+      comercial: {
+        label: 'Comercial',
+        primary: '#b91c1c',
+        accent: '#f59e0b',
+        headerBg: '#b91c1c',
+        headerColor: '#ffffff',
+        tableHeaderBg: '#fef3c7',
+        kpiBg: '#fff7ed',
+        kpiBorder: '#f59e0b',
+        coverTitleSize: '26pt',
+        bodyFont: "'Segoe UI', Calibri, Arial, sans-serif",
+        fontStyle:
+          "body{font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11pt;color:#1c1917;}" +
+          'h1{color:#b91c1c;font-size:20pt;border-bottom:3px solid #f59e0b;padding-bottom:4px;}' +
+          'h2{color:#b91c1c;font-size:14pt;}' +
+          'table{font-size:10pt;}' +
+          'th{background:#fef3c7;color:#92400e;}' +
+          '.kpi{background:#fff7ed;border:2px solid #f59e0b;border-radius:8px;padding:10px;display:inline-block;margin:6px;text-align:center;}' +
+          '.kpi b{display:block;font-size:18pt;color:#b91c1c;}' +
+          '.kpi .lbl{color:#92400e;font-weight:bold;}' +
+          '.cover{background:linear-gradient(135deg,#b91c1c,#f59e0b);color:#fff;padding:40px;border-radius:8px;}' +
+          '.cover h1{color:#fff;border:none;font-size:26pt;}' +
+          '.cover .sub{color:#fff;font-size:12pt;margin-top:8px;font-weight:bold;}',
+      },
+    }
+
     // ---------- main ----------
     var userId = e.auth && e.auth.id
     if (!userId) return e.unauthorizedError('auth required')
@@ -173,6 +284,10 @@ routerAdd(
     var body = e.requestInfo().body || {}
     var clientId = body.clientId
     if (!clientId) return e.badRequestError('clientId é obrigatório')
+
+    var modeloKey = String(body.modelo || 'executivo').toLowerCase()
+    if (!TEMPLATES[modeloKey]) modeloKey = 'executivo'
+    var T = TEMPLATES[modeloKey]
 
     var factory = null
     try {
@@ -206,15 +321,74 @@ routerAdd(
         ')'
     }
 
-    var userName = ''
-    if (e.auth && e.auth.getString) {
+    var userName = body.solicitante || ''
+    if (!userName && e.auth && e.auth.getString) {
       userName = e.auth.getString('name') || e.auth.getString('email') || ''
     }
 
+    // ---------- fetch the Blink logo and embed as base64 ----------
+    var logoB64 = ''
+    var logoMediaEntry = null
+    try {
+      var logoRes = $http.send({
+        url: 'https://dagtlwojkqyivnjgveda.supabase.co/storage/v1/object/public/message-attachments/38d970e5-7e8c-4a30-8b1e-ccf8a9667554/image-f220f.png',
+        method: 'GET',
+        timeout: 15,
+      })
+      if (logoRes && logoRes.statusCode >= 200 && logoRes.statusCode < 300 && logoRes.body) {
+        // $http returns raw bytes in body; encode to base64 in chunks (JSVM has no btoa)
+        var raw = logoRes.body
+        var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+        var b64 = ''
+        for (var bi = 0; bi < raw.length; bi += 3) {
+          var b1 = raw[bi] || 0
+          var b2 = bi + 1 < raw.length ? raw[bi + 1] : 0
+          var b3 = bi + 2 < raw.length ? raw[bi + 2] : 0
+          b64 += chars[(b1 >> 2) & 0x3f]
+          b64 += chars[((b1 & 0x03) << 4) | ((b2 >> 4) & 0x0f)]
+          b64 += bi + 1 < raw.length ? chars[((b2 & 0x0f) << 2) | ((b3 >> 6) & 0x03)] : '='
+          b64 += bi + 2 < raw.length ? chars[b3 & 0x3f] : '='
+        }
+        logoB64 = b64
+        logoMediaEntry = { name: 'word/media/logo.png', data: base64ToBytes(b64) }
+      }
+    } catch (_) {}
+
     // ---------- build HTML body ----------
+    var nowStr = fmtDate(new Date().toISOString())
+
+    var coverHtml = ''
+    coverHtml += '<div class="cover">'
+    if (logoMediaEntry) {
+      coverHtml +=
+        '<img src="media/logo.png" alt="Blink Biotech" style="max-height:70px;margin-bottom:16px;"/>'
+    }
+    coverHtml += '<h1>' + esc(titulo) + '</h1>'
+    coverHtml += '<div class="sub">Blink Biotech • Relatório ' + esc(T.label) + '</div>'
+    coverHtml += '</div>'
+    coverHtml += '<p style="margin-top:14px;"><b>Cliente:</b> ' + esc(clientName) + '</p>'
+
     var bodyHtml = ''
-    bodyHtml += '<h1>' + esc(titulo) + '</h1>'
-    bodyHtml += '<p><b>Cliente:</b> ' + esc(clientName) + '</p>'
+    bodyHtml += coverHtml
+
+    // KPI block (counts by tipo) — always present for all templates
+    var byTipo = {}
+    for (var ti = 0; ti < logs.length; ti++) {
+      var tKey = logs[ti].getString('tipo') || 'outro'
+      byTipo[tKey] = (byTipo[tKey] || 0) + 1
+    }
+    bodyHtml += '<div style="margin:10px 0;">'
+    bodyHtml += '<div class="kpi"><b>' + logs.length + '</b><span class="lbl">Ações</span></div>'
+    bodyHtml +=
+      '<div class="kpi"><b>' +
+      (byTipo['status'] || 0) +
+      '</b><span class="lbl">Mudanças de Status</span></div>'
+    bodyHtml +=
+      '<div class="kpi"><b>' +
+      (byTipo['acao'] || 0) +
+      '</b><span class="lbl">Ações Registradas</span></div>'
+    bodyHtml += '</div>'
+
     if (factory.getString('city'))
       bodyHtml += '<p><b>Cidade:</b> ' + esc(factory.getString('city')) + '</p>'
     if (factory.getString('state'))
@@ -227,8 +401,8 @@ routerAdd(
       bodyHtml += '<p><b>Vendedor:</b> ' + esc(factory.getString('vendedor_name')) + '</p>'
     bodyHtml += '<p><b>Período:</b> ' + esc(periodoTxt || 'Todo o histórico') + '</p>'
     bodyHtml += '<p><b>Total de ações registradas:</b> ' + logs.length + '</p>'
-    bodyHtml +=
-      '<p><b>Gerado por:</b> ' + esc(userName) + ' em ' + fmtDate(new Date().toISOString()) + '</p>'
+    bodyHtml += '<p><b>Solicitado por:</b> ' + esc(userName) + '</p>'
+    bodyHtml += '<p><b>Gerado em:</b> ' + nowStr + '</p>'
     bodyHtml += '<hr/>'
 
     if (logs.length === 0) {
@@ -238,7 +412,11 @@ routerAdd(
       bodyHtml +=
         '<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;">'
       bodyHtml +=
-        '<tr style="background:#e8e8e8;">' +
+        '<tr style="background:' +
+        T.tableHeaderBg +
+        ';color:' +
+        T.primary +
+        ';font-weight:bold;">' +
         '<th>Data/Hora</th><th>Tipo</th><th>Ação</th><th>Detalhes / Próximo Passo</th>' +
         '<th>Mudança de Status</th><th>Responsável</th></tr>'
       for (var i = 0; i < logs.length; i++) {
@@ -268,13 +446,90 @@ routerAdd(
     }
     bodyHtml +=
       '<p style="margin-top:20px;color:#888;font-size:10px;">' +
-      'Documento gerado automaticamente pelo Blink&#39;s Bunker. Editável.</p>'
+      'Documento gerado automaticamente pelo Blink&#39;s Bunker (Modelo ' +
+      esc(T.label) +
+      '). Editável.</p>'
 
     // ---------- build the .docx (OOXML zip) ----------
+    // When the logo is embedded we render it as a real OOXML image (drawing)
+    // referencing relationship rId3, placed as the first paragraph (cover).
+    var EMU_PER_PX = 9525
+    var logoParaXml = ''
+    var imgRelXml = ''
+    if (logoMediaEntry) {
+      // read PNG IHDR for native pixel dimensions (big-endian at offsets 16/20)
+      var pngData = logoMediaEntry.data
+      var imgW = 200
+      var imgH = 60
+      try {
+        if (pngData.length > 24) {
+          imgW = (pngData[16] << 24) | (pngData[17] << 16) | (pngData[18] << 8) | pngData[19]
+          imgH = (pngData[20] << 24) | (pngData[21] << 16) | (pngData[22] << 8) | pngData[23]
+          if (imgW <= 0 || imgH <= 0 || imgW > 4000 || imgH > 4000) {
+            imgW = 200
+            imgH = 60
+          }
+        }
+      } catch (_) {}
+      // scale to a max width of ~220px, keep aspect ratio
+      var maxW = 220
+      var dispW = imgW
+      var dispH = imgH
+      if (dispW > maxW) {
+        dispH = Math.round((dispH * maxW) / dispW)
+        dispW = maxW
+      }
+      var cx = dispW * EMU_PER_PX
+      var cy = dispH * EMU_PER_PX
+      var picXml =
+        '<w:p>' +
+        '<w:pPr><w:jc w:val="center"/></w:pPr>' +
+        '<w:r>' +
+        '<w:drawing>' +
+        '<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="0" distR="0">' +
+        '<wp:extent cx="' +
+        cx +
+        '" cy="' +
+        cy +
+        '"/>' +
+        '<wp:effectExtent l="0" t="0" r="0" b="0"/>' +
+        '<wp:docPr id="1" name="Blink Biotech Logo"/>' +
+        '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">' +
+        '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">' +
+        '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">' +
+        '<pic:nvPicPr>' +
+        '<pic:cNvPr id="1" name="Blink Biotech Logo"/>' +
+        '<pic:cNvPicPr/>' +
+        '</pic:nvPicPr>' +
+        '<pic:blipFill>' +
+        '<a:blip r:embed="rId3" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>' +
+        '<a:stretch><a:fillRect/></a:stretch>' +
+        '</pic:blipFill>' +
+        '<pic:spPr>' +
+        '<a:xfrm><a:off x="0" y="0"/><a:ext cx="' +
+        cx +
+        '" cy="' +
+        cy +
+        '"/></a:xfrm>' +
+        '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>' +
+        '</pic:spPr>' +
+        '</pic:pic>' +
+        '</a:graphicData>' +
+        '</a:graphic>' +
+        '</wp:inline>' +
+        '</w:drawing>' +
+        '</w:r>' +
+        '</w:p>'
+      logoParaXml = picXml
+      imgRelXml =
+        '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo.png"/>'
+    }
+
     var docXml =
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
       '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
       '<w:body>' +
+      logoParaXml +
       '<w:p><w:r><w:altChunk r:id="rId1" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/></w:r></w:p>' +
       '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>' +
       '</w:body></w:document>'
@@ -283,8 +538,9 @@ routerAdd(
       '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
         'xmlns:w="urn:schemas-microsoft-com:office:word" ' +
         'xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8">' +
-        '<style>body{font-family:Calibri,Arial,sans-serif;font-size:11pt;}' +
-        'table{font-size:10pt;}h1{font-size:18pt;}h2{font-size:14pt;}</style>' +
+        '<style>' +
+        T.fontStyle +
+        '</style>' +
         '</head><body>' +
         bodyHtml +
         '</body></html>',
@@ -295,6 +551,7 @@ routerAdd(
       '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
       '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/afChunk" Target="chunk1.htm"/>' +
       '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+      imgRelXml +
       '</Relationships>'
 
     var contentTypesXml =
@@ -303,6 +560,7 @@ routerAdd(
       '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
       '<Default Extension="xml" ContentType="application/xml"/>' +
       '<Default Extension="htm" ContentType="text/html"/>' +
+      '<Default Extension="png" ContentType="image/png"/>' +
       '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
       '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
       '</Types>'
@@ -327,6 +585,7 @@ routerAdd(
       { name: 'word/styles.xml', data: stringToBytes(stylesXml) },
       { name: 'word/chunk1.htm', data: htmlBytes },
     ]
+    if (logoMediaEntry) entries.push(logoMediaEntry)
     var zipBytes = buildStoredZip(entries)
 
     return e.blob(

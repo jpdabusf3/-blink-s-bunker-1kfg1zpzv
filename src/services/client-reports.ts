@@ -65,14 +65,22 @@ export const addClientAction = (payload: NewActionPayload) =>
   })
 
 /** Call the backend to generate the Word (.docx) report and return its bytes. */
-export const generateClientWordReport = async (clientId: string, opts?: { titulo?: string }) => {
+export const generateClientWordReport = async (
+  clientId: string,
+  opts?: { titulo?: string; modelo?: string; solicitante?: string },
+) => {
   const res = await fetch(`${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/client-reports/word`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: pb.authStore.token,
     },
-    body: JSON.stringify({ clientId, titulo: opts?.titulo }),
+    body: JSON.stringify({
+      clientId,
+      titulo: opts?.titulo,
+      modelo: opts?.modelo,
+      solicitante: opts?.solicitante,
+    }),
   })
   if (!res.ok) throw new Error('Falha ao gerar relatório Word')
   return res.blob()
@@ -91,15 +99,21 @@ function safeFileName(clientName: string) {
 export const generateAndStoreClientWordReport = async (
   clientId: string,
   clientName: string,
-  opts?: { titulo?: string },
-): Promise<ClientReport> => {
+  opts?: { titulo?: string; modelo?: string; solicitante?: string; store?: boolean },
+): Promise<ClientReport | null> => {
   const blob = await generateClientWordReport(clientId, opts)
   const fileName = safeFileName(clientName)
   const file = new File([blob], fileName, {
     type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   })
 
-  // trigger browser download
+  // trigger browser download (skipped in batch mode where the caller zips blobs)
+  const store = opts?.store !== false
+  if (!store) {
+    // caller takes the blob via generateClientWordReport directly
+    return null
+  }
+
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
