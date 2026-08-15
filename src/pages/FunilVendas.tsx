@@ -74,6 +74,8 @@ export default function FunilVendas() {
   const [importOpen, setImportOpen] = useState(false)
   const [dashboardData, setDashboardData] = useState<ConsolidatedData | null>(null)
   const [selectedFactoryId, setSelectedFactoryId] = useState<string | null>(null)
+  const [historyFactory, setHistoryFactory] = useState<any>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [panelForm, setPanelForm] = useState<{
     proximos_passos: string
     acao: string
