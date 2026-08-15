@@ -83,6 +83,7 @@ export default function Cadastro() {
   const [selectedRegions, setSelectedRegions] = useState<string[]>([])
   const [selectedSpecies, setSelectedSpecies] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
+  const [selectedStatusContatos, setSelectedStatusContatos] = useState<string[]>([])
   const [selectedProfiles, setSelectedProfiles] = useState<string[]>([])
   const [selectedProductLines, setSelectedProductLines] = useState<string[]>([])
 
