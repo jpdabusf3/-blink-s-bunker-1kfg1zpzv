@@ -58,9 +58,12 @@ export function AppSidebar() {
   ]
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border shadow-sm print:hidden">
-      <SidebarHeader className="p-4 border-b flex items-center justify-center">
-        <div className="flex items-center gap-2 overflow-hidden px-1">
+    <Sidebar
+      collapsible="icon"
+      className="border-r border-border bg-card text-card-foreground print:hidden lg:w-[240px]"
+    >
+      <SidebarHeader className="p-4 border-b border-border flex items-center justify-center">
+        <div className="flex items-center gap-3 overflow-hidden px-1">
           <div className="bg-primary p-1.5 rounded-lg shrink-0">
             <Target className="w-5 h-5 text-primary-foreground" />
           </div>
@@ -70,17 +73,17 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent className="p-2 pt-4 flex-1">
-        <SidebarMenu className="gap-2">
+        <SidebarMenu>
           {menu.map((m) => (
-            <SidebarMenuItem key={m.path}>
+            <SidebarMenuItem key={m.path} className="mb-1">
               <SidebarMenuButton
                 asChild
                 isActive={loc.pathname === m.path}
-                className="h-10 px-3 data-[active=true]:bg-primary/10 data-[active=true]:text-primary font-medium transition-all"
+                className="flex items-center gap-3 h-11 pl-4 pr-4 rounded-lg mb-1 text-sm font-medium text-muted-foreground transition-all duration-150 ease-out hover:bg-muted hover:text-foreground data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-semibold"
                 tooltip={m.name}
               >
                 <Link to={m.path}>
-                  <m.icon className="w-5 h-5" />
+                  <m.icon className="w-5 h-5 shrink-0" />
                   <span className="group-data-[collapsible=icon]:hidden">{m.name}</span>
                 </Link>
               </SidebarMenuButton>
@@ -88,15 +91,15 @@ export function AppSidebar() {
           ))}
         </SidebarMenu>
       </SidebarContent>
-      <div className="p-2 border-t mt-auto">
+      <div className="p-2 border-t border-border mt-auto">
         <SidebarMenu>
-          <SidebarMenuItem>
+          <SidebarMenuItem className="mb-1">
             <SidebarMenuButton
               onClick={signOut}
               tooltip={t('nav.sair')}
-              className="h-10 px-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+              className="flex items-center gap-3 h-11 pl-4 pr-4 rounded-lg mb-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut className="w-5 h-5 shrink-0" />
               <span className="group-data-[collapsible=icon]:hidden font-medium">
                 {t('nav.sair')}
               </span>

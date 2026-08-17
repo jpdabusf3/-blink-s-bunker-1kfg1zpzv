@@ -150,7 +150,7 @@ export function AppHeader() {
   const notifCount = allNotifications.length
 
   return (
-    <header className="h-16 border-b flex items-center justify-between px-4 lg:px-6 bg-card text-card-foreground shrink-0 shadow-sm z-10 sticky top-0 print:hidden">
+    <header className="h-16 border-b border-border flex items-center justify-between px-4 lg:px-6 bg-card text-card-foreground shrink-0 backdrop-blur-sm z-50 sticky top-0 print:hidden">
       <div className="flex items-center gap-3">
         <SidebarTrigger className="md:hidden" />
         <h1 className="font-semibold text-lg lg:text-xl text-primary hidden sm:block">

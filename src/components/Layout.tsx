@@ -13,8 +13,10 @@ export default function Layout() {
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <AppHeader />
-          <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 relative pb-24 md:pb-8">
-            <Outlet />
+          <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 relative pb-24 md:pb-8 bg-background">
+            <div className="mx-auto w-full max-w-[1280px]">
+              <Outlet />
+            </div>
           </main>
         </div>
         <AppBottomNav />
