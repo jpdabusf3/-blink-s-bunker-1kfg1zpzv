@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
 
 const TIPOS = [
   { value: 'visita', label: 'Visita' },
@@ -57,6 +58,7 @@ interface AtividadeFormProps {
 }
 
 export function AtividadeForm({ onSuccess }: AtividadeFormProps) {
+  const { logAction } = useFunnelActivityLog()
   const [users, setUsers] = useState<UserListItem[]>([])
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [loading, setLoading] = useState(false)
@@ -106,6 +108,14 @@ export function AtividadeForm({ onSuccess }: AtividadeFormProps) {
       } else {
         toast.success('Atividade registrada com sucesso!')
       }
+      // Funnel activity log: activity registered
+      logAction({
+        action_type: 'create',
+        entity_type: 'action_plan',
+        entity_id: result.atividade_id || result.cliente_id || '',
+        entity_name: data.cliente.nome || '',
+        description: `Registrou atividade (${data.tipo_atividade})${data.cliente.nome ? ` para ${data.cliente.nome}` : ''}`,
+      })
       onSuccess?.()
     } catch (err) {
       const errors = extractFieldErrors(err)

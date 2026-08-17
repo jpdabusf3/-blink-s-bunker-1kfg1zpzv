@@ -222,9 +222,30 @@ export function FunilReviewMode() {
     if (Object.keys(data).length === 0 || selected.size === 0) return
 
     for (const id of selected) {
+      const factory = factories.find((f) => f.id === id)
       updateFactory(id, data)
       try {
         await updateFactoryPB(id, data as any)
+        // Funnel activity log: deal batch updated
+        logAction({
+          action_type: 'update',
+          entity_type: 'deal',
+          entity_id: id,
+          entity_name: factory?.name || '',
+          description: `Atualizou negocio ${factory?.name || id} (lote)`,
+        })
+        // If a sales owner was assigned in the batch, log an assign action
+        if (data.salesOwner && factory?.salesOwner !== data.salesOwner) {
+          logAction({
+            action_type: 'assign',
+            entity_type: 'team_member',
+            entity_id: data.salesOwner,
+            entity_name: factory?.name || '',
+            old_value: factory?.salesOwner || '',
+            new_value: data.salesOwner,
+            description: `Atribuiu responsavel ao negocio ${factory?.name || id} (lote)`,
+          })
+        }
       } catch {
         /* noop */
       }

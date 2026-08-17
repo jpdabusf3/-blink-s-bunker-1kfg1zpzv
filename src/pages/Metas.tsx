@@ -130,9 +130,18 @@ export default function Metas() {
 
   const handleDelete = async () => {
     if (!deleteId) return
+    const meta = metas.find((m) => m.id === deleteId)
     try {
       await deleteMeta(deleteId)
       toast.success('Meta excluída')
+      // Funnel activity log: goal deleted
+      logAction({
+        action_type: 'delete',
+        entity_type: 'goal',
+        entity_id: deleteId,
+        entity_name: meta?.periodo || '',
+        description: `Excluiu meta ${meta?.periodo || deleteId}`,
+      })
     } catch {
       toast.error('Erro ao excluir')
     } finally {
