@@ -209,6 +209,22 @@ routerAdd(
           meta.set('valor_realizado', (meta.get('valor_realizado') || 0) + valorEstimado)
           txApp.save(meta)
         }
+
+        // create a plano de acao for the extracted next step (if any)
+        if (proximoPasso) {
+          try {
+            var planoCol = txApp.findCollectionByNameOrId('planos_acao')
+            var plano = new Record(planoCol)
+            plano.set('descricao', proximoPasso)
+            if (dataProximaAcao) plano.set('data_prevista', dataProximaAcao)
+            plano.set('status', 'pendente')
+            plano.set('cliente', clienteId)
+            plano.set('vendedor', vendedorId)
+            plano.set('atividade_origem', atividade.id)
+            plano.set('origem', origem)
+            txApp.save(plano)
+          } catch (_) {}
+        }
       })
 
       $app

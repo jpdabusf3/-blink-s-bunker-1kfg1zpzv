@@ -45,3 +45,44 @@ export const getAtividades = () =>
     sort: '-created',
     expand: 'cliente_id,vendedor_id',
   })
+
+/**
+ * Call the backend route that generates the visit PDF, stores it on the
+ * atividade.relatorio_pdf field, and returns the binary PDF for download.
+ */
+export async function generateAtividadePdf(atividadeId: string): Promise<Blob> {
+  const res = await fetch(`${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/atividade-pdf`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: pb.authStore.token,
+    },
+    body: JSON.stringify({ atividadeId }),
+  })
+  if (!res.ok) throw new Error('Falha ao gerar PDF da visita')
+  return res.blob()
+}
+
+/** Download the generated visit PDF to the user's machine. */
+export async function downloadAtividadePdf(atividadeId: string, label?: string): Promise<void> {
+  const blob = await generateAtividadePdf(atividadeId)
+  const safe = (label || 'atividade').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 40)
+  const fileName = `relatorio_visita_${safe}_${new Date().toISOString().slice(0, 10)}.pdf`
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+/** Build the storage URL for a previously-stored relatorio_pdf file. */
+export function getAtividadePdfUrl(atividade: {
+  id: string
+  relatorio_pdf?: string
+}): string | null {
+  if (!atividade.relatorio_pdf) return null
+  return `${import.meta.env.VITE_POCKETBASE_URL}/api/files/atividades/${atividade.id}/${atividade.relatorio_pdf}`
+}

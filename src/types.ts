@@ -262,10 +262,31 @@ export interface Atividade {
   confianca: number
   carteira?: string
   grupo_cliente?: string
+  relatorio_pdf?: string
   created: string
   updated: string
   expand?: {
     cliente_id?: { id: string; name: string; city: string; state: string }
     vendedor_id?: { id: string; name: string }
+  }
+}
+
+export type PlanoStatus = 'pendente' | 'em_andamento' | 'concluido' | 'cancelado'
+
+export interface PlanoAcao {
+  id: string
+  descricao: string
+  data_prevista?: string
+  status: PlanoStatus
+  cliente?: string
+  vendedor?: string
+  atividade_origem?: string
+  origem?: 'audio' | 'manual' | 'excel' | string
+  created: string
+  updated: string
+  expand?: {
+    cliente?: { id: string; name: string }
+    vendedor?: { id: string; name: string }
+    atividade_origem?: { id: string; descricao: string }
   }
 }

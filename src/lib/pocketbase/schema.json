@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-17T13:10:49.693Z",
+  "generatedAt": "2026-08-17T13:23:32.500Z",
   "collections": [
     {
       "name": "users",
@@ -1153,6 +1153,12 @@
           "type": "json",
           "required": false,
           "system": false
+        },
+        {
+          "name": "relatorio_pdf",
+          "type": "file",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -1905,6 +1911,85 @@
       "indexes": [
         "CREATE INDEX idx_client_reports_client_id ON client_reports (client_id)",
         "CREATE INDEX idx_client_reports_created ON client_reports (created DESC)"
+      ]
+    },
+    {
+      "name": "planos_acao",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "descricao",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "data_prevista",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["pendente", "em_andamento", "concluido", "cancelado"]
+        },
+        {
+          "name": "cliente",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "factories"
+        },
+        {
+          "name": "vendedor",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "atividade_origem",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "atividades"
+        },
+        {
+          "name": "origem",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_planos_acao_cliente ON planos_acao (cliente)",
+        "CREATE INDEX idx_planos_acao_vendedor ON planos_acao (vendedor)",
+        "CREATE INDEX idx_planos_acao_status ON planos_acao (status)",
+        "CREATE INDEX idx_planos_acao_atividade_origem ON planos_acao (atividade_origem)"
       ]
     }
   ]

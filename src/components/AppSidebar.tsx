@@ -23,6 +23,7 @@ import {
   TrendingUp,
   Award,
   Layers,
+  Upload,
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
@@ -38,6 +39,7 @@ export function AppSidebar() {
   const menu = [
     { name: t('nav.dashboard'), path: '/', icon: Home },
     { name: t('nav.cadastro'), path: '/cadastro', icon: Building2 },
+    { name: 'Importar Clientes', path: '/importar-clientes', icon: Upload },
     { name: t('nav.funil'), path: '/funil', icon: BarChart2 },
     { name: 'Funil de Vendas', path: '/funil-vendas', icon: Layers },
     ...(showManager ? [{ name: 'Gestão Técnica', path: '/gestao-tecnica', icon: UserCog }] : []),

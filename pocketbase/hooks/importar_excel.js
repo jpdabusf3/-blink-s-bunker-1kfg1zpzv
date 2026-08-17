@@ -59,7 +59,8 @@ routerAdd(
 
       var factoriesCol = $app.findCollectionByNameOrId('factories')
       var created = 0,
-        updated = 0
+        updated = 0,
+        duplicatas = 0
       var errors = []
 
       for (var i = 0; i < rows.length; i++) {
@@ -69,21 +70,34 @@ routerAdd(
         var tipo = String(row.tipo || '')
           .trim()
           .toLowerCase()
-        var cnpj = cleanCnpj(row.cnpj)
+        // CNPJ header can be "cnpj" or "CNPJ"
+        var cnpjRaw = row.cnpj != null ? row.cnpj : row.CNPJ != null ? row.CNPJ : ''
+        var cnpj = cleanCnpj(cnpjRaw)
         var cidade = String(row.cidade || row.city || '').trim()
         var estado = String(row.estado || row.state || '').trim()
-        var telefone = String(row.telefone || row.phone || '').trim()
+        var telefone = String(row.telefone || row.phone || row.contato || '').trim()
         var email = String(row.email || '').trim()
-        var etapaFunil = String(row.etapa_funil || row.funnelStage || '').trim()
-        var valorPotencial = parseNumber(row.valor_potencial || row.potentialValue)
+        // funil header maps to etapa_funil
+        var etapaFunil = String(
+          row.etapa_funil || row.funnelStage || row.funil || row.Funil || '',
+        ).trim()
+        var valorPotencial = parseNumber(
+          row.valor_potencial || row.potentialValue || row.valor || row.Valor,
+        )
         var observacoes = String(row.observacoes || row.notes || '').trim()
         var carteira = String(row.carteira || '').trim()
         var grupoCliente = String(row.grupo_cliente || row.grupoCliente || '').trim()
+        var especie = String(row.especie || row.Especie || row.animalSpecies || '').trim()
+        var statusContato = String(row.status_contato || row.StatusContato || '').trim()
+        var gestorNome = String(row.gestor || row.gestor_tecnico || '').trim()
+        var vendedorNome = String(row.vendedor || row.Vendedor || '').trim()
 
         if (!nome) {
           errors.push({ linha: rowNum, erro: 'nome é obrigatório' })
           continue
         }
+        // tipo defaults to "cliente" when omitted (template doesn't require it)
+        if (!tipo) tipo = 'cliente'
         if (tipo !== 'cliente' && tipo !== 'prospecto') {
           errors.push({ linha: rowNum, erro: 'tipo deve ser "cliente" ou "prospecto"' })
           continue
@@ -114,94 +128,56 @@ routerAdd(
           } catch (_) {}
         }
 
+        // duplicate (same CNPJ or name) -> skip, do not overwrite
+        if (existing) {
+          duplicatas++
+          continue
+        }
+
         try {
-          if (existing) {
-            var rec = $app.findRecordById('factories', existing.id)
-            rec.set('name', nome)
-            if (cnpj) rec.set('cnpj', cnpj)
-            rec.set('tipo', tipo === 'cliente' ? 'Cliente' : 'Prospecto')
-            if (cidade) rec.set('city', cidade)
-            if (estado) rec.set('state', estado)
-            if (telefone) rec.set('contactPhone', telefone)
-            if (email) rec.set('contact_email', email)
-            if (etapaFunil) rec.set('funnelStage', etapaFunil)
-            if (valorPotencial) rec.set('potentialValue', valorPotencial)
-            if (observacoes) rec.set('notes', observacoes)
-            if (carteira) rec.set('carteira', carteira.toUpperCase())
-            if (grupoCliente) rec.set('grupo_cliente', grupoCliente)
-
-            var gestorNomeUpd = String(row.gestor_tecnico || '').trim()
-            var vendedorNomeUpd = String(row.vendedor || '').trim()
-            if (gestorNomeUpd) {
-              try {
-                var gtUpd = $app.findFirstRecordByFilter(
-                  'gestao_tecnica',
-                  "nome = '" +
-                    gestorNomeUpd.replace(/'/g, "\\'") +
-                    "' && funcao = 'gestor_tecnico'",
-                )
-                rec.set('gestor_tecnico_id', gtUpd.id)
-              } catch (_) {}
-            }
-            if (vendedorNomeUpd) {
-              try {
-                var vdUpd = $app.findFirstRecordByFilter(
-                  'gestao_tecnica',
-                  "nome = '" + vendedorNomeUpd.replace(/'/g, "\\'") + "' && funcao = 'vendedor'",
-                )
-                rec.set('vendedor_id', vdUpd.id)
-              } catch (_) {}
-            }
-
-            rec.set('ultima_edicao_origem', 'excel')
-            $app.save(rec)
-            updated++
+          var newRec = new Record(factoriesCol)
+          newRec.set('name', nome)
+          if (cnpj) newRec.set('cnpj', cnpj)
+          newRec.set('tipo', tipo === 'cliente' ? 'Cliente' : 'Prospecto')
+          if (cidade) newRec.set('city', cidade)
+          if (estado) newRec.set('state', estado)
+          if (telefone) newRec.set('contactPhone', telefone)
+          if (email) newRec.set('contact_email', email)
+          if (tipo === 'prospecto') {
+            newRec.set('funnelStage', 'prospeccao')
           } else {
-            var newRec = new Record(factoriesCol)
-            newRec.set('name', nome)
-            if (cnpj) newRec.set('cnpj', cnpj)
-            newRec.set('tipo', tipo === 'cliente' ? 'Cliente' : 'Prospecto')
-            if (cidade) newRec.set('city', cidade)
-            if (estado) newRec.set('state', estado)
-            if (telefone) newRec.set('contactPhone', telefone)
-            if (email) newRec.set('contact_email', email)
-            if (tipo === 'prospecto') {
-              newRec.set('funnelStage', 'prospeccao')
-            } else {
-              newRec.set('funnelStage', etapaFunil || 'Lead')
-            }
-            if (valorPotencial) newRec.set('potentialValue', valorPotencial)
-            if (observacoes) newRec.set('notes', observacoes)
-            if (carteira) newRec.set('carteira', carteira.toUpperCase())
-            if (grupoCliente) newRec.set('grupo_cliente', grupoCliente)
-
-            var gestorNomeNew = String(row.gestor_tecnico || '').trim()
-            var vendedorNomeNew = String(row.vendedor || '').trim()
-            if (gestorNomeNew) {
-              try {
-                var gtNew = $app.findFirstRecordByFilter(
-                  'gestao_tecnica',
-                  "nome = '" +
-                    gestorNomeNew.replace(/'/g, "\\'") +
-                    "' && funcao = 'gestor_tecnico'",
-                )
-                newRec.set('gestor_tecnico_id', gtNew.id)
-              } catch (_) {}
-            }
-            if (vendedorNomeNew) {
-              try {
-                var vdNew = $app.findFirstRecordByFilter(
-                  'gestao_tecnica',
-                  "nome = '" + vendedorNomeNew.replace(/'/g, "\\'") + "' && funcao = 'vendedor'",
-                )
-                newRec.set('vendedor_id', vdNew.id)
-              } catch (_) {}
-            }
-
-            newRec.set('ultima_edicao_origem', 'excel')
-            $app.save(newRec)
-            created++
+            newRec.set('funnelStage', etapaFunil || 'Lead')
           }
+          if (valorPotencial) newRec.set('potentialValue', valorPotencial)
+          if (observacoes) newRec.set('notes', observacoes)
+          if (carteira) newRec.set('carteira', carteira.toUpperCase())
+          if (grupoCliente) newRec.set('grupo_cliente', grupoCliente)
+          if (especie) newRec.set('animalSpecies', especie)
+          if (statusContato) newRec.set('status_contato', statusContato)
+          if (telefone) newRec.set('contato', telefone)
+
+          if (gestorNome) {
+            try {
+              var gtNew = $app.findFirstRecordByFilter(
+                'gestao_tecnica',
+                "nome = '" + gestorNome.replace(/'/g, "\\'") + "' && funcao = 'gestor_tecnico'",
+              )
+              newRec.set('gestor_tecnico_id', gtNew.id)
+            } catch (_) {}
+          }
+          if (vendedorNome) {
+            try {
+              var vdNew = $app.findFirstRecordByFilter(
+                'gestao_tecnica',
+                "nome = '" + vendedorNome.replace(/'/g, "\\'") + "' && funcao = 'vendedor'",
+              )
+              newRec.set('vendedor_id', vdNew.id)
+            } catch (_) {}
+          }
+
+          newRec.set('ultima_edicao_origem', 'excel')
+          $app.save(newRec)
+          created++
         } catch (saveErr) {
           errors.push({ linha: rowNum, erro: 'erro ao salvar: ' + String(saveErr) })
         }
@@ -211,6 +187,7 @@ routerAdd(
         success: true,
         criados: created,
         atualizados: updated,
+        duplicatas: duplicatas,
         erros: errors,
         total: rows.length,
       })

@@ -26,6 +26,7 @@ import { FileText, Plus, Loader2, History, ArrowRight } from 'lucide-react'
 import type { Factory } from '@/types'
 import { getReportTemplatePreference } from '@/services/report-template-preferences'
 import { REPORT_TEMPLATE_LABEL } from '@/lib/reportTemplates'
+import { PlanoAcaoPanel } from '@/components/PlanoAcaoPanel'
 
 interface ClientHistoryDialogProps {
   factory: Factory | null
@@ -322,6 +323,12 @@ export function ClientHistoryDialog({
             </div>
           )}
         </ScrollArea>
+
+        {factory && (
+          <div className="border-t pt-3">
+            <PlanoAcaoPanel clienteId={factory.id} />
+          </div>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

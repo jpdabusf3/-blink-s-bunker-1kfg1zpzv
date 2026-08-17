@@ -15,13 +15,16 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Loader2 } from 'lucide-react'
+import { Plus, Loader2, FileDown, Loader } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { downloadAtividadePdf } from '@/services/atividades'
+import { toast } from 'sonner'
 
 export default function Atividades() {
   const [atividades, setAtividades] = useState<Atividade[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -44,6 +47,20 @@ export default function Atividades() {
   useRealtime('atividades', () => {
     load()
   })
+
+  const handleDownloadPdf = async (a: Atividade) => {
+    setDownloadingId(a.id)
+    try {
+      const clientName = a.expand?.cliente_id?.name || 'atividade'
+      await downloadAtividadePdf(a.id, clientName)
+      toast.success('PDF gerado com sucesso')
+      load()
+    } catch {
+      toast.error('Erro ao gerar PDF')
+    } finally {
+      setDownloadingId(null)
+    }
+  }
 
   return (
     <div className="space-y-4 animate-fade-in pb-10">
@@ -77,6 +94,7 @@ export default function Atividades() {
                   <TableHead className="text-right">Valor</TableHead>
                   <TableHead>Origem</TableHead>
                   <TableHead>Próximo passo</TableHead>
+                  <TableHead className="text-right">PDF</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -109,11 +127,27 @@ export default function Atividades() {
                     <TableCell className="text-xs max-w-[200px] truncate">
                       {a.proximo_passo || '—'}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleDownloadPdf(a)}
+                        disabled={downloadingId === a.id}
+                        title="Baixar PDF da visita"
+                      >
+                        {downloadingId === a.id ? (
+                          <Loader className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <FileDown className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
                 {atividades.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center h-24 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center h-24 text-muted-foreground">
                       Nenhuma atividade registrada
                     </TableCell>
                   </TableRow>

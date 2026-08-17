@@ -261,6 +261,42 @@ cronAdd('processar_fila_audio', '* * * * *', () => {
           throw new Error('validar-e-gravar failed: ' + writeRes.statusCode)
         }
 
+        // Extract the created atividade id (and cliente id) from the response
+        var gravadoId = ''
+        var gravadoClienteId = ''
+        try {
+          var gravadoJson = writeRes.json || {}
+          gravadoId = gravadoJson.atividade_id || ''
+          gravadoClienteId = gravadoJson.cliente_id || ''
+        } catch (_) {}
+
+        // Generate the visit PDF and store it on the atividade (best-effort).
+        var pdfLink = ''
+        if (gravadoId) {
+          try {
+            var pdfRes = $http.send({
+              url: pbUrl + '/backend/v1/atividade-pdf',
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: superuserToken,
+              },
+              body: JSON.stringify({ atividadeId: gravadoId }),
+              timeout: 30,
+            })
+            if (pdfRes.statusCode >= 200 && pdfRes.statusCode < 300) {
+              // build the storage URL for the stored relatorio_pdf file
+              pdfLink =
+                pbUrl +
+                '/api/files/atividades/' +
+                gravadoId +
+                '/relatorio_visita_' +
+                gravadoId.substring(0, 8) +
+                '.pdf'
+            }
+          } catch (_) {}
+        }
+
         var valorStr =
           typeof parsed.valor_estimado === 'number'
             ? String(parsed.valor_estimado).replace('.', ',')
@@ -279,6 +315,9 @@ cronAdd('processar_fila_audio', '* * * * *', () => {
           '\n' +
           'Proximo passo: ' +
           (parsed.proximo_passo || '')
+        if (pdfLink) {
+          confirmMsg += '\nRelatorio PDF: ' + pdfLink
+        }
 
         if (evolutionUrl && instance && from) {
           try {

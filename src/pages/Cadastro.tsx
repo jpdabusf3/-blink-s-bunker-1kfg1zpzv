@@ -32,6 +32,7 @@ import { normalizeArray } from '@/lib/utils'
 import { FactoryForm } from '@/components/FactoryForm'
 import { ImportExcelDialog } from '@/components/ImportExcelDialog'
 import { MultiSelect } from '@/components/ui/multi-select'
+import { Link } from 'react-router-dom'
 import type { Factory } from '@/types'
 
 const REGION_OPTIONS = ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul']
@@ -220,6 +221,11 @@ export default function Cadastro() {
         <div className="flex gap-2">
           <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
             <Upload className="w-4 h-4" /> Importar
+          </Button>
+          <Button variant="outline" className="gap-2" asChild>
+            <Link to="/importar-clientes">
+              <Upload className="w-4 h-4" /> Importar Clientes (Excel)
+            </Link>
           </Button>
           <Button className="gap-2" onClick={handleNew}>
             <Plus className="w-4 h-4" /> Nova Fábrica
