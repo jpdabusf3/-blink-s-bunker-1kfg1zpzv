@@ -9,9 +9,20 @@
 //   - solicitante: name of the requesting user (falls back to auth user)
 //   - gathers activity_logs for the client
 //   - builds a minimal valid .docx (OOXML zip, stored/uncompressed, no deps)
-//   - the Blink Biotech logo is always embedded (header/cover) regardless of template
+//   - the Blink Biotech logo is always embedded (cover) regardless of template
 //   - colours / styles follow the chosen visual template
 //   - responds with the binary blob
+//
+// Fix history:
+//   - The logo used to be fetched via $http.send(...).body, which in the JSVM
+//     is a lossy Go->JS string cast of the binary body — the resulting bytes
+//     were corrupted, so the embedded PNG inside the .docx zip was invalid and
+//     Microsoft Word rejected the whole package with "conteúdo ilegível".
+//     The logo is now downloaded with $filesystem.fileFromURL (which exposes
+//     the raw bytes through a FileReader) so the PNG is byte-accurate.
+//   - altChunk is now a direct child of <w:body> (not wrapped in <w:r>), per
+//     the OOXML schema, which some Word versions enforce strictly.
+//   - All user-controlled text fields are XML-escaped ( &, <, >, ", ' ).
 routerAdd(
   'POST',
   '/backend/v1/client-reports/word',
@@ -27,6 +38,8 @@ routerAdd(
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;')
     }
     function fmtDate(iso) {
       if (!iso) return '—'
@@ -170,36 +183,24 @@ routerAdd(
       }
     }
 
-    // base64 -> bytes (for embedding the logo image fetched via $http)
-    function base64ToBytes(b64) {
-      var lookup = (function () {
-        var t = new Array(256)
-        for (var i = 0; i < 256; i++) t[i] = -1
-        var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-        for (var j = 0; j < chars.length; j++) t[chars.charCodeAt(j)] = j
-        t['='.charCodeAt(0)] = 0
-        return t
-      })()
-      var cleaned = String(b64 || '').replace(/[^A-Za-z0-9+/=]/g, '')
-      var len = cleaned.length
-      var out = []
-      var i = 0
-      while (i < len) {
-        var a = lookup[cleaned.charCodeAt(i++)]
-        var b = lookup[cleaned.charCodeAt(i++)]
-        var c = lookup[cleaned.charCodeAt(i++)]
-        var d = lookup[cleaned.charCodeAt(i++)]
-        var n = (a << 18) | (b << 12) | (c << 6) | d
-        out.push((n >> 16) & 0xff)
-        out.push((n >> 8) & 0xff)
-        out.push(n & 0xff)
+    // Download a URL as raw bytes. $filesystem.fileFromURL returns a File whose
+    // reader exposes the true binary content (unlike $http body which lossy-
+    // casts bytes to a JS string). Used to embed the logo PNG byte-accurately.
+    function fetchBytesViaFilesystem(url, timeoutSec) {
+      var file = $filesystem.fileFromURL(url, timeoutSec || 30)
+      var reader = file.reader.open()
+      try {
+        var buf = new Uint8Array(file.size)
+        reader.read(buf)
+        // convert to plain array (number[]) — buildStoredZip expects arrays
+        var arr = new Array(buf.length)
+        for (var i = 0; i < buf.length; i++) arr[i] = buf[i]
+        return arr
+      } finally {
+        try {
+          reader.close()
+        } catch (_) {}
       }
-      // trim padding
-      var padCount = 0
-      if (cleaned.length >= 1 && cleaned.charAt(cleaned.length - 1) === '=') padCount++
-      if (cleaned.length >= 2 && cleaned.charAt(cleaned.length - 2) === '=') padCount++
-      while (padCount-- > 0) out.pop()
-      return out
     }
 
     // ---------- visual templates ----------
@@ -326,43 +327,36 @@ routerAdd(
       userName = e.auth.getString('name') || e.auth.getString('email') || ''
     }
 
-    // ---------- fetch the Blink logo and embed as base64 ----------
-    var logoB64 = ''
-    var logoMediaEntry = null
+    // ---------- fetch the Blink logo as byte-accurate raw bytes ----------
+    // $filesystem.fileFromURL downloads the resource and exposes the true
+    // binary content via a FileReader — essential for a valid PNG inside the
+    // .docx zip (the previous $http.send().body path corrupted the bytes).
+    var logoBytes = null
     try {
-      var logoRes = $http.send({
-        url: 'https://dagtlwojkqyivnjgveda.supabase.co/storage/v1/object/public/message-attachments/38d970e5-7e8c-4a30-8b1e-ccf8a9667554/image-f220f.png',
-        method: 'GET',
-        timeout: 15,
-      })
-      if (logoRes && logoRes.statusCode >= 200 && logoRes.statusCode < 300 && logoRes.body) {
-        // $http returns raw bytes in body; encode to base64 in chunks (JSVM has no btoa)
-        var raw = logoRes.body
-        var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-        var b64 = ''
-        for (var bi = 0; bi < raw.length; bi += 3) {
-          var b1 = raw[bi] || 0
-          var b2 = bi + 1 < raw.length ? raw[bi + 1] : 0
-          var b3 = bi + 2 < raw.length ? raw[bi + 2] : 0
-          b64 += chars[(b1 >> 2) & 0x3f]
-          b64 += chars[((b1 & 0x03) << 4) | ((b2 >> 4) & 0x0f)]
-          b64 += bi + 1 < raw.length ? chars[((b2 & 0x0f) << 2) | ((b3 >> 6) & 0x03)] : '='
-          b64 += bi + 2 < raw.length ? chars[b3 & 0x3f] : '='
-        }
-        logoB64 = b64
-        logoMediaEntry = { name: 'word/media/logo.png', data: base64ToBytes(b64) }
+      logoBytes = fetchBytesViaFilesystem(
+        'https://dagtlwojkqyivnjgveda.supabase.co/storage/v1/object/public/message-attachments/38d970e5-7e8c-4a30-8b1e-ccf8a9667554/image-f220f.png',
+        20,
+      )
+      if (!logoBytes || logoBytes.length < 24) logoBytes = null
+      // sanity check: PNG signature (89 50 4E 47 0D 0A 1A 0A)
+      if (
+        logoBytes &&
+        (logoBytes[0] !== 0x89 ||
+          logoBytes[1] !== 0x50 ||
+          logoBytes[2] !== 0x4e ||
+          logoBytes[3] !== 0x47)
+      ) {
+        logoBytes = null
       }
-    } catch (_) {}
+    } catch (_) {
+      logoBytes = null
+    }
 
     // ---------- build HTML body ----------
     var nowStr = fmtDate(new Date().toISOString())
 
     var coverHtml = ''
     coverHtml += '<div class="cover">'
-    if (logoMediaEntry) {
-      coverHtml +=
-        '<img src="media/logo.png" alt="Blink Biotech" style="max-height:70px;margin-bottom:16px;"/>'
-    }
     coverHtml += '<h1>' + esc(titulo) + '</h1>'
     coverHtml += '<div class="sub">Blink Biotech • Relatório ' + esc(T.label) + '</div>'
     coverHtml += '</div>'
@@ -429,7 +423,7 @@ routerAdd(
         var stNew = log.getString('status_novo') || ''
         var statusChange = ''
         if (stOld || stNew) {
-          statusChange = esc(stOld || '—') + ' → ' + esc(stNew || '—')
+          statusChange = esc(stOld || '—') + ' &rarr; ' + esc(stNew || '—')
         }
         var detailCell = esc(details)
         if (prox) detailCell += '<br/><i>Próximo passo:</i> ' + esc(prox)
@@ -451,20 +445,24 @@ routerAdd(
       '). Editável.</p>'
 
     // ---------- build the .docx (OOXML zip) ----------
-    // When the logo is embedded we render it as a real OOXML image (drawing)
+    // The HTML chunk is referenced via an altChunk relationship (rId1). When
+    // the logo is present it is rendered as a real OOXML drawing (image)
     // referencing relationship rId3, placed as the first paragraph (cover).
     var EMU_PER_PX = 9525
     var logoParaXml = ''
     var imgRelXml = ''
-    if (logoMediaEntry) {
+    var logoMediaEntry = null
+    if (logoBytes) {
+      logoMediaEntry = { name: 'word/media/logo.png', data: logoBytes }
       // read PNG IHDR for native pixel dimensions (big-endian at offsets 16/20)
-      var pngData = logoMediaEntry.data
       var imgW = 200
       var imgH = 60
       try {
-        if (pngData.length > 24) {
-          imgW = (pngData[16] << 24) | (pngData[17] << 16) | (pngData[18] << 8) | pngData[19]
-          imgH = (pngData[20] << 24) | (pngData[21] << 16) | (pngData[22] << 8) | pngData[23]
+        if (logoBytes.length > 24) {
+          imgW =
+            (logoBytes[16] << 24) | (logoBytes[17] << 16) | (logoBytes[18] << 8) | logoBytes[19]
+          imgH =
+            (logoBytes[20] << 24) | (logoBytes[21] << 16) | (logoBytes[22] << 8) | logoBytes[23]
           if (imgW <= 0 || imgH <= 0 || imgW > 4000 || imgH > 4000) {
             imgW = 200
             imgH = 60
@@ -525,12 +523,14 @@ routerAdd(
         '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo.png"/>'
     }
 
+    // altChunk is a direct child of <w:body> (not wrapped in <w:r>/<w:p>),
+    // which is the schema-correct placement Word expects.
     var docXml =
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
-      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
       '<w:body>' +
       logoParaXml +
-      '<w:p><w:r><w:altChunk r:id="rId1" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/></w:r></w:p>' +
+      '<w:altChunk r:id="rId1"/>' +
       '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>' +
       '</w:body></w:document>'
 

@@ -10,12 +10,14 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
-import { Loader2, Plus, Edit, Trash2, Target } from 'lucide-react'
+import { Loader2, Plus, Edit, Trash2, Target, FileText } from 'lucide-react'
 import { useRealtime } from '@/hooks/use-realtime'
+import { useAuth } from '@/hooks/use-auth'
 import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { getMetas, createMeta, updateMeta, deleteMeta, type Meta } from '@/services/metas'
 import { MetaForm, type MetaFormValues } from '@/components/MetaForm'
 import { MetasMatrix } from '@/components/MetasMatrix'
+import { exportMetasBalancoPDF, logMetasBalancoExport, buildMetasMatrix } from '@/lib/exportMetas'
 
 export default function Metas() {
   const [vendedores, setVendedores] = useState<GestaoTecnica[]>([])
@@ -26,6 +28,8 @@ export default function Metas() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'especie' | 'gestor' | 'canal'>('especie')
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
+  const { user } = useAuth()
 
   const loadData = async () => {
     try {
@@ -118,6 +122,33 @@ export default function Metas() {
     }
   }
 
+  const handleExportPDF = async () => {
+    if (metas.length === 0) {
+      toast.error('Nenhuma meta para exportar')
+      return
+    }
+    setExporting(true)
+    try {
+      const solicitante = user?.name || user?.email || ''
+      await exportMetasBalancoPDF(metas, vendedores, gestores, { solicitante })
+      // Compute totals from the espécie view (grand total is view-independent
+      // in aggregate) for the activity log.
+      const res = buildMetasMatrix(metas, vendedores, gestores, 'especie')
+      await logMetasBalancoExport({
+        solicitante,
+        totalMetas: metas.length,
+        totalVendedores: vendedores.length,
+        metaTotal: res.grandTotal.meta,
+        realizadoTotal: res.grandTotal.realizado,
+      })
+      toast.success('Balanço exportado. Registro salvo na aba de Relatórios.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao exportar balanço de metas')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <div className="space-y-6 pb-10 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -132,31 +163,46 @@ export default function Metas() {
             </p>
           </div>
         </div>
-        <Dialog
-          open={open}
-          onOpenChange={(v) => {
-            if (!v) handleClose()
-            else setOpen(v)
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button className="gap-2" onClick={handleOpen}>
-              <Plus className="w-4 h-4" /> Nova Meta
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>{editingId ? 'Editar Meta' : 'Nova Meta'}</DialogTitle>
-            </DialogHeader>
-            <MetaForm
-              onSubmit={onSubmit}
-              initialData={editingMeta}
-              vendedores={vendedores}
-              gestores={gestores}
-              onCancel={handleClose}
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={handleExportPDF}
+            disabled={exporting || loading || metas.length === 0}
+          >
+            {exporting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <FileText className="w-4 h-4" />
+            )}
+            Exportar Balanço (PDF)
+          </Button>
+          <Dialog
+            open={open}
+            onOpenChange={(v) => {
+              if (!v) handleClose()
+              else setOpen(v)
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button className="gap-2" onClick={handleOpen}>
+                <Plus className="w-4 h-4" /> Nova Meta
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>{editingId ? 'Editar Meta' : 'Nova Meta'}</DialogTitle>
+              </DialogHeader>
+              <MetaForm
+                onSubmit={onSubmit}
+                initialData={editingMeta}
+                vendedores={vendedores}
+                gestores={gestores}
+                onCancel={handleClose}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Card className="shadow-subtle">
