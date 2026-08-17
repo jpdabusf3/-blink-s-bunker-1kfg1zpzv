@@ -153,6 +153,11 @@ export function AppHeader() {
     <header className="h-16 border-b border-border flex items-center justify-between px-4 lg:px-6 bg-card text-card-foreground shrink-0 backdrop-blur-sm z-50 sticky top-0 print:hidden">
       <div className="flex items-center gap-3">
         <SidebarTrigger className="md:hidden" />
+        <img
+          src="https://dagtlwojkqyivnjgveda.supabase.co/storage/v1/object/public/message-attachments/38d970e5-7e8c-4a30-8b1e-ccf8a9667554/image-f220f.png"
+          alt="Blink Biotech"
+          className="h-9 w-auto"
+        />
         <h1 className="font-semibold text-lg lg:text-xl text-primary hidden sm:block">
           {tr('hdr.title')}
         </h1>
