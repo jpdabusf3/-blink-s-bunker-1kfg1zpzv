@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useAppContext } from '@/store/AppContext'
 import { useScopedFactories } from '@/hooks/use-scoped-data'
+import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
 import { updateFactoryPB } from '@/services/factories'
 import { getUsers, type UserListItem } from '@/services/users'
 import { Card } from '@/components/ui/card'
@@ -68,6 +69,7 @@ const REGIONS = [
 export function FunilReviewMode() {
   const { updateFactory } = useAppContext()
   const factories = useScopedFactories()
+  const { logAction } = useFunnelActivityLog()
   const [users, setUsers] = useState<UserListItem[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [searchTerm, setSearchTerm] = useState('')
@@ -163,6 +165,7 @@ export function FunilReviewMode() {
   const handleInlineSave = async (id: string) => {
     const edits = editValues[id]
     if (!edits) return
+    const factory = factories.find((f) => f.id === id)
     const data: Partial<Factory> = {}
     if (edits.priority) data.priority = edits.priority as Factory['priority']
     if (edits.winProbability !== undefined) data.winProbability = Number(edits.winProbability)
@@ -176,6 +179,26 @@ export function FunilReviewMode() {
       updateFactory(id, data)
       try {
         await updateFactoryPB(id, data as any)
+        // Funnel activity log: deal updated
+        logAction({
+          action_type: 'update',
+          entity_type: 'deal',
+          entity_id: id,
+          entity_name: factory?.name || '',
+          description: `Atualizou negocio ${factory?.name || id}`,
+        })
+        // If a sales owner was assigned, log an assign action
+        if (data.salesOwner && factory?.salesOwner !== data.salesOwner) {
+          logAction({
+            action_type: 'assign',
+            entity_type: 'team_member',
+            entity_id: data.salesOwner,
+            entity_name: factory?.name || '',
+            old_value: factory?.salesOwner || '',
+            new_value: data.salesOwner,
+            description: `Atribuiu responsavel ao negocio ${factory?.name || id}`,
+          })
+        }
       } catch {
         /* noop */
       }

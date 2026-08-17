@@ -29,7 +29,23 @@ import ImportarClientes from './pages/ImportarClientes'
 import RelatorioAtividades from './pages/RelatorioAtividades'
 import PerformanceReport from './pages/PerformanceReport'
 import { SuperAdminRoute } from './components/SuperAdminRoute'
+import { lazy, Suspense } from 'react'
+import { Skeleton } from '@/components/ui/skeleton'
 import { ThemeProvider } from './components/ThemeProvider'
+
+const HistoricoFunil = lazy(() => import('./pages/HistoricoFunil'))
+const ConfiguracoesLayout = lazy(() => import('./pages/ConfiguracoesLayout'))
+
+function PageSkeleton() {
+  return (
+    <div className="space-y-4 p-4">
+      <Skeleton className="h-8 w-64" />
+      <Skeleton className="h-4 w-96" />
+      <Skeleton className="h-24 w-full" />
+      <Skeleton className="h-64 w-full" />
+    </div>
+  )
+}
 
 const App = () => (
   <ThemeProvider defaultTheme="system" storageKey="blink-theme" attribute="class">
@@ -45,6 +61,22 @@ const App = () => (
 
                 <Route element={<ProtectedRoute />}>
                   <Route element={<Layout />}>
+                    <Route
+                      path="/historico-funil"
+                      element={
+                        <Suspense fallback={<PageSkeleton />}>
+                          <HistoricoFunil />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/configuracoes-layout"
+                      element={
+                        <Suspense fallback={<PageSkeleton />}>
+                          <ConfiguracoesLayout />
+                        </Suspense>
+                      }
+                    />
                     <Route path="/" element={<Index />} />
                     <Route path="/cadastro" element={<Cadastro />} />
                     <Route path="/funil" element={<Funil />} />

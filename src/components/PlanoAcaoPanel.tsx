@@ -13,6 +13,7 @@ import {
 import { Loader2, Plus, Trash2, CheckCircle2, Circle, Clock, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
+import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
 import {
   getPlanosByCliente,
   createPlanoAcao,
@@ -42,6 +43,7 @@ const STATUS_OPTIONS: { value: PlanoStatus; label: string }[] = [
 
 export function PlanoAcaoPanel({ clienteId }: PlanoAcaoPanelProps) {
   const { user } = useAuth()
+  const { logAction } = useFunnelActivityLog()
   const [planos, setPlanos] = useState<PlanoAcao[]>([])
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
@@ -85,6 +87,14 @@ export function PlanoAcaoPanel({ clienteId }: PlanoAcaoPanelProps) {
       setShowForm(false)
       await load()
       toast.success('Plano de ação criado')
+      // Funnel activity log: action plan created
+      logAction({
+        action_type: 'create',
+        entity_type: 'action_plan',
+        entity_id: clienteId,
+        entity_name: descricao.trim(),
+        description: `Criou plano de acao: ${descricao.trim()}`,
+      })
     } catch {
       toast.error('Erro ao criar plano de ação')
     } finally {
@@ -93,20 +103,44 @@ export function PlanoAcaoPanel({ clienteId }: PlanoAcaoPanelProps) {
   }
 
   const handleStatusChange = async (id: string, status: PlanoStatus) => {
+    const plano = planos.find((p) => p.id === id)
+    const oldStatus = plano?.status
     try {
       await updatePlanoAcao(id, { status })
       await load()
+      // Funnel activity log: action plan status change
+      logAction({
+        action_type: 'status_change',
+        entity_type: 'action_plan',
+        entity_id: id,
+        entity_name: plano?.descricao || '',
+        old_value: oldStatus || '',
+        new_value: status,
+        description: `Atualizou plano de acao ${plano?.descricao || id} para ${status}`,
+      })
     } catch {
       toast.error('Erro ao atualizar status')
     }
   }
 
+  // Funnel activity log: action_plan updates handled via handleStatusChange.
+  // (Edit-by-description is not exposed in the current UI.)
+
   const handleDelete = async (id: string) => {
+    const plano = planos.find((p) => p.id === id)
     if (!confirm('Excluir este plano de ação?')) return
     try {
       await deletePlanoAcao(id)
       await load()
       toast.success('Plano de ação excluído')
+      // Funnel activity log: action plan deleted
+      logAction({
+        action_type: 'delete',
+        entity_type: 'action_plan',
+        entity_id: id,
+        entity_name: plano?.descricao || '',
+        description: `Excluiu plano de acao: ${plano?.descricao || id}`,
+      })
     } catch {
       toast.error('Erro ao excluir')
     }

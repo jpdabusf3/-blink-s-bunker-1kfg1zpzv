@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { Loader2, Plus, Edit, Trash2, Target, FileText } from 'lucide-react'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useAuth } from '@/hooks/use-auth'
+import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
 import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { getMetas, createMeta, updateMeta, deleteMeta, type Meta } from '@/services/metas'
 import { MetaForm, type MetaFormValues } from '@/components/MetaForm'
@@ -30,6 +31,7 @@ export default function Metas() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
   const { user } = useAuth()
+  const { logAction } = useFunnelActivityLog()
 
   const loadData = async () => {
     try {
@@ -100,9 +102,25 @@ export default function Metas() {
       if (editingId) {
         await updateMeta(editingId, payload)
         toast.success('Meta atualizada')
+        // Funnel activity log: goal updated
+        logAction({
+          action_type: 'update',
+          entity_type: 'goal',
+          entity_id: editingId,
+          entity_name: payload.periodo,
+          description: `Atualizou meta ${payload.periodo}`,
+        })
       } else {
-        await createMeta(payload)
+        const created = await createMeta(payload)
         toast.success('Meta criada')
+        // Funnel activity log: goal created
+        logAction({
+          action_type: 'create',
+          entity_type: 'goal',
+          entity_id: created?.id || '',
+          entity_name: payload.periodo,
+          description: `Criou meta ${payload.periodo}`,
+        })
       }
       handleClose()
     } catch {

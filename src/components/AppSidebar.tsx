@@ -24,6 +24,7 @@ import {
   Award,
   Layers,
   Upload,
+  Settings2,
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
@@ -57,6 +58,8 @@ export function AppSidebar() {
     ...(showMasterOrCeo
       ? [{ name: t('nav.auditoria'), path: '/admin/logs', icon: ScrollText }]
       : []),
+    { name: 'Historico', path: '/historico-funil', icon: ClipboardList },
+    { name: 'Config. Layout', path: '/configuracoes-layout', icon: Settings2 },
   ]
 
   return (

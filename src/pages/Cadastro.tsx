@@ -32,6 +32,7 @@ import { normalizeArray } from '@/lib/utils'
 import { FactoryForm } from '@/components/FactoryForm'
 import { ImportExcelDialog } from '@/components/ImportExcelDialog'
 import { MultiSelect } from '@/components/ui/multi-select'
+import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
 import { Link } from 'react-router-dom'
 import type { Factory } from '@/types'
 
@@ -193,11 +194,22 @@ export default function Cadastro() {
     setDialogOpen(true)
   }
 
+  const { logAction } = useFunnelActivityLog()
+
   const handleDelete = async (id: string) => {
+    const factory = factories.find((f) => f.id === id)
     if (!confirm('Excluir esta fábrica?')) return
     try {
       await deleteFactoryPB(id)
       toast.success('Fábrica excluída')
+      // Funnel activity log: client deleted
+      logAction({
+        action_type: 'delete',
+        entity_type: 'client',
+        entity_id: id,
+        entity_name: factory?.name || '',
+        description: `Excluiu cliente ${factory?.name || id}`,
+      })
       loadData()
     } catch {
       toast.error('Erro ao excluir')

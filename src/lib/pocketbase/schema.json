@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-17T13:33:32.489Z",
+  "generatedAt": "2026-08-17T14:04:33.589Z",
   "collections": [
     {
       "name": "users",
@@ -1990,6 +1990,154 @@
         "CREATE INDEX idx_planos_acao_vendedor ON planos_acao (vendedor)",
         "CREATE INDEX idx_planos_acao_status ON planos_acao (status)",
         "CREATE INDEX idx_planos_acao_atividade_origem ON planos_acao (atividade_origem)"
+      ]
+    },
+    {
+      "name": "funnel_activity_log",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\" && user = @request.auth.id",
+        "view": "@request.auth.id != \"\" && user = @request.auth.id",
+        "create": "@request.auth.id != \"\" && user = @request.auth.id",
+        "update": "@request.auth.id != \"\" && user = @request.auth.id",
+        "delete": "@request.auth.id != \"\" && user = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "user",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "action_type",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["create", "update", "delete", "move", "assign", "status_change"]
+        },
+        {
+          "name": "entity_type",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["deal", "client", "action_plan", "goal", "team_member"]
+        },
+        {
+          "name": "entity_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "entity_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "old_value",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "new_value",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_funnel_activity_log_user ON funnel_activity_log (user)",
+        "CREATE INDEX idx_funnel_activity_log_entity_type ON funnel_activity_log (entity_type)",
+        "CREATE INDEX idx_funnel_activity_log_entity_id ON funnel_activity_log (entity_id)",
+        "CREATE INDEX idx_funnel_activity_log_created ON funnel_activity_log (created DESC)"
+      ]
+    },
+    {
+      "name": "layout_versions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\" && user = @request.auth.id",
+        "view": "@request.auth.id != \"\" && user = @request.auth.id",
+        "create": "@request.auth.id != \"\" && user = @request.auth.id",
+        "update": "@request.auth.id != \"\" && user = @request.auth.id",
+        "delete": "@request.auth.id != \"\" && user = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "user",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "page_name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "config_data",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "version_label",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "is_active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_layout_versions_user ON layout_versions (user)",
+        "CREATE INDEX idx_layout_versions_page_name ON layout_versions (page_name)",
+        "CREATE INDEX idx_layout_versions_created ON layout_versions (created DESC)",
+        "CREATE UNIQUE INDEX idx_layout_versions_active_user_page ON layout_versions (user, page_name) WHERE is_active = 1"
       ]
     }
   ]

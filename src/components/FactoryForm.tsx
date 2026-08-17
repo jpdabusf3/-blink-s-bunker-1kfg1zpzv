@@ -25,6 +25,7 @@ import { createFactoryPB, updateFactoryPB } from '@/services/factories'
 import { logActivity } from '@/services/activity-logs'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 import { normalizeArray } from '@/lib/utils'
+import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
 import { UserCog } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -87,6 +88,7 @@ const CARTEIRA_DEFAULT_OPTIONS = [
 export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
   const { addFactory, updateFactory } = useAppContext()
   const { user } = useAuth()
+  const { logAction } = useFunnelActivityLog()
   const userIsManager = isManager(user)
   const userArea = user?.geographicArea || ''
   const [gestores, setGestores] = useState<GestaoTecnica[]>([])
@@ -214,6 +216,38 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
           factory.id,
           'factories',
         ).catch(() => {})
+        // Funnel activity log: client updated
+        logAction({
+          action_type: 'update',
+          entity_type: 'client',
+          entity_id: factory.id,
+          entity_name: data.name,
+          description: `Atualizou cliente ${data.name}`,
+        })
+        // If a sales owner was assigned/changed, log an assign action
+        if (data.salesOwner && factory.salesOwner !== data.salesOwner) {
+          logAction({
+            action_type: 'assign',
+            entity_type: 'team_member',
+            entity_id: data.salesOwner,
+            entity_name: data.name,
+            old_value: factory.salesOwner || '',
+            new_value: data.salesOwner,
+            description: `Atribuiu responsavel ao negocio ${data.name}`,
+          })
+        }
+        // If the funnel stage changed, log a deal move as well
+        if (factory.funnelStage && data.funnelStage && factory.funnelStage !== data.funnelStage) {
+          logAction({
+            action_type: 'move',
+            entity_type: 'deal',
+            entity_id: factory.id,
+            entity_name: data.name,
+            old_value: factory.funnelStage,
+            new_value: data.funnelStage,
+            description: `Moveu negocio ${data.name} de ${factory.funnelStage} para ${data.funnelStage}`,
+          })
+        }
         toast.success('Fábrica atualizada com sucesso')
       } else {
         const created = await createFactoryPB(data)
@@ -224,6 +258,14 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
           created.id,
           'factories',
         ).catch(() => {})
+        // Funnel activity log: client created
+        logAction({
+          action_type: 'create',
+          entity_type: 'client',
+          entity_id: created.id,
+          entity_name: data.name,
+          description: `Cadastrou cliente ${data.name}`,
+        })
         toast.success('Fábrica cadastrada com sucesso')
       }
       onSubmit()

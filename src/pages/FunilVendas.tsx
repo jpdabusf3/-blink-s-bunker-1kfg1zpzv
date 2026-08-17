@@ -62,6 +62,7 @@ import {
 } from '@/services/report-template-preferences'
 import { exportBatchClientReportsZip, logBatchReportExport } from '@/lib/batchReportExport'
 import { useToast } from '@/hooks/use-toast'
+import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
 
 const STATUS_COLUMNS = ['Inativo', 'Mensal', 'Ativo'] as const
 const SPECIES = [
@@ -86,6 +87,7 @@ const CANAL_VENDAS_OPTIONS = [
 export default function FunilVendas() {
   const { user } = useAuth()
   const { toast } = useToast()
+  const { logAction } = useFunnelActivityLog()
   const [factories, setFactories] = useState<Factory[]>([])
   const [vendedores, setVendedores] = useState<GestaoTecnica[]>([])
   const [gestores, setGestores] = useState<GestaoTecnica[]>([])
@@ -229,6 +231,16 @@ export default function FunilVendas() {
           origem: 'funil_vendas',
         },
       )
+      // Funnel activity log: deal stage/status change
+      logAction({
+        action_type: 'status_change',
+        entity_type: 'deal',
+        entity_id: factoryId,
+        entity_name: factory?.name || '',
+        old_value: oldStatus,
+        new_value: newStatus,
+        description: `Moveu negocio ${factory?.name || ''} de ${oldStatus} para ${newStatus}`,
+      })
     } catch {
       setFactories((prev) =>
         prev.map((f) =>
@@ -272,7 +284,24 @@ export default function FunilVendas() {
           selectedFactory.id,
           'factories',
         )
+        logAction({
+          action_type: 'move',
+          entity_type: 'deal',
+          entity_id: selectedFactory.id,
+          entity_name: selectedFactory.name,
+          old_value: oldStatus,
+          new_value: panelForm.status_funil,
+          description: `Moveu negocio ${selectedFactory.name} de ${oldStatus} para ${panelForm.status_funil}`,
+        })
       }
+      // Funnel activity log: deal updated
+      logAction({
+        action_type: 'update',
+        entity_type: 'deal',
+        entity_id: selectedFactory.id,
+        entity_name: selectedFactory.name,
+        description: `Atualizou negocio ${selectedFactory.name}`,
+      })
       closePanel()
     } catch {
       /* noop */
