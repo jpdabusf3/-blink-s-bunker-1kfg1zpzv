@@ -30,6 +30,8 @@ import { useTheme } from 'next-themes'
 import { getNotifications, evaluateTargets, markNotificationAsRead } from '@/services/notifications'
 import { AppNotification } from '@/types'
 import { useRealtime } from '@/hooks/use-realtime'
+import { useLogoUrl } from '@/hooks/use-logo-url'
+import { useNavigate } from 'react-router-dom'
 
 export function AppHeader() {
   const { factories, tasks, isOnline } = useAppContext()
@@ -37,6 +39,12 @@ export function AppHeader() {
   const [open, setOpen] = useState(false)
   const [dbNotifications, setDbNotifications] = useState<AppNotification[]>([])
   const { theme, setTheme } = useTheme()
+  const { logoUrl, isLoading, hasError } = useLogoUrl()
+  const [imgError, setImgError] = useState(false)
+  const navigate = useNavigate()
+
+  const showFallback = hasError || imgError
+  const goHome = () => navigate('/')
 
   const loadNotifications = async () => {
     try {
@@ -153,11 +161,30 @@ export function AppHeader() {
     <header className="h-16 border-b border-border flex items-center justify-between px-4 lg:px-6 bg-card text-card-foreground shrink-0 backdrop-blur-sm z-50 sticky top-0 print:hidden">
       <div className="flex items-center gap-3">
         <SidebarTrigger className="md:hidden" />
-        <img
-          src="https://dagtlwojkqyivnjgveda.supabase.co/storage/v1/object/public/message-attachments/38d970e5-7e8c-4a30-8b1e-ccf8a9667554/image-f220f.png"
-          alt="Blink Biotech"
-          className="h-9 w-auto"
-        />
+        {isLoading ? (
+          <div className="h-8 lg:h-10 w-auto min-w-[80px] animate-pulse bg-muted rounded-md" />
+        ) : showFallback ? (
+          <button
+            type="button"
+            onClick={goHome}
+            className="text-primary font-bold text-lg"
+            aria-label="Blink Biotech"
+          >
+            Blink
+          </button>
+        ) : (
+          <div
+            className="bg-white dark:bg-[#1a1a1a] p-1 rounded-md inline-flex items-center justify-center cursor-pointer"
+            onClick={goHome}
+          >
+            <img
+              src={logoUrl ?? undefined}
+              alt="Blink Biotech"
+              className="h-8 lg:h-10 w-auto"
+              onError={() => setImgError(true)}
+            />
+          </div>
+        )}
         <h1 className="font-semibold text-lg lg:text-xl text-primary hidden sm:block">
           {tr('hdr.title')}
         </h1>
