@@ -122,6 +122,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
   const [salesChannelState, setSalesChannelState] = useState<string>(
     (factory?.salesChannel as string) || '',
   )
+  const [submitting, setSubmitting] = useState(false)
 
   const carteiraProfileOptions = useMemo(() => {
     if (salesChannelState === 'Direct') {
@@ -206,6 +207,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
           : undefined,
     }
 
+    setSubmitting(true)
     try {
       if (factory) {
         await updateFactoryPB(factory.id, data)
@@ -283,6 +285,8 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
       onSubmit()
     } catch (err) {
       toast.error(getErrorMessage(err))
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -609,10 +613,12 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
         </div>
       </div>
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onSubmit}>
+        <Button type="button" variant="outline" onClick={onSubmit} disabled={submitting}>
           Cancelar
         </Button>
-        <Button type="submit">Salvar Fábrica</Button>
+        <Button type="submit" disabled={submitting}>
+          {submitting ? 'Salvando...' : 'Salvar Fábrica'}
+        </Button>
       </div>
     </form>
   )

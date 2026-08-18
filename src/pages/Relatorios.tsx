@@ -136,6 +136,14 @@ export default function Relatorios() {
       .then((res) => {
         setOrders(res)
       })
+      .catch(() => {
+        setOrders([])
+        toast({
+          title: 'Não foi possível carregar os dados.',
+          description: 'Tente novamente em instantes.',
+          variant: 'destructive',
+        })
+      })
       .finally(() => {
         setLoading(false)
       })

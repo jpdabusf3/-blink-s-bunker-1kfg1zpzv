@@ -65,13 +65,13 @@ const ACTION_COLORS: Record<FunnelActionType, string> = {
   status_change: 'bg-emerald-500/15 text-emerald-500',
 }
 
-const ENTITY_LINKS: Record<FunnelEntityType, string> = {
+const ENTITY_LINKS: Partial<Record<FunnelEntityType, string>> = {
   deal: '/funil',
-  client: '/clientes',
-  action_plan: '/planos',
+  client: '/cadastro',
+  action_plan: '/atividades',
   goal: '/metas',
   team_member: '/equipe',
-  factory: '/fabricas',
+  factory: '/cadastro',
 }
 
 function formatDate(iso: string): string {

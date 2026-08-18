@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { useI18n } from '@/hooks/use-i18n'
 import { Button } from '@/components/ui/button'
@@ -31,7 +31,8 @@ import {
 
 export default function Login() {
   const navigate = useNavigate()
-  const { signIn, signUp } = useAuth()
+  const location = useLocation()
+  const { signIn, signUp, isAuthenticated, loading } = useAuth()
   const { t } = useI18n()
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -51,6 +52,19 @@ export default function Login() {
   const [resetLoading, setResetLoading] = useState(false)
 
   const selectedCountry = COUNTRIES.find((c) => c.name === regData.country)
+
+  // Redirect authenticated users away from /login.
+  useEffect(() => {
+    if (loading) return
+    if (isAuthenticated) {
+      const from = (location.state as { from?: string } | null)?.from
+      navigate(from || '/', { replace: true })
+      const reason = (location.state as { reason?: string } | null)?.reason
+      if (reason === 'auth') {
+        toast.info('Você precisa estar logado para acessar esta página.')
+      }
+    }
+  }, [isAuthenticated, loading, navigate, location.state])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

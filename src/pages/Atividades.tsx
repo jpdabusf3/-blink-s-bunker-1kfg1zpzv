@@ -33,8 +33,8 @@ export default function Atividades() {
         expand: 'cliente_id,vendedor_id',
       })
       setAtividades(data as unknown as Atividade[])
-    } catch {
-      /* noop */
+    } catch (err) {
+      toast.error('Não foi possível carregar os dados. Tente novamente.')
     } finally {
       setLoading(false)
     }

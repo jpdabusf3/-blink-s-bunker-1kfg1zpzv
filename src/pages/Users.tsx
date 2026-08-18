@@ -26,6 +26,8 @@ import {
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { exportUserReportToPDF, exportUserReportToExcel } from '@/lib/exportReports'
+import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/pocketbase/errors'
 
 export default function Users() {
   const [users, setUsers] = useState<UserListItem[]>([])
@@ -50,7 +52,10 @@ export default function Users() {
   useEffect(() => {
     getUsers()
       .then(setUsers)
-      .catch(console.error)
+      .catch((err) => {
+        setUsers([])
+        toast.error(getErrorMessage(err) || 'Não foi possível carregar os dados. Tente novamente.')
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -62,7 +67,7 @@ export default function Users() {
       const r = await getUserReport(user.id)
       setReport(r)
     } catch (e) {
-      console.error(e)
+      toast.error(getErrorMessage(e) || 'Não foi possível carregar os dados. Tente novamente.')
     } finally {
       setReportLoading(false)
     }

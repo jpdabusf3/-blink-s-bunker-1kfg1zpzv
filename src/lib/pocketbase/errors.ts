@@ -20,10 +20,34 @@ export function extractFieldErrors(error: unknown): FieldErrors {
   return errors
 }
 
+// Map common PocketBase error messages to Portuguese (pt-BR).
+function translate(message: string): string {
+  if (!message) return ''
+  const lower = message.toLowerCase()
+  if (lower.includes('failed to authenticate') || lower.includes('invalid login'))
+    return 'Email ou senha incorretos.'
+  if (lower.includes('unauthorized') || lower.includes('requires authentication'))
+    return 'Você precisa estar logado para acessar esta página.'
+  if (lower.includes('forbidden') || lower.includes('you are not allowed'))
+    return 'Você não tem permissão para realizar esta ação.'
+  if (lower.includes('the request was aborted'))
+    return 'A requisição foi cancelada. Tente novamente.'
+  if (lower.includes('network request failed') || lower.includes('failed to fetch'))
+    return 'Não foi possível conectar ao servidor. Verifique sua internet.'
+  if (lower.includes('timeout')) return 'A operação demorou demais. Tente novamente.'
+  return message
+}
+
 export function getErrorMessage(error: unknown): string {
   if (!(error instanceof ClientResponseError)) {
-    return error instanceof Error ? error.message : 'An unexpected error occurred.'
+    if (error instanceof Error) {
+      const translated = translate(error.message)
+      return translated || 'Não foi possível concluir a operação. Tente novamente.'
+    }
+    return 'Não foi possível concluir a operação. Tente novamente.'
   }
   const msgs = Object.values(extractFieldErrors(error))
-  return msgs.length > 0 ? msgs.join(' ') : error.message || 'An unexpected error occurred.'
+  if (msgs.length > 0) return msgs.join(' ')
+  const translated = translate(error.message)
+  return translated || 'Não foi possível concluir a operação. Tente novamente.'
 }
