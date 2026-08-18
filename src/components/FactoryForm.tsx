@@ -224,6 +224,18 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
           entity_name: data.name,
           description: `Atualizou fábrica ${data.name}`,
         })
+        // Funnel activity log: status do contato alterado
+        if (factory.status_contato !== data.status_contato) {
+          logAction({
+            action_type: 'status_change',
+            entity_type: 'factory',
+            entity_id: factory.id,
+            entity_name: data.name,
+            old_value: factory.status_contato || 'Sem status',
+            new_value: data.status_contato || 'Sem status',
+            description: `Alterou status do contato ${data.contato || 'N/A'} na fabrica ${data.name} para ${data.status_contato || 'Sem status'}`,
+          })
+        }
         // If a sales owner was assigned/changed, log an assign action
         if (data.salesOwner && factory.salesOwner !== data.salesOwner) {
           logAction({
