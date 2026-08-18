@@ -61,6 +61,47 @@ routerAdd(
         return iso
       }
     }
+    function fmtDateOnly(iso) {
+      if (!iso) return '—'
+      try {
+        var d = new Date(iso)
+        if (isNaN(d.getTime())) return iso
+        return pad(d.getDate(), 2) + '/' + pad(d.getMonth() + 1, 2) + '/' + d.getFullYear()
+      } catch (_) {
+        return iso
+      }
+    }
+    function fmtBRL(n) {
+      if (n == null || isNaN(n)) return '—'
+      try {
+        return Number(n).toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+      } catch (_) {
+        return String(n)
+      }
+    }
+    function funnelIcon(actionType) {
+      switch (actionType) {
+        case 'create':
+          return '[+]'
+        case 'update':
+          return '[~]'
+        case 'delete':
+          return '[x]'
+        case 'move':
+          return '[→]'
+        case 'assign':
+          return '[@]'
+        case 'status_change':
+          return '[⇄]'
+        default:
+          return '[•]'
+      }
+    }
     function stringToBytes(s) {
       var bytes = []
       for (var i = 0; i < s.length; i++) {
@@ -286,313 +327,429 @@ routerAdd(
     var clientId = body.clientId
     if (!clientId) return e.badRequestError('clientId é obrigatório')
 
-    var modeloKey = String(body.modelo || 'executivo').toLowerCase()
-    if (!TEMPLATES[modeloKey]) modeloKey = 'executivo'
-    var T = TEMPLATES[modeloKey]
-
-    var factory = null
     try {
-      factory = $app.findRecordById('factories', clientId)
-    } catch (_) {
-      return e.notFoundError('cliente não encontrado')
-    }
-    var clientName = factory.getString('name')
+      var modeloKey = String(body.modelo || 'executivo').toLowerCase()
+      if (!TEMPLATES[modeloKey]) modeloKey = 'executivo'
+      var T = TEMPLATES[modeloKey]
 
-    var logs = []
-    try {
-      logs = $app.findRecordsByFilter(
-        'activity_logs',
-        "recordId = '" + clientId + "'",
-        'created',
-        10000,
-        0,
-      )
-    } catch (_) {}
-
-    var titulo = body.titulo || 'Relatório de Histórico — ' + clientName
-    var periodoInicio = body.periodoInicio || ''
-    var periodoFim = body.periodoFim || ''
-    var periodoTxt = ''
-    if (periodoInicio || periodoFim) {
-      periodoTxt =
-        '(' +
-        (periodoInicio ? fmtDate(periodoInicio) : 'início') +
-        ' até ' +
-        (periodoFim ? fmtDate(periodoFim) : 'agora') +
-        ')'
-    }
-
-    var userName = body.solicitante || ''
-    if (!userName && e.auth && e.auth.getString) {
-      userName = e.auth.getString('name') || e.auth.getString('email') || ''
-    }
-
-    // ---------- fetch the Blink logo as byte-accurate raw bytes ----------
-    // $filesystem.fileFromURL downloads the resource and exposes the true
-    // binary content via a FileReader — essential for a valid PNG inside the
-    // .docx zip (the previous $http.send().body path corrupted the bytes).
-    var logoBytes = null
-    try {
-      logoBytes = fetchBytesViaFilesystem(
-        'https://dagtlwojkqyivnjgveda.supabase.co/storage/v1/object/public/message-attachments/38d970e5-7e8c-4a30-8b1e-ccf8a9667554/image-f220f.png',
-        20,
-      )
-      if (!logoBytes || logoBytes.length < 24) logoBytes = null
-      // sanity check: PNG signature (89 50 4E 47 0D 0A 1A 0A)
-      if (
-        logoBytes &&
-        (logoBytes[0] !== 0x89 ||
-          logoBytes[1] !== 0x50 ||
-          logoBytes[2] !== 0x4e ||
-          logoBytes[3] !== 0x47)
-      ) {
-        logoBytes = null
-      }
-    } catch (_) {
-      logoBytes = null
-    }
-
-    // ---------- build HTML body ----------
-    var nowStr = fmtDate(new Date().toISOString())
-
-    var coverHtml = ''
-    coverHtml += '<div class="cover">'
-    coverHtml += '<h1>' + esc(titulo) + '</h1>'
-    coverHtml += '<div class="sub">Blink Biotech • Relatório ' + esc(T.label) + '</div>'
-    coverHtml += '</div>'
-    coverHtml += '<p style="margin-top:14px;"><b>Cliente:</b> ' + esc(clientName) + '</p>'
-
-    var bodyHtml = ''
-    bodyHtml += coverHtml
-
-    // KPI block (counts by tipo) — always present for all templates
-    var byTipo = {}
-    for (var ti = 0; ti < logs.length; ti++) {
-      var tKey = logs[ti].getString('tipo') || 'outro'
-      byTipo[tKey] = (byTipo[tKey] || 0) + 1
-    }
-    bodyHtml += '<div style="margin:10px 0;">'
-    bodyHtml += '<div class="kpi"><b>' + logs.length + '</b><span class="lbl">Ações</span></div>'
-    bodyHtml +=
-      '<div class="kpi"><b>' +
-      (byTipo['status'] || 0) +
-      '</b><span class="lbl">Mudanças de Status</span></div>'
-    bodyHtml +=
-      '<div class="kpi"><b>' +
-      (byTipo['acao'] || 0) +
-      '</b><span class="lbl">Ações Registradas</span></div>'
-    bodyHtml += '</div>'
-
-    if (factory.getString('city'))
-      bodyHtml += '<p><b>Cidade:</b> ' + esc(factory.getString('city')) + '</p>'
-    if (factory.getString('state'))
-      bodyHtml += '<p><b>Estado:</b> ' + esc(factory.getString('state')) + '</p>'
-    if (factory.getString('animalSpecies'))
-      bodyHtml += '<p><b>Espécie:</b> ' + esc(factory.getString('animalSpecies')) + '</p>'
-    if (factory.getString('status_funil'))
-      bodyHtml += '<p><b>Status do Funil:</b> ' + esc(factory.getString('status_funil')) + '</p>'
-    if (factory.getString('vendedor_name'))
-      bodyHtml += '<p><b>Vendedor:</b> ' + esc(factory.getString('vendedor_name')) + '</p>'
-    bodyHtml += '<p><b>Período:</b> ' + esc(periodoTxt || 'Todo o histórico') + '</p>'
-    bodyHtml += '<p><b>Total de ações registradas:</b> ' + logs.length + '</p>'
-    bodyHtml += '<p><b>Solicitado por:</b> ' + esc(userName) + '</p>'
-    bodyHtml += '<p><b>Gerado em:</b> ' + nowStr + '</p>'
-    bodyHtml += '<hr/>'
-
-    if (logs.length === 0) {
-      bodyHtml += '<p><i>Nenhuma ação registrada para este cliente.</i></p>'
-    } else {
-      bodyHtml += '<h2>Histórico de Ações</h2>'
-      bodyHtml +=
-        '<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;">'
-      bodyHtml +=
-        '<tr style="background:' +
-        T.tableHeaderBg +
-        ';color:' +
-        T.primary +
-        ';font-weight:bold;">' +
-        '<th>Data/Hora</th><th>Tipo</th><th>Ação</th><th>Detalhes / Próximo Passo</th>' +
-        '<th>Mudança de Status</th><th>Responsável</th></tr>'
-      for (var i = 0; i < logs.length; i++) {
-        var log = logs[i]
-        var tipo = log.getString('tipo') || 'outro'
-        var action = log.getString('action') || ''
-        var details = log.getString('details') || ''
-        var prox = log.getString('proximo_passo') || ''
-        var stOld = log.getString('status_anterior') || ''
-        var stNew = log.getString('status_novo') || ''
-        var statusChange = ''
-        if (stOld || stNew) {
-          statusChange = esc(stOld || '—') + ' &rarr; ' + esc(stNew || '—')
-        }
-        var detailCell = esc(details)
-        if (prox) detailCell += '<br/><i>Próximo passo:</i> ' + esc(prox)
-        bodyHtml += '<tr>'
-        bodyHtml += '<td>' + fmtDate(log.getString('created')) + '</td>'
-        bodyHtml += '<td>' + esc(tipo) + '</td>'
-        bodyHtml += '<td>' + esc(action) + '</td>'
-        bodyHtml += '<td>' + detailCell + '</td>'
-        bodyHtml += '<td>' + statusChange + '</td>'
-        bodyHtml += '<td>' + esc(userDisplay(log)) + '</td>'
-        bodyHtml += '</tr>'
-      }
-      bodyHtml += '</table>'
-    }
-    bodyHtml +=
-      '<p style="margin-top:20px;color:#888;font-size:10px;">' +
-      'Documento gerado automaticamente pelo Blink&#39;s Bunker (Modelo ' +
-      esc(T.label) +
-      '). Editável.</p>'
-
-    // ---------- build the .docx (OOXML zip) ----------
-    // The HTML chunk is referenced via an altChunk relationship (rId1). When
-    // the logo is present it is rendered as a real OOXML drawing (image)
-    // referencing relationship rId3, placed as the first paragraph (cover).
-    var EMU_PER_PX = 9525
-    var logoParaXml = ''
-    var imgRelXml = ''
-    var logoMediaEntry = null
-    if (logoBytes) {
-      logoMediaEntry = { name: 'word/media/logo.png', data: logoBytes }
-      // read PNG IHDR for native pixel dimensions (big-endian at offsets 16/20)
-      var imgW = 200
-      var imgH = 60
+      var factory = null
       try {
-        if (logoBytes.length > 24) {
-          imgW =
-            (logoBytes[16] << 24) | (logoBytes[17] << 16) | (logoBytes[18] << 8) | logoBytes[19]
-          imgH =
-            (logoBytes[20] << 24) | (logoBytes[21] << 16) | (logoBytes[22] << 8) | logoBytes[23]
-          if (imgW <= 0 || imgH <= 0 || imgW > 4000 || imgH > 4000) {
-            imgW = 200
-            imgH = 60
-          }
+        factory = $app.findRecordById('factories', clientId)
+      } catch (_) {
+        return e.notFoundError('cliente não encontrado')
+      }
+      var clientName = factory.getString('name')
+
+      var logs = []
+      try {
+        logs = $app.findRecordsByFilter(
+          'activity_logs',
+          "recordId = '" + clientId + "'",
+          'created',
+          10000,
+          0,
+        )
+      } catch (_) {}
+
+      // ---------- factory registration fields (Bug 3a) ----------
+      var cnpj = ''
+      try {
+        cnpj = factory.getString('cnpj')
+      } catch (_) {}
+      var valorMedio = factory.get('valor_medio')
+      var valorAtual = factory.get('valor_atual')
+      var ultimoPedidoRaw = ''
+      try {
+        ultimoPedidoRaw = factory.getString('ultimo_pedido')
+      } catch (_) {}
+      var proximosPassos = ''
+      try {
+        proximosPassos = factory.getString('proximos_passos')
+      } catch (_) {}
+      var acao = ''
+      try {
+        acao = factory.getString('acao')
+      } catch (_) {}
+
+      // ---------- relations (Bug 3b): gestor_tecnico_id & vendedor_id -> gestao_tecnica.nome ----------
+      var gestorTecnicoName = '—'
+      try {
+        var gtId = factory.getString('gestor_tecnico_id')
+        if (gtId) {
+          var gt = $app.findRecordById('gestao_tecnica', gtId)
+          gestorTecnicoName = gt.getString('nome') || '—'
         }
       } catch (_) {}
-      // scale to a max width of ~220px, keep aspect ratio
-      var maxW = 220
-      var dispW = imgW
-      var dispH = imgH
-      if (dispW > maxW) {
-        dispH = Math.round((dispH * maxW) / dispW)
-        dispW = maxW
+      var vendedorName = '—'
+      try {
+        var vId = factory.getString('vendedor_id')
+        if (vId) {
+          var v = $app.findRecordById('gestao_tecnica', vId)
+          vendedorName = v.getString('nome') || '—'
+        }
+      } catch (_) {}
+
+      // ---------- últimas 5 atividades do funil (Bug 3c) ----------
+      var funnelLogs = []
+      try {
+        funnelLogs = $app.findRecordsByFilter(
+          'funnel_activity_log',
+          "entity_id = '" + clientId + "' && (entity_type = 'client' || entity_type = 'factory')",
+          '-created',
+          5,
+          0,
+        )
+      } catch (_) {}
+
+      var titulo = body.titulo || 'Relatório de Histórico — ' + clientName
+      var periodoInicio = body.periodoInicio || ''
+      var periodoFim = body.periodoFim || ''
+      var periodoTxt = ''
+      if (periodoInicio || periodoFim) {
+        periodoTxt =
+          '(' +
+          (periodoInicio ? fmtDate(periodoInicio) : 'início') +
+          ' até ' +
+          (periodoFim ? fmtDate(periodoFim) : 'agora') +
+          ')'
       }
-      var cx = dispW * EMU_PER_PX
-      var cy = dispH * EMU_PER_PX
-      var picXml =
-        '<w:p>' +
-        '<w:pPr><w:jc w:val="center"/></w:pPr>' +
-        '<w:r>' +
-        '<w:drawing>' +
-        '<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="0" distR="0">' +
-        '<wp:extent cx="' +
-        cx +
-        '" cy="' +
-        cy +
-        '"/>' +
-        '<wp:effectExtent l="0" t="0" r="0" b="0"/>' +
-        '<wp:docPr id="1" name="Blink Biotech Logo"/>' +
-        '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">' +
-        '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">' +
-        '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">' +
-        '<pic:nvPicPr>' +
-        '<pic:cNvPr id="1" name="Blink Biotech Logo"/>' +
-        '<pic:cNvPicPr/>' +
-        '</pic:nvPicPr>' +
-        '<pic:blipFill>' +
-        '<a:blip r:embed="rId3" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>' +
-        '<a:stretch><a:fillRect/></a:stretch>' +
-        '</pic:blipFill>' +
-        '<pic:spPr>' +
-        '<a:xfrm><a:off x="0" y="0"/><a:ext cx="' +
-        cx +
-        '" cy="' +
-        cy +
-        '"/></a:xfrm>' +
-        '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>' +
-        '</pic:spPr>' +
-        '</pic:pic>' +
-        '</a:graphicData>' +
-        '</a:graphic>' +
-        '</wp:inline>' +
-        '</w:drawing>' +
-        '</w:r>' +
-        '</w:p>'
-      logoParaXml = picXml
-      imgRelXml =
-        '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo.png"/>'
+
+      var userName = body.solicitante || ''
+      if (!userName && e.auth && e.auth.getString) {
+        userName = e.auth.getString('name') || e.auth.getString('email') || ''
+      }
+
+      // ---------- fetch the Blink logo as byte-accurate raw bytes ----------
+      // $filesystem.fileFromURL downloads the resource and exposes the true
+      // binary content via a FileReader — essential for a valid PNG inside the
+      // .docx zip (the previous $http.send().body path corrupted the bytes).
+      var logoBytes = null
+      try {
+        logoBytes = fetchBytesViaFilesystem(
+          'https://dagtlwojkqyivnjgveda.supabase.co/storage/v1/object/public/message-attachments/38d970e5-7e8c-4a30-8b1e-ccf8a9667554/image-f220f.png',
+          20,
+        )
+        if (!logoBytes || logoBytes.length < 24) logoBytes = null
+        // sanity check: PNG signature (89 50 4E 47 0D 0A 1A 0A)
+        if (
+          logoBytes &&
+          (logoBytes[0] !== 0x89 ||
+            logoBytes[1] !== 0x50 ||
+            logoBytes[2] !== 0x4e ||
+            logoBytes[3] !== 0x47)
+        ) {
+          logoBytes = null
+        }
+      } catch (_) {
+        logoBytes = null
+      }
+
+      // ---------- build HTML body ----------
+      var nowStr = fmtDate(new Date().toISOString())
+
+      var coverHtml = ''
+      coverHtml += '<div class="cover">'
+      coverHtml += '<h1>' + esc(titulo) + '</h1>'
+      coverHtml += '<div class="sub">Blink Biotech • Relatório ' + esc(T.label) + '</div>'
+      coverHtml += '</div>'
+      coverHtml += '<p style="margin-top:14px;"><b>Cliente:</b> ' + esc(clientName) + '</p>'
+
+      var bodyHtml = ''
+      bodyHtml += coverHtml
+
+      // Metadados do relatório
+      bodyHtml += '<p><b>Cliente:</b> ' + esc(clientName) + '</p>'
+      bodyHtml += '<p><b>Período:</b> ' + esc(periodoTxt || 'Todo o histórico') + '</p>'
+      bodyHtml += '<p><b>Total de ações registradas:</b> ' + logs.length + '</p>'
+      bodyHtml += '<p><b>Solicitado por:</b> ' + esc(userName) + '</p>'
+      bodyHtml += '<p><b>Gerado em:</b> ' + nowStr + '</p>'
+      bodyHtml += '<hr/>'
+
+      // 2. Dados do Cliente
+      bodyHtml += '<h2>Dados do Cliente</h2>'
+      bodyHtml += '<p><b>Nome:</b> ' + esc(clientName) + '</p>'
+      bodyHtml += '<p><b>CNPJ:</b> ' + esc(cnpj || '—') + '</p>'
+      if (factory.getString('animalSpecies'))
+        bodyHtml += '<p><b>Espécie:</b> ' + esc(factory.getString('animalSpecies')) + '</p>'
+      var cidadeEstado = ''
+      if (factory.getString('city')) cidadeEstado = factory.getString('city')
+      if (factory.getString('state'))
+        cidadeEstado += (cidadeEstado ? ' — ' : '') + factory.getString('state')
+      bodyHtml += '<p><b>Cidade/Estado:</b> ' + esc(cidadeEstado || '—') + '</p>'
+      bodyHtml += '<p><b>Gestor Técnico:</b> ' + esc(gestorTecnicoName) + '</p>'
+      bodyHtml += '<p><b>Vendedor:</b> ' + esc(vendedorName) + '</p>'
+
+      // 3. Status do Funil
+      bodyHtml += '<h2>Status do Funil</h2>'
+      bodyHtml += '<p><b>Status:</b> ' + esc(factory.getString('status_funil') || '—') + '</p>'
+      bodyHtml += '<p><b>Valor Médio:</b> ' + esc(fmtBRL(valorMedio)) + '</p>'
+      bodyHtml += '<p><b>Valor Atual:</b> ' + esc(fmtBRL(valorAtual)) + '</p>'
+      bodyHtml += '<p><b>Último Pedido:</b> ' + esc(fmtDateOnly(ultimoPedidoRaw)) + '</p>'
+
+      // 4. Próximos Passos e Ação
+      bodyHtml += '<h2>Próximos Passos e Ação</h2>'
+      bodyHtml += '<p><b>Próximos Passos:</b> ' + esc(proximosPassos || '—') + '</p>'
+      bodyHtml += '<p><b>Ação:</b> ' + esc(acao || '—') + '</p>'
+
+      // 5. KPIs (counts by tipo) — always present for all templates
+      var byTipo = {}
+      for (var ti = 0; ti < logs.length; ti++) {
+        var tKey = logs[ti].getString('tipo') || 'outro'
+        byTipo[tKey] = (byTipo[tKey] || 0) + 1
+      }
+      bodyHtml += '<h2>Indicadores</h2>'
+      bodyHtml += '<div style="margin:10px 0;">'
+      bodyHtml += '<div class="kpi"><b>' + logs.length + '</b><span class="lbl">Ações</span></div>'
+      bodyHtml +=
+        '<div class="kpi"><b>' +
+        (byTipo['status'] || 0) +
+        '</b><span class="lbl">Mudanças de Status</span></div>'
+      bodyHtml +=
+        '<div class="kpi"><b>' +
+        (byTipo['acao'] || 0) +
+        '</b><span class="lbl">Ações Registradas</span></div>'
+      bodyHtml += '</div>'
+
+      // 6. Últimas Atividades do Funil (funnel_activity_log, últimas 5)
+      bodyHtml += '<h2>Últimas Atividades do Funil</h2>'
+      if (funnelLogs.length === 0) {
+        bodyHtml += '<p><i>Nenhuma atividade de funil registrada para este cliente.</i></p>'
+      } else {
+        bodyHtml += '<div style="margin:10px 0;">'
+        for (var fi = 0; fi < funnelLogs.length; fi++) {
+          var fLog = funnelLogs[fi]
+          var fActionType = fLog.getString('action_type') || ''
+          var fDesc = fLog.getString('description') || ''
+          var fOld = fLog.getString('old_value') || ''
+          var fNew = fLog.getString('new_value') || ''
+          bodyHtml +=
+            '<p style="margin:6px 0;padding-left:8px;border-left:3px solid ' +
+            T.accent +
+            ';"><b>' +
+            esc(funnelIcon(fActionType)) +
+            '</b> <span style="color:#6b7280;font-size:10pt;">' +
+            fmtDate(fLog.getString('created')) +
+            '</span><br/>' +
+            esc(fDesc)
+          if (fOld || fNew) {
+            bodyHtml +=
+              '<br/><span style="font-size:9pt;color:#6b7280;">Anterior: ' +
+              esc(fOld || '—') +
+              ' &rarr; Novo: ' +
+              esc(fNew || '—') +
+              '</span>'
+          }
+          bodyHtml += '</p>'
+        }
+        bodyHtml += '</div>'
+      }
+
+      // 7. Histórico de Ações (activity_logs legados)
+      if (logs.length === 0) {
+        bodyHtml += '<p><i>Nenhuma ação registrada para este cliente.</i></p>'
+      } else {
+        bodyHtml += '<h2>Histórico de Ações</h2>'
+        bodyHtml +=
+          '<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;">'
+        bodyHtml +=
+          '<tr style="background:' +
+          T.tableHeaderBg +
+          ';color:' +
+          T.primary +
+          ';font-weight:bold;">' +
+          '<th>Data/Hora</th><th>Tipo</th><th>Ação</th><th>Detalhes / Próximo Passo</th>' +
+          '<th>Mudança de Status</th><th>Responsável</th></tr>'
+        for (var i = 0; i < logs.length; i++) {
+          var log = logs[i]
+          var tipo = log.getString('tipo') || 'outro'
+          var action = log.getString('action') || ''
+          var details = log.getString('details') || ''
+          var prox = log.getString('proximo_passo') || ''
+          var stOld = log.getString('status_anterior') || ''
+          var stNew = log.getString('status_novo') || ''
+          var statusChange = ''
+          if (stOld || stNew) {
+            statusChange = esc(stOld || '—') + ' &rarr; ' + esc(stNew || '—')
+          }
+          var detailCell = esc(details)
+          if (prox) detailCell += '<br/><i>Próximo passo:</i> ' + esc(prox)
+          bodyHtml += '<tr>'
+          bodyHtml += '<td>' + fmtDate(log.getString('created')) + '</td>'
+          bodyHtml += '<td>' + esc(tipo) + '</td>'
+          bodyHtml += '<td>' + esc(action) + '</td>'
+          bodyHtml += '<td>' + detailCell + '</td>'
+          bodyHtml += '<td>' + statusChange + '</td>'
+          bodyHtml += '<td>' + esc(userDisplay(log)) + '</td>'
+          bodyHtml += '</tr>'
+        }
+        bodyHtml += '</table>'
+      }
+
+      // 8. Footer
+      bodyHtml +=
+        '<p style="margin-top:20px;color:#888;font-size:10px;">' +
+        'Documento gerado automaticamente pelo Blink&#39;s Bunker (Modelo ' +
+        esc(T.label) +
+        '). Editável.</p>'
+      bodyHtml +=
+        '<hr/><p style="color:#9ca3af;font-size:9pt;text-align:center;">' +
+        'Blink Biotech — Inteligência Comercial</p>'
+
+      // ---------- build the .docx (OOXML zip) ----------
+      // The HTML chunk is referenced via an altChunk relationship (rId1). When
+      // the logo is present it is rendered as a real OOXML drawing (image)
+      // referencing relationship rId3, placed as the first paragraph (cover).
+      var EMU_PER_PX = 9525
+      var logoParaXml = ''
+      var imgRelXml = ''
+      var logoMediaEntry = null
+      if (logoBytes) {
+        logoMediaEntry = { name: 'word/media/logo.png', data: logoBytes }
+        // read PNG IHDR for native pixel dimensions (big-endian at offsets 16/20)
+        var imgW = 200
+        var imgH = 60
+        try {
+          if (logoBytes.length > 24) {
+            imgW =
+              (logoBytes[16] << 24) | (logoBytes[17] << 16) | (logoBytes[18] << 8) | logoBytes[19]
+            imgH =
+              (logoBytes[20] << 24) | (logoBytes[21] << 16) | (logoBytes[22] << 8) | logoBytes[23]
+            if (imgW <= 0 || imgH <= 0 || imgW > 4000 || imgH > 4000) {
+              imgW = 200
+              imgH = 60
+            }
+          }
+        } catch (_) {}
+        // scale to a max width of ~220px, keep aspect ratio
+        var maxW = 220
+        var dispW = imgW
+        var dispH = imgH
+        if (dispW > maxW) {
+          dispH = Math.round((dispH * maxW) / dispW)
+          dispW = maxW
+        }
+        var cx = dispW * EMU_PER_PX
+        var cy = dispH * EMU_PER_PX
+        var picXml =
+          '<w:p>' +
+          '<w:pPr><w:jc w:val="center"/></w:pPr>' +
+          '<w:r>' +
+          '<w:drawing>' +
+          '<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="0" distR="0">' +
+          '<wp:extent cx="' +
+          cx +
+          '" cy="' +
+          cy +
+          '"/>' +
+          '<wp:effectExtent l="0" t="0" r="0" b="0"/>' +
+          '<wp:docPr id="1" name="Blink Biotech Logo"/>' +
+          '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">' +
+          '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">' +
+          '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">' +
+          '<pic:nvPicPr>' +
+          '<pic:cNvPr id="1" name="Blink Biotech Logo"/>' +
+          '<pic:cNvPicPr/>' +
+          '</pic:nvPicPr>' +
+          '<pic:blipFill>' +
+          '<a:blip r:embed="rId3" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>' +
+          '<a:stretch><a:fillRect/></a:stretch>' +
+          '</pic:blipFill>' +
+          '<pic:spPr>' +
+          '<a:xfrm><a:off x="0" y="0"/><a:ext cx="' +
+          cx +
+          '" cy="' +
+          cy +
+          '"/></a:xfrm>' +
+          '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>' +
+          '</pic:spPr>' +
+          '</pic:pic>' +
+          '</a:graphicData>' +
+          '</a:graphic>' +
+          '</wp:inline>' +
+          '</w:drawing>' +
+          '</w:r>' +
+          '</w:p>'
+        logoParaXml = picXml
+        imgRelXml =
+          '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo.png"/>'
+      }
+
+      // altChunk is a direct child of <w:body> (not wrapped in <w:r>/<w:p>),
+      // which is the schema-correct placement Word expects.
+      var docXml =
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+        '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+        '<w:body>' +
+        logoParaXml +
+        '<w:altChunk r:id="rId1"/>' +
+        '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>' +
+        '</w:body></w:document>'
+
+      var htmlBytes = stringToBytes(
+        '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
+          'xmlns:w="urn:schemas-microsoft-com:office:word" ' +
+          'xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8">' +
+          '<style>' +
+          T.fontStyle +
+          'h2{page-break-before:always;}' +
+          '</style>' +
+          '</head><body>' +
+          bodyHtml +
+          '</body></html>',
+      )
+
+      var relsXml =
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/afChunk" Target="chunk1.htm"/>' +
+        '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+        imgRelXml +
+        '</Relationships>'
+
+      var contentTypesXml =
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+        '<Default Extension="xml" ContentType="application/xml"/>' +
+        '<Default Extension="htm" ContentType="text/html"/>' +
+        '<Default Extension="png" ContentType="image/png"/>' +
+        '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+        '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
+        '</Types>'
+
+      var stylesXml =
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+        '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+        '<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:rPrDefault></w:docDefaults>' +
+        '<w:style w:type="paragraph" w:styleId="Normal"><w:name w:val="Normal"/><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:style>' +
+        '</w:styles>'
+
+      var rootRelsXml =
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
+        '</Relationships>'
+
+      var entries = [
+        { name: '[Content_Types].xml', data: stringToBytes(contentTypesXml) },
+        { name: '_rels/.rels', data: stringToBytes(rootRelsXml) },
+        { name: 'word/document.xml', data: stringToBytes(docXml) },
+        { name: 'word/_rels/document.xml.rels', data: stringToBytes(relsXml) },
+        { name: 'word/styles.xml', data: stringToBytes(stylesXml) },
+        { name: 'word/chunk1.htm', data: htmlBytes },
+      ]
+      if (logoMediaEntry) entries.push(logoMediaEntry)
+      var zipArr = buildStoredZip(entries)
+      var zipBytes = new Uint8Array(zipArr)
+
+      return e.blob(
+        200,
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        zipBytes,
+      )
+    } catch (err) {
+      return e.json(500, { error: 'Erro ao gerar relatório.' })
     }
-
-    // altChunk is a direct child of <w:body> (not wrapped in <w:r>/<w:p>),
-    // which is the schema-correct placement Word expects.
-    var docXml =
-      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
-      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
-      '<w:body>' +
-      logoParaXml +
-      '<w:altChunk r:id="rId1"/>' +
-      '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>' +
-      '</w:body></w:document>'
-
-    var htmlBytes = stringToBytes(
-      '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
-        'xmlns:w="urn:schemas-microsoft-com:office:word" ' +
-        'xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8">' +
-        '<style>' +
-        T.fontStyle +
-        '</style>' +
-        '</head><body>' +
-        bodyHtml +
-        '</body></html>',
-    )
-
-    var relsXml =
-      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
-      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
-      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/afChunk" Target="chunk1.htm"/>' +
-      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
-      imgRelXml +
-      '</Relationships>'
-
-    var contentTypesXml =
-      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
-      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
-      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
-      '<Default Extension="xml" ContentType="application/xml"/>' +
-      '<Default Extension="htm" ContentType="text/html"/>' +
-      '<Default Extension="png" ContentType="image/png"/>' +
-      '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
-      '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
-      '</Types>'
-
-    var stylesXml =
-      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
-      '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
-      '<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/></w:rPr></w:rPrDefault></w:docDefaults>' +
-      '</w:styles>'
-
-    var rootRelsXml =
-      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
-      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
-      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
-      '</Relationships>'
-
-    var entries = [
-      { name: '[Content_Types].xml', data: stringToBytes(contentTypesXml) },
-      { name: '_rels/.rels', data: stringToBytes(rootRelsXml) },
-      { name: 'word/document.xml', data: stringToBytes(docXml) },
-      { name: 'word/_rels/document.xml.rels', data: stringToBytes(relsXml) },
-      { name: 'word/styles.xml', data: stringToBytes(stylesXml) },
-      { name: 'word/chunk1.htm', data: htmlBytes },
-    ]
-    if (logoMediaEntry) entries.push(logoMediaEntry)
-    var zipBytes = buildStoredZip(entries)
-
-    return e.blob(
-      200,
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      zipBytes,
-    )
   },
   $apis.requireAuth(),
 )

@@ -82,8 +82,21 @@ export const generateClientWordReport = async (
       solicitante: opts?.solicitante,
     }),
   })
-  if (!res.ok) throw new Error('Falha ao gerar relatório Word')
-  return res.blob()
+  if (!res.ok) {
+    let msg = 'Falha ao gerar relatório Word'
+    try {
+      const data = await res.json()
+      if (data && data.error) msg = data.error
+    } catch {
+      /* intentionally ignored */
+    }
+    throw new Error(msg)
+  }
+  const blob = await res.blob()
+  if (!blob || blob.size === 0) {
+    throw new Error('Erro ao gerar relatório.')
+  }
+  return blob
 }
 
 function safeFileName(clientName: string) {
