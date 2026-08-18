@@ -67,10 +67,11 @@ const ACTION_COLORS: Record<FunnelActionType, string> = {
 
 const ENTITY_LINKS: Record<FunnelEntityType, string> = {
   deal: '/funil',
-  client: '/cadastro',
-  action_plan: '/atividades',
+  client: '/clientes',
+  action_plan: '/planos',
   goal: '/metas',
   team_member: '/equipe',
+  factory: '/fabricas',
 }
 
 function formatDate(iso: string): string {
@@ -118,7 +119,7 @@ function EmptyState() {
       <ClipboardList className="w-14 h-14 text-muted-foreground mb-4" />
       <h3 className="text-lg font-semibold text-foreground">Nenhuma atividade registrada</h3>
       <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-        As acoes realizadas no funil aparecerao aqui automaticamente.
+        As ações realizadas no funil aparecerão aqui automaticamente.
       </p>
       <Button asChild variant="outline" className="mt-6 gap-2">
         <Link to="/funil">Voltar para o funil</Link>
@@ -261,8 +262,8 @@ export default function HistoricoFunil() {
   return (
     <div className="flex flex-col h-full animate-fade-in space-y-4 pb-10">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Historico de Atividades</h1>
-        <p className="text-muted-foreground text-sm">Acompanhe todas as acoes no funil de vendas</p>
+        <h1 className="text-2xl font-bold tracking-tight">Histórico de Atividades</h1>
+        <p className="text-muted-foreground text-sm">Acompanhe todas as ações no funil de vendas</p>
       </div>
 
       {/* Filters bar */}
@@ -290,7 +291,7 @@ export default function HistoricoFunil() {
             onValueChange={(v) => setActionType(v as FunnelActionType | 'all')}
           >
             <SelectTrigger className="w-[170px] h-9">
-              <SelectValue placeholder="Tipo de acao" />
+              <SelectValue placeholder="Tipo de ação" />
             </SelectTrigger>
             <SelectContent>
               {ACTION_TYPE_OPTIONS.map((o) => (
@@ -318,7 +319,7 @@ export default function HistoricoFunil() {
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nome ou descricao..."
+              placeholder="Buscar por nome ou descrição..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 h-9"

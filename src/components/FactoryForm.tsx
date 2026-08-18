@@ -216,13 +216,13 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
           factory.id,
           'factories',
         ).catch(() => {})
-        // Funnel activity log: client updated
+        // Funnel activity log: factory updated
         logAction({
           action_type: 'update',
-          entity_type: 'client',
+          entity_type: 'factory',
           entity_id: factory.id,
           entity_name: data.name,
-          description: `Atualizou cliente ${data.name}`,
+          description: `Atualizou fábrica ${data.name}`,
         })
         // If a sales owner was assigned/changed, log an assign action
         if (data.salesOwner && factory.salesOwner !== data.salesOwner) {

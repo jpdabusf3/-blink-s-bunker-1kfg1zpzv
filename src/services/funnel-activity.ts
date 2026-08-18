@@ -3,7 +3,13 @@ import type { RecordSubscription } from 'pocketbase'
 
 export type FunnelActionType = 'create' | 'update' | 'delete' | 'move' | 'assign' | 'status_change'
 
-export type FunnelEntityType = 'deal' | 'client' | 'action_plan' | 'goal' | 'team_member'
+export type FunnelEntityType =
+  | 'deal'
+  | 'client'
+  | 'action_plan'
+  | 'goal'
+  | 'team_member'
+  | 'factory'
 
 export interface FunnelActivityLog {
   id: string
@@ -106,4 +112,24 @@ export const funnelActivityService = {
       }
     })
   },
+}
+
+/**
+ * Standalone (non-hook) helper to log a funnel activity entry from anywhere
+ * (e.g. non-React modules). Silently logs on error (console.error only).
+ */
+export async function logFunnelAction(params: {
+  action_type: FunnelActionType
+  entity_type: FunnelEntityType
+  entity_id: string
+  entity_name?: string
+  old_value?: string
+  new_value?: string
+  description: string
+}): Promise<void> {
+  try {
+    await funnelActivityService.create(params)
+  } catch (err) {
+    console.error('logFunnelAction failed', err)
+  }
 }

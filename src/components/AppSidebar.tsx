@@ -58,7 +58,7 @@ export function AppSidebar() {
     ...(showMasterOrCeo
       ? [{ name: t('nav.auditoria'), path: '/admin/logs', icon: ScrollText }]
       : []),
-    { name: 'Historico', path: '/historico-funil', icon: ClipboardList },
+    { name: 'Histórico', path: '/historico-funil', icon: ClipboardList },
     { name: 'Config. Layout', path: '/configuracoes-layout', icon: Settings2 },
   ]
 

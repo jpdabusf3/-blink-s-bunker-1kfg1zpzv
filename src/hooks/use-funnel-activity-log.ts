@@ -51,8 +51,8 @@ export function useFunnelActivityLog() {
           err.message.toLowerCase().includes('permiss'))
       setError(
         isAuth
-          ? 'Voce nao tem permissao para ver este historico.'
-          : 'Erro de conexao. Verifique sua internet.',
+          ? 'Você não tem permissão para ver este histórico.'
+          : 'Erro de conexão. Verifique sua internet.',
       )
       setLoading(false)
       setHasMore(false)

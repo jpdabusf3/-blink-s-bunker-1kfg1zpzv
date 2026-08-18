@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-17T14:04:33.589Z",
+  "generatedAt": "2026-08-18T21:48:08.727Z",
   "collections": [
     {
       "name": "users",
@@ -2022,7 +2022,7 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["deal", "client", "action_plan", "goal", "team_member"]
+          "selectValues": ["deal", "client", "action_plan", "goal", "team_member", "factory"]
         },
         {
           "name": "entity_id",
