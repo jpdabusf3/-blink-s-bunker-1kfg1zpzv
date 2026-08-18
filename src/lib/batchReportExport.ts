@@ -125,67 +125,130 @@ function buildStoredZip(entries: { name: string; data: Uint8Array }[]): Uint8Arr
   return new Uint8Array(out.concat(central).concat(eocd))
 }
 
+/** Date stamp formatted as DD-MM-YYYY (locale independent). */
+function dateStamp(d: Date = new Date()): string {
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = d.getFullYear()
+  return `${dd}-${mm}-${yyyy}`
+}
+
+/** Sanitize a client name for use inside a file name. */
 function safeFileName(clientName: string): string {
-  const safe = (clientName || 'cliente')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9]/g, '_')
-    .slice(0, 50)
-  return `relatorio_${safe}.docx`
+  const safe =
+    (clientName || 'cliente')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 60) || 'cliente'
+  return `relatorio-${safe}-${dateStamp()}.docx`
 }
 
-export interface BatchExportResult {
-  zipBlob: Blob
-  count: number
-}
-
-/**
- * Generate a Word (.docx) report for each selected client and bundle them
- * into a single ZIP download. Uses the chosen visual template for all of
- * them and stamps the requesting user's name into every document.
- */
-export async function exportBatchClientReportsZip(
-  clients: Pick<Factory, 'id' | 'name'>[],
-  opts: { modelo: ReportTemplateKey; solicitante: string },
-): Promise<BatchExportResult> {
-  if (clients.length === 0) throw new Error('Selecione ao menos um cliente.')
-
-  const entries: { name: string; data: Uint8Array }[] = []
-  let count = 0
-
-  for (const client of clients) {
-    const blob = await generateClientWordReport(client.id, {
-      modelo: opts.modelo,
-      solicitante: opts.solicitante,
-      titulo: `Relatório de Histórico — ${client.name}`,
-    })
-    const buf = new Uint8Array(await blob.arrayBuffer())
-    entries.push({ name: safeFileName(client.name), data: buf })
-    count++
-  }
-
-  if (entries.length === 0) throw new Error('Nenhum relatório gerado.')
-
-  const zipBytes = buildStoredZip(entries)
-  const zipBlob = new Blob([zipBytes as BlobPart], { type: 'application/zip' })
-
-  const url = URL.createObjectURL(zipBlob)
+function triggerDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  const stamp = new Date().toISOString().slice(0, 10)
-  a.download = `relatorios_blink_${opts.modelo}_${stamp}.zip`
+  a.download = filename
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
+}
 
-  return { zipBlob, count }
+export interface BatchExportFailure {
+  clientName: string
+  error: string
+}
+
+export interface BatchExportResult {
+  /** Number of .docx reports successfully generated. */
+  count: number
+  /** Clients whose report failed to generate. */
+  failures: BatchExportFailure[]
+  /** Name of the file that was downloaded (.zip or .docx). */
+  downloadedFile: string
+}
+
+export interface BatchExportProgress {
+  done: number
+  total: number
+  currentName?: string
 }
 
 /**
- * Register a batch export in the `atividades` collection:
- * tipo_atividade = "exportacao_relatorio", origem = "manual", detalhes in
- * `detalhes_exportacao` (date, requesting user, # clients, template).
+ * Generate a Word (.docx) report for each selected client and either download
+ * a single .docx (when only one client is selected) or bundle them into a
+ * single .zip download.
+ *
+ * - Uses the chosen visual template (`modelo`) for all reports.
+ * - Stamps the requesting user's name (`solicitante`) into every document.
+ * - If a client's report fails, generation continues with the remaining ones;
+ *   failures are returned (not thrown) so the caller can show a partial toast.
+ * - `onProgress` is invoked after each client (success or failure) with the
+ *   number completed so far.
+ */
+export async function exportBatchClientReportsZip(
+  clients: Pick<Factory, 'id' | 'name'>[],
+  opts: {
+    modelo: ReportTemplateKey
+    solicitante: string
+    onProgress?: (p: BatchExportProgress) => void
+  },
+): Promise<BatchExportResult> {
+  if (clients.length === 0) throw new Error('Selecione pelo menos um cliente para exportar.')
+
+  const failures: BatchExportFailure[] = []
+  const entries: { name: string; data: Uint8Array }[] = []
+  const total = clients.length
+
+  for (let i = 0; i < clients.length; i++) {
+    const client = clients[i]
+    try {
+      const blob = await generateClientWordReport(client.id, {
+        modelo: opts.modelo,
+        solicitante: opts.solicitante,
+        titulo: `Relatório de Histórico — ${client.name}`,
+      })
+      const buf = new Uint8Array(await blob.arrayBuffer())
+      entries.push({ name: safeFileName(client.name), data: buf })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error(`[batch export] Falha ao gerar relatório para "${client.name}":`, message)
+      failures.push({ clientName: client.name, error: message })
+    }
+    opts.onProgress?.({ done: i + 1, total, currentName: client.name })
+  }
+
+  const count = entries.length
+
+  if (count === 0) {
+    throw new Error('Não foi possível gerar os relatórios. Tente novamente.')
+  }
+
+  // Single client → download the lone .docx directly (no zip).
+  if (count === 1) {
+    const entry = entries[0]
+    const blob = new Blob([entry.data as BlobPart], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    })
+    triggerDownload(blob, entry.name)
+    return { count, failures, downloadedFile: entry.name }
+  }
+
+  // Multiple clients → bundle into a .zip.
+  const zipBytes = buildStoredZip(entries)
+  const zipBlob = new Blob([zipBytes as BlobPart], { type: 'application/zip' })
+  const zipName = `relatorios-lote-${dateStamp()}.zip`
+  triggerDownload(zipBlob, zipName)
+  return { count, failures, downloadedFile: zipName }
+}
+
+/**
+ * Register a batch export in the `atividades` collection AND in the
+ * `funnel_activity_log` collection (the funnel log is what the activity
+ * timeline surfaces). Best-effort: logging failures are swallowed.
  */
 export async function logBatchReportExport(opts: {
   solicitante: string
@@ -196,6 +259,25 @@ export async function logBatchReportExport(opts: {
 }): Promise<void> {
   const userId = pb.authStore.record?.id
   const modeloLabel = REPORT_TEMPLATE_LABEL[opts.modelo]
+  const descricao = `Exportou relatórios em lote para ${opts.clienteIds.length} clientes (modelo: ${modeloLabel})`
+
+  // 1) funnel_activity_log — action_type=create, entity_type=client
+  try {
+    await pb.collection('funnel_activity_log').create({
+      user: userId || '',
+      action_type: 'create',
+      entity_type: 'client',
+      entity_id: opts.clienteIds[0] || '',
+      entity_name: '',
+      old_value: '',
+      new_value: '',
+      description: descricao,
+    })
+  } catch (err) {
+    console.error('[batch export] funnel_activity_log failed', err)
+  }
+
+  // 2) atividades — legacy export log entry (kept for backwards compat)
   const detalhes = {
     data: new Date().toISOString(),
     usuario_solicitante: opts.solicitante,
@@ -212,7 +294,7 @@ export async function logBatchReportExport(opts: {
       tipo_atividade: 'exportacao_relatorio',
       etapa_funil: 'pos_venda',
       valor_estimado: 0,
-      descricao: `Exportação em lote de ${opts.clienteIds.length} relatório(s) — Modelo ${modeloLabel}`,
+      descricao,
       proximo_passo: '',
       origem: 'manual',
       detalhes_exportacao: detalhes,

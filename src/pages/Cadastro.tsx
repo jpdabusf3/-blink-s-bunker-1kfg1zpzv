@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,6 +11,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Progress } from '@/components/ui/progress'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   Loader2,
@@ -22,6 +24,7 @@ import {
   Upload,
   Filter,
   RotateCcw,
+  FileArchive,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
@@ -33,6 +36,9 @@ import { FactoryForm } from '@/components/FactoryForm'
 import { ImportExcelDialog } from '@/components/ImportExcelDialog'
 import { MultiSelect } from '@/components/ui/multi-select'
 import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
+import { exportBatchClientReportsZip, logBatchReportExport } from '@/lib/batchReportExport'
+import { getReportTemplatePreference } from '@/services/report-template-preferences'
+import { REPORT_TEMPLATE_LABEL, type ReportTemplateKey } from '@/lib/reportTemplates'
 import { Link } from 'react-router-dom'
 import type { Factory } from '@/types'
 
@@ -80,6 +86,69 @@ export default function Cadastro() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [editingFactory, setEditingFactory] = useState<Factory | undefined>(undefined)
+
+  // Batch export state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [batchExporting, setBatchExporting] = useState(false)
+  const [exportProgress, setExportProgress] = useState<{ done: number; total: number } | null>(null)
+  const reportTemplateRef = useRef<ReportTemplateKey>('executivo')
+
+  useEffect(() => {
+    getReportTemplatePreference()
+      .then((t) => {
+        reportTemplateRef.current = t
+      })
+      .catch(() => {})
+  }, [])
+
+  const handleBatchExport = async () => {
+    const selected = filtered.filter((f) => selectedIds.has(f.id))
+    if (selected.length === 0) {
+      toast.error('Selecione pelo menos um cliente para exportar.')
+      return
+    }
+    const modelo = reportTemplateRef.current
+    const solicitante = user?.name || user?.email || ''
+    setBatchExporting(true)
+    setExportProgress({ done: 0, total: selected.length })
+    try {
+      const result = await exportBatchClientReportsZip(
+        selected.map((f) => ({ id: f.id, name: f.name })),
+        {
+          modelo,
+          solicitante,
+          onProgress: (p) => setExportProgress({ done: p.done, total: p.total }),
+        },
+      )
+      // Register activity log (best-effort)
+      await logBatchReportExport({
+        solicitante,
+        solicitanteId: user?.id,
+        clienteIds: selected.map((f) => f.id),
+        modelo,
+      })
+
+      const okCount = result.count
+      const errCount = result.failures.length
+      if (errCount === 0) {
+        toast.success(`${okCount} relatórios gerados com sucesso!`)
+      } else if (okCount === 0) {
+        toast.error('Não foi possível gerar os relatórios. Tente novamente.')
+      } else {
+        toast.warning(`${okCount} relatórios gerados, ${errCount} com erro (verifique o log).`)
+      }
+      setSelectedIds(new Set())
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : 'Não foi possível gerar os relatórios. Tente novamente.',
+      )
+    } finally {
+      setBatchExporting(false)
+      setExportProgress(null)
+    }
+  }
 
   // Multi-select filters
   const [selectedRegions, setSelectedRegions] = useState<string[]>([])
@@ -250,6 +319,48 @@ export default function Cadastro() {
           <CardTitle>Fábricas Cadastradas</CardTitle>
           <CardDescription>{filtered.length} fábrica(s)</CardDescription>
         </CardHeader>
+        {selectedIds.size > 0 && (
+          <div className="px-6 pb-3 -mb-1 flex flex-wrap items-center justify-between gap-3">
+            <span className="text-sm font-medium text-muted-foreground">
+              {selectedIds.size} cliente(s) selecionado(s)
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={batchExporting}
+                onClick={() => setSelectedIds(new Set())}
+              >
+                Limpar seleção
+              </Button>
+              <Button
+                size="sm"
+                className="gap-2"
+                disabled={batchExporting}
+                onClick={handleBatchExport}
+              >
+                {batchExporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <FileArchive className="w-4 h-4" />
+                )}
+                Exportar Relatórios em Lote
+              </Button>
+            </div>
+          </div>
+        )}
+        {exportProgress && (
+          <div className="px-6 pb-3 space-y-1">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Gerando relatórios... {exportProgress.done}/{exportProgress.total} concluídos
+              </span>
+              <span>Modelo: {REPORT_TEMPLATE_LABEL[reportTemplateRef.current]}</span>
+            </div>
+            <Progress value={(exportProgress.done / exportProgress.total) * 100} className="h-2" />
+          </div>
+        )}
         <CardContent className="space-y-4">
           <div className="space-y-3 p-3 bg-muted/20 border rounded-lg">
             <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -358,6 +469,22 @@ export default function Cadastro() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={
+                          filtered.length > 0 && filtered.every((f) => selectedIds.has(f.id))
+                        }
+                        onCheckedChange={(checked) => {
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev)
+                            if (checked) filtered.forEach((f) => next.add(f.id))
+                            else filtered.forEach((f) => next.delete(f.id))
+                            return next
+                          })
+                        }}
+                        aria-label="Selecionar todos"
+                      />
+                    </TableHead>
                     <TableHead>Nome</TableHead>
                     <TableHead>Cidade/UF</TableHead>
                     <TableHead>Espécie</TableHead>
@@ -372,13 +499,27 @@ export default function Cadastro() {
                 <TableBody>
                   {filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center text-muted-foreground h-16">
+                      <TableCell colSpan={10} className="text-center text-muted-foreground h-16">
                         Nenhuma fábrica encontrada.
                       </TableCell>
                     </TableRow>
                   ) : (
                     filtered.map((f) => (
                       <TableRow key={f.id}>
+                        <TableCell className="w-10">
+                          <Checkbox
+                            checked={selectedIds.has(f.id)}
+                            onCheckedChange={(v) => {
+                              setSelectedIds((prev) => {
+                                const next = new Set(prev)
+                                if (v) next.add(f.id)
+                                else next.delete(f.id)
+                                return next
+                              })
+                            }}
+                            aria-label={`Selecionar ${f.name}`}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">{f.name}</TableCell>
                         <TableCell className="text-sm">
                           {[f.city, f.state].filter(Boolean).join('/') || '-'}
