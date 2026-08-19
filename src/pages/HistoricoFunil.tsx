@@ -366,3 +366,4 @@ export default function HistoricoFunil() {
 
 // Re-export param type for callers integrating logAction.
 export type { LogActionParams }
+// (rebuilt chunk for /historico-funil route)
