@@ -159,17 +159,6 @@ routerAdd(
       }
       var clientName = factory.getString('name')
 
-      var logs = []
-      try {
-        logs = $app.findRecordsByFilter(
-          'activity_logs',
-          "recordId = '" + clientId + "'",
-          'created',
-          10000,
-          0,
-        )
-      } catch (_) {}
-
       var cnpj = ''
       try {
         cnpj = factory.getString('cnpj')
@@ -206,17 +195,6 @@ routerAdd(
         }
       } catch (_) {}
 
-      var funnelLogs = []
-      try {
-        funnelLogs = $app.findRecordsByFilter(
-          'funnel_activity_log',
-          "entity_id = '" + clientId + "' && (entity_type = 'client' || entity_type = 'factory')",
-          '-created',
-          5,
-          0,
-        )
-      } catch (_) {}
-
       var titulo = body.titulo || 'Relatório de Histórico — ' + clientName
       var periodoInicio = body.periodoInicio || ''
       var periodoFim = body.periodoFim || ''
@@ -233,6 +211,46 @@ routerAdd(
       if (!userName && e.auth && e.auth.getString) {
         userName = e.auth.getString('name') || e.auth.getString('email') || ''
       }
+
+      function fmtIsoDateStart(dStr) {
+        if (!dStr) return ''
+        if (dStr.indexOf(' ') > 0 || dStr.indexOf('T') > 0) return dStr
+        return dStr + ' 00:00:00'
+      }
+
+      function fmtIsoDateEnd(dStr) {
+        if (!dStr) return ''
+        if (dStr.indexOf(' ') > 0 || dStr.indexOf('T') > 0) return dStr
+        return dStr + ' 23:59:59'
+      }
+
+      var activityFilter = "recordId = '" + clientId + "'"
+      if (periodoInicio) {
+        activityFilter += " && created >= '" + fmtIsoDateStart(periodoInicio) + "'"
+      }
+      if (periodoFim) {
+        activityFilter += " && created <= '" + fmtIsoDateEnd(periodoFim) + "'"
+      }
+
+      var logs = []
+      try {
+        logs = $app.findRecordsByFilter('activity_logs', activityFilter, 'created', 10000, 0)
+      } catch (_) {}
+
+      var funnelFilter =
+        "entity_id = '" + clientId + "' && (entity_type = 'client' || entity_type = 'factory')"
+      if (periodoInicio) {
+        funnelFilter += " && created >= '" + fmtIsoDateStart(periodoInicio) + "'"
+      }
+      if (periodoFim) {
+        funnelFilter += " && created <= '" + fmtIsoDateEnd(periodoFim) + "'"
+      }
+
+      var funnelLogs = []
+      try {
+        funnelLogs = $app.findRecordsByFilter('funnel_activity_log', funnelFilter, '-created', 5, 0)
+      } catch (_) {}
+
       var nowStr = fmtDate(new Date().toISOString())
 
       var species = ''

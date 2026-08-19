@@ -64,6 +64,16 @@ export function ClientHistoryDialog({
   const [generating, setGenerating] = useState(false)
   const [generatingDocs, setGeneratingDocs] = useState(false)
 
+  // Default periodoInicio to 30 days ago and periodoFim to today
+  const [periodoInicio, setPeriodoInicio] = useState(() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 30)
+    return d.toISOString().split('T')[0]
+  })
+  const [periodoFim, setPeriodoFim] = useState(() => {
+    return new Date().toISOString().split('T')[0]
+  })
+
   const loadHistory = useCallback(async () => {
     if (!factory) return
     setLoading(true)
@@ -132,6 +142,8 @@ export function ClientHistoryDialog({
         titulo: `Relatório de Histórico — ${factory.name}`,
         modelo: modeloKey,
         solicitante: user?.name || user?.email || '',
+        periodoInicio: periodoInicio || undefined,
+        periodoFim: periodoFim || undefined,
       })
       logAction({
         action_type: 'create',
@@ -164,6 +176,8 @@ export function ClientHistoryDialog({
         titulo: `Relatório de Histórico — ${factory.name}`,
         modelo: modeloKey,
         solicitante: user?.name || user?.email || '',
+        periodoInicio: periodoInicio || undefined,
+        periodoFim: periodoFim || undefined,
       })
       logAction({
         action_type: 'create',
@@ -191,6 +205,23 @@ export function ClientHistoryDialog({
     log.expand?.user?.name || log.expand?.user?.email || '—'
 
   const tipoInfo = (tipo?: string) => TIPO_LABELS[tipo || 'outro'] || TIPO_LABELS.outro
+
+  const filteredLogs = logs.filter((log) => {
+    if (!log.created) return true
+    const createdStr = log.created.replace(' ', 'T')
+    const createdDate = new Date(createdStr)
+    if (isNaN(createdDate.getTime())) return true
+
+    if (periodoInicio) {
+      const start = new Date(`${periodoInicio}T00:00:00`)
+      if (createdDate < start) return false
+    }
+    if (periodoFim) {
+      const end = new Date(`${periodoFim}T23:59:59.999`)
+      if (createdDate > end) return false
+    }
+    return true
+  })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -229,46 +260,80 @@ export function ClientHistoryDialog({
           </div>
         )}
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            size="sm"
-            variant={showForm ? 'secondary' : 'default'}
-            onClick={() => setShowForm((v) => !v)}
-            className="gap-2"
-          >
-            <Plus className="w-4 h-4" /> Nova Ação
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleGeneratePdf}
-            disabled={generating || generatingDocs}
-            className="gap-2"
-          >
-            {generating ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <FileDown className="w-4 h-4" />
-            )}
-            Exportar PDF
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleGenerateGoogleDocs}
-            disabled={generating || generatingDocs}
-            className="gap-2"
-          >
-            {generatingDocs ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <FilePlus2 className="w-4 h-4" />
-            )}
-            Exportar Google Docs
-          </Button>
-          <span className="text-xs text-muted-foreground ml-auto">
-            {logs.length} ação(ões) registrada(s)
-          </span>
+        <div className="flex items-center gap-2 flex-wrap bg-muted/20 p-2 rounded-lg border">
+          <div className="flex items-center gap-1 text-xs">
+            <Label
+              htmlFor="periodo-inicio"
+              className="text-xs text-muted-foreground whitespace-nowrap"
+            >
+              Início:
+            </Label>
+            <Input
+              id="periodo-inicio"
+              type="date"
+              value={periodoInicio}
+              onChange={(e) => setPeriodoInicio(e.target.value)}
+              className="h-8 w-36 text-xs"
+            />
+          </div>
+          <div className="flex items-center gap-1 text-xs">
+            <Label
+              htmlFor="periodo-fim"
+              className="text-xs text-muted-foreground whitespace-nowrap"
+            >
+              Fim:
+            </Label>
+            <Input
+              id="periodo-fim"
+              type="date"
+              value={periodoFim}
+              onChange={(e) => setPeriodoFim(e.target.value)}
+              className="h-8 w-36 text-xs"
+            />
+          </div>
+          <div className="flex items-center gap-2 ml-auto flex-wrap">
+            <Button
+              size="sm"
+              variant={showForm ? 'secondary' : 'default'}
+              onClick={() => setShowForm((v) => !v)}
+              className="gap-1.5 h-8 text-xs"
+            >
+              <Plus className="w-3.5 h-3.5" /> Nova Ação
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleGeneratePdf}
+              disabled={generating || generatingDocs}
+              className="gap-1.5 h-8 text-xs"
+            >
+              {generating ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <FileDown className="w-3.5 h-3.5" />
+              )}
+              Exportar PDF
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleGenerateGoogleDocs}
+              disabled={generating || generatingDocs}
+              className="gap-1.5 h-8 text-xs"
+            >
+              {generatingDocs ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <FilePlus2 className="w-3.5 h-3.5" />
+              )}
+              Exportar Google Docs
+            </Button>
+          </div>
+          <div className="w-full flex justify-end">
+            <span className="text-[11px] text-muted-foreground">
+              {filteredLogs.length} ação(ões) registrada(s)
+            </span>
+          </div>
         </div>
 
         {showForm && (
@@ -324,13 +389,13 @@ export function ClientHistoryDialog({
             <div className="flex items-center justify-center py-10">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
-          ) : logs.length === 0 ? (
+          ) : filteredLogs.length === 0 ? (
             <div className="text-center py-10 text-sm text-muted-foreground border border-dashed rounded-lg">
-              Nenhuma ação registrada para este cliente ainda.
+              Nenhuma ação registrada para este cliente no período selecionado.
             </div>
           ) : (
             <div className="space-y-2">
-              {logs.map((log) => {
+              {filteredLogs.map((log) => {
                 const info = tipoInfo(log.tipo)
                 const isStatus = log.tipo === 'status' || (log.status_anterior && log.status_novo)
                 return (
@@ -383,7 +448,11 @@ export function ClientHistoryDialog({
 
         {factory && (
           <div className="border-t pt-3">
-            <PlanoAcaoPanel clienteId={factory.id} />
+            <PlanoAcaoPanel
+              clienteId={factory.id}
+              periodoInicio={periodoInicio}
+              periodoFim={periodoFim}
+            />
           </div>
         )}
 

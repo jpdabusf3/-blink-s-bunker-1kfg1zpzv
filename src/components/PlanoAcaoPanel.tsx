@@ -25,6 +25,8 @@ import type { PlanoAcao, PlanoStatus } from '@/types'
 
 interface PlanoAcaoPanelProps {
   clienteId: string
+  periodoInicio?: string
+  periodoFim?: string
 }
 
 const STATUS_META: Record<PlanoStatus, { label: string; icon: typeof Circle; color: string }> = {
@@ -41,7 +43,7 @@ const STATUS_OPTIONS: { value: PlanoStatus; label: string }[] = [
   { value: 'cancelado', label: 'Cancelado' },
 ]
 
-export function PlanoAcaoPanel({ clienteId }: PlanoAcaoPanelProps) {
+export function PlanoAcaoPanel({ clienteId, periodoInicio, periodoFim }: PlanoAcaoPanelProps) {
   const { user } = useAuth()
   const { logAction } = useFunnelActivityLog()
   const [planos, setPlanos] = useState<PlanoAcao[]>([])
@@ -87,7 +89,6 @@ export function PlanoAcaoPanel({ clienteId }: PlanoAcaoPanelProps) {
       setShowForm(false)
       await load()
       toast.success('Plano de ação criado')
-      // Funnel activity log: action plan created
       logAction({
         action_type: 'create',
         entity_type: 'action_plan',
@@ -108,7 +109,6 @@ export function PlanoAcaoPanel({ clienteId }: PlanoAcaoPanelProps) {
     try {
       await updatePlanoAcao(id, { status })
       await load()
-      // Funnel activity log: action plan status change
       logAction({
         action_type: 'status_change',
         entity_type: 'action_plan',
@@ -123,9 +123,6 @@ export function PlanoAcaoPanel({ clienteId }: PlanoAcaoPanelProps) {
     }
   }
 
-  // Funnel activity log: action_plan updates handled via handleStatusChange.
-  // (Edit-by-description is not exposed in the current UI.)
-
   const handleDelete = async (id: string) => {
     const plano = planos.find((p) => p.id === id)
     if (!confirm('Excluir este plano de ação?')) return
@@ -133,7 +130,6 @@ export function PlanoAcaoPanel({ clienteId }: PlanoAcaoPanelProps) {
       await deletePlanoAcao(id)
       await load()
       toast.success('Plano de ação excluído')
-      // Funnel activity log: action plan deleted
       logAction({
         action_type: 'delete',
         entity_type: 'action_plan',
@@ -145,6 +141,23 @@ export function PlanoAcaoPanel({ clienteId }: PlanoAcaoPanelProps) {
       toast.error('Erro ao excluir')
     }
   }
+
+  const filteredPlanos = planos.filter((p) => {
+    if (!p.created) return true
+    const createdStr = p.created.replace(' ', 'T')
+    const createdDate = new Date(createdStr)
+    if (isNaN(createdDate.getTime())) return true
+
+    if (periodoInicio) {
+      const start = new Date(`${periodoInicio}T00:00:00`)
+      if (createdDate < start) return false
+    }
+    if (periodoFim) {
+      const end = new Date(`${periodoFim}T23:59:59.999`)
+      if (createdDate > end) return false
+    }
+    return true
+  })
 
   return (
     <div className="space-y-3">
@@ -204,13 +217,13 @@ export function PlanoAcaoPanel({ clienteId }: PlanoAcaoPanelProps) {
         <div className="flex justify-center py-4">
           <Loader2 className="w-5 h-5 animate-spin text-primary" />
         </div>
-      ) : planos.length === 0 ? (
+      ) : filteredPlanos.length === 0 ? (
         <p className="text-xs text-muted-foreground text-center py-4 border border-dashed rounded-lg">
           Nenhum plano de ação registrado.
         </p>
       ) : (
         <div className="space-y-2">
-          {planos.map((p) => {
+          {filteredPlanos.map((p) => {
             const meta = STATUS_META[p.status as PlanoStatus] || STATUS_META.pendente
             const Icon = meta.icon
             return (
