@@ -30,6 +30,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { useI18n } from '@/hooks/use-i18n'
 import { isMasterOrCeo, isManager } from '@/lib/user-scope'
+import logoBlink from '@/assets/logo-blink-6759b.png'
 
 export function AppSidebar() {
   const loc = useLocation()
@@ -69,9 +70,11 @@ export function AppSidebar() {
     >
       <SidebarHeader className="p-4 border-b border-border flex items-center justify-center">
         <div className="flex items-center gap-3 overflow-hidden px-1">
-          <div className="bg-primary p-1.5 rounded-lg shrink-0">
-            <Target className="w-5 h-5 text-primary-foreground" />
-          </div>
+          <img
+            src={logoBlink}
+            alt="Blink Biotech Logo"
+            className="h-8 w-auto shrink-0 object-contain"
+          />
           <h2 className="text-lg font-bold text-foreground truncate group-data-[collapsible=icon]:hidden">
             Blink Biotech
           </h2>
