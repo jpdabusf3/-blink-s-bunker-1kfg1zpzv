@@ -1,5 +1,7 @@
 import pb from '@/lib/pocketbase/client'
 import type { ActivityLog } from '@/types'
+import type { ReportTemplateKey } from '@/lib/reportTemplates'
+import { REPORT_TEMPLATE_LABEL } from '@/lib/reportTemplates'
 
 export interface ClientReport {
   id: string
@@ -64,12 +66,41 @@ export const addClientAction = (payload: NewActionPayload) =>
     headers: { 'Content-Type': 'application/json' },
   })
 
-/** Call the backend to generate the Word (.docx) report and return its bytes. */
-export const generateClientWordReport = async (
+export interface ClientReportOpts {
+  titulo?: string
+  modelo?: string
+  solicitante?: string
+  periodoInicio?: string
+  periodoFim?: string
+}
+
+/** Date stamp formatted as DD-MM-YYYY (locale independent). */
+export function dateStamp(d: Date = new Date()): string {
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = d.getFullYear()
+  return `${dd}-${mm}-${yyyy}`
+}
+
+/** Sanitize a client name for use inside a file name. */
+export function safePdfFileName(clientName: string): string {
+  const safe =
+    (clientName || 'cliente')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 60) || 'cliente'
+  return `relatorio-${safe}-${dateStamp()}.pdf`
+}
+
+/** Call the backend to generate the PDF report and return its bytes. */
+export const generateClientPdfReport = async (
   clientId: string,
-  opts?: { titulo?: string; modelo?: string; solicitante?: string },
-) => {
-  const res = await fetch(`${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/client-reports/word`, {
+  opts?: ClientReportOpts,
+): Promise<Blob> => {
+  const res = await fetch(`${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/client-reports/pdf`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -80,10 +111,12 @@ export const generateClientWordReport = async (
       titulo: opts?.titulo,
       modelo: opts?.modelo,
       solicitante: opts?.solicitante,
+      periodoInicio: opts?.periodoInicio,
+      periodoFim: opts?.periodoFim,
     }),
   })
   if (!res.ok) {
-    let msg = 'Falha ao gerar relatório Word'
+    let msg = 'Falha ao gerar relatório PDF'
     try {
       const data = await res.json()
       if (data && data.error) msg = data.error
@@ -99,34 +132,43 @@ export const generateClientWordReport = async (
   return blob
 }
 
-function safeFileName(clientName: string) {
-  const safe = (clientName || 'cliente').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 40)
-  return `relatorio_${safe}_${new Date().toISOString().slice(0, 10)}.docx`
+/** Call the backend to generate the Google Docs (HTML) report and return the HTML string. */
+export const generateClientGoogleDocsHtml = async (
+  clientId: string,
+  opts?: ClientReportOpts,
+): Promise<string> => {
+  const res = await fetch(
+    `${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/client-reports/google-docs`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: pb.authStore.token,
+      },
+      body: JSON.stringify({
+        clientId,
+        titulo: opts?.titulo,
+        modelo: opts?.modelo,
+        solicitante: opts?.solicitante,
+        periodoInicio: opts?.periodoInicio,
+        periodoFim: opts?.periodoFim,
+      }),
+    },
+  )
+  if (!res.ok) {
+    let msg = 'Falha ao preparar Google Docs'
+    try {
+      const data = await res.json()
+      if (data && data.error) msg = data.error
+    } catch {
+      /* intentionally ignored */
+    }
+    throw new Error(msg)
+  }
+  return res.text()
 }
 
-/**
- * Generate the Word report on the backend, download it to the user AND store
- * a copy in the `client_reports` collection so it appears in the Relatórios
- * tab for later re-download / PDF export.
- */
-export const generateAndStoreClientWordReport = async (
-  clientId: string,
-  clientName: string,
-  opts?: { titulo?: string; modelo?: string; solicitante?: string; store?: boolean },
-): Promise<ClientReport | null> => {
-  const blob = await generateClientWordReport(clientId, opts)
-  const fileName = safeFileName(clientName)
-  const file = new File([blob], fileName, {
-    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  })
-
-  // trigger browser download (skipped in batch mode where the caller zips blobs)
-  const store = opts?.store !== false
-  if (!store) {
-    // caller takes the blob via generateClientWordReport directly
-    return null
-  }
-
+function triggerBlobDownload(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
@@ -135,6 +177,32 @@ export const generateAndStoreClientWordReport = async (
   a.click()
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
+}
+
+/**
+ * Generate the PDF report on the backend, download it to the user AND store
+ * a copy in the `client_reports` collection so it appears in the Relatórios
+ * tab for later re-download.
+ *
+ * `store: false` skips the browser download and the DB store (used by the
+ * batch exporter, which takes the blob via `generateClientPdfReport` directly).
+ */
+export const generateAndStoreClientPdfReport = async (
+  clientId: string,
+  clientName: string,
+  opts?: ClientReportOpts & { store?: boolean },
+): Promise<ClientReport | null> => {
+  const blob = await generateClientPdfReport(clientId, opts)
+  const fileName = safePdfFileName(clientName)
+  const file = new File([blob], fileName, { type: 'application/pdf' })
+
+  const store = opts?.store !== false
+  if (!store) {
+    // caller takes the blob via generateClientPdfReport directly
+    return null
+  }
+
+  triggerBlobDownload(blob, fileName)
 
   // store the generated file for later access (Relatórios tab)
   const form = new FormData()
@@ -144,6 +212,63 @@ export const generateAndStoreClientWordReport = async (
   form.append('file', file)
   const created = await pb.collection('client_reports').create<ClientReport>(form)
   return created
+}
+
+/**
+ * Open the Google Docs (HTML) report in a new browser tab. The HTML is fully
+ * self-contained (inline styles) so it renders ready to be copied / imported
+ * into Google Docs via "File > Open".
+ */
+export const openClientReportInGoogleDocs = async (
+  clientId: string,
+  clientName: string,
+  opts?: ClientReportOpts,
+): Promise<void> => {
+  const html = await generateClientGoogleDocsHtml(clientId, opts)
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const win = window.open(url, '_blank')
+  // Some browsers block popups; fall back to a triggered download.
+  if (!win) {
+    triggerBlobDownload(blob, `relatorio-${clientName}-${dateStamp()} — Abrir no Google Docs.html`)
+  }
+  // Release the object URL after the new tab has had a chance to load.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}
+
+/**
+ * Register a single-client report export in the funnel_activity_log (and the
+ * legacy atividades collection). Best-effort: logging failures are swallowed.
+ */
+export async function logClientReportExport(opts: {
+  solicitante: string
+  solicitanteId?: string
+  clientId: string
+  clientName: string
+  modelo: ReportTemplateKey
+  formato: 'pdf' | 'google-docs'
+}): Promise<void> {
+  const userId = pb.authStore.record?.id
+  const modeloLabel = REPORT_TEMPLATE_LABEL[opts.modelo]
+  const descricao =
+    opts.formato === 'pdf'
+      ? `Exportou relatório ${modeloLabel} em PDF para ${opts.clientName}`
+      : `Exportou relatório ${modeloLabel} para Google Docs para ${opts.clientName}`
+
+  try {
+    await pb.collection('funnel_activity_log').create({
+      user: userId || '',
+      action_type: 'create',
+      entity_type: 'client',
+      entity_id: opts.clientId,
+      entity_name: opts.clientName,
+      old_value: '',
+      new_value: '',
+      description: descricao,
+    })
+  } catch (err) {
+    console.error('[client report] funnel_activity_log failed', err)
+  }
 }
 
 /** List all generated client reports (used by the Relatórios tab). */
@@ -165,14 +290,7 @@ export const downloadClientReportFile = async (report: ClientReport) => {
   })
   if (!res.ok) throw new Error('Falha no download')
   const blob = await res.blob()
-  const downloadUrl = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = downloadUrl
-  a.download = report.file
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(downloadUrl)
+  triggerBlobDownload(blob, report.file)
 }
 
 /** Delete a stored client report. */

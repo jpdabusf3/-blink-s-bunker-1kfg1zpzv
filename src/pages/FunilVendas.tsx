@@ -375,10 +375,11 @@ export default function FunilVendas() {
                   solicitanteId: user?.id,
                   clienteIds: clients.map((f) => f.id),
                   modelo: reportTemplate,
+                  formato: 'pdf',
                 })
                 toast({
-                  title: 'Relatórios em lote gerados',
-                  description: `${clients.length} relatório(s) .docx empacotados em ZIP (modelo ${reportTemplate}).`,
+                  title: 'PDFs gerados com sucesso!',
+                  description: `${clients.length} relatório(s) PDF empacotados em ZIP (modelo ${reportTemplate}).`,
                 })
                 setSelectedClientIds(new Set())
               } catch (err) {

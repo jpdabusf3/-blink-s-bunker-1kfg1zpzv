@@ -1,13 +1,13 @@
 import pb from '@/lib/pocketbase/client'
-import { generateClientWordReport } from '@/services/client-reports'
+import { generateClientPdfReport, dateStamp } from '@/services/client-reports'
 import type { ReportTemplateKey } from '@/lib/reportTemplates'
 import { REPORT_TEMPLATE_LABEL } from '@/lib/reportTemplates'
 import type { Factory } from '@/types'
 
 /**
  * Minimal stored-ZIP writer (no dependencies). Produces a valid .zip whose
- * entries are stored (method 0, no compression) — same approach the backend
- * uses for .docx. Enough for bundling a handful of .docx blobs per download.
+ * entries are stored (method 0, no compression) — enough for bundling a
+ * handful of PDF blobs per download.
  */
 
 function u16(v: number): number[] {
@@ -125,16 +125,8 @@ function buildStoredZip(entries: { name: string; data: Uint8Array }[]): Uint8Arr
   return new Uint8Array(out.concat(central).concat(eocd))
 }
 
-/** Date stamp formatted as DD-MM-YYYY (locale independent). */
-function dateStamp(d: Date = new Date()): string {
-  const dd = String(d.getDate()).padStart(2, '0')
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const yyyy = d.getFullYear()
-  return `${dd}-${mm}-${yyyy}`
-}
-
-/** Sanitize a client name for use inside a file name. */
-function safeFileName(clientName: string): string {
+/** Sanitize a client name for use inside a PDF file name. */
+function safePdfFileName(clientName: string): string {
   const safe =
     (clientName || 'cliente')
       .normalize('NFD')
@@ -143,7 +135,7 @@ function safeFileName(clientName: string): string {
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '')
       .slice(0, 60) || 'cliente'
-  return `relatorio-${safe}-${dateStamp()}.docx`
+  return `relatorio-${safe}-${dateStamp()}.pdf`
 }
 
 function triggerDownload(blob: Blob, filename: string) {
@@ -163,11 +155,11 @@ export interface BatchExportFailure {
 }
 
 export interface BatchExportResult {
-  /** Number of .docx reports successfully generated. */
+  /** Number of reports successfully generated. */
   count: number
   /** Clients whose report failed to generate. */
   failures: BatchExportFailure[]
-  /** Name of the file that was downloaded (.zip or .docx). */
+  /** Name of the file that was downloaded (.zip or .pdf). */
   downloadedFile: string
 }
 
@@ -178,9 +170,8 @@ export interface BatchExportProgress {
 }
 
 /**
- * Generate a Word (.docx) report for each selected client and either download
- * a single .docx (when only one client is selected) or bundle them into a
- * single .zip download.
+ * Generate a PDF report for each selected client and either download a single
+ * PDF (when only one client is selected) or bundle them into a single .zip.
  *
  * - Uses the chosen visual template (`modelo`) for all reports.
  * - Stamps the requesting user's name (`solicitante`) into every document.
@@ -206,13 +197,13 @@ export async function exportBatchClientReportsZip(
   for (let i = 0; i < clients.length; i++) {
     const client = clients[i]
     try {
-      const blob = await generateClientWordReport(client.id, {
+      const blob = await generateClientPdfReport(client.id, {
         modelo: opts.modelo,
         solicitante: opts.solicitante,
         titulo: `Relatório de Histórico — ${client.name}`,
       })
       const buf = new Uint8Array(await blob.arrayBuffer())
-      entries.push({ name: safeFileName(client.name), data: buf })
+      entries.push({ name: safePdfFileName(client.name), data: buf })
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       console.error(`[batch export] Falha ao gerar relatório para "${client.name}":`, message)
@@ -227,12 +218,10 @@ export async function exportBatchClientReportsZip(
     throw new Error('Não foi possível gerar os relatórios. Tente novamente.')
   }
 
-  // Single client → download the lone .docx directly (no zip).
+  // Single client → download the lone PDF directly (no zip).
   if (count === 1) {
     const entry = entries[0]
-    const blob = new Blob([entry.data as BlobPart], {
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    })
+    const blob = new Blob([entry.data as BlobPart], { type: 'application/pdf' })
     triggerDownload(blob, entry.name)
     return { count, failures, downloadedFile: entry.name }
   }
@@ -256,10 +245,15 @@ export async function logBatchReportExport(opts: {
   clienteIds: string[]
   modelo: ReportTemplateKey
   origem?: string
+  formato?: 'pdf' | 'google-docs'
 }): Promise<void> {
   const userId = pb.authStore.record?.id
   const modeloLabel = REPORT_TEMPLATE_LABEL[opts.modelo]
-  const descricao = `Exportou relatórios em lote para ${opts.clienteIds.length} clientes (modelo: ${modeloLabel})`
+  const formato = opts.formato || 'pdf'
+  const descricao =
+    formato === 'pdf'
+      ? `Exportou relatórios em lote (PDF) para ${opts.clienteIds.length} clientes (modelo: ${modeloLabel})`
+      : `Exportou relatórios em lote (Google Docs) para ${opts.clienteIds.length} clientes (modelo: ${modeloLabel})`
 
   // 1) funnel_activity_log — action_type=create, entity_type=client
   try {
@@ -285,6 +279,7 @@ export async function logBatchReportExport(opts: {
     quantidade_clientes: opts.clienteIds.length,
     modelo_utilizado: opts.modelo,
     modelo_label: modeloLabel,
+    formato,
     origem: opts.origem || 'manual',
   }
   try {

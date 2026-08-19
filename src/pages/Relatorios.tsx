@@ -33,7 +33,7 @@ import {
   Cell,
 } from 'recharts'
 import { ChartContainer } from '@/components/ui/chart'
-import { Loader2, FileSpreadsheet, FileText, Download, Trash2, FileArchive } from 'lucide-react'
+import { Loader2, FileSpreadsheet, FileArchive } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { exportOrdersToExcel } from '@/lib/exportUtils'
@@ -44,6 +44,8 @@ import {
   getClientReports,
   downloadClientReportFile,
   deleteClientReport,
+  generateClientGoogleDocsHtml,
+  dateStamp,
   type ClientReport,
 } from '@/services/client-reports'
 import { useToast } from '@/hooks/use-toast'
@@ -58,6 +60,7 @@ import {
   saveReportTemplatePreference,
 } from '@/services/report-template-preferences'
 import { exportBatchClientReportsZip, logBatchReportExport } from '@/lib/batchReportExport'
+import { FilePlus2 } from 'lucide-react'
 
 const STATE_REGIONS = [
   'Sul',
@@ -95,6 +98,7 @@ export default function Relatorios() {
   // Multi-selection of clients (Top Clientes) for batch export.
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set())
   const [batchExporting, setBatchExporting] = useState(false)
+  const [batchDocsExporting, setBatchDocsExporting] = useState(false)
 
   useEffect(() => {
     getReportTemplatePreference()
@@ -275,9 +279,7 @@ export default function Relatorios() {
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">
-              Modelo Visual (Word)
-            </label>
+            <label className="text-xs font-medium text-muted-foreground">Modelo Visual (PDF)</label>
             <Select
               value={reportTemplate}
               onValueChange={handleTemplateChange}
@@ -531,6 +533,7 @@ export default function Relatorios() {
                 disabled={
                   selectedClientIds.size === 0 ||
                   batchExporting ||
+                  batchDocsExporting ||
                   volumeByCustomer.filter((c) => c.factoryId).length === 0
                 }
                 onClick={async () => {
@@ -550,10 +553,11 @@ export default function Relatorios() {
                       solicitanteId: user?.id,
                       clienteIds: clients.map((c) => c.factoryId!),
                       modelo: reportTemplate,
+                      formato: 'pdf',
                     })
                     toast({
-                      title: 'Relatórios em lote gerados',
-                      description: `${clients.length} relatório(s) .docx empacotados em ZIP (modelo ${reportTemplate}).`,
+                      title: 'PDFs gerados com sucesso!',
+                      description: `${clients.length} relatório(s) PDF empacotados em ZIP (modelo ${reportTemplate}).`,
                     })
                     setSelectedClientIds(new Set())
                   } catch (err) {
@@ -573,7 +577,92 @@ export default function Relatorios() {
                 ) : (
                   <FileArchive className="w-4 h-4" />
                 )}
-                Gerar Relatórios em Lote (ZIP)
+                Exportar PDFs em Lote (ZIP)
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-2"
+                disabled={
+                  selectedClientIds.size === 0 ||
+                  batchExporting ||
+                  batchDocsExporting ||
+                  volumeByCustomer.filter((c) => c.factoryId).length === 0
+                }
+                onClick={async () => {
+                  const clients = volumeByCustomer.filter(
+                    (c) => c.factoryId && selectedClientIds.has(c.factoryId),
+                  )
+                  if (clients.length === 0) return
+                  setBatchDocsExporting(true)
+                  try {
+                    const solicitante = user?.name || user?.email || ''
+                    // Open each client's Google Docs report in a new tab.
+                    // Browsers may throttle multiple popups, so we open them
+                    // sequentially with a small delay.
+                    let opened = 0
+                    for (const c of clients) {
+                      try {
+                        const html = await generateClientGoogleDocsHtml(c.factoryId!, {
+                          titulo: `Relatório de Histórico — ${c.name}`,
+                          modelo: reportTemplate,
+                          solicitante,
+                        })
+                        const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+                        const url = URL.createObjectURL(blob)
+                        const win = window.open(url, '_blank')
+                        if (!win) {
+                          // popup blocked → trigger download fallback
+                          const a = document.createElement('a')
+                          a.href = url
+                          a.download = `relatorio-${c.name}-${dateStamp()} — Abrir no Google Docs.html`
+                          document.body.appendChild(a)
+                          a.click()
+                          document.body.removeChild(a)
+                        }
+                        setTimeout(() => URL.revokeObjectURL(url), 60_000)
+                        opened++
+                      } catch (err) {
+                        console.error('[batch google docs] falha', c.name, err)
+                      }
+                    }
+                    await logBatchReportExport({
+                      solicitante,
+                      solicitanteId: user?.id,
+                      clienteIds: clients.map((c) => c.factoryId!),
+                      modelo: reportTemplate,
+                      formato: 'google-docs',
+                    })
+                    if (opened === 0) {
+                      toast({
+                        title: 'Erro ao preparar Google Docs',
+                        description: 'Não foi possível abrir os relatórios. Tente novamente.',
+                        variant: 'destructive',
+                      })
+                    } else {
+                      toast({
+                        title: 'Relatórios prontos para Google Docs!',
+                        description: `${opened}/${clients.length} relatório(s) aberto(s) em nova aba (modelo ${reportTemplate}).`,
+                      })
+                      setSelectedClientIds(new Set())
+                    }
+                  } catch (err) {
+                    toast({
+                      title: 'Erro ao preparar Google Docs',
+                      description: err instanceof Error ? err.message : 'Tente novamente.',
+                      variant: 'destructive',
+                    })
+                  } finally {
+                    setBatchDocsExporting(false)
+                  }
+                }}
+              >
+                {batchDocsExporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <FilePlus2 className="w-4 h-4" />
+                )}
+                Exportar Google Docs em Lote
               </Button>
             </div>
           </div>

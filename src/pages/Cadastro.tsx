@@ -37,8 +37,10 @@ import { ImportExcelDialog } from '@/components/ImportExcelDialog'
 import { MultiSelect } from '@/components/ui/multi-select'
 import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
 import { exportBatchClientReportsZip, logBatchReportExport } from '@/lib/batchReportExport'
+import { generateClientGoogleDocsHtml, dateStamp } from '@/services/client-reports'
 import { getReportTemplatePreference } from '@/services/report-template-preferences'
 import { REPORT_TEMPLATE_LABEL, type ReportTemplateKey } from '@/lib/reportTemplates'
+import { FilePlus2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { Factory } from '@/types'
 
@@ -126,23 +128,82 @@ export default function Cadastro() {
         solicitanteId: user?.id,
         clienteIds: selected.map((f) => f.id),
         modelo,
+        formato: 'pdf',
       })
 
       const okCount = result.count
       const errCount = result.failures.length
       if (errCount === 0) {
-        toast.success(`${okCount} relatórios gerados com sucesso!`)
+        toast.success(`${okCount} PDFs gerados com sucesso!`)
       } else if (okCount === 0) {
-        toast.error('Não foi possível gerar os relatórios. Tente novamente.')
+        toast.error('Erro ao gerar PDF. Tente novamente.')
       } else {
-        toast.warning(`${okCount} relatórios gerados, ${errCount} com erro (verifique o log).`)
+        toast.warning(`${okCount} PDFs gerados, ${errCount} com erro (verifique o log).`)
       }
       setSelectedIds(new Set())
     } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao gerar PDF. Tente novamente.')
+    } finally {
+      setBatchExporting(false)
+      setExportProgress(null)
+    }
+  }
+
+  const handleBatchGoogleDocsExport = async () => {
+    const selected = filtered.filter((f) => selectedIds.has(f.id))
+    if (selected.length === 0) {
+      toast.error('Selecione pelo menos um cliente para exportar.')
+      return
+    }
+    const modelo = reportTemplateRef.current
+    const solicitante = user?.name || user?.email || ''
+    setBatchExporting(true)
+    setExportProgress({ done: 0, total: selected.length })
+    try {
+      let opened = 0
+      for (let i = 0; i < selected.length; i++) {
+        const f = selected[i]
+        try {
+          const html = await generateClientGoogleDocsHtml(f.id, {
+            titulo: `Relatório de Histórico — ${f.name}`,
+            modelo,
+            solicitante,
+          })
+          const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+          const url = URL.createObjectURL(blob)
+          const win = window.open(url, '_blank')
+          if (!win) {
+            // popup blocked → download fallback
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `relatorio-${f.name}-${dateStamp()} — Abrir no Google Docs.html`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+          }
+          setTimeout(() => URL.revokeObjectURL(url), 60_000)
+          opened++
+        } catch (err) {
+          console.error('[batch google docs] falha', f.name, err)
+        }
+        setExportProgress({ done: i + 1, total: selected.length })
+      }
+      await logBatchReportExport({
+        solicitante,
+        solicitanteId: user?.id,
+        clienteIds: selected.map((f) => f.id),
+        modelo,
+        formato: 'google-docs',
+      })
+      if (opened === 0) {
+        toast.error('Erro ao preparar Google Docs. Tente novamente.')
+      } else {
+        toast.success(`Relatório pronto para Google Docs! (${opened}/${selected.length})`)
+        setSelectedIds(new Set())
+      }
+    } catch (err) {
       toast.error(
-        err instanceof Error
-          ? err.message
-          : 'Não foi possível gerar os relatórios. Tente novamente.',
+        err instanceof Error ? err.message : 'Erro ao preparar Google Docs. Tente novamente.',
       )
     } finally {
       setBatchExporting(false)
@@ -344,7 +405,21 @@ export default function Cadastro() {
                 ) : (
                   <FileArchive className="w-4 h-4" />
                 )}
-                Exportar Relatórios em Lote
+                Exportar PDFs em Lote (ZIP)
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-2"
+                disabled={batchExporting}
+                onClick={handleBatchGoogleDocsExport}
+              >
+                {batchExporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <FilePlus2 className="w-4 h-4" />
+                )}
+                Exportar Google Docs em Lote
               </Button>
             </div>
           </div>

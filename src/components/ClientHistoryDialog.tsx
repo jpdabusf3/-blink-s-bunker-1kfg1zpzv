@@ -19,14 +19,16 @@ import { formatDateTime } from '@/lib/utils'
 import {
   getClientHistory,
   addClientAction,
-  generateAndStoreClientWordReport,
+  generateAndStoreClientPdfReport,
+  openClientReportInGoogleDocs,
   type ActivityLogEntry,
 } from '@/services/client-reports'
-import { FileText, Plus, Loader2, History, ArrowRight } from 'lucide-react'
+import { FileDown, FilePlus2, Plus, Loader2, History, ArrowRight } from 'lucide-react'
 import type { Factory } from '@/types'
 import { getReportTemplatePreference } from '@/services/report-template-preferences'
 import { REPORT_TEMPLATE_LABEL } from '@/lib/reportTemplates'
 import { PlanoAcaoPanel } from '@/components/PlanoAcaoPanel'
+import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
 
 interface ClientHistoryDialogProps {
   factory: Factory | null
@@ -52,6 +54,7 @@ export function ClientHistoryDialog({
 }: ClientHistoryDialogProps) {
   const { toast } = useToast()
   const { user } = useAuth()
+  const { logAction } = useFunnelActivityLog()
   const [logs, setLogs] = useState<ActivityLogEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
@@ -59,6 +62,7 @@ export function ClientHistoryDialog({
   const [nextStep, setNextStep] = useState('')
   const [saving, setSaving] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [generatingDocs, setGeneratingDocs] = useState(false)
 
   const loadHistory = useCallback(async () => {
     if (!factory) return
@@ -119,28 +123,67 @@ export function ClientHistoryDialog({
     }
   }
 
-  const handleGenerateWord = async () => {
+  const handleGeneratePdf = async () => {
     if (!factory) return
     setGenerating(true)
     try {
       const modeloKey = await getReportTemplatePreference()
-      await generateAndStoreClientWordReport(factory.id, factory.name, {
+      await generateAndStoreClientPdfReport(factory.id, factory.name, {
         titulo: `Relatório de Histórico — ${factory.name}`,
         modelo: modeloKey,
         solicitante: user?.name || user?.email || '',
       })
+      logAction({
+        action_type: 'create',
+        entity_type: 'client',
+        entity_id: factory.id,
+        entity_name: factory.name,
+        description: `Exportou relatório ${REPORT_TEMPLATE_LABEL[modeloKey]} em PDF para ${factory.name}`,
+      })
       toast({
-        title: 'Relatório Word gerado',
-        description: `Modelo ${REPORT_TEMPLATE_LABEL[modeloKey]}. O arquivo .docx foi baixado e também salvo na aba de Relatórios para acesso posterior.`,
+        title: 'PDF gerado com sucesso!',
+        description: `Modelo ${REPORT_TEMPLATE_LABEL[modeloKey]}. O arquivo .pdf foi baixado e também salvo na aba de Relatórios.`,
       })
     } catch {
       toast({
-        title: 'Erro ao gerar relatório',
-        description: 'Não foi possível gerar o arquivo Word.',
+        title: 'Erro ao gerar PDF',
+        description: 'Erro ao gerar PDF. Tente novamente.',
         variant: 'destructive',
       })
     } finally {
       setGenerating(false)
+    }
+  }
+
+  const handleGenerateGoogleDocs = async () => {
+    if (!factory) return
+    setGeneratingDocs(true)
+    try {
+      const modeloKey = await getReportTemplatePreference()
+      await openClientReportInGoogleDocs(factory.id, factory.name, {
+        titulo: `Relatório de Histórico — ${factory.name}`,
+        modelo: modeloKey,
+        solicitante: user?.name || user?.email || '',
+      })
+      logAction({
+        action_type: 'create',
+        entity_type: 'client',
+        entity_id: factory.id,
+        entity_name: factory.name,
+        description: `Exportou relatório ${REPORT_TEMPLATE_LABEL[modeloKey]} para Google Docs para ${factory.name}`,
+      })
+      toast({
+        title: 'Relatório pronto para Google Docs!',
+        description: `Modelo ${REPORT_TEMPLATE_LABEL[modeloKey]}. O relatório foi aberto em uma nova aba — copie ou use "File > Open" no Google Docs.`,
+      })
+    } catch {
+      toast({
+        title: 'Erro ao preparar Google Docs',
+        description: 'Erro ao preparar Google Docs. Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setGeneratingDocs(false)
     }
   }
 
@@ -198,16 +241,30 @@ export function ClientHistoryDialog({
           <Button
             size="sm"
             variant="outline"
-            onClick={handleGenerateWord}
-            disabled={generating}
+            onClick={handleGeneratePdf}
+            disabled={generating || generatingDocs}
             className="gap-2"
           >
             {generating ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <FileText className="w-4 h-4" />
+              <FileDown className="w-4 h-4" />
             )}
-            Gerar Relatório Word
+            Exportar PDF
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleGenerateGoogleDocs}
+            disabled={generating || generatingDocs}
+            className="gap-2"
+          >
+            {generatingDocs ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <FilePlus2 className="w-4 h-4" />
+            )}
+            Exportar Google Docs
           </Button>
           <span className="text-xs text-muted-foreground ml-auto">
             {logs.length} ação(ões) registrada(s)

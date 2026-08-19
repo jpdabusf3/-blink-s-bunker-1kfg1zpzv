@@ -1,8 +1,9 @@
-// Visual report templates for the .docx client history export.
+// Visual report templates for the PDF / Google Docs client history export.
 //
-// The backend hook (`client_report_word.js`) actually renders the styles, but
-// the UI needs the list of available models + labels for the dropdown and a
-// helper to persist the user's choice as a per-user preference.
+// The backend hooks (`client_report_pdf.js` and `client_report_google_docs.js`)
+// actually render the styles, but the UI needs the list of available models +
+// labels for the dropdown and a helper to persist the user's choice as a
+// per-user preference.
 
 export type ReportTemplateKey = 'executivo' | 'tecnico' | 'comercial'
 
