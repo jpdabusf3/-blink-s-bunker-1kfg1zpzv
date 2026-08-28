@@ -162,8 +162,8 @@ export default function TeamManagement() {
       ) : (
         <Tabs defaultValue="performance">
           <TabsList className="grid w-full grid-cols-3 mb-4">
-            <TabsTrigger value="performance" className="gap-1">
-              <BarChart3 className="w-4 h-4" /> Performance
+            <TabsTrigger value="performance" className="gap-1.5">
+              <BarChart3 className="w-4 h-4" /> Painel Executivo
             </TabsTrigger>
             <TabsTrigger value="users">Usuários ({users.length})</TabsTrigger>
             <TabsTrigger value="invitations">Convites ({invitations.length})</TabsTrigger>
