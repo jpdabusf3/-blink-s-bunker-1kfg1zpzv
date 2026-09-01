@@ -426,7 +426,7 @@ export function useUploadNF(): UseUploadNFReturn {
             gestoresTecnicos.find((g) => g.id === data.gestor_tecnico_id)?.nome || ''
           const vendedorNome = vendedores.find((v) => v.id === data.vendedor_id)?.nome || ''
 
-          // Catálogo de produtos para derivar família
+          // Catálogo de produtos para derivar família/categoria/linha
           const catalogMap = await nfService.getCatalogProductsMap()
 
           const itensToSave =
@@ -445,7 +445,8 @@ export function useUploadNF(): UseUploadNFReturn {
           for (const item of itensToSave) {
             const prodCod = (item.produto_codigo || '').trim()
             const catInfo = catalogMap.get(prodCod.toUpperCase())
-            const produtoFamilia = catInfo?.linha || ''
+            // Nova spec mapeia categoria e linha (ex: categoria: "Organic Minerals", linha: "Minerals")
+            const produtoFamilia = catInfo?.categoria || catInfo?.linha || ''
 
             const itemQtd = Number(item.produto_quantidade) || 1
             const itemUnit = Number(item.produto_valor_unitario) || 0

@@ -3,14 +3,14 @@ migrate(
     // 1. Atualizar notas_fiscais: adicionar raw_text (TEXT sem limite max), tornar valor_total_nota NULLABLE
     try {
       const nfCol = app.findCollectionByNameOrId('notas_fiscais')
-      
+
       const rawTextField = nfCol.fields.getByName('raw_text')
       if (!rawTextField) {
         nfCol.fields.add(
           new TextField({
             name: 'raw_text',
             required: false,
-          })
+          }),
         )
       } else {
         // Remover limite se houver
@@ -38,7 +38,7 @@ migrate(
           new TextField({
             name: 'raw_text',
             required: false,
-          })
+          }),
         )
       } else {
         nfeRawText.max = 0
@@ -74,5 +74,5 @@ migrate(
       }
       app.save(nfeCol)
     } catch (_) {}
-  }
+  },
 )

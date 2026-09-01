@@ -39,6 +39,7 @@ import { ThemeProvider } from './components/ThemeProvider'
 const Historico = lazy(() => import('./pages/Historico'))
 const HistoricoFunil = lazy(() => import('./pages/HistoricoFunil'))
 const ConfiguracoesLayout = lazy(() => import('./pages/ConfiguracoesLayout'))
+const Produtos = lazy(() => import('./pages/Produtos'))
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -156,6 +157,14 @@ const App = () => (
                       }
                     />
                     <Route path="/pedidos" element={<Pedidos />} />
+                    <Route
+                      path="/produtos"
+                      element={
+                        <Suspense fallback={<PageSkeleton />}>
+                          <Produtos />
+                        </Suspense>
+                      }
+                    />
                     <Route path="/historico-vendas" element={<HistoricoVendas />} />
                     <Route path="/metas" element={<Metas />} />
                     <Route path="/relatorios" element={<Relatorios />} />

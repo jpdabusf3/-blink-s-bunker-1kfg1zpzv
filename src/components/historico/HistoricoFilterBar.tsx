@@ -37,12 +37,16 @@ export const CANAL_VENDAS_LIST = [
 export const PAIS_LIST = ['Brasil', 'Paraguai', 'Chile'] as const
 
 export const FAMILIA_PRODUTO_LIST = [
-  'Adsorventes',
-  'Minerais Organicos',
-  'Prebioticos',
+  'Mycotoxin Binders',
+  'Yeast Derivatives',
+  'Organic Minerals',
+  'Yeast Cell Wall',
   'Blends',
-  'Ingredientes',
-  'Inovacao',
+  'MOS',
+  'Mycotoxin',
+  'Minerals',
+  'Yeast',
+  'Blend',
 ] as const
 
 interface HistoricoFilterBarProps {

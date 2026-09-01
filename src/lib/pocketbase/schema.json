@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-01T19:58:18.383Z",
+  "generatedAt": "2026-09-01T20:27:37.010Z",
   "collections": [
     {
       "name": "users",
@@ -2676,13 +2676,28 @@
           "required": false,
           "system": false,
           "collectionRef": "users"
+        },
+        {
+          "name": "categoria",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Mycotoxin Binders",
+            "Yeast Derivatives",
+            "Organic Minerals",
+            "Yeast Cell Wall",
+            "Blends"
+          ]
         }
       ],
       "indexes": [
         "CREATE INDEX idx_produtos_nome ON produtos (nome)",
-        "CREATE INDEX idx_produtos_linha ON produtos (linha)",
-        "CREATE UNIQUE INDEX `idx_produtos_codigo` ON `produtos` (codigo)",
         "CREATE INDEX `idx_produtos_familia` ON `produtos` (familia)",
+        "CREATE UNIQUE INDEX `idx_produtos_codigo` ON `produtos` (codigo)",
+        "CREATE INDEX `idx_produtos_categoria` ON `produtos` (categoria)",
+        "CREATE INDEX `idx_produtos_linha` ON `produtos` (linha)",
+        "CREATE INDEX `idx_produtos_ativo` ON `produtos` (ativo)",
         "CREATE INDEX `idx_produtos_user_id` ON `produtos` (user_id)"
       ]
     },

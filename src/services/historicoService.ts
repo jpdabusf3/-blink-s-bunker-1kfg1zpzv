@@ -144,12 +144,14 @@ function normalizeCanal(canal?: string): string {
 function normalizeFamilia(fam?: string): string {
   if (!fam) return 'Outros'
   const f = fam.trim().toLowerCase()
-  if (f.includes('adsorv')) return 'Adsorventes'
-  if (f.includes('miner')) return 'Minerais Organicos'
-  if (f.includes('prebio')) return 'Prebioticos'
+  if (f.includes('mycotoxin binder') || f === 'mos' || f.includes('adsorv'))
+    return 'Mycotoxin Binders'
+  if (f.includes('yeast deriv') || f === 'mycotoxin') return 'Yeast Derivatives'
+  if (f.includes('organic mineral') || f === 'minerals' || f.includes('miner'))
+    return 'Organic Minerals'
+  if (f.includes('yeast cell wall') || f === 'yeast' || f.includes('suplement'))
+    return 'Yeast Cell Wall'
   if (f.includes('blend')) return 'Blends'
-  if (f.includes('ingred')) return 'Ingredientes'
-  if (f.includes('inova')) return 'Inovacao'
   return fam
 }
 
@@ -281,7 +283,7 @@ export const historicoService = {
             for (const it of itemsOfThisNf) {
               const pCode = String(it.produto_codigo || '').trim()
               const pInfo = produtoMap.get(pCode.toUpperCase())
-              const familia = pInfo?.linha || ''
+              const familia = pInfo?.categoria || pInfo?.linha || ''
               allItems.push({
                 id: `${nf.id}_${it.id}`,
                 origem: 'nf',
@@ -357,7 +359,7 @@ export const historicoService = {
           const vendedor = ped.expand?.vendedor_id?.nome || ''
           const prodCode = ped.produto_codigo || ped.expand?.produto_id?.codigo || ''
           const prodInfo = produtoMap.get(String(prodCode).toUpperCase().trim())
-          const familia = ped.produto_linha || prodInfo?.linha || ''
+          const familia = ped.produto_linha || prodInfo?.categoria || prodInfo?.linha || ''
 
           const valTotal = Number(ped.total_geral) || Number(ped.preco_base) || 0
           allItems.push({

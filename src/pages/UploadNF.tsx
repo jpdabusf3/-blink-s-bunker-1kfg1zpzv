@@ -851,11 +851,13 @@ export function UploadNF() {
                   <div className="space-y-1.5">
                     <Label className="text-xs flex items-center justify-between">
                       <span>
-                        {extracted.valor_total_nota === null || extracted.valor_total_nota === undefined
+                        {extracted.valor_total_nota === null ||
+                        extracted.valor_total_nota === undefined
                           ? 'Valor Total (preencher manualmente)'
                           : 'Valor Total da Nota'}
                       </span>
-                      {(extracted.valor_total_nota === null || extracted.valor_total_nota === undefined) && (
+                      {(extracted.valor_total_nota === null ||
+                        extracted.valor_total_nota === undefined) && (
                         <span className="text-destructive font-bold text-xs">*</span>
                       )}
                     </Label>
@@ -865,7 +867,8 @@ export function UploadNF() {
                         step="0.01"
                         placeholder="Informe o valor total da NF"
                         className={
-                          extracted.valor_total_nota === null || extracted.valor_total_nota === undefined
+                          extracted.valor_total_nota === null ||
+                          extracted.valor_total_nota === undefined
                             ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/30 dark:bg-amber-950/20'
                             : ''
                         }
@@ -878,10 +881,11 @@ export function UploadNF() {
                           })
                         }}
                       />
-                      {extracted.valor_total_nota === null || extracted.valor_total_nota === undefined ? (
+                      {extracted.valor_total_nota === null ||
+                      extracted.valor_total_nota === undefined ? (
                         <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium block mt-1 flex items-center gap-1">
-                          <AlertTriangle className="w-3.5 h-3.5 inline shrink-0" />
-                          O valor total nao foi extraido automaticamente. Preencha manualmente.
+                          <AlertTriangle className="w-3.5 h-3.5 inline shrink-0" />O valor total nao
+                          foi extraido automaticamente. Preencha manualmente.
                         </span>
                       ) : (
                         <span className="text-[11px] text-muted-foreground block mt-0.5">
@@ -1541,7 +1545,10 @@ export function UploadNF() {
                   {!isCrmComplete && (
                     <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
                       <AlertTriangle className="w-4 h-4 shrink-0" />
-                      {extracted && (extracted.valor_total_nota === null || extracted.valor_total_nota === undefined || extracted.valor_total_nota <= 0)
+                      {extracted &&
+                      (extracted.valor_total_nota === null ||
+                        extracted.valor_total_nota === undefined ||
+                        extracted.valor_total_nota <= 0)
                         ? 'O valor total e obrigatorio para salvar a NF.'
                         : 'Preencha todos os campos do Bloco D para confirmar'}
                     </span>

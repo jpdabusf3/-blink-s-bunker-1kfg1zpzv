@@ -319,7 +319,9 @@ export async function insertNF(
     }
 
     const valTotalNotaNum =
-      data.valor_total_nota === null || data.valor_total_nota === undefined || isNaN(Number(data.valor_total_nota))
+      data.valor_total_nota === null ||
+      data.valor_total_nota === undefined ||
+      isNaN(Number(data.valor_total_nota))
         ? null
         : Number(data.valor_total_nota)
 
@@ -486,6 +488,7 @@ export async function checkCatalogProducts(): Promise<Set<string>> {
 export interface CatalogProductInfo {
   codigo: string
   nome: string
+  categoria?: string
   linha?: string
   preco_base?: number
 }
@@ -493,7 +496,7 @@ export interface CatalogProductInfo {
 export async function getCatalogProductsMap(): Promise<Map<string, CatalogProductInfo>> {
   try {
     const prods = await pb.collection('produtos').getFullList<CatalogProductInfo>({
-      fields: 'codigo,nome,linha,preco_base',
+      fields: 'codigo,nome,categoria,linha,preco_base',
     })
     const map = new Map<string, CatalogProductInfo>()
     for (const p of prods) {

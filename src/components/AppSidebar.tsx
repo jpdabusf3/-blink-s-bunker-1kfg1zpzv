@@ -25,6 +25,7 @@ import {
   Layers,
   Upload,
   Settings2,
+  Package,
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
@@ -47,6 +48,7 @@ export function AppSidebar() {
     ...(showManager ? [{ name: 'Gestão Técnica', path: '/gestao-tecnica', icon: UserCog }] : []),
     { name: 'Implantação de Novos Pedidos', path: '/pedidos', icon: ShoppingCart, badge: 'NF' },
     { name: 'Upload NF', path: '/upload-nf', icon: Upload },
+    { name: 'Produtos', path: '/produtos', icon: Package },
     { name: 'Histórico', path: '/historico', icon: TrendingUp },
     { name: 'Histórico de Vendas', path: '/historico-vendas', icon: TrendingUp },
     { name: t('nav.swot'), path: '/swot', icon: Target },

@@ -78,12 +78,16 @@ export const MESES_EXTENSO = [
 ] as const
 
 export const FAMILIAS_PRODUTO_OPTIONS = [
-  'Adsorventes',
-  'Minerais Organicos',
-  'Prebioticos',
+  'Mycotoxin Binders',
+  'Yeast Derivatives',
+  'Organic Minerals',
+  'Yeast Cell Wall',
   'Blends',
-  'Ingredientes',
-  'Inovacao',
+  'MOS',
+  'Mycotoxin',
+  'Minerals',
+  'Yeast',
+  'Blend',
 ] as const
 
 export function deriveDateParts(dataStr: string): {

@@ -638,7 +638,8 @@ routerAdd(
 
         return {
           valor_total_nota: valorTotalNota > 0 ? valorTotalNota : 0,
-          valor_total_produtos: valorProdutos > 0 ? valorProdutos : (valorTotalNota > 0 ? valorTotalNota : 0),
+          valor_total_produtos:
+            valorProdutos > 0 ? valorProdutos : valorTotalNota > 0 ? valorTotalNota : 0,
           valor_icms: valorIcms,
           bc_icms: bcIcms,
           valor_pis: valorPis,
@@ -1096,7 +1097,7 @@ routerAdd(
       // 2. Se não houver itens, buscar no texto bruto qualquer linha contendo "TOTAL" seguida de um valor monetário
       // 3. Se ainda não encontrar, definir valor_total como null (NUNCA 0) e adicionar aviso: "Valor total nao encontrado. Preencha manualmente."
       // ----------------------------------------------------
-      var finalValorTotal = (valorTotalNota && valorTotalNota > 0) ? valorTotalNota : null
+      var finalValorTotal = valorTotalNota && valorTotalNota > 0 ? valorTotalNota : null
 
       if (!finalValorTotal || finalValorTotal <= 0) {
         // Fallback 1: Somar todos os valor_total dos itens
@@ -1314,7 +1315,7 @@ routerAdd(
           (aiData && aiData.fatura_valor != null ? parseNum(aiData.fatura_valor) : 0) ||
           (cleanedText.match(/Vcto:[^\n\r]+R\$:\s*([\d\.,]+)/i)
             ? parseNum((cleanedText.match(/Vcto:[^\n\r]+R\$:\s*([\d\.,]+)/i) || ['', '0'])[1])
-            : (finalValorTotal || 0)),
+            : finalValorTotal || 0),
         ordem_compra:
           (aiData && aiData.ordem_compra) ||
           (cleanedText.match(/ORDEM DE COMPRA\s+([A-Za-z0-9]+)/i)
