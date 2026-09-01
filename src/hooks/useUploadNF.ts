@@ -5,6 +5,8 @@ import {
   type EquipeOption,
   type AtribuicaoClienteRecord,
 } from '@/services/nfService'
+import { deriveDateParts, derivePais } from '@/services/historico-vendas'
+import pb from '@/lib/pocketbase/client'
 import { extrairTextoPdf } from '@/services/nfe-service'
 
 export interface UploadFileItem {
@@ -300,15 +302,27 @@ export function useUploadNF(): UseUploadNFReturn {
       setFiles((prev) => prev.map((f) => (f.id === fileId ? { ...f, status: 'saving' } : f)))
 
       try {
+        const currentUserId = pb.authStore.model?.id || ''
+
+        // Format dates properly
+        let dataEmissaoDoc = data.data_emissao || new Date().toISOString().substring(0, 10)
+        if (dataEmissaoDoc.includes('/')) {
+          const p = dataEmissaoDoc.split('/')
+          if (p.length === 3) {
+            dataEmissaoDoc = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`
+          }
+        }
+
         const nfId = await nfService.insertNF({
           ...data,
-          status: 'importada',
+          data_emissao: dataEmissaoDoc,
+          status: asDraft ? 'importada' : 'confirmada',
         })
 
-        // Insert items
+        // Insert items into nf_itens
         const insertedItens = await nfService.insertItens(nfId, data.itens || [])
 
-        // Insert lotes
+        // Insert lotes into nf_lotes
         for (const insItem of insertedItens) {
           if (insItem.lotes && insItem.lotes.length > 0) {
             await nfService.insertLotes(nfId, insItem.id, insItem.lotes)
@@ -332,6 +346,87 @@ export function useUploadNF(): UseUploadNFReturn {
                   lote_quantidade: lote.lote_quantidade,
                 },
               ])
+            }
+          }
+        }
+
+        // 2. Se for confirmação final (não rascunho), gravar UMA linha por item em historico_vendas
+        if (!asDraft) {
+          const { mes, ano, trimestre } = deriveDateParts(dataEmissaoDoc)
+          const pais = derivePais(data.destinatario_uf)
+
+          // Obter nomes de gestor e vendedor
+          const gestorNome =
+            gestoresTecnicos.find((g) => g.id === data.gestor_tecnico_id)?.nome || ''
+          const vendedorNome = vendedores.find((v) => v.id === data.vendedor_id)?.nome || ''
+
+          // Catálogo de produtos para derivar família
+          const catalogMap = await nfService.getCatalogProductsMap()
+
+          const itensToSave =
+            data.itens && data.itens.length > 0
+              ? data.itens
+              : [
+                  {
+                    produto_codigo: 'ND',
+                    produto_descricao: 'Produtos da NF ' + (data.numero_nf || ''),
+                    produto_quantidade: 1,
+                    produto_valor_unitario: data.valor_total_nota || 0,
+                    produto_valor_total: data.valor_total_nota || 0,
+                  },
+                ]
+
+          for (const item of itensToSave) {
+            const prodCod = (item.produto_codigo || '').trim()
+            const catInfo = catalogMap.get(prodCod.toUpperCase())
+            const produtoFamilia = catInfo?.linha || ''
+
+            const itemQtd = Number(item.produto_quantidade) || 1
+            const itemUnit = Number(item.produto_valor_unitario) || 0
+            const itemTotal = Number(item.produto_valor_total) || itemQtd * itemUnit
+
+            const historicoPayload: Record<string, any> = {
+              origem: 'nf',
+              numero_documento: String(data.numero_nf || '').trim(),
+              data_documento: dataEmissaoDoc,
+              mes,
+              ano,
+              trimestre,
+              destinatario_nome: String(data.destinatario_nome || '').trim(),
+              destinatario_uf: String(data.destinatario_uf || '')
+                .toUpperCase()
+                .trim(),
+              pais,
+              especie_destino: data.especie_destino || '',
+              canal_vendas: data.canal_vendas || '',
+              gestor_tecnico: gestorNome,
+              vendedor: vendedorNome,
+              produto_codigo: prodCod,
+              produto_descricao: String(item.produto_descricao || '').trim(),
+              produto_familia: produtoFamilia,
+              produto_quantidade: itemQtd,
+              produto_valor_unitario: itemUnit,
+              produto_valor_total: itemTotal,
+              valor_total_nota: Number(data.valor_total_nota) || 0,
+              frete_modalidade: data.frete_modalidade || 'CIF',
+              status: 'realizado',
+              user_id: currentUserId,
+
+              // Campos legados para dashboards compatíveis
+              data: dataEmissaoDoc,
+              cliente: String(data.destinatario_nome || '').trim(),
+              especie: data.especie_destino || '',
+              gestor_tecnico_id: data.gestor_tecnico_id || '',
+              vendedor_id: data.vendedor_id || '',
+              valor: itemTotal,
+              observacoes: `NF #${data.numero_nf || ''}`,
+              atualizado_em: new Date().toISOString(),
+            }
+
+            try {
+              await pb.collection('historico_vendas').create(historicoPayload)
+            } catch (hvErr) {
+              console.error('Erro ao gravar linha em historico_vendas:', hvErr)
             }
           }
         }

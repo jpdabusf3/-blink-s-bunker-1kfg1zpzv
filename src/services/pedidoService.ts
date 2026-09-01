@@ -1,6 +1,7 @@
 import pb from '@/lib/pocketbase/client'
 import type { EquipeMember } from '@/services/equipe'
 import type { ProdutoCatalogo } from '@/services/nfe-service'
+import { deriveDateParts, derivePais } from '@/services/historico-vendas'
 
 export interface MatrizFiscal {
   id: string
@@ -194,15 +195,73 @@ export const pedidoService = {
   /** Cria registro na coleção pedidos se existir, senão retorna dados */
   async createPedido(pedidoData: PedidoFormData): Promise<any> {
     const userId = pb.authStore.record?.id
+    let pedidoRecord: any = null
     try {
-      return await pb.collection('pedidos').create({
+      pedidoRecord = await pb.collection('pedidos').create({
         ...pedidoData,
         user_id: userId || '',
       })
     } catch (err) {
-      console.warn('Colecao pedidos nao persistida ou erro menor, prosseguindo com geracao:', err)
-      return pedidoData
+      console.warn('Colecao pedidos nao persistida ou erro menor, prosseguindo:', err)
+      pedidoRecord = pedidoData
     }
+
+    // Gravar também em historico_vendas (origem='pedido', status='projetado')
+    try {
+      const hojeIso = new Date().toISOString().substring(0, 10)
+      const { mes, ano, trimestre } = deriveDateParts(hojeIso)
+      const pais = derivePais(pedidoData.estado)
+
+      const numDoc = pedidoRecord?.id
+        ? `PED-${pedidoRecord.id.substring(0, 8).toUpperCase()}`
+        : `PED-${Date.now()}`
+      const itemQtd = Number(pedidoData.quantidade) || 1
+      const itemUnit = Number(pedidoData.preco_base) / (itemQtd || 1) || 0
+      const itemTotal = Number(pedidoData.preco_base) || 0
+      const totalGeral = Number(pedidoData.total_geral) || itemTotal
+
+      const historicoPayload: Record<string, any> = {
+        origem: 'pedido',
+        numero_documento: numDoc,
+        data_documento: hojeIso,
+        mes,
+        ano,
+        trimestre,
+        destinatario_nome: String(pedidoData.cliente_nome || '').trim(),
+        destinatario_uf: pedidoData.estado === 'Parana' ? 'PR' : '',
+        pais,
+        especie_destino: pedidoData.especie_destino || pedidoData.especie || '',
+        canal_vendas: pedidoData.canal_vendas || '',
+        gestor_tecnico: pedidoData.gestor_tecnico_nome || '',
+        vendedor: pedidoData.vendedor_nome || '',
+        produto_codigo: pedidoData.produto_codigo || '',
+        produto_descricao: pedidoData.produto_nome || '',
+        produto_familia: pedidoData.produto_linha || '',
+        produto_quantidade: itemQtd,
+        produto_valor_unitario: itemUnit,
+        produto_valor_total: itemTotal,
+        valor_total_nota: totalGeral,
+        frete_modalidade: pedidoData.modalidade_frete || 'FOB',
+        status: 'projetado',
+        user_id: userId || '',
+
+        // Compatibilidade retroativa
+        data: hojeIso,
+        cliente: String(pedidoData.cliente_nome || '').trim(),
+        especie: pedidoData.especie_destino || pedidoData.especie || '',
+        gestor_tecnico_id: pedidoData.gestor_tecnico_id || '',
+        vendedor_id: pedidoData.vendedor_id || '',
+        valor: totalGeral,
+        observacoes: `Pedido ${numDoc} - ${pedidoData.produto_nome || ''}`,
+        atualizado_em: new Date().toISOString(),
+      }
+
+      await pb.collection('historico_vendas').create(historicoPayload)
+    } catch (hvErr) {
+      console.error('Erro ao gravar pedido em historico_vendas:', hvErr)
+    }
+
+    return pedidoRecord
   },
 
   /** Registra log na tabela funnel_activity_log */

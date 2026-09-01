@@ -3,21 +3,45 @@ import * as XLSX from 'xlsx'
 
 export interface HistoricoVenda {
   id: string
-  data: string
-  cliente: string
-  especie: string
+  origem: 'nf' | 'pedido' | string
+  numero_documento?: string
+  data_documento: string
+  mes: string
+  ano: number
+  trimestre: 'T1' | 'T2' | 'T3' | 'T4' | string
+  destinatario_nome: string
+  destinatario_uf?: string
+  pais?: string
+  especie_destino?: string
+  canal_vendas?: string
+  gestor_tecnico?: string
+  vendedor?: string
+  produto_codigo?: string
+  produto_descricao?: string
+  produto_familia?: string
+  produto_quantidade?: number
+  produto_valor_unitario?: number
+  produto_valor_total?: number
+  valor_total_nota?: number
+  frete_modalidade?: string
+  status: 'realizado' | 'projetado' | string
+  user_id?: string
+
+  // Compatibilidade retroativa
+  data?: string
+  cliente?: string
+  especie?: string
   gestor_tecnico_id?: string
   vendedor_id?: string
-  canal_vendas?: string
-  valor: number
+  valor?: number
   observacoes?: string
-  origem?: string
   atualizado_em?: string
   created: string
   updated: string
   expand?: {
     gestor_tecnico_id?: { id: string; nome: string }
     vendedor_id?: { id: string; nome: string }
+    user_id?: { id: string; name: string; email: string }
   }
 }
 
@@ -38,9 +62,58 @@ export const CANAL_VENDAS_OPTIONS = [
   'Online',
 ] as const
 
+export const MESES_EXTENSO = [
+  'janeiro',
+  'fevereiro',
+  'março',
+  'abril',
+  'maio',
+  'junho',
+  'julho',
+  'agosto',
+  'setembro',
+  'outubro',
+  'novembro',
+  'dezembro',
+] as const
+
+export const FAMILIAS_PRODUTO_OPTIONS = [
+  'Adsorventes',
+  'Minerais Organicos',
+  'Prebioticos',
+  'Blends',
+  'Ingredientes',
+  'Inovacao',
+] as const
+
+export function deriveDateParts(dataStr: string): {
+  mes: string
+  ano: number
+  trimestre: 'T1' | 'T2' | 'T3' | 'T4'
+} {
+  let d = new Date(dataStr)
+  if (isNaN(d.getTime())) {
+    d = new Date()
+  }
+  const monthIdx = d.getUTCMonth()
+  const mes = MESES_EXTENSO[monthIdx] || 'janeiro'
+  const ano = d.getUTCFullYear() || new Date().getFullYear()
+  const qNum = Math.floor(monthIdx / 3) + 1
+  const trimestre = `T${qNum}` as 'T1' | 'T2' | 'T3' | 'T4'
+  return { mes, ano, trimestre }
+}
+
+export function derivePais(ufOrPais?: string): string {
+  if (!ufOrPais) return 'Brasil'
+  const clean = ufOrPais.trim().toUpperCase()
+  if (clean === 'PARAGUAI' || clean === 'PARAGUAY' || clean === 'PY') return 'Paraguai'
+  if (clean === 'CHILE' || clean === 'CL') return 'Chile'
+  return 'Brasil'
+}
+
 export const getHistoricoVendas = () =>
   pb.collection('historico_vendas').getFullList<HistoricoVenda>({
-    sort: '-data',
+    sort: '-data_documento,-created',
     expand: 'gestor_tecnico_id,vendedor_id',
   })
 

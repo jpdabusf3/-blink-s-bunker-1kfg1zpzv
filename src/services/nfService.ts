@@ -425,6 +425,30 @@ export async function checkCatalogProducts(): Promise<Set<string>> {
   }
 }
 
+export interface CatalogProductInfo {
+  codigo: string
+  nome: string
+  linha?: string
+  preco_base?: number
+}
+
+export async function getCatalogProductsMap(): Promise<Map<string, CatalogProductInfo>> {
+  try {
+    const prods = await pb.collection('produtos').getFullList<CatalogProductInfo>({
+      fields: 'codigo,nome,linha,preco_base',
+    })
+    const map = new Map<string, CatalogProductInfo>()
+    for (const p of prods) {
+      if (p.codigo) {
+        map.set(p.codigo.trim().toUpperCase(), p)
+      }
+    }
+    return map
+  } catch {
+    return new Map()
+  }
+}
+
 export const nfService = {
   uploadToStorage,
   deleteFromStorage,
@@ -436,6 +460,7 @@ export const nfService = {
   insertItens,
   insertLotes,
   checkCatalogProducts,
+  getCatalogProductsMap,
 }
 
 export default nfService

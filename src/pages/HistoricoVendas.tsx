@@ -85,14 +85,26 @@ export default function HistoricoVendas() {
 
   const filtered = useMemo(() => {
     let r = [...data]
-    if (fEspecie !== 'all') r = r.filter((d) => d.especie === fEspecie)
-    if (fGestor !== 'all') r = r.filter((d) => d.gestor_tecnico_id === fGestor)
-    if (fVendedor !== 'all') r = r.filter((d) => d.vendedor_id === fVendedor)
-    if (fCanal !== 'all') r = r.filter((d) => d.canal_vendas === fCanal)
+    if (fEspecie !== 'all') {
+      r = r.filter((d) => (d.especie_destino || d.especie) === fEspecie)
+    }
+    if (fGestor !== 'all') {
+      const gObj = gestores.find((g) => g.id === fGestor)
+      const gNome = gObj?.nome || ''
+      r = r.filter((d) => d.gestor_tecnico_id === fGestor || (gNome && d.gestor_tecnico === gNome))
+    }
+    if (fVendedor !== 'all') {
+      const vObj = vendedores.find((v) => v.id === fVendedor)
+      const vNome = vObj?.nome || ''
+      r = r.filter((d) => d.vendedor_id === fVendedor || (vNome && d.vendedor === vNome))
+    }
+    if (fCanal !== 'all') {
+      r = r.filter((d) => d.canal_vendas === fCanal)
+    }
     return r
-  }, [data, fEspecie, fGestor, fVendedor, fCanal])
+  }, [data, fEspecie, fGestor, fVendedor, fCanal, gestores, vendedores])
 
-  const totalValor = filtered.reduce((s, d) => s + (d.valor || 0), 0)
+  const totalValor = filtered.reduce((s, d) => s + (d.produto_valor_total || d.valor || 0), 0)
 
   const handleDelete = async (id: string) => {
     try {
@@ -246,12 +258,15 @@ export default function HistoricoVendas() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Data</TableHead>
+                    <TableHead>Documento</TableHead>
                     <TableHead>Cliente</TableHead>
+                    <TableHead>Produto</TableHead>
                     <TableHead>Espécie</TableHead>
                     <TableHead>Gestor</TableHead>
                     <TableHead>Vendedor</TableHead>
                     <TableHead>Canal</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
                     <TableHead>Origem</TableHead>
                     <TableHead className="text-center">Ações</TableHead>
                   </TableRow>
@@ -259,39 +274,80 @@ export default function HistoricoVendas() {
                 <TableBody>
                   {filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center text-muted-foreground h-16">
+                      <TableCell colSpan={12} className="text-center text-muted-foreground h-16">
                         Nenhum registro encontrado.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filtered.map((r) => (
-                      <TableRow key={r.id}>
-                        <TableCell className="whitespace-nowrap">
-                          {r.data ? new Date(r.data).toLocaleDateString('pt-BR') : '-'}
-                        </TableCell>
-                        <TableCell className="font-medium">{r.cliente}</TableCell>
-                        <TableCell>{r.especie}</TableCell>
-                        <TableCell>{r.expand?.gestor_tecnico_id?.nome || '-'}</TableCell>
-                        <TableCell>{r.expand?.vendedor_id?.nome || '-'}</TableCell>
-                        <TableCell>{r.canal_vendas || '-'}</TableCell>
-                        <TableCell className="text-right font-semibold text-primary">
-                          {formatCurrency(r.valor)}
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-xs capitalize">{r.origem}</span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-center gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => setEditing(r)}>
-                              <Edit2 className="w-4 h-4 text-primary" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)}>
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    filtered.map((r) => {
+                      const dataExibicao = r.data_documento || r.data
+                      const clienteExibicao = r.destinatario_nome || r.cliente
+                      const gestorExibicao =
+                        r.gestor_tecnico || r.expand?.gestor_tecnico_id?.nome || '-'
+                      const vendedorExibicao = r.vendedor || r.expand?.vendedor_id?.nome || '-'
+                      const especieExibicao = r.especie_destino || r.especie || '-'
+                      const valorExibicao = r.produto_valor_total || r.valor || 0
+                      const docExibicao = r.numero_documento || '-'
+                      const statusExibicao =
+                        r.status || (r.origem === 'pedido' ? 'projetado' : 'realizado')
+
+                      return (
+                        <TableRow key={r.id}>
+                          <TableCell className="whitespace-nowrap font-mono text-xs">
+                            {dataExibicao
+                              ? new Date(dataExibicao).toLocaleDateString('pt-BR')
+                              : '-'}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground">
+                            {docExibicao}
+                          </TableCell>
+                          <TableCell className="font-medium text-xs">{clienteExibicao}</TableCell>
+                          <TableCell
+                            className="text-xs max-w-[180px] truncate"
+                            title={r.produto_descricao || r.produto_codigo}
+                          >
+                            {r.produto_descricao || r.produto_codigo || '-'}
+                          </TableCell>
+                          <TableCell className="text-xs">{especieExibicao}</TableCell>
+                          <TableCell className="text-xs">{gestorExibicao}</TableCell>
+                          <TableCell className="text-xs">{vendedorExibicao}</TableCell>
+                          <TableCell className="text-xs">{r.canal_vendas || '-'}</TableCell>
+                          <TableCell className="text-right font-semibold text-xs text-primary">
+                            {formatCurrency(valorExibicao)}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${
+                                statusExibicao === 'realizado'
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                  : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                              }`}
+                            >
+                              {statusExibicao}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-xs font-mono uppercase bg-muted px-1.5 py-0.5 rounded">
+                              {r.origem || 'nf'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-center gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => setEditing(r)}>
+                                <Edit2 className="w-4 h-4 text-primary" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(r.id)}
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
                   )}
                 </TableBody>
               </Table>

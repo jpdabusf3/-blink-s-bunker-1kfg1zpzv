@@ -100,19 +100,41 @@ routerAdd(
 
       // Helper parsing functions inside callback
       function parseNum(v) {
-        if (typeof v === 'number') return v
+        if (typeof v === 'number') return isNaN(v) ? 0 : v
         if (!v) return 0
         var s = String(v).trim()
+        // Remove currency symbols, non-numeric noise except dots and commas and minus
+        s = s.replace(/R\$/gi, '').replace(/\s+/g, '')
         if (s.indexOf('.') !== -1 && s.indexOf(',') !== -1) {
           s = s.replace(/\./g, '').replace(',', '.')
         } else if (s.indexOf(',') !== -1) {
           s = s.replace(',', '.')
         }
-        return parseFloat(s.replace(/[^\d.-]/g, '')) || 0
+        var n = parseFloat(s.replace(/[^\d.-]/g, ''))
+        return isNaN(n) ? 0 : n
       }
 
       function cleanStr(s) {
         return s == null ? '' : String(s).trim()
+      }
+
+      function normalizeDate(val) {
+        if (!val) return ''
+        var s = String(val).trim()
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+        var dmMatch = s.match(/(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{2,4})/)
+        if (dmMatch) {
+          var day = dmMatch[1].padStart(2, '0')
+          var month = dmMatch[2].padStart(2, '0')
+          var year = dmMatch[3]
+          if (year.length === 2) year = '20' + year
+          return year + '-' + month + '-' + day
+        }
+        var parsed = new Date(s)
+        if (!isNaN(parsed.getTime())) {
+          return parsed.toISOString().substring(0, 10)
+        }
+        return ''
       }
 
       // Call AI to parse DANFE with high precision
@@ -226,12 +248,17 @@ routerAdd(
         }
       }
 
-      var dataEmissao = aiData && aiData.data_emissao ? cleanStr(aiData.data_emissao) : ''
+      var dataEmissao = aiData && aiData.data_emissao ? normalizeDate(aiData.data_emissao) : ''
       if (!dataEmissao) {
-        var mDate = pdfText.match(/EMISS[ÃA]O:?\s*([0-9]{2}\/[0-9]{2}\/[0-9]{4})/i)
+        var mDate = pdfText.match(/EMISS[ÃA]O:?\s*([0-9]{1,2}[\/\.-][0-9]{1,2}[\/\.-][0-9]{2,4})/i)
         if (mDate) {
-          var p = mDate[1].split('/')
-          dataEmissao = p[2] + '-' + p[1] + '-' + p[0]
+          dataEmissao = normalizeDate(mDate[1])
+        }
+      }
+      if (!dataEmissao) {
+        var anyDate = pdfText.match(/\b([0-9]{2}\/[0-9]{2}\/[0-9]{4})\b/)
+        if (anyDate) {
+          dataEmissao = normalizeDate(anyDate[1])
         }
       }
       if (!dataEmissao) {
@@ -480,7 +507,7 @@ routerAdd(
             : '',
         fatura_vencimento:
           aiData && (aiData.fatura_vencimento || (aiData.fatura && aiData.fatura.vencimento))
-            ? cleanStr(aiData.fatura_vencimento || aiData.fatura.vencimento)
+            ? normalizeDate(aiData.fatura_vencimento || aiData.fatura.vencimento)
             : '',
         fatura_valor: aiData
           ? parseNum(aiData.fatura_valor || (aiData.fatura && aiData.fatura.valor))
