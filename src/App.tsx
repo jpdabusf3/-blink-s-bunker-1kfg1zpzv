@@ -33,6 +33,7 @@ import { lazy, Suspense } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ThemeProvider } from './components/ThemeProvider'
 
+const Historico = lazy(() => import('./pages/Historico'))
 const HistoricoFunil = lazy(() => import('./pages/HistoricoFunil'))
 const ConfiguracoesLayout = lazy(() => import('./pages/ConfiguracoesLayout'))
 const UploadNF = lazy(() => import('./pages/UploadNF'))
@@ -96,6 +97,14 @@ const App = () => (
                           }
                         >
                           <UploadNF />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/historico"
+                      element={
+                        <Suspense fallback={<PageSkeleton />}>
+                          <Historico />
                         </Suspense>
                       }
                     />

@@ -47,6 +47,7 @@ export function AppSidebar() {
     ...(showManager ? [{ name: 'Gestão Técnica', path: '/gestao-tecnica', icon: UserCog }] : []),
     { name: 'Implantação de Novos Pedidos', path: '/pedidos', icon: ShoppingCart, badge: 'NF' },
     { name: 'Upload NF', path: '/upload-nf', icon: Upload },
+    { name: 'Histórico', path: '/historico', icon: TrendingUp },
     { name: 'Histórico de Vendas', path: '/historico-vendas', icon: TrendingUp },
     { name: t('nav.swot'), path: '/swot', icon: Target },
     { name: t('nav.prioridade'), path: '/matriz', icon: Grid },
@@ -60,7 +61,7 @@ export function AppSidebar() {
     ...(showMasterOrCeo
       ? [{ name: t('nav.auditoria'), path: '/admin/logs', icon: ScrollText }]
       : []),
-    { name: 'Histórico', path: '/historico-funil', icon: ClipboardList },
+    { name: 'Histórico Funil', path: '/historico-funil', icon: ClipboardList },
     { name: 'Config. Layout', path: '/configuracoes-layout', icon: Settings2 },
   ]
 
