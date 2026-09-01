@@ -29,6 +29,7 @@ import ImportarClientes from './pages/ImportarClientes'
 import RelatorioAtividades from './pages/RelatorioAtividades'
 import PerformanceReport from './pages/PerformanceReport'
 import { SuperAdminRoute } from './components/SuperAdminRoute'
+import UploadNF from './pages/UploadNF'
 import { Component, lazy, Suspense, type ErrorInfo, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -38,7 +39,6 @@ import { ThemeProvider } from './components/ThemeProvider'
 const Historico = lazy(() => import('./pages/Historico'))
 const HistoricoFunil = lazy(() => import('./pages/HistoricoFunil'))
 const ConfiguracoesLayout = lazy(() => import('./pages/ConfiguracoesLayout'))
-const UploadNF = lazy(() => import('./pages/UploadNF'))
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -142,11 +142,9 @@ const App = () => (
                     <Route
                       path="/upload-nf"
                       element={
-                        <Suspense fallback={<PageSkeleton />}>
-                          <RouteErrorBoundary>
-                            <UploadNF />
-                          </RouteErrorBoundary>
-                        </Suspense>
+                        <RouteErrorBoundary>
+                          <UploadNF />
+                        </RouteErrorBoundary>
                       }
                     />
                     <Route
