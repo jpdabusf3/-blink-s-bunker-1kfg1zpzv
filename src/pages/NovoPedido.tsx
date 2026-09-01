@@ -417,14 +417,20 @@ export default function NovoPedido() {
 
     setGerando(true)
     try {
-      // 1. Gerar documento .docx e disparar download
+      // 1. Revogar URL anterior se houver para evitar vazamento de memória
+      if (ultimoDownloadUrl) {
+        URL.revokeObjectURL(ultimoDownloadUrl)
+        setUltimoDownloadUrl(null)
+      }
+
+      // 2. Gerar documento .docx e disparar download
       const { blob, fileName, downloadUrl } = await gerarDocumento(pedidoData)
       setUltimoBlob(blob)
       setUltimoFileName(fileName)
       setUltimoDownloadUrl(downloadUrl)
       setUltimoPedidoGerado(pedidoData)
 
-      // 2. Salvar atribuição se o checkbox foi marcado
+      // 3. Salvar atribuição se o checkbox foi marcado
       if (salvarAtribuicaoCheck && !temAtribuicaoPrevia) {
         await salvarAtribuicao({
           cliente_nome: clienteNome.trim(),
@@ -433,10 +439,10 @@ export default function NovoPedido() {
         })
       }
 
-      // 3. Salvar registro na coleção pedidos (se existir)
+      // 4. Salvar registro na coleção pedidos (se existir)
       await createPedido(pedidoData)
 
-      // 4. Registrar log no funnel_activity_log
+      // 5. Registrar log no funnel_activity_log
       await logPedido({
         cliente_nome: clienteNome.trim(),
         produto_nome: pNome,
@@ -452,8 +458,8 @@ export default function NovoPedido() {
     } catch (err: any) {
       console.error('Erro ao gerar pedido:', err)
       toast({
-        title: 'Erro ao gerar documento. Tente novamente.',
-        description: err?.message || 'Não foi possível processar o pedido de venda.',
+        title: 'Erro ao gerar relatorio. Tente novamente.',
+        description: 'Erro ao gerar documento. Verifique os dados e tente novamente.',
         variant: 'destructive',
       })
     } finally {
@@ -464,10 +470,15 @@ export default function NovoPedido() {
   // Re-download do documento
   const handleBaixarNovamente = () => {
     if (ultimoBlob && ultimoFileName) {
+      if (ultimoDownloadUrl) {
+        URL.revokeObjectURL(ultimoDownloadUrl)
+      }
       const url = URL.createObjectURL(ultimoBlob)
+      setUltimoDownloadUrl(url)
       const a = document.createElement('a')
       a.href = url
       a.download = ultimoFileName
+      a.rel = 'noopener noreferrer'
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -476,7 +487,14 @@ export default function NovoPedido() {
         description: ultimoFileName,
       })
     } else if (ultimoPedidoGerado) {
-      gerarDocumento(ultimoPedidoGerado)
+      gerarDocumento(ultimoPedidoGerado).catch((err) => {
+        console.error('Erro ao re-gerar pedido:', err)
+        toast({
+          title: 'Erro ao gerar relatorio. Tente novamente.',
+          description: 'Erro ao gerar documento. Verifique os dados e tente novamente.',
+          variant: 'destructive',
+        })
+      })
     }
   }
 
@@ -1397,7 +1415,7 @@ Hernandarias - PY | Indaiatuba - SP`
                   {gerando ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      Gerando Documento .docx...
+                      Gerando relatorio...
                     </>
                   ) : (
                     <>

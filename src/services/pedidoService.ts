@@ -301,7 +301,7 @@ export const pedidoService = {
     })
 
     if (!res.ok) {
-      let errMsg = 'Erro ao gerar documento. Tente novamente.'
+      let errMsg = 'Erro ao gerar relatorio. Tente novamente.'
       try {
         const d = await res.json()
         if (d && d.error) errMsg = d.error
@@ -311,10 +311,16 @@ export const pedidoService = {
       throw new Error(errMsg)
     }
 
-    const blob = await res.blob()
-    if (!blob || blob.size === 0) {
-      throw new Error('Erro ao gerar documento. Tente novamente.')
+    const rawBlob = await res.blob()
+    if (!rawBlob || rawBlob.size === 0) {
+      throw new Error('Erro ao gerar relatorio. Tente novamente.')
     }
-    return blob
+
+    // Garantir MIME type correto para o arquivo .docx
+    const docxBlob = new Blob([rawBlob], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    })
+
+    return docxBlob
   },
 }

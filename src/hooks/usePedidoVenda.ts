@@ -231,18 +231,17 @@ export function usePedidoVenda(): UsePedidoVendaReturn {
 
   const gerarDocumento = useCallback(async (pedidoData: PedidoFormData) => {
     const blob = await pedidoService.gerarDocumento(pedidoData)
-    const safeCliente = (pedidoData.cliente_nome || 'cliente')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9]/g, '_')
-      .slice(0, 40)
-    const fileName = `pedido_venda_${safeCliente}_${new Date().toISOString().slice(0, 10)}.docx`
+    if (!blob || blob.size === 0) {
+      throw new Error('Erro ao gerar relatorio. Tente novamente.')
+    }
+    const fileName = 'relatorio-blink.docx'
     const downloadUrl = URL.createObjectURL(blob)
 
     // Auto download
     const a = document.createElement('a')
     a.href = downloadUrl
     a.download = fileName
+    a.rel = 'noopener noreferrer'
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
