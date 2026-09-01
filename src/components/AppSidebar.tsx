@@ -45,7 +45,7 @@ export function AppSidebar() {
     { name: t('nav.funil'), path: '/funil', icon: BarChart2 },
     { name: 'Funil de Vendas', path: '/funil-vendas', icon: Layers },
     ...(showManager ? [{ name: 'Gestão Técnica', path: '/gestao-tecnica', icon: UserCog }] : []),
-    { name: 'Implantação de Novos Pedidos', path: '/pedidos', icon: ShoppingCart },
+    { name: 'Implantação de Novos Pedidos', path: '/pedidos', icon: ShoppingCart, badge: 'NF' },
     { name: 'Histórico de Vendas', path: '/historico-vendas', icon: TrendingUp },
     { name: t('nav.swot'), path: '/swot', icon: Target },
     { name: t('nav.prioridade'), path: '/matriz', icon: Grid },
@@ -90,9 +90,16 @@ export function AppSidebar() {
                 className="flex items-center gap-3 h-11 pl-4 pr-4 rounded-lg mb-1 text-sm font-medium text-muted-foreground transition-all duration-150 ease-out hover:bg-muted hover:text-foreground data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-semibold"
                 tooltip={m.name}
               >
-                <Link to={m.path}>
-                  <m.icon className="w-5 h-5 shrink-0" />
-                  <span className="group-data-[collapsible=icon]:hidden">{m.name}</span>
+                <Link to={m.path} className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-3">
+                    <m.icon className="w-5 h-5 shrink-0" />
+                    <span className="group-data-[collapsible=icon]:hidden">{m.name}</span>
+                  </div>
+                  {(m as any).badge && (
+                    <span className="group-data-[collapsible=icon]:hidden text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary text-primary-foreground">
+                      {(m as any).badge}
+                    </span>
+                  )}
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

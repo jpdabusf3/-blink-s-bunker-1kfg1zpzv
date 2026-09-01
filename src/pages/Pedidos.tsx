@@ -52,7 +52,12 @@ import {
   type GestaoTecnica,
 } from '@/services/gestao-tecnica'
 import { UploadPedidoDialog } from '@/components/UploadPedidoDialog'
+import { UploadNfeDialog } from '@/components/UploadNfeDialog'
+import { NfeReviewQueue } from '@/components/NfeReviewQueue'
 import { VendaForm } from '@/components/VendaForm'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Sparkles, Layers } from 'lucide-react'
+import { getNfePedidos } from '@/services/nfe-service'
 
 export default function Pedidos() {
   const { toast } = useToast()
@@ -62,6 +67,9 @@ export default function Pedidos() {
   const [loading, setLoading] = useState(true)
 
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [nfeUploadOpen, setNfeUploadOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<'implantados' | 'revisao'>('implantados')
+  const [pendentesCount, setPendentesCount] = useState(0)
   const [editing, setEditing] = useState<HistoricoVenda | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
@@ -75,7 +83,15 @@ export default function Pedidos() {
 
   const loadData = useCallback(async () => {
     try {
-      setPedidos(await getHistoricoVendas())
+      const [vendas, nfes] = await Promise.all([
+        getHistoricoVendas(),
+        getNfePedidos('all').catch(() => []),
+      ])
+      setPedidos(vendas)
+      const pCount = nfes.filter(
+        (n) => n.status === 'pendente' || n.status === 'pendencia_produto',
+      ).length
+      setPendentesCount(pCount)
     } catch {
       setPedidos([])
     } finally {
@@ -94,6 +110,7 @@ export default function Pedidos() {
   }, [loadData])
 
   useRealtime('historico_vendas', () => loadData())
+  useRealtime('nfe_pedidos', () => loadData())
 
   const filtered = useMemo(() => {
     let r = [...pedidos]
@@ -220,281 +237,326 @@ export default function Pedidos() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button
+            className="gap-2 shadow-sm bg-primary hover:bg-primary/90"
+            onClick={() => setNfeUploadOpen(true)}
+          >
+            <Sparkles className="w-4 h-4" /> Leitor de NF (PDF)
+          </Button>
           <UploadPedidoDialog open={uploadOpen} onOpenChange={setUploadOpen} onImported={loadData}>
             <Button variant="outline" className="gap-2 shadow-sm">
-              <Upload className="w-4 h-4" /> Importar PDF + Excel
+              <Upload className="w-4 h-4" /> Importar Excel / CSV
             </Button>
           </UploadPedidoDialog>
-          <Button className="gap-2 shadow-sm" onClick={() => setEditing({} as HistoricoVenda)}>
-            <FileText className="w-4 h-4" /> Registrar Pedido
+          <Button
+            variant="outline"
+            className="gap-2 shadow-sm"
+            onClick={() => setEditing({} as HistoricoVenda)}
+          >
+            <FileText className="w-4 h-4" /> Registrar Manual
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="shadow-subtle">
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground mb-1">Pedidos</p>
-            <p className="text-2xl font-bold">{filtered.length}</p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-subtle">
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground mb-1">Valor Total</p>
-            <p className="text-2xl font-bold text-primary">{formatCurrency(totalValor)}</p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-subtle">
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground mb-1">Ticket Médio</p>
-            <p className="text-2xl font-bold">
-              {formatCurrency(filtered.length > 0 ? totalValor / filtered.length : 0)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-subtle">
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground mb-1">Via IA (upload)</p>
-            <p className="text-2xl font-bold">
-              {filtered.filter((p) => p.origem === 'upload').length}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+        <TabsList className="grid grid-cols-2 max-w-md">
+          <TabsTrigger value="implantados" className="gap-2">
+            <FileText className="w-4 h-4" /> Pedidos Implantados ({filtered.length})
+          </TabsTrigger>
+          <TabsTrigger value="revisao" className="gap-2 relative">
+            <Layers className="w-4 h-4" /> Fila de Revisão de NFs
+            {pendentesCount > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white">
+                {pendentesCount}
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-      <Card className="shadow-subtle">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Filter className="w-5 h-5 text-primary" /> Filtros
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="space-y-2">
-            <Label>Data Inicial</Label>
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+        <TabsContent value="revisao" className="space-y-4 pt-4">
+          <NfeReviewQueue onPedidoAprovado={loadData} onOpenUpload={() => setNfeUploadOpen(true)} />
+        </TabsContent>
+
+        <TabsContent value="implantados" className="space-y-6 pt-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="shadow-subtle">
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground mb-1">Pedidos</p>
+                <p className="text-2xl font-bold">{filtered.length}</p>
+              </CardContent>
+            </Card>
+            <Card className="shadow-subtle">
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground mb-1">Valor Total</p>
+                <p className="text-2xl font-bold text-primary">{formatCurrency(totalValor)}</p>
+              </CardContent>
+            </Card>
+            <Card className="shadow-subtle">
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground mb-1">Ticket Médio</p>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(filtered.length > 0 ? totalValor / filtered.length : 0)}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="shadow-subtle">
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground mb-1">Via IA (upload)</p>
+                <p className="text-2xl font-bold">
+                  {filtered.filter((p) => p.origem === 'upload').length}
+                </p>
+              </CardContent>
+            </Card>
           </div>
-          <div className="space-y-2">
-            <Label>Data Final</Label>
-            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Cliente / Observação</Label>
-            <Input
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar..."
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Espécie</Label>
-            <Select value={fEspecie} onValueChange={setFEspecie}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                {ESPECIE_OPTIONS.map((o) => (
-                  <SelectItem key={o} value={o}>
-                    {o}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Gestor Técnico</Label>
-            <Select value={fGestor} onValueChange={setFGestor}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {gestores.map((g) => (
-                  <SelectItem key={g.id} value={g.id}>
-                    {g.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Vendedor</Label>
-            <Select value={fVendedor} onValueChange={setFVendedor}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {vendedores.map((v) => (
-                  <SelectItem key={v.id} value={v.id}>
-                    {v.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Canal de Vendas</Label>
-            <Select value={fCanal} onValueChange={setFCanal}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {CANAL_VENDAS_OPTIONS.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-end gap-2">
-            <Button variant="outline" onClick={clearFilters} className="flex-1">
-              Limpar
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  disabled={filtered.length === 0}
-                  className="flex-1 gap-2 text-primary border-primary/20 hover:bg-primary/5"
-                >
-                  <Download className="w-4 h-4" /> Exportar
+
+          <Card className="shadow-subtle">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Filter className="w-5 h-5 text-primary" /> Filtros
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label>Data Inicial</Label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Data Final</Label>
+                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Cliente / Observação</Label>
+                <Input
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  placeholder="Buscar..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Espécie</Label>
+                <Select value={fEspecie} onValueChange={setFEspecie}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    {ESPECIE_OPTIONS.map((o) => (
+                      <SelectItem key={o} value={o}>
+                        {o}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Gestor Técnico</Label>
+                <Select value={fGestor} onValueChange={setFGestor}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {gestores.map((g) => (
+                      <SelectItem key={g.id} value={g.id}>
+                        {g.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Vendedor</Label>
+                <Select value={fVendedor} onValueChange={setFVendedor}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {vendedores.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Canal de Vendas</Label>
+                <Select value={fCanal} onValueChange={setFCanal}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {CANAL_VENDAS_OPTIONS.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-end gap-2">
+                <Button variant="outline" onClick={clearFilters} className="flex-1">
+                  Limpar
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleExportPDF}>Documento PDF</DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportCSV}>Planilha Excel (CSV)</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </CardContent>
-      </Card>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      disabled={filtered.length === 0}
+                      className="flex-1 gap-2 text-primary border-primary/20 hover:bg-primary/5"
+                    >
+                      <Download className="w-4 h-4" /> Exportar
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleExportPDF}>Documento PDF</DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportCSV}>
+                      Planilha Excel (CSV)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </CardContent>
+          </Card>
 
-      <Card className="shadow-subtle">
-        <CardHeader>
-          <CardTitle>Pedidos Implantados</CardTitle>
-          <CardDescription>
-            Mostrando {filtered.length} pedido(s) · Valor total {formatCurrency(totalValor)}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center p-8">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Espécie</TableHead>
-                    <TableHead>Gestor Técnico</TableHead>
-                    <TableHead>Vendedor</TableHead>
-                    <TableHead>Canal</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                    <TableHead>Origem</TableHead>
-                    <TableHead className="text-center">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center text-muted-foreground h-32">
-                        Nenhum pedido implantado. Use “Importar PDF + Excel” para começar.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {filtered.map((p) => (
-                    <TableRow key={p.id}>
-                      <TableCell className="whitespace-nowrap font-medium">
-                        {p.data ? new Date(p.data).toLocaleDateString('pt-BR') : '-'}
-                      </TableCell>
-                      <TableCell className="font-medium">{p.cliente}</TableCell>
-                      <TableCell>{p.especie || '-'}</TableCell>
-                      <TableCell>{p.expand?.gestor_tecnico_id?.nome || '-'}</TableCell>
-                      <TableCell>{p.expand?.vendedor_id?.nome || '-'}</TableCell>
-                      <TableCell>{p.canal_vendas || '-'}</TableCell>
-                      <TableCell className="text-right font-semibold text-primary">
-                        {formatCurrency(p.valor || 0)}
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-xs capitalize">{p.origem || '-'}</span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setEditing(p)}
-                            title="Editar pedido"
-                          >
-                            <FileText className="w-4 h-4 text-primary" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeletingId(p.id)}
-                            title="Excluir pedido"
-                          >
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          <Card className="shadow-subtle">
+            <CardHeader>
+              <CardTitle>Pedidos Implantados</CardTitle>
+              <CardDescription>
+                Mostrando {filtered.length} pedido(s) · Valor total {formatCurrency(totalValor)}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex justify-center p-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Cliente</TableHead>
+                        <TableHead>Espécie</TableHead>
+                        <TableHead>Gestor Técnico</TableHead>
+                        <TableHead>Vendedor</TableHead>
+                        <TableHead>Canal</TableHead>
+                        <TableHead className="text-right">Valor</TableHead>
+                        <TableHead>Origem</TableHead>
+                        <TableHead className="text-center">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filtered.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={9} className="text-center text-muted-foreground h-32">
+                            Nenhum pedido implantado. Use “Importar PDF + Excel” para começar.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {filtered.map((p) => (
+                        <TableRow key={p.id}>
+                          <TableCell className="whitespace-nowrap font-medium">
+                            {p.data ? new Date(p.data).toLocaleDateString('pt-BR') : '-'}
+                          </TableCell>
+                          <TableCell className="font-medium">{p.cliente}</TableCell>
+                          <TableCell>{p.especie || '-'}</TableCell>
+                          <TableCell>{p.expand?.gestor_tecnico_id?.nome || '-'}</TableCell>
+                          <TableCell>{p.expand?.vendedor_id?.nome || '-'}</TableCell>
+                          <TableCell>{p.canal_vendas || '-'}</TableCell>
+                          <TableCell className="text-right font-semibold text-primary">
+                            {formatCurrency(p.valor || 0)}
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-xs capitalize">{p.origem || '-'}</span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setEditing(p)}
+                                title="Editar pedido"
+                              >
+                                <FileText className="w-4 h-4 text-primary" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setDeletingId(p.id)}
+                                title="Excluir pedido"
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-      <Dialog
-        open={!!editing}
-        onOpenChange={(open) => {
-          if (!open) setEditing(null)
-        }}
-      >
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>{editing?.id ? 'Editar Pedido' : 'Registrar Pedido'}</DialogTitle>
-          </DialogHeader>
-          {editing && (
-            <VendaForm
-              onSubmit={() => {
-                setEditing(null)
-                loadData()
-              }}
-              initialData={editing.id ? editing : undefined}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+          <Dialog
+            open={!!editing}
+            onOpenChange={(open) => {
+              if (!open) setEditing(null)
+            }}
+          >
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>{editing?.id ? 'Editar Pedido' : 'Registrar Pedido'}</DialogTitle>
+              </DialogHeader>
+              {editing && (
+                <VendaForm
+                  onSubmit={() => {
+                    setEditing(null)
+                    loadData()
+                  }}
+                  initialData={editing.id ? editing : undefined}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
 
-      <AlertDialog open={!!deletingId} onOpenChange={(open) => !open && setDeletingId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Pedido?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja remover este pedido permanentemente? Esta ação não poderá ser
-              desfeita e os volumes/metas serão recalculados automaticamente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Sim, Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          <AlertDialog open={!!deletingId} onOpenChange={(open) => !open && setDeletingId(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir Pedido?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja remover este pedido permanentemente? Esta ação não poderá
+                  ser desfeita e os volumes/metas serão recalculados automaticamente.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Sim, Excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </TabsContent>
+      </Tabs>
+
+      <UploadNfeDialog
+        open={nfeUploadOpen}
+        onOpenChange={setNfeUploadOpen}
+        onSuccess={loadData}
+        onOpenReviewQueue={() => setActiveTab('revisao')}
+      />
     </div>
   )
 }

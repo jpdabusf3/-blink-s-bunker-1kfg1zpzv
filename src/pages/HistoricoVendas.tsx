@@ -43,6 +43,8 @@ import {
 } from '@/services/gestao-tecnica'
 import { VendaForm } from '@/components/VendaForm'
 import { UploadPedidoDialog } from '@/components/UploadPedidoDialog'
+import { UploadNfeDialog } from '@/components/UploadNfeDialog'
+import { Sparkles } from 'lucide-react'
 
 export default function HistoricoVendas() {
   const { toast } = useToast()
@@ -57,6 +59,7 @@ export default function HistoricoVendas() {
   const [isNewOpen, setIsNewOpen] = useState(false)
   const [editing, setEditing] = useState<HistoricoVenda | null>(null)
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [nfeUploadOpen, setNfeUploadOpen] = useState(false)
 
   const loadData = async () => {
     try {
@@ -110,6 +113,12 @@ export default function HistoricoVendas() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button
+            className="gap-2 bg-primary hover:bg-primary/90 shadow-sm"
+            onClick={() => setNfeUploadOpen(true)}
+          >
+            <Sparkles className="w-4 h-4" /> Leitor de NF (PDF)
+          </Button>
           <Button variant="outline" className="gap-2" onClick={downloadPedidoModel}>
             <Download className="w-4 h-4" /> Baixar Modelo
           </Button>
@@ -301,6 +310,8 @@ export default function HistoricoVendas() {
       </Dialog>
 
       <UploadPedidoDialog open={uploadOpen} onOpenChange={setUploadOpen} onImported={loadData} />
+
+      <UploadNfeDialog open={nfeUploadOpen} onOpenChange={setNfeUploadOpen} onSuccess={loadData} />
     </div>
   )
 }
