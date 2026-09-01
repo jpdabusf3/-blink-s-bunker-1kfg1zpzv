@@ -230,23 +230,29 @@ export function usePedidoVenda(): UsePedidoVendaReturn {
   )
 
   const gerarDocumento = useCallback(async (pedidoData: PedidoFormData) => {
-    const blob = await pedidoService.gerarDocumento(pedidoData)
-    if (!blob || blob.size === 0) {
-      throw new Error('Erro ao gerar relatorio. Tente novamente.')
+    try {
+      const blob = await pedidoService.gerarDocumento(pedidoData)
+      if (!blob || blob.size === 0) {
+        throw new Error('Erro ao gerar relatorio. Tente novamente.')
+      }
+      const fileName = 'relatorio-blink.docx'
+      const downloadUrl = URL.createObjectURL(blob)
+
+      // Auto download seguro sem navegação
+      const a = document.createElement('a')
+      a.href = downloadUrl
+      a.download = fileName
+      a.rel = 'noopener noreferrer'
+      a.style.display = 'none'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+
+      return { blob, fileName, downloadUrl }
+    } catch (err) {
+      console.error('Erro em usePedidoVenda.gerarDocumento:', err)
+      throw err
     }
-    const fileName = 'relatorio-blink.docx'
-    const downloadUrl = URL.createObjectURL(blob)
-
-    // Auto download
-    const a = document.createElement('a')
-    a.href = downloadUrl
-    a.download = fileName
-    a.rel = 'noopener noreferrer'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-
-    return { blob, fileName, downloadUrl }
   }, [])
 
   return {

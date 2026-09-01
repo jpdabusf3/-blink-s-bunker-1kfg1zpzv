@@ -10,6 +10,7 @@ import FunilVendas from './pages/FunilVendas'
 import SWOT from './pages/SWOT'
 import Matriz from './pages/Matriz'
 import Pedidos from './pages/Pedidos'
+import NovoPedido from './pages/NovoPedido'
 import Metas from './pages/Metas'
 import NotFound from './pages/NotFound'
 import Login from './pages/Login'
@@ -157,6 +158,7 @@ const App = () => (
                       }
                     />
                     <Route path="/pedidos" element={<Pedidos />} />
+                    <Route path="/novo-pedido" element={<NovoPedido />} />
                     <Route
                       path="/produtos"
                       element={

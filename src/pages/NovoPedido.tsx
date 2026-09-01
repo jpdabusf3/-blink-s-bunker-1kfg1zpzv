@@ -456,7 +456,7 @@ export default function NovoPedido() {
         description: 'O documento .docx foi gerado e baixado automaticamente.',
       })
     } catch (err: any) {
-      console.error('Erro ao gerar pedido:', err)
+      console.error('Erro completo na geração do documento Word:', err)
       toast({
         title: 'Erro ao gerar relatorio. Tente novamente.',
         description: 'Erro ao gerar documento. Verifique os dados e tente novamente.',
@@ -469,31 +469,55 @@ export default function NovoPedido() {
 
   // Re-download do documento
   const handleBaixarNovamente = () => {
-    if (ultimoBlob && ultimoFileName) {
-      if (ultimoDownloadUrl) {
-        URL.revokeObjectURL(ultimoDownloadUrl)
-      }
-      const url = URL.createObjectURL(ultimoBlob)
-      setUltimoDownloadUrl(url)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = ultimoFileName
-      a.rel = 'noopener noreferrer'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      toast({
-        title: 'Download iniciado',
-        description: ultimoFileName,
-      })
-    } else if (ultimoPedidoGerado) {
-      gerarDocumento(ultimoPedidoGerado).catch((err) => {
-        console.error('Erro ao re-gerar pedido:', err)
+    try {
+      if (ultimoBlob && ultimoFileName) {
+        if (ultimoDownloadUrl) {
+          URL.revokeObjectURL(ultimoDownloadUrl)
+        }
+        const url = URL.createObjectURL(ultimoBlob)
+        setUltimoDownloadUrl(url)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = ultimoFileName
+        a.rel = 'noopener noreferrer'
+        a.style.display = 'none'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
         toast({
-          title: 'Erro ao gerar relatorio. Tente novamente.',
-          description: 'Erro ao gerar documento. Verifique os dados e tente novamente.',
-          variant: 'destructive',
+          title: 'Download iniciado',
+          description: ultimoFileName,
         })
+      } else if (ultimoPedidoGerado) {
+        setGerando(true)
+        gerarDocumento(ultimoPedidoGerado)
+          .then(({ blob, fileName, downloadUrl }) => {
+            setUltimoBlob(blob)
+            setUltimoFileName(fileName)
+            setUltimoDownloadUrl(downloadUrl)
+            toast({
+              title: 'Download iniciado',
+              description: fileName,
+            })
+          })
+          .catch((err) => {
+            console.error('Erro completo ao re-gerar documento Word:', err)
+            toast({
+              title: 'Erro ao gerar relatorio. Tente novamente.',
+              description: 'Erro ao gerar documento. Verifique os dados e tente novamente.',
+              variant: 'destructive',
+            })
+          })
+          .finally(() => {
+            setGerando(false)
+          })
+      }
+    } catch (err) {
+      console.error('Erro inesperado no download:', err)
+      toast({
+        title: 'Erro ao gerar relatorio. Tente novamente.',
+        description: 'Erro ao gerar documento. Verifique os dados e tente novamente.',
+        variant: 'destructive',
       })
     }
   }
@@ -655,10 +679,20 @@ Hernandarias - PY | Indaiatuba - SP`
                 <Button
                   onClick={handleBaixarNovamente}
                   variant="outline"
+                  disabled={gerando}
                   className="bg-white dark:bg-card border-green-300 text-green-800 dark:text-green-200 hover:bg-green-100 flex-1 md:flex-none flex items-center gap-2"
                 >
-                  <Download className="w-4 h-4" />
-                  Baixar documento
+                  {gerando ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Gerando relatorio...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      Baixar documento
+                    </>
+                  )}
                 </Button>
                 <Button
                   onClick={handleEnviarEmail}

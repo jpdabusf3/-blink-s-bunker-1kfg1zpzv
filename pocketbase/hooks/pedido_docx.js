@@ -106,7 +106,7 @@ routerAdd(
     var canalVendas = data.canal_vendas || '-'
     var especieDestino = data.especie_destino || '-'
     var observacoes = data.observacoes || '-'
-    var dataEmissao = fmtDateDDMMYYYY(new Date())
+    var dataEmissao = fmtDateDDMMYYYY(data.data_emissao || data.data || new Date())
 
     // Helper functions for WordprocessingML elements
     function pageBreak() {

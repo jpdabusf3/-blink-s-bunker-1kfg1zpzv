@@ -291,36 +291,41 @@ export const pedidoService = {
 
   /** Chama hook backend para gerar .docx e retorna o Blob */
   async gerarDocumento(pedidoData: PedidoFormData): Promise<Blob> {
-    const res = await fetch(`${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/pedidos/docx`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: pb.authStore.token,
-      },
-      body: JSON.stringify(pedidoData),
-    })
+    try {
+      const res = await fetch(`${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/pedidos/docx`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: pb.authStore.token,
+        },
+        body: JSON.stringify(pedidoData),
+      })
 
-    if (!res.ok) {
-      let errMsg = 'Erro ao gerar relatorio. Tente novamente.'
-      try {
-        const d = await res.json()
-        if (d && d.error) errMsg = d.error
-      } catch {
-        /* noop */
+      if (!res.ok) {
+        let errMsg = 'Erro ao gerar relatorio. Tente novamente.'
+        try {
+          const d = await res.json()
+          if (d && (d.error || d.message)) errMsg = d.error || d.message
+        } catch {
+          /* noop */
+        }
+        throw new Error(errMsg)
       }
-      throw new Error(errMsg)
+
+      const rawBlob = await res.blob()
+      if (!rawBlob || rawBlob.size === 0) {
+        throw new Error('Erro ao gerar relatorio. Tente novamente.')
+      }
+
+      // Garantir MIME type correto para o arquivo .docx
+      const docxBlob = new Blob([rawBlob], {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      })
+
+      return docxBlob
+    } catch (err) {
+      console.error('Erro na chamada gerarDocumento:', err)
+      throw err
     }
-
-    const rawBlob = await res.blob()
-    if (!rawBlob || rawBlob.size === 0) {
-      throw new Error('Erro ao gerar relatorio. Tente novamente.')
-    }
-
-    // Garantir MIME type correto para o arquivo .docx
-    const docxBlob = new Blob([rawBlob], {
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    })
-
-    return docxBlob
   },
 }
