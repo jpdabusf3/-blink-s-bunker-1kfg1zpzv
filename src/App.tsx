@@ -35,6 +35,7 @@ import { ThemeProvider } from './components/ThemeProvider'
 
 const HistoricoFunil = lazy(() => import('./pages/HistoricoFunil'))
 const ConfiguracoesLayout = lazy(() => import('./pages/ConfiguracoesLayout'))
+const UploadNF = lazy(() => import('./pages/UploadNF'))
 
 function PageSkeleton() {
   return (
@@ -83,6 +84,21 @@ const App = () => (
                     <Route path="/funil-vendas" element={<FunilVendas />} />
                     <Route path="/swot" element={<SWOT />} />
                     <Route path="/matriz" element={<Matriz />} />
+                    <Route
+                      path="/upload-nf"
+                      element={
+                        <Suspense
+                          fallback={
+                            <div className="p-8">
+                              <div className="h-8 w-48 bg-muted animate-pulse rounded mb-4" />
+                              <div className="h-64 w-full bg-muted animate-pulse rounded" />
+                            </div>
+                          }
+                        >
+                          <UploadNF />
+                        </Suspense>
+                      }
+                    />
                     <Route path="/pedidos" element={<Pedidos />} />
                     <Route path="/historico-vendas" element={<HistoricoVendas />} />
                     <Route path="/metas" element={<Metas />} />

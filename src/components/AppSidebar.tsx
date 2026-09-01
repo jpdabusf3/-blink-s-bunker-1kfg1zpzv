@@ -46,6 +46,7 @@ export function AppSidebar() {
     { name: 'Funil de Vendas', path: '/funil-vendas', icon: Layers },
     ...(showManager ? [{ name: 'Gestão Técnica', path: '/gestao-tecnica', icon: UserCog }] : []),
     { name: 'Implantação de Novos Pedidos', path: '/pedidos', icon: ShoppingCart, badge: 'NF' },
+    { name: 'Upload NF', path: '/upload-nf', icon: Upload },
     { name: 'Histórico de Vendas', path: '/historico-vendas', icon: TrendingUp },
     { name: t('nav.swot'), path: '/swot', icon: Target },
     { name: t('nav.prioridade'), path: '/matriz', icon: Grid },
