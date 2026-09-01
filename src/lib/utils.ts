@@ -45,6 +45,40 @@ export function isPassedDeadline(dateStr?: string) {
   return new Date(dateStr).getTime() < new Date().getTime()
 }
 
+export function normalizeNumberBR(val: unknown): number {
+  if (typeof val === 'number') {
+    return isNaN(val) ? 0 : val
+  }
+  if (val === null || val === undefined) return 0
+  let s = String(val).trim()
+  if (!s) return 0
+
+  s = s.replace(/R\$/gi, '').trim()
+  s = s.replace(/\s+/g, '')
+  if (!s) return 0
+
+  const hasDot = s.indexOf('.') !== -1
+  const hasComma = s.indexOf(',') !== -1
+
+  if (hasDot && hasComma) {
+    s = s.replace(/\./g, '').replace(',', '.')
+  } else if (hasComma) {
+    s = s.replace(',', '.')
+  } else if (hasDot) {
+    const lastDotIdx = s.lastIndexOf('.')
+    const decimals = s.substring(lastDotIdx + 1)
+    if (decimals.length === 3 && /^\d{3}$/.test(decimals)) {
+      // Ex: 9.000 ou 371.031 -> milhar
+      s = s.replace(/\./g, '')
+    }
+  }
+
+  const cleanNumeric = s.replace(/[^\d.-]/g, '')
+  if (!cleanNumeric || cleanNumeric === '-' || cleanNumeric === '.') return 0
+  const n = parseFloat(cleanNumeric)
+  return isNaN(n) ? 0 : n
+}
+
 export function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',

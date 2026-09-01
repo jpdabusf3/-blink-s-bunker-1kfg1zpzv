@@ -47,7 +47,7 @@ import {
   type ParsedNFData,
   type ParsedItem,
 } from '@/services/nfService'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, normalizeNumberBR } from '@/lib/utils'
 
 export function UploadNF() {
   const { toast } = useToast()
@@ -111,15 +111,18 @@ export function UploadNF() {
   // Check if CRM required fields are completed
   const isCrmComplete = useMemo(() => {
     if (!extracted) return false
+    const numVal = normalizeNumberBR(extracted.valor_total_nota)
     return !!(
       extracted.especie_destino &&
       extracted.canal_vendas &&
       extracted.gestor_tecnico_id &&
       extracted.vendedor_id &&
       extracted.numero_nf &&
+      extracted.data_emissao &&
+      extracted.destinatario_nome &&
       extracted.valor_total_nota !== null &&
       extracted.valor_total_nota !== undefined &&
-      extracted.valor_total_nota > 0
+      numVal > 0
     )
   }, [extracted])
 
@@ -200,11 +203,13 @@ export function UploadNF() {
     const item = { ...currentItens[index], [field]: val }
     if (field === 'produto_quantidade' || field === 'produto_valor_unitario') {
       const q =
-        field === 'produto_quantidade' ? Number(val) || 0 : Number(item.produto_quantidade) || 0
+        field === 'produto_quantidade'
+          ? normalizeNumberBR(val)
+          : normalizeNumberBR(item.produto_quantidade)
       const u =
         field === 'produto_valor_unitario'
-          ? Number(val) || 0
-          : Number(item.produto_valor_unitario) || 0
+          ? normalizeNumberBR(val)
+          : normalizeNumberBR(item.produto_valor_unitario)
       item.produto_valor_total = q * u
     }
     currentItens[index] = item
@@ -865,21 +870,22 @@ export function UploadNF() {
                         value={extracted.valor_total_nota ?? ''}
                         onChange={(e) => {
                           const val = e.target.value.trim()
-                          const parsedVal = val === '' ? null : parseFloat(val)
+                          const parsedVal = val === '' ? null : normalizeNumberBR(val)
                           updateExtractedData(activeFile.id, {
-                            valor_total_nota: isNaN(parsedVal as number) ? null : parsedVal,
+                            valor_total_nota:
+                              parsedVal === null || isNaN(parsedVal) ? null : parsedVal,
                           })
                         }}
                       />
                       {extracted.valor_total_nota === null ||
                       extracted.valor_total_nota === undefined ? (
-                        <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium block mt-1 flex items-center gap-1">
-                          <AlertTriangle className="w-3.5 h-3.5 inline shrink-0" />O valor total nao
-                          foi extraido automaticamente. Preencha manualmente.
+                        <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium mt-1 flex items-center gap-1">
+                          <AlertTriangle className="w-3.5 h-3.5 inline shrink-0" /> O valor total
+                          não foi extraído automaticamente. Preencha manualmente.
                         </span>
                       ) : (
                         <span className="text-[11px] text-muted-foreground block mt-0.5">
-                          {formatCurrency(extracted.valor_total_nota || 0)}
+                          {formatCurrency(normalizeNumberBR(extracted.valor_total_nota))}
                         </span>
                       )}
                     </div>
@@ -893,12 +899,12 @@ export function UploadNF() {
                         value={extracted.valor_total_produtos ?? ''}
                         onChange={(e) =>
                           updateExtractedData(activeFile.id, {
-                            valor_total_produtos: parseFloat(e.target.value) || 0,
+                            valor_total_produtos: normalizeNumberBR(e.target.value),
                           })
                         }
                       />
                       <span className="text-[11px] text-muted-foreground block mt-0.5">
-                        {formatCurrency(extracted.valor_total_produtos || 0)}
+                        {formatCurrency(normalizeNumberBR(extracted.valor_total_produtos))}
                       </span>
                     </div>
                   </div>
@@ -911,12 +917,12 @@ export function UploadNF() {
                         value={extracted.valor_aproximado_tributos ?? ''}
                         onChange={(e) =>
                           updateExtractedData(activeFile.id, {
-                            valor_aproximado_tributos: parseFloat(e.target.value) || 0,
+                            valor_aproximado_tributos: normalizeNumberBR(e.target.value),
                           })
                         }
                       />
                       <span className="text-[11px] text-muted-foreground block mt-0.5">
-                        {formatCurrency(extracted.valor_aproximado_tributos || 0)}
+                        {formatCurrency(normalizeNumberBR(extracted.valor_aproximado_tributos))}
                       </span>
                     </div>
                   </div>{' '}
@@ -1049,12 +1055,12 @@ export function UploadNF() {
                         value={extracted.bc_icms ?? ''}
                         onChange={(e) =>
                           updateExtractedData(activeFile.id, {
-                            bc_icms: parseFloat(e.target.value) || 0,
+                            bc_icms: normalizeNumberBR(e.target.value),
                           })
                         }
                       />
                       <span className="text-[11px] text-muted-foreground block mt-0.5">
-                        {formatCurrency(extracted.bc_icms || 0)}
+                        {formatCurrency(normalizeNumberBR(extracted.bc_icms))}
                       </span>
                     </div>
                   </div>
@@ -1067,12 +1073,12 @@ export function UploadNF() {
                         value={extracted.valor_icms ?? ''}
                         onChange={(e) =>
                           updateExtractedData(activeFile.id, {
-                            valor_icms: parseFloat(e.target.value) || 0,
+                            valor_icms: normalizeNumberBR(e.target.value),
                           })
                         }
                       />
                       <span className="text-[11px] text-muted-foreground block mt-0.5">
-                        {formatCurrency(extracted.valor_icms || 0)}
+                        {formatCurrency(normalizeNumberBR(extracted.valor_icms))}
                       </span>
                     </div>
                   </div>
@@ -1085,12 +1091,12 @@ export function UploadNF() {
                         value={extracted.valor_frete ?? ''}
                         onChange={(e) =>
                           updateExtractedData(activeFile.id, {
-                            valor_frete: parseFloat(e.target.value) || 0,
+                            valor_frete: normalizeNumberBR(e.target.value),
                           })
                         }
                       />
                       <span className="text-[11px] text-muted-foreground block mt-0.5">
-                        {formatCurrency(extracted.valor_frete || 0)}
+                        {formatCurrency(normalizeNumberBR(extracted.valor_frete))}
                       </span>
                     </div>
                   </div>
@@ -1103,12 +1109,12 @@ export function UploadNF() {
                         value={extracted.valor_seguro ?? ''}
                         onChange={(e) =>
                           updateExtractedData(activeFile.id, {
-                            valor_seguro: parseFloat(e.target.value) || 0,
+                            valor_seguro: normalizeNumberBR(e.target.value),
                           })
                         }
                       />
                       <span className="text-[11px] text-muted-foreground block mt-0.5">
-                        {formatCurrency(extracted.valor_seguro || 0)}
+                        {formatCurrency(normalizeNumberBR(extracted.valor_seguro))}
                       </span>
                     </div>
                   </div>
@@ -1121,12 +1127,12 @@ export function UploadNF() {
                         value={extracted.desconto ?? ''}
                         onChange={(e) =>
                           updateExtractedData(activeFile.id, {
-                            desconto: parseFloat(e.target.value) || 0,
+                            desconto: normalizeNumberBR(e.target.value),
                           })
                         }
                       />
                       <span className="text-[11px] text-muted-foreground block mt-0.5">
-                        {formatCurrency(extracted.desconto || 0)}
+                        {formatCurrency(normalizeNumberBR(extracted.desconto))}
                       </span>
                     </div>
                   </div>
@@ -1139,12 +1145,12 @@ export function UploadNF() {
                         value={extracted.outras_despesas ?? ''}
                         onChange={(e) =>
                           updateExtractedData(activeFile.id, {
-                            outras_despesas: parseFloat(e.target.value) || 0,
+                            outras_despesas: normalizeNumberBR(e.target.value),
                           })
                         }
                       />
                       <span className="text-[11px] text-muted-foreground block mt-0.5">
-                        {formatCurrency(extracted.outras_despesas || 0)}
+                        {formatCurrency(normalizeNumberBR(extracted.outras_despesas))}
                       </span>
                     </div>
                   </div>
@@ -1157,12 +1163,12 @@ export function UploadNF() {
                         value={extracted.valor_ipi ?? ''}
                         onChange={(e) =>
                           updateExtractedData(activeFile.id, {
-                            valor_ipi: parseFloat(e.target.value) || 0,
+                            valor_ipi: normalizeNumberBR(e.target.value),
                           })
                         }
                       />
                       <span className="text-[11px] text-muted-foreground block mt-0.5">
-                        {formatCurrency(extracted.valor_ipi || 0)}
+                        {formatCurrency(normalizeNumberBR(extracted.valor_ipi))}
                       </span>
                     </div>
                   </div>
@@ -1190,10 +1196,10 @@ export function UploadNF() {
                       value={extracted.volumes_quantidade ?? ''}
                       onChange={(e) =>
                         updateExtractedData(activeFile.id, {
-                          volumes_quantidade: parseFloat(e.target.value) || 0,
+                          volumes_quantidade: normalizeNumberBR(e.target.value),
                         })
                       }
-                    />
+                    />{' '}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Espécie Volumes</Label>
@@ -1212,10 +1218,10 @@ export function UploadNF() {
                       value={extracted.peso_bruto ?? ''}
                       onChange={(e) =>
                         updateExtractedData(activeFile.id, {
-                          peso_bruto: parseFloat(e.target.value) || 0,
+                          peso_bruto: normalizeNumberBR(e.target.value),
                         })
                       }
-                    />
+                    />{' '}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Peso Líquido (Kg)</Label>
@@ -1225,10 +1231,10 @@ export function UploadNF() {
                       value={extracted.peso_liquido ?? ''}
                       onChange={(e) =>
                         updateExtractedData(activeFile.id, {
-                          peso_liquido: parseFloat(e.target.value) || 0,
+                          peso_liquido: normalizeNumberBR(e.target.value),
                         })
                       }
-                    />
+                    />{' '}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Número Fatura</Label>
@@ -1258,12 +1264,12 @@ export function UploadNF() {
                         value={extracted.fatura_valor ?? ''}
                         onChange={(e) =>
                           updateExtractedData(activeFile.id, {
-                            fatura_valor: parseFloat(e.target.value) || 0,
+                            fatura_valor: normalizeNumberBR(e.target.value),
                           })
                         }
                       />
                       <span className="text-[11px] text-muted-foreground block mt-0.5">
-                        {formatCurrency(extracted.fatura_valor || 0)}
+                        {formatCurrency(normalizeNumberBR(extracted.fatura_valor))}
                       </span>
                     </div>
                   </div>
@@ -1435,7 +1441,11 @@ export function UploadNF() {
                                     className="h-8 text-xs text-right"
                                     value={it.bc_icms ?? ''}
                                     onChange={(e) =>
-                                      handleItemChange(idx, 'bc_icms', Number(e.target.value) || 0)
+                                      handleItemChange(
+                                        idx,
+                                        'bc_icms',
+                                        normalizeNumberBR(e.target.value),
+                                      )
                                     }
                                   />
                                 </TableCell>
@@ -1449,7 +1459,7 @@ export function UploadNF() {
                                       handleItemChange(
                                         idx,
                                         'valor_icms',
-                                        Number(e.target.value) || 0,
+                                        normalizeNumberBR(e.target.value),
                                       )
                                     }
                                   />
@@ -1464,7 +1474,7 @@ export function UploadNF() {
                                       handleItemChange(
                                         idx,
                                         'aliq_icms',
-                                        Number(e.target.value) || 0,
+                                        normalizeNumberBR(e.target.value),
                                       )
                                     }
                                   />
@@ -1538,9 +1548,9 @@ export function UploadNF() {
                       {extracted &&
                       (extracted.valor_total_nota === null ||
                         extracted.valor_total_nota === undefined ||
-                        extracted.valor_total_nota <= 0)
-                        ? 'O valor total e obrigatorio para salvar a NF.'
-                        : 'Preencha todos os campos do Bloco D para confirmar'}
+                        normalizeNumberBR(extracted.valor_total_nota) <= 0)
+                        ? 'O valor total é obrigatório para salvar a NF.'
+                        : 'Preencha todos os campos obrigatórios (Número, Data, Destinatário e Bloco D) para confirmar'}
                     </span>
                   )}
                   <Button

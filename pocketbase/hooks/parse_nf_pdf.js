@@ -175,9 +175,9 @@ routerAdd(
         var s = String(v).trim()
         if (s.length === 0) return 0
 
-        // 2. Remova prefixo R$ se presente
+        // Remova prefixo R$ se presente
         s = s.replace(/R\$/gi, '').trim()
-        // 3. Remova todos os espaços
+        // Remova todos os espaços
         s = s.replace(/\s+/g, '')
         if (s.length === 0) return 0
 
@@ -185,23 +185,17 @@ routerAdd(
         var hasComma = s.indexOf(',') !== -1
 
         if (hasDot && hasComma) {
-          // 4. Contém ponto E vírgula: ponto é separador de milhar, vírgula é decimal
+          // Contém ponto E vírgula: ponto é separador de milhar, vírgula é decimal
           s = s.replace(/\./g, '').replace(',', '.')
         } else if (hasComma) {
-          // 5. Contém apenas vírgula: vírgula é decimal
+          // Contém apenas vírgula: vírgula é decimal
           s = s.replace(',', '.')
         } else if (hasDot) {
-          // 6. Contém apenas ponto:
-          // Se há exatamente 2 dígitos após o último ponto (ex.: "8.50" = 8.50)
           var lastDotIdx = s.lastIndexOf('.')
           var decimals = s.substring(lastDotIdx + 1)
-          if (decimals.length === 2 || (decimals.length === 1 && /^\d+$/.test(decimals))) {
-            // Decimal float (ex: 8.50 ou 8.5)
-          } else if (decimals.length === 3 && /^\d{3}$/.test(decimals)) {
+          if (decimals.length === 3 && /^\d{3}$/.test(decimals)) {
             // Separador de milhar (ex.: "9.000" = 9000, "371.031" = 371031)
             s = s.replace(/\./g, '')
-          } else {
-            // Default: manter como float
           }
         }
 
@@ -210,7 +204,6 @@ routerAdd(
         var n = parseFloat(cleanNumeric)
         return isNaN(n) ? 0 : n
       }
-
       function cleanStr(s) {
         return s == null ? '' : String(s).trim()
       }
@@ -329,6 +322,7 @@ routerAdd(
         var knownNames = [
           'Feedpro Science Nutrition Importadora e Exportadora Ltda',
           'Feedpro Science Nutrition',
+          'Nuttria Nutricao Animal Ltda.',
           'Nuttria Nutricao Animal Ltda',
           'Nuttria Nutricao Animal',
         ]
@@ -587,11 +581,22 @@ routerAdd(
         var valorTotalNota = getValAfter(/VALOR\s+TOTAL\s+DA\s+NOTA/i)
         if (valorTotalNota <= 0) valorTotalNota = getValBeforeOrAfter('VALOR TOTAL DA NOTA')
         if (valorTotalNota <= 0) valorTotalNota = getValAfter(/V\.?\s*TOTAL\s+DA\s+NOTA/i)
+        if (valorTotalNota <= 0) valorTotalNota = getValAfter(/VALOR\s+TOTAL\s+NOTA/i)
         if (valorTotalNota <= 0) valorTotalNota = getValAfter(/VALOR\s+TOTAL/i)
         if (valorTotalNota <= 0) {
-          // Busca padrão VALOR TOTAL 9.000,00 no cabeçalho do recibo
+          // Busca padrão VALOR TOTAL 9.000,00 ou 371.031,70 no cabeçalho do recibo / canhoto
           var mRecibo = text.match(/VALOR\s+TOTAL\s*:?\s*(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})/i)
           if (mRecibo && mRecibo[1]) valorTotalNota = parseNum(mRecibo[1])
+        }
+        if (valorTotalNota <= 0) {
+          // Procura 371.031,70 ou 9.000,00 explícitos se existirem no texto
+          var mHighTotal = text.match(/\b(\d{1,3}(?:\.\d{3})+,\d{2})\b/)
+          if (mHighTotal && mHighTotal[1]) {
+            var candHigh = parseNum(mHighTotal[1])
+            if (candHigh > 1000) {
+              valorTotalNota = candHigh
+            }
+          }
         }
 
         var valorProdutos = getValAfter(/VALOR\s+TOTAL\s+DOS\s+PRODUTOS/i)
@@ -1093,14 +1098,14 @@ routerAdd(
 
       // ----------------------------------------------------
       // FIX 2: Fallbacks de valor_total se for null ou <= 0
-      // 1. Somar todos os valor_total dos itens do array de itens
+      // 1. Somar todos os valor_total dos itens + frete + IPI
       // 2. Se não houver itens, buscar no texto bruto qualquer linha contendo "TOTAL" seguida de um valor monetário
       // 3. Se ainda não encontrar, definir valor_total como null (NUNCA 0) e adicionar aviso: "Valor total nao encontrado. Preencha manualmente."
       // ----------------------------------------------------
       var finalValorTotal = valorTotalNota && valorTotalNota > 0 ? valorTotalNota : null
 
       if (!finalValorTotal || finalValorTotal <= 0) {
-        // Fallback 1: Somar todos os valor_total dos itens
+        // Fallback 1: Somar todos os valor_total dos itens (+ frete + IPI se houver)
         if (itens && itens.length > 0) {
           var sumItens = 0
           for (var sIdx = 0; sIdx < itens.length; sIdx++) {
@@ -1110,7 +1115,12 @@ routerAdd(
             }
           }
           if (sumItens > 0) {
-            finalValorTotal = Math.round(sumItens * 100) / 100
+            var freteVal = parseNum(detValores.valor_frete) || 0
+            var ipiVal = parseNum(detValores.valor_ipi) || 0
+            var outrasVal = parseNum(detValores.outras_despesas) || 0
+            var descVal = parseNum(detValores.desconto) || 0
+            var computedTot = sumItens + freteVal + ipiVal + outrasVal - descVal
+            finalValorTotal = Math.round((computedTot > 0 ? computedTot : sumItens) * 100) / 100
             extractionMethod.valores = 'fallback_sum_itens'
           }
         }
@@ -1123,13 +1133,16 @@ routerAdd(
             if (/TOTAL/i.test(lineStr)) {
               var mLineMoney = lineStr.match(/(?:R\$\s*)?(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})/g)
               if (mLineMoney && mLineMoney.length > 0) {
-                // pegar o último valor monetário da linha com TOTAL
-                var candVal = parseNum(mLineMoney[mLineMoney.length - 1])
-                if (candVal > 0) {
-                  finalValorTotal = candVal
-                  extractionMethod.valores = 'fallback_regex_line_total'
-                  break
+                // pegar o maior ou o último valor monetário da linha com TOTAL
+                for (var mm = mLineMoney.length - 1; mm >= 0; mm--) {
+                  var candVal = parseNum(mLineMoney[mm])
+                  if (candVal > 0) {
+                    finalValorTotal = candVal
+                    extractionMethod.valores = 'fallback_regex_line_total'
+                    break
+                  }
                 }
+                if (finalValorTotal && finalValorTotal > 0) break
               }
             }
           }
@@ -1141,7 +1154,6 @@ routerAdd(
           warnings.push('Valor total nao encontrado. Preencha manualmente.')
         }
       }
-
       // Validação final de campos
       if (!numeroNf || numeroNf.length < 3) {
         warnings.push('Numero da NF nao identificado com seguranca (minimo 3 digitos).')

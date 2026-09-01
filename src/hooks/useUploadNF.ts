@@ -9,6 +9,7 @@ import { deriveDateParts, derivePais } from '@/services/historico-vendas'
 import pb from '@/lib/pocketbase/client'
 import { extrairTextoPdf } from '@/services/nfe-service'
 import { toast } from '@/hooks/use-toast'
+import { normalizeNumberBR } from '@/lib/utils'
 
 export interface UploadFileItem {
   id: string
@@ -452,26 +453,78 @@ export function useUploadNF(): UseUploadNFReturn {
                     produto_codigo: 'ND',
                     produto_descricao: 'Produtos da NF ' + (data.numero_nf || ''),
                     produto_quantidade: 1,
-                    produto_valor_unitario: data.valor_total_nota || 0,
-                    produto_valor_total: data.valor_total_nota || 0,
+                    produto_valor_unitario: normalizeNumberBR(data.valor_total_nota),
+                    produto_valor_total: normalizeNumberBR(data.valor_total_nota),
                   },
                 ]
 
-          for (const item of itensToSave) {
+          // Mapeamento seguro de espécie para a collection historico_vendas (select: BOVINO | SUINO | AVE | PET | AQUA | OUTRO)
+          const mapEspecieHistorico = (
+            esp?: string,
+          ): 'BOVINO' | 'SUINO' | 'AVE' | 'PET' | 'AQUA' | 'OUTRO' => {
+            if (!esp) return 'BOVINO'
+            const up = esp.toUpperCase().trim()
+            if (up === 'RUMINANTES' || up === 'BOVINO' || up === 'BOVINOS') return 'BOVINO'
+            if (up === 'SUINOS' || up === 'SUINO') return 'SUINO'
+            if (up === 'AVES' || up === 'AVE') return 'AVE'
+            if (up === 'PETS' || up === 'PET') return 'PET'
+            if (up === 'AQUA') return 'AQUA'
+            return 'OUTRO'
+          }
+
+          // Mapeamento seguro de canal_vendas para historico_vendas (select: Direto | Distribuidor | Indústria | Premixera | Cooperativa | Online)
+          const mapCanalHistorico = (
+            canal?: string,
+          ): 'Direto' | 'Distribuidor' | 'Indústria' | 'Premixera' | 'Cooperativa' | 'Online' => {
+            if (!canal) return 'Direto'
+            const clean = canal.trim()
+            if (clean === 'Industria' || clean === 'Indústria') return 'Indústria'
+            if (clean === 'Distribuidor') return 'Distribuidor'
+            if (clean === 'Premixera') return 'Premixera'
+            if (clean === 'Cooperativa') return 'Cooperativa'
+            if (clean === 'Online') return 'Online'
+            return 'Direto'
+          }
+
+          // Buscar gestao_tecnica ids correspondentes ao gestor / vendedor se aplicável
+          let gestaoTecnicoId = ''
+          let gestaoVendedorId = ''
+          try {
+            if (gestorNome) {
+              const gtList = await pb.collection('gestao_tecnica').getList(1, 1, {
+                filter: `nome ~ "${gestorNome.replace(/['"\\]/g, '')}"`,
+              })
+              if (gtList.items[0]) gestaoTecnicoId = gtList.items[0].id
+            }
+            if (vendedorNome) {
+              const vendList = await pb.collection('gestao_tecnica').getList(1, 1, {
+                filter: `nome ~ "${vendedorNome.replace(/['"\\]/g, '')}"`,
+              })
+              if (vendList.items[0]) gestaoVendedorId = vendList.items[0].id
+            }
+          } catch {
+            /* intentionally ignored */
+          }
+
+          for (let itemIdx = 0; itemIdx < itensToSave.length; itemIdx++) {
+            const item = itensToSave[itemIdx]
             const prodCod = (item.produto_codigo || '').trim()
             const catInfo = catalogMap.get(prodCod.toUpperCase())
             // Nova spec mapeia categoria e linha (ex: categoria: "Organic Minerals", linha: "Minerals")
             const produtoFamilia = catInfo?.categoria || catInfo?.linha || ''
 
-            const itemQtd = Number(item.produto_quantidade) || 1
-            const itemUnit = Number(item.produto_valor_unitario) || 0
-            const itemTotal = Number(item.produto_valor_total) || itemQtd * itemUnit
+            const itemQtd = normalizeNumberBR(item.produto_quantidade) || 1
+            const itemUnit = normalizeNumberBR(item.produto_valor_unitario)
+            let itemTotal = normalizeNumberBR(item.produto_valor_total)
+            if (itemTotal === 0 && itemQtd > 0 && itemUnit > 0) {
+              itemTotal = itemQtd * itemUnit
+            }
 
             const historicoPayload: Record<string, string | number | null> = {
-              origem: 'nf',
+              origem: 'upload',
               numero_documento: String(data.numero_nf || '').trim(),
               data_documento: dataEmissaoDoc,
-              mes: Number(mes) || 1,
+              mes: String(mes),
               ano: Number(ano) || new Date().getFullYear(),
               trimestre: String(trimestre || 'T1'),
               destinatario_nome: String(data.destinatario_nome || '').trim(),
@@ -480,7 +533,7 @@ export function useUploadNF(): UseUploadNFReturn {
                 .trim(),
               pais: String(pais || 'Brasil'),
               especie_destino: data.especie_destino || '',
-              canal_vendas: data.canal_vendas || '',
+              canal_vendas: mapCanalHistorico(data.canal_vendas),
               gestor_tecnico: gestorNome,
               vendedor: vendedorNome,
               produto_codigo: prodCod,
@@ -489,7 +542,7 @@ export function useUploadNF(): UseUploadNFReturn {
               produto_quantidade: itemQtd,
               produto_valor_unitario: itemUnit,
               produto_valor_total: itemTotal,
-              valor_total_nota: Number(data.valor_total_nota) || 0,
+              valor_total_nota: normalizeNumberBR(data.valor_total_nota),
               frete_modalidade: data.frete_modalidade || 'CIF',
               status: 'realizado',
               user_id: currentUserId,
@@ -497,11 +550,11 @@ export function useUploadNF(): UseUploadNFReturn {
               // Campos legados para dashboards compatíveis
               data: dataEmissaoDoc,
               cliente: String(data.destinatario_nome || '').trim(),
-              especie: data.especie_destino || '',
-              gestor_tecnico_id: data.gestor_tecnico_id || '',
-              vendedor_id: data.vendedor_id || '',
+              especie: mapEspecieHistorico(data.especie_destino),
+              gestor_tecnico_id: gestaoTecnicoId || null,
+              vendedor_id: gestaoVendedorId || null,
               valor: itemTotal,
-              observacoes: `NF #${data.numero_nf || ''}`,
+              observacoes: `NF #${data.numero_nf || ''}${itensToSave.length > 1 ? ` (Item ${itemIdx + 1})` : ''}`,
               atualizado_em: new Date().toISOString(),
             }
 

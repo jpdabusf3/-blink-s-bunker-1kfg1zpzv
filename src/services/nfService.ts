@@ -1,4 +1,5 @@
 import pb from '@/lib/pocketbase/client'
+import { normalizeNumberBR } from '@/lib/utils'
 
 export interface ParsedItem {
   produto_codigo: string
@@ -332,9 +333,16 @@ export async function insertNF(
     const valTotalNotaNum =
       data.valor_total_nota === null ||
       data.valor_total_nota === undefined ||
-      isNaN(Number(data.valor_total_nota))
+      data.valor_total_nota === ('' as unknown)
         ? null
-        : Number(data.valor_total_nota)
+        : normalizeNumberBR(data.valor_total_nota)
+
+    const valProdutosNum =
+      data.valor_total_produtos !== undefined && data.valor_total_produtos !== null
+        ? normalizeNumberBR(data.valor_total_produtos)
+        : valTotalNotaNum !== null
+          ? valTotalNotaNum
+          : 0
 
     const payload: Record<string, string | number | null> = {
       numero_nf: String(data.numero_nf || '').trim(),
@@ -354,32 +362,24 @@ export async function insertNF(
       destinatario_fone: String(data.destinatario_fone || ''),
       fatura_numero: String(data.fatura_numero || ''),
       fatura_vencimento: faturaVenc || null,
-      fatura_valor: isNaN(Number(data.fatura_valor)) ? 0 : Number(data.fatura_valor),
-      bc_icms: isNaN(Number(data.bc_icms)) ? 0 : Number(data.bc_icms),
-      valor_icms: isNaN(Number(data.valor_icms)) ? 0 : Number(data.valor_icms),
-      valor_frete: isNaN(Number(data.valor_frete)) ? 0 : Number(data.valor_frete),
-      valor_seguro: isNaN(Number(data.valor_seguro)) ? 0 : Number(data.valor_seguro),
-      desconto: isNaN(Number(data.desconto)) ? 0 : Number(data.desconto),
-      outras_despesas: isNaN(Number(data.outras_despesas)) ? 0 : Number(data.outras_despesas),
-      valor_ipi: isNaN(Number(data.valor_ipi)) ? 0 : Number(data.valor_ipi),
-      valor_total_produtos: isNaN(Number(data.valor_total_produtos))
-        ? valTotalNotaNum !== null
-          ? valTotalNotaNum
-          : 0
-        : Number(data.valor_total_produtos),
+      fatura_valor: normalizeNumberBR(data.fatura_valor),
+      bc_icms: normalizeNumberBR(data.bc_icms),
+      valor_icms: normalizeNumberBR(data.valor_icms),
+      valor_frete: normalizeNumberBR(data.valor_frete),
+      valor_seguro: normalizeNumberBR(data.valor_seguro),
+      desconto: normalizeNumberBR(data.desconto),
+      outras_despesas: normalizeNumberBR(data.outras_despesas),
+      valor_ipi: normalizeNumberBR(data.valor_ipi),
+      valor_total_produtos: valProdutosNum,
       valor_total_nota: valTotalNotaNum,
       raw_text: data.raw_text || null,
       frete_modalidade: data.frete_modalidade === 'FOB' ? 'FOB' : 'CIF',
-      volumes_quantidade: isNaN(Number(data.volumes_quantidade))
-        ? 0
-        : Number(data.volumes_quantidade),
+      volumes_quantidade: normalizeNumberBR(data.volumes_quantidade),
       volumes_especie: String(data.volumes_especie || 'Paletes'),
-      peso_bruto: isNaN(Number(data.peso_bruto)) ? 0 : Number(data.peso_bruto),
-      peso_liquido: isNaN(Number(data.peso_liquido)) ? 0 : Number(data.peso_liquido),
+      peso_bruto: normalizeNumberBR(data.peso_bruto),
+      peso_liquido: normalizeNumberBR(data.peso_liquido),
       ordem_compra: String(data.ordem_compra || ''),
-      valor_aproximado_tributos: isNaN(Number(data.valor_aproximado_tributos))
-        ? 0
-        : Number(data.valor_aproximado_tributos),
+      valor_aproximado_tributos: normalizeNumberBR(data.valor_aproximado_tributos),
       especie_destino: data.especie_destino || null,
       canal_vendas: canalVendasClean || null,
       gestor_tecnico_id: data.gestor_tecnico_id || null,
@@ -418,32 +418,31 @@ export async function insertItens(
   }> = []
 
   for (const item of itens) {
-    const qtd = isNaN(Number(item.produto_quantidade)) ? 1 : Number(item.produto_quantidade)
-    const unit = isNaN(Number(item.produto_valor_unitario))
-      ? 0
-      : Number(item.produto_valor_unitario)
-    const tot = isNaN(Number(item.produto_valor_total))
-      ? qtd * unit
-      : Number(item.produto_valor_total)
+    const qtd = normalizeNumberBR(item.produto_quantidade) || 1
+    const unit = normalizeNumberBR(item.produto_valor_unitario)
+    let tot = normalizeNumberBR(item.produto_valor_total)
+    if (tot === 0 && qtd > 0 && unit > 0) {
+      tot = qtd * unit
+    }
 
     const payload = {
       nota_fiscal_id: nfId,
       produto_codigo: String(item.produto_codigo || 'ND').trim(),
       produto_descricao: String(item.produto_descricao || '').trim(),
       produto_ncm: String(item.produto_ncm || '2309.90.90').trim(),
-      produto_cst: String(item.produto_cst || '140').trim(),
-      produto_cfop: String(item.produto_cfop || '5102').trim(),
+      produto_cst: String(item.produto_cst || '100').trim(),
+      produto_cfop: String(item.produto_cfop || '6102').trim(),
       produto_unidade: String(item.produto_unidade || 'KG')
         .trim()
         .toUpperCase(),
       produto_quantidade: qtd,
       produto_valor_unitario: unit,
       produto_valor_total: tot,
-      bc_icms: isNaN(Number(item.bc_icms)) ? 0 : Number(item.bc_icms),
-      valor_icms: isNaN(Number(item.valor_icms)) ? 0 : Number(item.valor_icms),
-      valor_ipi: isNaN(Number(item.valor_ipi)) ? 0 : Number(item.valor_ipi),
-      aliq_icms: isNaN(Number(item.aliq_icms)) ? 0 : Number(item.aliq_icms),
-      aliq_ipi: isNaN(Number(item.aliq_ipi)) ? 0 : Number(item.aliq_ipi),
+      bc_icms: normalizeNumberBR(item.bc_icms),
+      valor_icms: normalizeNumberBR(item.valor_icms),
+      valor_ipi: normalizeNumberBR(item.valor_ipi),
+      aliq_icms: normalizeNumberBR(item.aliq_icms),
+      aliq_ipi: normalizeNumberBR(item.aliq_ipi),
       user_id: currentUserId,
     }
 
@@ -471,7 +470,7 @@ export async function insertLotes(
 
   for (const lot of lotes) {
     if (!lot.lote_codigo || !String(lot.lote_codigo).trim()) continue
-    const lotQtd = isNaN(Number(lot.lote_quantidade)) ? 0 : Number(lot.lote_quantidade)
+    const lotQtd = normalizeNumberBR(lot.lote_quantidade)
     await pb.collection('nf_lotes').create({
       nota_fiscal_id: nfId,
       nf_item_id: itemId,
