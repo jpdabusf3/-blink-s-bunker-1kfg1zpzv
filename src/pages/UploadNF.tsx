@@ -135,7 +135,8 @@ export function UploadNF() {
   // Handlers for confirming import / draft / discard
   const handleConfirmarImportacao = async (fileItem: UploadFileItem) => {
     try {
-      await saveNF(fileItem.id, false)
+      const savedId = await saveNF(fileItem.id, false)
+      if (!savedId) return
       toast({
         title: 'Sucesso!',
         description: `Nota fiscal ${fileItem.extractedData?.numero_nf || ''} importada com sucesso!`,
@@ -148,20 +149,15 @@ export function UploadNF() {
         setActiveTab('resumo')
       }
     } catch (err: unknown) {
-      const msg =
-        (err instanceof Error ? err.message : '') ||
-        'Preencha todos os campos obrigatorios antes de confirmar.'
-      toast({
-        title: 'Erro na importação',
-        description: msg,
-        variant: 'destructive',
-      })
+      // O erro já exibe o toast em useUploadNF
+      console.error('Erro na confirmação:', err)
     }
   }
 
   const handleSalvarRascunho = async (fileItem: UploadFileItem) => {
     try {
-      await saveNF(fileItem.id, true)
+      const savedId = await saveNF(fileItem.id, true)
+      if (!savedId) return
       toast({
         title: 'Rascunho salvo',
         description: `Nota fiscal ${fileItem.extractedData?.numero_nf || ''} salva como rascunho.`,
@@ -173,14 +169,8 @@ export function UploadNF() {
         setActiveTab('resumo')
       }
     } catch (err: unknown) {
-      const msg =
-        (err instanceof Error ? err.message : '') ||
-        'Erro ao gravar no banco de dados. Verifique os dados e tente novamente.'
-      toast({
-        title: 'Erro ao salvar rascunho',
-        description: msg,
-        variant: 'destructive',
-      })
+      // O erro já exibe o toast em useUploadNF
+      console.error('Erro ao salvar rascunho:', err)
     }
   }
 

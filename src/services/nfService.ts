@@ -286,12 +286,23 @@ export async function getVendedoresEquipe(): Promise<EquipeOption[]> {
 export async function insertNF(
   data: Partial<ParsedNFData> & { status?: 'importada' | 'revisada' | 'confirmada' },
 ): Promise<string> {
-  try {
-    const currentUserId = pb.authStore.model?.id
-    if (!currentUserId) {
-      throw new Error('Autenticação necessária')
-    }
+  // Validação prévia de campos obrigatórios no insert
+  if (!data.numero_nf || !String(data.numero_nf).trim()) {
+    throw new Error('Campo obrigatorio faltando: numero_nf')
+  }
+  if (!data.destinatario_nome || !String(data.destinatario_nome).trim()) {
+    throw new Error('Campo obrigatorio faltando: destinatario_nome')
+  }
+  if (!data.data_emissao || !String(data.data_emissao).trim()) {
+    throw new Error('Campo obrigatorio faltando: data_emissao')
+  }
 
+  const currentUserId = pb.authStore.model?.id
+  if (!currentUserId) {
+    throw new Error('Autenticação necessária')
+  }
+
+  try {
     // Format date string YYYY-MM-DD
     let formattedDate = data.data_emissao || ''
     if (formattedDate.includes('/')) {

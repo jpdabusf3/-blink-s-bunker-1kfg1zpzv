@@ -8,6 +8,7 @@ import {
 import { deriveDateParts, derivePais } from '@/services/historico-vendas'
 import pb from '@/lib/pocketbase/client'
 import { extrairTextoPdf } from '@/services/nfe-service'
+import { toast } from '@/hooks/use-toast'
 
 export interface UploadFileItem {
   id: string
@@ -347,25 +348,39 @@ export function useUploadNF(): UseUploadNFReturn {
 
       const data = item.extractedData
 
+      // Validação antes do save: valida que TODOS os campos obrigatórios estão presentes
+      // Se algum campo obrigatório estiver faltando, exibe toast "Campo obrigatorio faltando: [nome do campo]" e NÃO tenta insert/update
+      const requiredFields: Array<{ key: keyof ParsedNFData; label: string }> = [
+        { key: 'numero_nf', label: 'Número da NF' },
+        { key: 'data_emissao', label: 'Data de Emissão' },
+        { key: 'destinatario_nome', label: 'Nome do Destinatário' },
+      ]
+
       if (!asDraft) {
-        // Strict CRM validation
-        if (!data.numero_nf) {
-          throw new Error('Preencha todos os campos obrigatorios antes de confirmar.')
-        }
-        if (!data.valor_total_nota || data.valor_total_nota <= 0) {
-          throw new Error('Preencha todos os campos obrigatorios antes de confirmar.')
-        }
-        if (
-          !data.especie_destino ||
-          !data.canal_vendas ||
-          !data.gestor_tecnico_id ||
-          !data.vendedor_id
-        ) {
-          throw new Error('Preencha todos os campos obrigatorios antes de confirmar.')
+        requiredFields.push(
+          { key: 'especie_destino', label: 'Espécie de Destino' },
+          { key: 'canal_vendas', label: 'Canal de Vendas' },
+          { key: 'gestor_tecnico_id', label: 'Gestor Técnico' },
+          { key: 'vendedor_id', label: 'Vendedor' },
+        )
+      }
+
+      for (const field of requiredFields) {
+        const val = data[field.key]
+        if (val === undefined || val === null || (typeof val === 'string' && val.trim() === '')) {
+          toast({
+            title: 'Validação',
+            description: `Campo obrigatorio faltando: ${field.label}`,
+            variant: 'destructive',
+          })
+          return null
         }
       }
 
       setFiles((prev) => prev.map((f) => (f.id === fileId ? { ...f, status: 'saving' } : f)))
+
+      let isSuccess = false
+      let createdNfId: string | null = null
 
       try {
         const currentUserId = pb.authStore.model?.id || ''
@@ -498,6 +513,9 @@ export function useUploadNF(): UseUploadNFReturn {
           }
         }
 
+        isSuccess = true
+        createdNfId = nfId
+
         setFiles((prev) =>
           prev.map((f) =>
             f.id === fileId ? { ...f, status: 'concluido', importedNfId: nfId } : f,
@@ -506,10 +524,15 @@ export function useUploadNF(): UseUploadNFReturn {
 
         return nfId
       } catch (saveErr: unknown) {
-        console.error('Erro ao salvar nota fiscal:', saveErr)
+        console.error('Erro completo ao salvar nota fiscal:', saveErr)
+        toast({
+          title: 'Erro ao salvar',
+          description: 'Erro ao salvar nota fiscal. Tente novamente.',
+          variant: 'destructive',
+        })
         const errMsg =
           (saveErr instanceof Error ? saveErr.message : '') ||
-          'Erro ao gravar no banco de dados. Verifique os dados e tente novamente.'
+          'Erro ao salvar nota fiscal. Tente novamente.'
         setFiles((prev) =>
           prev.map((f) =>
             f.id === fileId
@@ -522,6 +545,14 @@ export function useUploadNF(): UseUploadNFReturn {
           ),
         )
         throw saveErr
+      } finally {
+        if (!isSuccess) {
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === fileId && f.status === 'saving' ? { ...f, status: 'ready' } : f,
+            ),
+          )
+        }
       }
     },
     [files, gestoresTecnicos, vendedores],
