@@ -13,8 +13,8 @@ export interface HistoricoFilters {
   data_inicio?: string // 'YYYY-MM-DD'
   data_fim?: string // 'YYYY-MM-DD'
   mostrarApenasRealizado?: boolean // default false
+  [key: string]: any
 }
-
 export interface HistoricoDocumentoItem {
   id: string
   origem: 'nf' | 'pedido' | string
