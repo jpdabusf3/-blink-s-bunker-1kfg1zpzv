@@ -307,6 +307,12 @@ export async function insertNF(
       }
     }
 
+    // Map canal_vendas to match notas_fiscais schema (Industria vs Indústria)
+    let canalVendasClean = data.canal_vendas || null
+    if (canalVendasClean === ('Indústria' as unknown)) {
+      canalVendasClean = 'Industria' as ParsedNFData['canal_vendas']
+    }
+
     const payload: Record<string, string | number | null> = {
       numero_nf: String(data.numero_nf || '').trim(),
       serie: String(data.serie || '1'),
@@ -351,7 +357,7 @@ export async function insertNF(
         ? 0
         : Number(data.valor_aproximado_tributos),
       especie_destino: data.especie_destino || null,
-      canal_vendas: data.canal_vendas || null,
+      canal_vendas: canalVendasClean || null,
       gestor_tecnico_id: data.gestor_tecnico_id || null,
       vendedor_id: data.vendedor_id || null,
       arquivo_pdf_url: data.arquivo_pdf_url || '',

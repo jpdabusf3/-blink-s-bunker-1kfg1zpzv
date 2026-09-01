@@ -49,7 +49,7 @@ import {
 } from '@/services/nfService'
 import { formatCurrency } from '@/lib/utils'
 
-export default function UploadNF() {
+export function UploadNF() {
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -1672,3 +1672,5 @@ export default function UploadNF() {
     </div>
   )
 }
+
+export default UploadNF

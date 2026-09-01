@@ -142,11 +142,11 @@ const App = () => (
                     <Route
                       path="/upload-nf"
                       element={
-                        <RouteErrorBoundary>
-                          <Suspense fallback={<PageSkeleton />}>
+                        <Suspense fallback={<PageSkeleton />}>
+                          <RouteErrorBoundary>
                             <UploadNF />
-                          </Suspense>
-                        </RouteErrorBoundary>
+                          </RouteErrorBoundary>
+                        </Suspense>
                       }
                     />
                     <Route
