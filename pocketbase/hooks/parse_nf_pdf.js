@@ -631,14 +631,14 @@ routerAdd(
           if (valorTotalNota <= 0) valorTotalNota = parseNum(mTaxRow[6])
         }
 
-        // FIX 3.3 Validação de valores:
+        // Se valorTotalNota for <= 0 mas valorProdutos > 0
         if (valorTotalNota <= 0 && valorProdutos > 0) {
           valorTotalNota = valorProdutos
         }
 
         return {
-          valor_total_nota: valorTotalNota,
-          valor_total_produtos: valorProdutos > 0 ? valorProdutos : valorTotalNota,
+          valor_total_nota: valorTotalNota > 0 ? valorTotalNota : 0,
+          valor_total_produtos: valorProdutos > 0 ? valorProdutos : (valorTotalNota > 0 ? valorTotalNota : 0),
           valor_icms: valorIcms,
           bc_icms: bcIcms,
           valor_pis: valorPis,
@@ -1090,6 +1090,57 @@ routerAdd(
         }
       }
 
+      // ----------------------------------------------------
+      // FIX 2: Fallbacks de valor_total se for null ou <= 0
+      // 1. Somar todos os valor_total dos itens do array de itens
+      // 2. Se não houver itens, buscar no texto bruto qualquer linha contendo "TOTAL" seguida de um valor monetário
+      // 3. Se ainda não encontrar, definir valor_total como null (NUNCA 0) e adicionar aviso: "Valor total nao encontrado. Preencha manualmente."
+      // ----------------------------------------------------
+      var finalValorTotal = (valorTotalNota && valorTotalNota > 0) ? valorTotalNota : null
+
+      if (!finalValorTotal || finalValorTotal <= 0) {
+        // Fallback 1: Somar todos os valor_total dos itens
+        if (itens && itens.length > 0) {
+          var sumItens = 0
+          for (var sIdx = 0; sIdx < itens.length; sIdx++) {
+            var itemTot = parseNum(itens[sIdx].produto_valor_total)
+            if (itemTot > 0) {
+              sumItens += itemTot
+            }
+          }
+          if (sumItens > 0) {
+            finalValorTotal = Math.round(sumItens * 100) / 100
+            extractionMethod.valores = 'fallback_sum_itens'
+          }
+        }
+
+        // Fallback 2: Se não houver itens ou soma foi 0, buscar no texto bruto linha contendo "TOTAL" seguida de valor
+        if (!finalValorTotal || finalValorTotal <= 0) {
+          var linesText = cleanedText.split(/\r?\n/)
+          for (var lnIdx = 0; lnIdx < linesText.length; lnIdx++) {
+            var lineStr = linesText[lnIdx]
+            if (/TOTAL/i.test(lineStr)) {
+              var mLineMoney = lineStr.match(/(?:R\$\s*)?(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})/g)
+              if (mLineMoney && mLineMoney.length > 0) {
+                // pegar o último valor monetário da linha com TOTAL
+                var candVal = parseNum(mLineMoney[mLineMoney.length - 1])
+                if (candVal > 0) {
+                  finalValorTotal = candVal
+                  extractionMethod.valores = 'fallback_regex_line_total'
+                  break
+                }
+              }
+            }
+          }
+        }
+
+        // Fallback 3: Se ainda não encontrar, definir como null (NUNCA 0) e adicionar aviso
+        if (!finalValorTotal || finalValorTotal <= 0) {
+          finalValorTotal = null
+          warnings.push('Valor total nao encontrado. Preencha manualmente.')
+        }
+      }
+
       // Validação final de campos
       if (!numeroNf || numeroNf.length < 3) {
         warnings.push('Numero da NF nao identificado com seguranca (minimo 3 digitos).')
@@ -1101,8 +1152,10 @@ routerAdd(
       ) {
         warnings.push('Nome do destinatario requer revisao manual.')
       }
-      if (valorTotalNota <= 0) {
-        warnings.push('Valor total da nota fiscal e zero ou nao identificado.')
+      if (finalValorTotal === null) {
+        if (warnings.indexOf('Valor total nao encontrado. Preencha manualmente.') === -1) {
+          warnings.push('Valor total nao encontrado. Preencha manualmente.')
+        }
       }
       if (itens.length === 0) {
         warnings.push('Nenhum item de produto identificado na NF.')
@@ -1115,8 +1168,8 @@ routerAdd(
           produto_cfop: '6102',
           produto_unidade: 'KG',
           produto_quantidade: 1,
-          produto_valor_unitario: valorTotalNota,
-          produto_valor_total: valorTotalNota,
+          produto_valor_unitario: finalValorTotal || 0,
+          produto_valor_total: finalValorTotal || 0,
           bc_icms: 0,
           valor_icms: 0,
           aliq_icms: 0,
@@ -1162,8 +1215,9 @@ routerAdd(
         chave_acesso: chaveAcesso,
         natureza_operacao: (aiData && aiData.natureza_operacao) || 'Venda Mercadoria',
         protocolo_autorizacao: (aiData && aiData.protocolo_autorizacao) || '',
-        valor_total_nota: valorTotalNota,
-        valor_total_produtos: valorTotalProdutos,
+        valor_total_nota: finalValorTotal,
+        valor_total_produtos: valorTotalProdutos > 0 ? valorTotalProdutos : finalValorTotal,
+        raw_text: cleanedText,
         valor_aproximado_tributos: aiData ? parseNum(aiData.valor_aproximado_tributos) : 0,
 
         // Bloco B — Destinatário
@@ -1260,7 +1314,7 @@ routerAdd(
           (aiData && aiData.fatura_valor != null ? parseNum(aiData.fatura_valor) : 0) ||
           (cleanedText.match(/Vcto:[^\n\r]+R\$:\s*([\d\.,]+)/i)
             ? parseNum((cleanedText.match(/Vcto:[^\n\r]+R\$:\s*([\d\.,]+)/i) || ['', '0'])[1])
-            : valorTotalNota),
+            : (finalValorTotal || 0)),
         ordem_compra:
           (aiData && aiData.ordem_compra) ||
           (cleanedText.match(/ORDEM DE COMPRA\s+([A-Za-z0-9]+)/i)

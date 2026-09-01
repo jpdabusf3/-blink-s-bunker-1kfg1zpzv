@@ -117,6 +117,8 @@ export function UploadNF() {
       extracted.gestor_tecnico_id &&
       extracted.vendedor_id &&
       extracted.numero_nf &&
+      extracted.valor_total_nota !== null &&
+      extracted.valor_total_nota !== undefined &&
       extracted.valor_total_nota > 0
     )
   }, [extracted])
@@ -172,7 +174,8 @@ export function UploadNF() {
       }
     } catch (err: unknown) {
       const msg =
-        (err instanceof Error ? err.message : '') || 'Erro ao gravar dados da nota fiscal.'
+        (err instanceof Error ? err.message : '') ||
+        'Erro ao gravar no banco de dados. Verifique os dados e tente novamente.'
       toast({
         title: 'Erro ao salvar rascunho',
         description: msg,
@@ -846,21 +849,45 @@ export function UploadNF() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Valor Total da Nota</Label>
+                    <Label className="text-xs flex items-center justify-between">
+                      <span>
+                        {extracted.valor_total_nota === null || extracted.valor_total_nota === undefined
+                          ? 'Valor Total (preencher manualmente)'
+                          : 'Valor Total da Nota'}
+                      </span>
+                      {(extracted.valor_total_nota === null || extracted.valor_total_nota === undefined) && (
+                        <span className="text-destructive font-bold text-xs">*</span>
+                      )}
+                    </Label>
                     <div className="relative">
                       <Input
                         type="number"
                         step="0.01"
-                        value={extracted.valor_total_nota ?? ''}
-                        onChange={(e) =>
-                          updateExtractedData(activeFile.id, {
-                            valor_total_nota: parseFloat(e.target.value) || 0,
-                          })
+                        placeholder="Informe o valor total da NF"
+                        className={
+                          extracted.valor_total_nota === null || extracted.valor_total_nota === undefined
+                            ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/30 dark:bg-amber-950/20'
+                            : ''
                         }
+                        value={extracted.valor_total_nota ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value.trim()
+                          const parsedVal = val === '' ? null : parseFloat(val)
+                          updateExtractedData(activeFile.id, {
+                            valor_total_nota: isNaN(parsedVal as number) ? null : parsedVal,
+                          })
+                        }}
                       />
-                      <span className="text-[11px] text-muted-foreground block mt-0.5">
-                        {formatCurrency(extracted.valor_total_nota || 0)}
-                      </span>
+                      {extracted.valor_total_nota === null || extracted.valor_total_nota === undefined ? (
+                        <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium block mt-1 flex items-center gap-1">
+                          <AlertTriangle className="w-3.5 h-3.5 inline shrink-0" />
+                          O valor total nao foi extraido automaticamente. Preencha manualmente.
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-muted-foreground block mt-0.5">
+                          {formatCurrency(extracted.valor_total_nota || 0)}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-1.5">
@@ -1513,8 +1540,10 @@ export function UploadNF() {
                 <div className="flex items-center gap-3">
                   {!isCrmComplete && (
                     <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                      <AlertTriangle className="w-4 h-4" /> Preencha todos os campos do Bloco D para
-                      confirmar
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                      {extracted && (extracted.valor_total_nota === null || extracted.valor_total_nota === undefined || extracted.valor_total_nota <= 0)
+                        ? 'O valor total e obrigatorio para salvar a NF.'
+                        : 'Preencha todos os campos do Bloco D para confirmar'}
                     </span>
                   )}
                   <Button

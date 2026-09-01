@@ -180,6 +180,9 @@ export function useUploadNF(): UseUploadNFReturn {
         )
 
         const extracted = await nfService.callParseFunction(url, rawText || undefined)
+        if (rawText && !extracted.raw_text) {
+          extracted.raw_text = rawText
+        }
 
         // Step 3: Match Atribuicao if possible, or fallback to first available team members
         if (extracted.destinatario_nome) {
@@ -505,7 +508,7 @@ export function useUploadNF(): UseUploadNFReturn {
         console.error('Erro ao salvar nota fiscal:', saveErr)
         const errMsg =
           (saveErr instanceof Error ? saveErr.message : '') ||
-          'Erro ao gravar dados da nota fiscal.'
+          'Erro ao gravar no banco de dados. Verifique os dados e tente novamente.'
         setFiles((prev) =>
           prev.map((f) =>
             f.id === fileId

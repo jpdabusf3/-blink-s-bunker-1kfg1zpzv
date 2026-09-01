@@ -36,9 +36,11 @@ export interface ParsedNFData {
   data_emissao: string
   natureza_operacao?: string
   protocolo_autorizacao?: string
-  valor_total_nota: number
+  valor_total_nota: number | null
   valor_total_produtos?: number
   valor_aproximado_tributos?: number
+  raw_text?: string
+  warnings?: string[]
 
   // Bloco B — Destinatário
   destinatario_nome: string
@@ -204,6 +206,9 @@ export async function callParseFunction(pdfUrl: string, rawText?: string): Promi
         'Content-Type': 'application/json',
       },
     })
+    if (rawText && !res.raw_text) {
+      res.raw_text = rawText
+    }
     return res
   } catch (err: unknown) {
     console.error('Erro ao chamar parse-nf-pdf:', err)
@@ -313,6 +318,11 @@ export async function insertNF(
       canalVendasClean = 'Industria' as ParsedNFData['canal_vendas']
     }
 
+    const valTotalNotaNum =
+      data.valor_total_nota === null || data.valor_total_nota === undefined || isNaN(Number(data.valor_total_nota))
+        ? null
+        : Number(data.valor_total_nota)
+
     const payload: Record<string, string | number | null> = {
       numero_nf: String(data.numero_nf || '').trim(),
       serie: String(data.serie || '1'),
@@ -340,11 +350,12 @@ export async function insertNF(
       outras_despesas: isNaN(Number(data.outras_despesas)) ? 0 : Number(data.outras_despesas),
       valor_ipi: isNaN(Number(data.valor_ipi)) ? 0 : Number(data.valor_ipi),
       valor_total_produtos: isNaN(Number(data.valor_total_produtos))
-        ? isNaN(Number(data.valor_total_nota))
-          ? 0
-          : Number(data.valor_total_nota)
+        ? valTotalNotaNum !== null
+          ? valTotalNotaNum
+          : 0
         : Number(data.valor_total_produtos),
-      valor_total_nota: isNaN(Number(data.valor_total_nota)) ? 0 : Number(data.valor_total_nota),
+      valor_total_nota: valTotalNotaNum,
+      raw_text: data.raw_text || null,
       frete_modalidade: data.frete_modalidade === 'FOB' ? 'FOB' : 'CIF',
       volumes_quantidade: isNaN(Number(data.volumes_quantidade))
         ? 0
@@ -369,7 +380,7 @@ export async function insertNF(
     return record.id
   } catch (err: unknown) {
     console.error('Erro ao inserir nota fiscal:', err)
-    throw err
+    throw new Error('Erro ao gravar no banco de dados. Verifique os dados e tente novamente.')
   }
 }
 
