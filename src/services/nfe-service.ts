@@ -192,34 +192,39 @@ export async function extrairTextoPdf(file: File): Promise<string> {
         }).promise
       } catch (docErr) {
         // Fallback: tentar com disableFontFace e sem cMaps
-        doc = await pdfjs.getDocument({
-          data: arrayBuffer,
-          disableFontFace: true,
-        }).promise
+        try {
+          doc = await pdfjs.getDocument({
+            data: arrayBuffer,
+            disableFontFace: true,
+          }).promise
+        } catch (docErr2) {
+          console.warn('Falha no getDocument pdfjs:', docErr2)
+        }
       }
 
-      const pages: string[] = []
-      for (let i = 1; i <= doc.numPages; i++) {
-        const page = await doc.getPage(i)
-        const content = await page.getTextContent()
-        const text = content.items
-          .map((item: any) => (typeof item.str === 'string' ? item.str : ''))
-          .join(' ')
-        pages.push(text)
-      }
-      const fullText = pages.join('\n')
-      if (fullText.trim().length >= 50) {
-        extractionMethod = `pdfjs-dist (${doc.numPages} paginas)`
-        console.log(
-          `extrairTextoPdf: extraídos ${fullText.length} caracteres via ${extractionMethod}`,
-        )
-        return fullText
+      if (doc && doc.numPages) {
+        const pages: string[] = []
+        for (let i = 1; i <= doc.numPages; i++) {
+          const page = await doc.getPage(i)
+          const content = await page.getTextContent()
+          const text = content.items
+            .map((item: any) => (typeof item.str === 'string' ? item.str : ''))
+            .join(' ')
+          pages.push(text)
+        }
+        const fullText = pages.join('\n')
+        if (fullText.trim().length >= 20) {
+          extractionMethod = `pdfjs-dist (${doc.numPages} paginas)`
+          console.log(
+            `extrairTextoPdf: extraídos ${fullText.length} caracteres via ${extractionMethod}`,
+          )
+          return fullText
+        }
       }
     }
   } catch (err) {
     console.warn('pdfjs-dist falhou, tentando fallback binario direto:', err)
   }
-
   // Tentativa 2: Extração binária de strings PDF nativas
   try {
     const buffer = await file.arrayBuffer()

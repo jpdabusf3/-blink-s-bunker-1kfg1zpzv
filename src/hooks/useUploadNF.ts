@@ -122,10 +122,12 @@ export function useUploadNF(): UseUploadNFReturn {
         let rawText = ''
         try {
           rawText = await extrairTextoPdf(item.file)
+          console.log(
+            `[useUploadNF] rawText obtido para ${item.file.name}: ${rawText.length} caracteres`,
+          )
         } catch (extractErr) {
           console.warn('Erro na extração local de texto do PDF:', extractErr)
         }
-
         // FIX 7.1: Se o texto for muito grande (acima de 50.000 caracteres), registre warning mas envie completo
         if (rawText && rawText.length > 50000) {
           console.warn(
@@ -171,7 +173,7 @@ export function useUploadNF(): UseUploadNFReturn {
           ),
         )
 
-        const extracted = await nfService.callParseFunction(url, rawText)
+        const extracted = await nfService.callParseFunction(url, rawText || undefined)
 
         // Step 3: Match Atribuicao if possible, or fallback to first available team members
         if (extracted.destinatario_nome) {
