@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-28T18:58:23.201Z",
+  "generatedAt": "2026-09-01T15:05:03.235Z",
   "collections": [
     {
       "name": "users",
@@ -2139,6 +2139,640 @@
         "CREATE INDEX idx_layout_versions_created ON layout_versions (created DESC)",
         "CREATE UNIQUE INDEX idx_layout_versions_active_user_page ON layout_versions (user, page_name) WHERE is_active = 1"
       ]
+    },
+    {
+      "name": "produtos",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "codigo",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "nome",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "linha",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "unidade_medida",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "preco_base",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "especie_padrao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ativo",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_produtos_codigo ON produtos (codigo)",
+        "CREATE INDEX idx_produtos_nome ON produtos (nome)",
+        "CREATE INDEX idx_produtos_linha ON produtos (linha)"
+      ]
+    },
+    {
+      "name": "nfe_pedidos",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "numero_nf",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "serie_nf",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "chave_acesso",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_emissao",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "emitente_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "emitente_cnpj",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cliente_nome",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "cliente_cnpj",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cliente_endereco",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cliente_cidade",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cliente_uf",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "factory_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "factories"
+        },
+        {
+          "name": "especie",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "BOVINO",
+            "SUINO",
+            "AVE",
+            "PET",
+            "AQUA",
+            "OUTRO",
+            "RUMINANTES",
+            "AVES",
+            "PETS",
+            "SUINOS"
+          ]
+        },
+        {
+          "name": "canal_vendas",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Direto",
+            "Distribuidor",
+            "Indústria",
+            "Premixera",
+            "Cooperativa",
+            "Online"
+          ]
+        },
+        {
+          "name": "gestor_tecnico_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "gestao_tecnica"
+        },
+        {
+          "name": "vendedor_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "gestao_tecnica"
+        },
+        {
+          "name": "itens",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_produtos",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "frete_modalidade",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "frete_valor",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "frete_percentual",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "impostos_icms_base",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "impostos_icms_aliquota",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "impostos_icms_valor",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "impostos_pis_aliquota",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "impostos_pis_valor",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "impostos_cofins_aliquota",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "impostos_cofins_valor",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "impostos_ipi_valor",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "impostos_total",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_total",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "pendente",
+            "pendencia_produto",
+            "aprovado",
+            "rejeitado",
+            "duplicada_ignorada"
+          ]
+        },
+        {
+          "name": "motivo_pendencia",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "aprovado_por",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "aprovado_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "arquivo_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "raw_text",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "observacoes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "natureza_operacao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "protocolo_autorizacao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_entrada_saida",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "hora_saida",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "emitente_inscricao_estadual",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "emitente_endereco",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cliente_bairro_distrito",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cliente_cep",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cliente_inscricao_estadual",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cliente_fone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "impostos_icms_st_base",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "impostos_icms_st_valor",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_seguro",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "desconto",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "outras_despesas",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_aproximado_tributos",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "fatura_numero",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "fatura_vencimento",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "fatura_valor",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "volumes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "peso_bruto",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "peso_liquido",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ordem_compra",
+          "type": "text",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_nfe_pedidos_numero ON nfe_pedidos (numero_nf)",
+        "CREATE INDEX idx_nfe_pedidos_status ON nfe_pedidos (status)",
+        "CREATE INDEX idx_nfe_pedidos_data ON nfe_pedidos (data_emissao DESC)",
+        "CREATE INDEX idx_nfe_pedidos_cliente ON nfe_pedidos (cliente_nome)"
+      ]
+    },
+    {
+      "name": "equipe",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && (user_id = '' || user_id = @request.auth.id)",
+        "view": "@request.auth.id != '' && (user_id = '' || user_id = @request.auth.id)",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != '' && (user_id = '' || user_id = @request.auth.id)",
+        "delete": "@request.auth.id != '' && (user_id = '' || user_id = @request.auth.id)"
+      },
+      "fields": [
+        {
+          "name": "nome",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "cargo",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["Gestor Tecnico", "Vendedor"]
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "regiao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ativo",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "user_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_equipe_user_id ON equipe (user_id)",
+        "CREATE INDEX idx_equipe_cargo ON equipe (cargo)"
+      ]
+    },
+    {
+      "name": "atribuicao_clientes",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && (user_id = '' || user_id = @request.auth.id)",
+        "view": "@request.auth.id != '' && (user_id = '' || user_id = @request.auth.id)",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != '' && (user_id = '' || user_id = @request.auth.id)",
+        "delete": "@request.auth.id != '' && (user_id = '' || user_id = @request.auth.id)"
+      },
+      "fields": [
+        {
+          "name": "cliente_nome",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "gestor_tecnico_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "equipe"
+        },
+        {
+          "name": "vendedor_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "equipe"
+        },
+        {
+          "name": "observacoes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "user_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_atribuicao_clientes_user_id ON atribuicao_clientes (user_id)"]
     }
   ]
 }
