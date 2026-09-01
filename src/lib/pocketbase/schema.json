@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-01T15:05:03.235Z",
+  "generatedAt": "2026-09-01T15:30:49.836Z",
   "collections": [
     {
       "name": "users",
@@ -2773,6 +2773,321 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_atribuicao_clientes_user_id ON atribuicao_clientes (user_id)"]
+    },
+    {
+      "name": "matriz_fiscal",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "estado",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["Parana", "Outros Estados"]
+        },
+        {
+          "name": "especie",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["PET", "AVES", "SUINOS", "RUMINANTES", "DISTRIBUICAO"]
+        },
+        {
+          "name": "aliquota_icms",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "aliquota_pis",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "aliquota_cofins",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "frete_fob_percent",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "frete_cif_percent",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_matriz_fiscal_estado ON matriz_fiscal (estado)",
+        "CREATE INDEX idx_matriz_fiscal_especie ON matriz_fiscal (especie)",
+        "CREATE INDEX idx_matriz_fiscal_estado_especie ON matriz_fiscal (estado, especie)"
+      ]
+    },
+    {
+      "name": "pedidos",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "cliente_nome",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "cliente_email",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "cliente_documento",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cliente_endereco",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "solicitante",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "gestor_tecnico_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "equipe"
+        },
+        {
+          "name": "vendedor_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "equipe"
+        },
+        {
+          "name": "produto_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "produtos"
+        },
+        {
+          "name": "produto_codigo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "produto_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "produto_linha",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "quantidade",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "preco_liquido",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "desconto_percent",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "estado",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "especie",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "modalidade_frete",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "frete_percentual",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "frete_valor",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "aliquota_icms",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "aliquota_pis",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "aliquota_cofins",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "impostos_adicionais",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "canal_vendas",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "especie_destino",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "observacoes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "preco_base",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "icms_valor",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "pis_valor",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cofins_valor",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "preco_fob",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "preco_cif",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_geral",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "user_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_pedidos_cliente ON pedidos (cliente_nome)",
+        "CREATE INDEX idx_pedidos_created ON pedidos (created DESC)"
+      ]
     }
   ]
 }
