@@ -133,11 +133,15 @@ export interface ProdutoCatalogo {
   id: string
   codigo: string
   nome: string
+  nome_curto?: string
+  familia?: string
   linha?: string
+  especie_destino?: string
   unidade_medida?: string
   preco_base?: number
   especie_padrao?: string
   ativo: boolean
+  user_id?: string
   created: string
   updated: string
 }
