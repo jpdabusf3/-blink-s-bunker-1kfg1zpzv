@@ -298,9 +298,9 @@ export async function insertNF(
     const payload: Record<string, any> = {
       numero_nf: String(data.numero_nf || '').trim(),
       serie: String(data.serie || '1'),
-      chave_acesso: String(data.chave_acesso || ''),
+      chave_acesso: String(data.chave_acesso || '').replace(/\s+/g, ''),
       data_emissao: formattedDate,
-      natureza_operacao: String(data.natureza_operacao || 'Venda Mercadoria'),
+      natureza_operacao: String(data.natureza_operacao || 'S-Venda Mercadoria'),
       protocolo_autorizacao: String(data.protocolo_autorizacao || ''),
       destinatario_nome: String(data.destinatario_nome || '').trim(),
       destinatario_cnpj: String(data.destinatario_cnpj || ''),
@@ -313,23 +313,31 @@ export async function insertNF(
       destinatario_fone: String(data.destinatario_fone || ''),
       fatura_numero: String(data.fatura_numero || ''),
       fatura_vencimento: faturaVenc || null,
-      fatura_valor: Number(data.fatura_valor) || 0,
-      bc_icms: Number(data.bc_icms) || 0,
-      valor_icms: Number(data.valor_icms) || 0,
-      valor_frete: Number(data.valor_frete) || 0,
-      valor_seguro: Number(data.valor_seguro) || 0,
-      desconto: Number(data.desconto) || 0,
-      outras_despesas: Number(data.outras_despesas) || 0,
-      valor_ipi: Number(data.valor_ipi) || 0,
-      valor_total_produtos: Number(data.valor_total_produtos) || Number(data.valor_total_nota) || 0,
-      valor_total_nota: Number(data.valor_total_nota) || 0,
+      fatura_valor: isNaN(Number(data.fatura_valor)) ? 0 : Number(data.fatura_valor),
+      bc_icms: isNaN(Number(data.bc_icms)) ? 0 : Number(data.bc_icms),
+      valor_icms: isNaN(Number(data.valor_icms)) ? 0 : Number(data.valor_icms),
+      valor_frete: isNaN(Number(data.valor_frete)) ? 0 : Number(data.valor_frete),
+      valor_seguro: isNaN(Number(data.valor_seguro)) ? 0 : Number(data.valor_seguro),
+      desconto: isNaN(Number(data.desconto)) ? 0 : Number(data.desconto),
+      outras_despesas: isNaN(Number(data.outras_despesas)) ? 0 : Number(data.outras_despesas),
+      valor_ipi: isNaN(Number(data.valor_ipi)) ? 0 : Number(data.valor_ipi),
+      valor_total_produtos: isNaN(Number(data.valor_total_produtos))
+        ? isNaN(Number(data.valor_total_nota))
+          ? 0
+          : Number(data.valor_total_nota)
+        : Number(data.valor_total_produtos),
+      valor_total_nota: isNaN(Number(data.valor_total_nota)) ? 0 : Number(data.valor_total_nota),
       frete_modalidade: data.frete_modalidade === 'FOB' ? 'FOB' : 'CIF',
-      volumes_quantidade: Number(data.volumes_quantidade) || 0,
-      volumes_especie: String(data.volumes_especie || ''),
-      peso_bruto: Number(data.peso_bruto) || 0,
-      peso_liquido: Number(data.peso_liquido) || 0,
+      volumes_quantidade: isNaN(Number(data.volumes_quantidade))
+        ? 0
+        : Number(data.volumes_quantidade),
+      volumes_especie: String(data.volumes_especie || 'Paletes'),
+      peso_bruto: isNaN(Number(data.peso_bruto)) ? 0 : Number(data.peso_bruto),
+      peso_liquido: isNaN(Number(data.peso_liquido)) ? 0 : Number(data.peso_liquido),
       ordem_compra: String(data.ordem_compra || ''),
-      valor_aproximado_tributos: Number(data.valor_aproximado_tributos) || 0,
+      valor_aproximado_tributos: isNaN(Number(data.valor_aproximado_tributos))
+        ? 0
+        : Number(data.valor_aproximado_tributos),
       especie_destino: data.especie_destino || null,
       canal_vendas: data.canal_vendas || null,
       gestor_tecnico_id: data.gestor_tecnico_id || null,
@@ -358,22 +366,32 @@ export async function insertItens(
   const insertedItens: Array<{ id: string; produto_codigo: string; lotes?: any[] }> = []
 
   for (const item of itens) {
+    const qtd = isNaN(Number(item.produto_quantidade)) ? 1 : Number(item.produto_quantidade)
+    const unit = isNaN(Number(item.produto_valor_unitario))
+      ? 0
+      : Number(item.produto_valor_unitario)
+    const tot = isNaN(Number(item.produto_valor_total))
+      ? qtd * unit
+      : Number(item.produto_valor_total)
+
     const payload = {
       nota_fiscal_id: nfId,
-      produto_codigo: String(item.produto_codigo || 'ND'),
-      produto_descricao: String(item.produto_descricao || ''),
-      produto_ncm: String(item.produto_ncm || ''),
-      produto_cst: String(item.produto_cst || ''),
-      produto_cfop: String(item.produto_cfop || ''),
-      produto_unidade: String(item.produto_unidade || 'KG'),
-      produto_quantidade: Number(item.produto_quantidade) || 1,
-      produto_valor_unitario: Number(item.produto_valor_unitario) || 0,
-      produto_valor_total: Number(item.produto_valor_total) || 0,
-      bc_icms: Number(item.bc_icms) || 0,
-      valor_icms: Number(item.valor_icms) || 0,
-      valor_ipi: Number(item.valor_ipi) || 0,
-      aliq_icms: Number(item.aliq_icms) || 0,
-      aliq_ipi: Number(item.aliq_ipi) || 0,
+      produto_codigo: String(item.produto_codigo || 'ND').trim(),
+      produto_descricao: String(item.produto_descricao || '').trim(),
+      produto_ncm: String(item.produto_ncm || '2309.90.90').trim(),
+      produto_cst: String(item.produto_cst || '140').trim(),
+      produto_cfop: String(item.produto_cfop || '5102').trim(),
+      produto_unidade: String(item.produto_unidade || 'KG')
+        .trim()
+        .toUpperCase(),
+      produto_quantidade: qtd,
+      produto_valor_unitario: unit,
+      produto_valor_total: tot,
+      bc_icms: isNaN(Number(item.bc_icms)) ? 0 : Number(item.bc_icms),
+      valor_icms: isNaN(Number(item.valor_icms)) ? 0 : Number(item.valor_icms),
+      valor_ipi: isNaN(Number(item.valor_ipi)) ? 0 : Number(item.valor_ipi),
+      aliq_icms: isNaN(Number(item.aliq_icms)) ? 0 : Number(item.aliq_icms),
+      aliq_ipi: isNaN(Number(item.aliq_ipi)) ? 0 : Number(item.aliq_ipi),
       user_id: currentUserId,
     }
 
@@ -400,12 +418,13 @@ export async function insertLotes(
   if (!lotes || lotes.length === 0) return
 
   for (const lot of lotes) {
-    if (!lot.lote_codigo) continue
+    if (!lot.lote_codigo || !String(lot.lote_codigo).trim()) continue
+    const lotQtd = isNaN(Number(lot.lote_quantidade)) ? 0 : Number(lot.lote_quantidade)
     await pb.collection('nf_lotes').create({
       nota_fiscal_id: nfId,
       nf_item_id: itemId,
-      lote_codigo: String(lot.lote_codigo),
-      lote_quantidade: Number(lot.lote_quantidade) || 0,
+      lote_codigo: String(lot.lote_codigo).trim(),
+      lote_quantidade: lotQtd,
       user_id: currentUserId,
     })
   }

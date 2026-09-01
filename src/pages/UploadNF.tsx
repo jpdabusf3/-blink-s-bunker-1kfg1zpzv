@@ -832,44 +832,59 @@ export default function UploadNF() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Valor Total da Nota (R$)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={extracted.valor_total_nota || ''}
-                      onChange={(e) =>
-                        updateExtractedData(activeFile.id, {
-                          valor_total_nota: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                    />
+                    <Label className="text-xs">Valor Total da Nota</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={extracted.valor_total_nota ?? ''}
+                        onChange={(e) =>
+                          updateExtractedData(activeFile.id, {
+                            valor_total_nota: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                      />
+                      <span className="text-[11px] text-muted-foreground block mt-0.5">
+                        {formatCurrency(extracted.valor_total_nota || 0)}
+                      </span>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Valor Total dos Produtos (R$)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={extracted.valor_total_produtos || ''}
-                      onChange={(e) =>
-                        updateExtractedData(activeFile.id, {
-                          valor_total_produtos: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                    />
+                    <Label className="text-xs">Valor Total dos Produtos</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={extracted.valor_total_produtos ?? ''}
+                        onChange={(e) =>
+                          updateExtractedData(activeFile.id, {
+                            valor_total_produtos: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                      />
+                      <span className="text-[11px] text-muted-foreground block mt-0.5">
+                        {formatCurrency(extracted.valor_total_produtos || 0)}
+                      </span>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Aproximado Tributos (R$)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={extracted.valor_aproximado_tributos || ''}
-                      onChange={(e) =>
-                        updateExtractedData(activeFile.id, {
-                          valor_aproximado_tributos: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                    />
-                  </div>
+                    <Label className="text-xs">Aproximado Tributos</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={extracted.valor_aproximado_tributos ?? ''}
+                        onChange={(e) =>
+                          updateExtractedData(activeFile.id, {
+                            valor_aproximado_tributos: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                      />
+                      <span className="text-[11px] text-muted-foreground block mt-0.5">
+                        {formatCurrency(extracted.valor_aproximado_tributos || 0)}
+                      </span>
+                    </div>
+                  </div>{' '}
                   <div className="space-y-1.5">
                     <Label className="text-xs">Protocolo de Autorização</Label>
                     <Input
@@ -991,95 +1006,130 @@ export default function UploadNF() {
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Base de Cálculo ICMS (R$)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={extracted.bc_icms || ''}
-                      onChange={(e) =>
-                        updateExtractedData(activeFile.id, {
-                          bc_icms: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                    />
+                    <Label className="text-xs">Base de Cálculo ICMS</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={extracted.bc_icms ?? ''}
+                        onChange={(e) =>
+                          updateExtractedData(activeFile.id, {
+                            bc_icms: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                      />
+                      <span className="text-[11px] text-muted-foreground block mt-0.5">
+                        {formatCurrency(extracted.bc_icms || 0)}
+                      </span>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Valor ICMS (R$)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={extracted.valor_icms || ''}
-                      onChange={(e) =>
-                        updateExtractedData(activeFile.id, {
-                          valor_icms: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                    />
+                    <Label className="text-xs">Valor ICMS</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={extracted.valor_icms ?? ''}
+                        onChange={(e) =>
+                          updateExtractedData(activeFile.id, {
+                            valor_icms: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                      />
+                      <span className="text-[11px] text-muted-foreground block mt-0.5">
+                        {formatCurrency(extracted.valor_icms || 0)}
+                      </span>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Valor Frete (R$)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={extracted.valor_frete || ''}
-                      onChange={(e) =>
-                        updateExtractedData(activeFile.id, {
-                          valor_frete: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                    />
+                    <Label className="text-xs">Valor Frete</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={extracted.valor_frete ?? ''}
+                        onChange={(e) =>
+                          updateExtractedData(activeFile.id, {
+                            valor_frete: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                      />
+                      <span className="text-[11px] text-muted-foreground block mt-0.5">
+                        {formatCurrency(extracted.valor_frete || 0)}
+                      </span>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Valor Seguro (R$)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={extracted.valor_seguro || ''}
-                      onChange={(e) =>
-                        updateExtractedData(activeFile.id, {
-                          valor_seguro: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                    />
+                    <Label className="text-xs">Valor Seguro</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={extracted.valor_seguro ?? ''}
+                        onChange={(e) =>
+                          updateExtractedData(activeFile.id, {
+                            valor_seguro: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                      />
+                      <span className="text-[11px] text-muted-foreground block mt-0.5">
+                        {formatCurrency(extracted.valor_seguro || 0)}
+                      </span>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Desconto (R$)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={extracted.desconto || ''}
-                      onChange={(e) =>
-                        updateExtractedData(activeFile.id, {
-                          desconto: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                    />
+                    <Label className="text-xs">Desconto</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={extracted.desconto ?? ''}
+                        onChange={(e) =>
+                          updateExtractedData(activeFile.id, {
+                            desconto: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                      />
+                      <span className="text-[11px] text-muted-foreground block mt-0.5">
+                        {formatCurrency(extracted.desconto || 0)}
+                      </span>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Outras Despesas (R$)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={extracted.outras_despesas || ''}
-                      onChange={(e) =>
-                        updateExtractedData(activeFile.id, {
-                          outras_despesas: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                    />
+                    <Label className="text-xs">Outras Despesas</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={extracted.outras_despesas ?? ''}
+                        onChange={(e) =>
+                          updateExtractedData(activeFile.id, {
+                            outras_despesas: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                      />
+                      <span className="text-[11px] text-muted-foreground block mt-0.5">
+                        {formatCurrency(extracted.outras_despesas || 0)}
+                      </span>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Valor IPI (R$)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={extracted.valor_ipi || ''}
-                      onChange={(e) =>
-                        updateExtractedData(activeFile.id, {
-                          valor_ipi: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                    />
+                    <Label className="text-xs">Valor IPI</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={extracted.valor_ipi ?? ''}
+                        onChange={(e) =>
+                          updateExtractedData(activeFile.id, {
+                            valor_ipi: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                      />
+                      <span className="text-[11px] text-muted-foreground block mt-0.5">
+                        {formatCurrency(extracted.valor_ipi || 0)}
+                      </span>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Modalidade do Frete</Label>
@@ -1102,7 +1152,7 @@ export default function UploadNF() {
                     <Label className="text-xs">Qtd Volumes</Label>
                     <Input
                       type="number"
-                      value={extracted.volumes_quantidade || ''}
+                      value={extracted.volumes_quantidade ?? ''}
                       onChange={(e) =>
                         updateExtractedData(activeFile.id, {
                           volumes_quantidade: parseFloat(e.target.value) || 0,
@@ -1124,7 +1174,7 @@ export default function UploadNF() {
                     <Input
                       type="number"
                       step="0.01"
-                      value={extracted.peso_bruto || ''}
+                      value={extracted.peso_bruto ?? ''}
                       onChange={(e) =>
                         updateExtractedData(activeFile.id, {
                           peso_bruto: parseFloat(e.target.value) || 0,
@@ -1137,7 +1187,7 @@ export default function UploadNF() {
                     <Input
                       type="number"
                       step="0.01"
-                      value={extracted.peso_liquido || ''}
+                      value={extracted.peso_liquido ?? ''}
                       onChange={(e) =>
                         updateExtractedData(activeFile.id, {
                           peso_liquido: parseFloat(e.target.value) || 0,
@@ -1165,17 +1215,22 @@ export default function UploadNF() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Valor Fatura (R$)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={extracted.fatura_valor || ''}
-                      onChange={(e) =>
-                        updateExtractedData(activeFile.id, {
-                          fatura_valor: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                    />
+                    <Label className="text-xs">Valor Fatura</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={extracted.fatura_valor ?? ''}
+                        onChange={(e) =>
+                          updateExtractedData(activeFile.id, {
+                            fatura_valor: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                      />
+                      <span className="text-[11px] text-muted-foreground block mt-0.5">
+                        {formatCurrency(extracted.fatura_valor || 0)}
+                      </span>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Ordem de Compra</Label>
@@ -1331,14 +1386,19 @@ export default function UploadNF() {
                                   />
                                 </TableCell>
                                 <TableCell className="text-right font-medium text-xs">
-                                  {formatCurrency(it.produto_valor_total || 0)}
+                                  <div>
+                                    <span>{formatCurrency(it.produto_valor_total || 0)}</span>
+                                    <span className="text-[10px] text-muted-foreground block">
+                                      Unit: {formatCurrency(it.produto_valor_unitario || 0)}
+                                    </span>
+                                  </div>
                                 </TableCell>
                                 <TableCell>
                                   <Input
                                     type="number"
                                     step="0.01"
                                     className="h-8 text-xs text-right"
-                                    value={it.bc_icms || ''}
+                                    value={it.bc_icms ?? ''}
                                     onChange={(e) =>
                                       handleItemChange(idx, 'bc_icms', Number(e.target.value) || 0)
                                     }
@@ -1349,7 +1409,7 @@ export default function UploadNF() {
                                     type="number"
                                     step="0.01"
                                     className="h-8 text-xs text-right"
-                                    value={it.valor_icms || ''}
+                                    value={it.valor_icms ?? ''}
                                     onChange={(e) =>
                                       handleItemChange(
                                         idx,
@@ -1364,7 +1424,7 @@ export default function UploadNF() {
                                     type="number"
                                     step="0.01"
                                     className="h-8 text-xs text-right"
-                                    value={it.aliq_icms || ''}
+                                    value={it.aliq_icms ?? ''}
                                     onChange={(e) =>
                                       handleItemChange(
                                         idx,

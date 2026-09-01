@@ -192,19 +192,26 @@ export async function extrairTextoPdf(file: File): Promise<string> {
     console.warn('pdfjs-dist fallback triggered:', err)
   }
 
-  const buffer = await file.arrayBuffer()
-  const bytes = new Uint8Array(buffer)
-  let raw = ''
-  for (let i = 0; i < bytes.length; i++) {
-    const c = bytes[i]
-    if ((c >= 32 && c <= 126) || c === 10 || c === 13 || c === 9) {
-      raw += String.fromCharCode(c)
+  try {
+    const buffer = await file.arrayBuffer()
+    const bytes = new Uint8Array(buffer)
+    let raw = ''
+    for (let i = 0; i < bytes.length; i++) {
+      const c = bytes[i]
+      if ((c >= 32 && c <= 126) || c === 10 || c === 13 || c === 9) {
+        raw += String.fromCharCode(c)
+      }
     }
-  }
 
-  const matches = raw.match(/\(([^()]{2,})\)/g) || []
-  const textStream = matches.map((m) => m.slice(1, -1)).join(' ')
-  return textStream || raw.substring(0, 5000)
+    const matches = raw.match(/\(([^()]{2,})\)/g) || []
+    if (matches.length > 5) {
+      const textStream = matches.map((m) => m.slice(1, -1)).join(' ')
+      if (textStream.trim().length > 30) return textStream
+    }
+    return raw.substring(0, 16000)
+  } catch {
+    return ''
+  }
 }
 
 export async function processarNfePdfs(

@@ -106,92 +106,109 @@ export function useUploadNF(): UseUploadNFReturn {
   }, [])
 
   // Process a single file pipeline
-  const processPipeline = useCallback(async (item: UploadFileItem) => {
-    try {
-      // Step 1: Uploading
-      setFiles((prev) =>
-        prev.map((f) =>
-          f.id === item.id
-            ? { ...f, status: 'uploading', progress: 25, errorMessage: undefined }
-            : f,
-        ),
-      )
-
-      // Read text in browser first as fallback / companion
-      let rawText = ''
+  const processPipeline = useCallback(
+    async (item: UploadFileItem) => {
       try {
-        rawText = await extrairTextoPdf(item.file)
-      } catch {
-        /* intentionally ignored */
-      }
+        // Step 1: Uploading
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === item.id
+              ? { ...f, status: 'uploading', progress: 25, errorMessage: undefined }
+              : f,
+          ),
+        )
 
-      setFiles((prev) => prev.map((f) => (f.id === item.id ? { ...f, progress: 45 } : f)))
+        // Read text in browser first as fallback / companion
+        let rawText = ''
+        try {
+          rawText = await extrairTextoPdf(item.file)
+        } catch {
+          /* intentionally ignored */
+        }
 
-      const { url, fileRecordId } = await nfService.uploadToStorage(item.file)
+        setFiles((prev) => prev.map((f) => (f.id === item.id ? { ...f, progress: 45 } : f)))
 
-      // Step 2: Parsing
-      setFiles((prev) =>
-        prev.map((f) =>
-          f.id === item.id
-            ? {
-                ...f,
-                status: 'parsing',
-                progress: 75,
-                pdfUrl: url,
-                fileRecordId,
-              }
-            : f,
-        ),
-      )
+        const { url, fileRecordId } = await nfService.uploadToStorage(item.file)
 
-      const extracted = await nfService.callParseFunction(url, rawText)
+        // Step 2: Parsing
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === item.id
+              ? {
+                  ...f,
+                  status: 'parsing',
+                  progress: 75,
+                  pdfUrl: url,
+                  fileRecordId,
+                }
+              : f,
+          ),
+        )
 
-      // Step 3: Match Atribuicao if possible
-      if (extracted.destinatario_nome) {
-        const match = await nfService.getAtribuicao(extracted.destinatario_nome)
-        if (match) {
-          if (match.gestor_tecnico_id && !extracted.gestor_tecnico_id) {
-            extracted.gestor_tecnico_id = match.gestor_tecnico_id
-          }
-          if (match.vendedor_id && !extracted.vendedor_id) {
-            extracted.vendedor_id = match.vendedor_id
+        const extracted = await nfService.callParseFunction(url, rawText)
+
+        // Step 3: Match Atribuicao if possible, or fallback to first available team members
+        if (extracted.destinatario_nome) {
+          const match = await nfService.getAtribuicao(extracted.destinatario_nome)
+          if (match) {
+            if (match.gestor_tecnico_id && !extracted.gestor_tecnico_id) {
+              extracted.gestor_tecnico_id = match.gestor_tecnico_id
+            }
+            if (match.vendedor_id && !extracted.vendedor_id) {
+              extracted.vendedor_id = match.vendedor_id
+            }
           }
         }
+
+        // Auto-assign default gestor / vendedor / especie / canal if empty to ease UX
+        if (!extracted.gestor_tecnico_id && gestoresTecnicos.length > 0) {
+          extracted.gestor_tecnico_id = gestoresTecnicos[0].id
+        }
+        if (!extracted.vendedor_id && vendedores.length > 0) {
+          extracted.vendedor_id = vendedores[0].id
+        }
+        if (!extracted.especie_destino) {
+          extracted.especie_destino = 'RUMINANTES'
+        }
+        if (!extracted.canal_vendas) {
+          extracted.canal_vendas = 'Direto'
+        }
+
+        extracted.arquivo_pdf_url = url
+        extracted.file_record_id = fileRecordId
+
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === item.id
+              ? {
+                  ...f,
+                  status: 'ready',
+                  progress: 100,
+                  extractedData: extracted,
+                }
+              : f,
+          ),
+        )
+      } catch (err: any) {
+        console.error('Erro na pipeline do arquivo:', item.file.name, err)
+        const errMsg =
+          err?.message || 'Erro ao processar arquivo. Verifique se o arquivo e um DANFE valido.'
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === item.id
+              ? {
+                  ...f,
+                  status: 'error',
+                  progress: 100,
+                  errorMessage: errMsg,
+                }
+              : f,
+          ),
+        )
       }
-
-      extracted.arquivo_pdf_url = url
-      extracted.file_record_id = fileRecordId
-
-      setFiles((prev) =>
-        prev.map((f) =>
-          f.id === item.id
-            ? {
-                ...f,
-                status: 'ready',
-                progress: 100,
-                extractedData: extracted,
-              }
-            : f,
-        ),
-      )
-    } catch (err: any) {
-      console.error('Erro na pipeline do arquivo:', item.file.name, err)
-      const errMsg =
-        err?.message || 'Erro ao processar arquivo. Verifique se o arquivo e um DANFE valido.'
-      setFiles((prev) =>
-        prev.map((f) =>
-          f.id === item.id
-            ? {
-                ...f,
-                status: 'error',
-                progress: 100,
-                errorMessage: errMsg,
-              }
-            : f,
-        ),
-      )
-    }
-  }, [])
+    },
+    [gestoresTecnicos, vendedores],
+  )
 
   // Add files to batch
   const addFiles = useCallback(
