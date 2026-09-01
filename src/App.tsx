@@ -29,6 +29,7 @@ import ImportarClientes from './pages/ImportarClientes'
 import RelatorioAtividades from './pages/RelatorioAtividades'
 import PerformanceReport from './pages/PerformanceReport'
 import { SuperAdminRoute } from './components/SuperAdminRoute'
+import UploadNF from './pages/UploadNF'
 import { lazy, Suspense } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ThemeProvider } from './components/ThemeProvider'
@@ -36,7 +37,6 @@ import { ThemeProvider } from './components/ThemeProvider'
 const Historico = lazy(() => import('./pages/Historico'))
 const HistoricoFunil = lazy(() => import('./pages/HistoricoFunil'))
 const ConfiguracoesLayout = lazy(() => import('./pages/ConfiguracoesLayout'))
-const UploadNF = lazy(() => import('./pages/UploadNF'))
 
 function PageSkeleton() {
   return (
@@ -85,21 +85,7 @@ const App = () => (
                     <Route path="/funil-vendas" element={<FunilVendas />} />
                     <Route path="/swot" element={<SWOT />} />
                     <Route path="/matriz" element={<Matriz />} />
-                    <Route
-                      path="/upload-nf"
-                      element={
-                        <Suspense
-                          fallback={
-                            <div className="p-8">
-                              <div className="h-8 w-48 bg-muted animate-pulse rounded mb-4" />
-                              <div className="h-64 w-full bg-muted animate-pulse rounded" />
-                            </div>
-                          }
-                        >
-                          <UploadNF />
-                        </Suspense>
-                      }
-                    />
+                    <Route path="/upload-nf" element={<UploadNF />} />
                     <Route
                       path="/historico"
                       element={
