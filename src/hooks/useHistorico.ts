@@ -179,10 +179,18 @@ export function useHistorico() {
     setError(null)
   }, [currentYear])
 
+  // Fetch details for a specific groupKey
+  const fetchDetail = useCallback(
+    (groupKey: string, customItems?: HistoricoDocumentoItem[]) => {
+      return historicoService.getDetail(groupKey, customItems || data.rawItems)
+    },
+    [data.rawItems],
+  )
+
   // Open detail modal for a group
   const openDetail = useCallback(
     (groupKey: string, title: string) => {
-      const items = historicoService.getDetail(groupKey, data.rawItems)
+      const items = fetchDetail(groupKey)
       const subtotal = items.reduce(
         (sum, it) => sum + (it.produto_valor_total || it.valor_total_nota || 0),
         0,
@@ -194,7 +202,7 @@ export function useHistorico() {
         subtotal,
       })
     },
-    [data.rawItems],
+    [fetchDetail],
   )
 
   const closeDetail = useCallback(() => {
@@ -202,128 +210,134 @@ export function useHistorico() {
   }, [])
 
   // Export CSV according to the active granularity
-  const exportCSV = useCallback(() => {
-    try {
-      let csvContent = ''
-      const formatDateBR = (isoDate?: string) => {
-        if (!isoDate) return ''
-        const d = isoDate.substring(0, 10).split('-')
-        if (d.length === 3) return `${d[2]}/${d[1]}/${d[0]}`
-        return isoDate
+  const exportCSV = useCallback(
+    (customData?: any) => {
+      try {
+        const activeData = customData || data
+        let csvContent = ''
+        const formatDateBR = (isoDate?: string) => {
+          if (!isoDate) return ''
+          const d = isoDate.substring(0, 10).split('-')
+          if (d.length === 3) return `${d[2]}/${d[1]}/${d[0]}`
+          return isoDate
+        }
+
+        if (granularity === 'mensal') {
+          const headers = [
+            'Mes/Ano',
+            'Especie',
+            'Gestor Tecnico',
+            'Vendedor',
+            'Canal',
+            'Qtd NFs',
+            'Qtd Pedidos',
+            'Valor Realizado',
+            'Valor Projetado',
+            'Total',
+          ]
+          const rows = (activeData.mensal || []).map((r: HistoricoMensalRow) => [
+            `"${r.mesAno}"`,
+            `"${r.especie}"`,
+            `"${r.gestor_tecnico}"`,
+            `"${r.vendedor}"`,
+            `"${r.canal}"`,
+            r.qtdNfs,
+            r.qtdPedidos,
+            `"${formatCurrency(r.valorRealizado)}"`,
+            `"${formatCurrency(r.valorProjetado)}"`,
+            `"${formatCurrency(r.total)}"`,
+          ])
+          csvContent = [headers.join(';'), ...rows.map((row: any[]) => row.join(';'))].join('\r\n')
+        } else if (granularity === 'anual') {
+          const headers = [
+            'Ano',
+            'Especie',
+            'Qtd NFs',
+            'Valor Realizado',
+            'Valor Projetado',
+            'Total',
+            'vs Ano Anterior (%)',
+          ]
+          const rows = (activeData.anual || []).map((r: HistoricoAnualRow) => [
+            r.ano,
+            `"${r.especie}"`,
+            r.qtdNfs,
+            `"${formatCurrency(r.valorRealizado)}"`,
+            `"${formatCurrency(r.valorProjetado)}"`,
+            `"${formatCurrency(r.total)}"`,
+            r.vsAnoAnteriorPercent !== null ? `"${r.vsAnoAnteriorPercent.toFixed(2)}%"` : '"-"',
+          ])
+          csvContent = [headers.join(';'), ...rows.map((row: any[]) => row.join(';'))].join('\r\n')
+        } else {
+          // Quadrienal
+          const headers = [
+            'Ano',
+            'Total Realizado',
+            'Total Projetado',
+            'Crescimento YoY (%)',
+            'CAGR (%)',
+          ]
+          const rows = (activeData.quadrienal || []).map((r: HistoricoQuadrienalRow) => [
+            r.ano,
+            `"${formatCurrency(r.totalRealizado)}"`,
+            `"${formatCurrency(r.totalProjetado)}"`,
+            r.crescimentoYoY !== null ? `"${r.crescimentoYoY.toFixed(2)}%"` : '"-"',
+            r.cagr !== null ? `"${r.cagr.toFixed(2)}%"` : '"-"',
+          ])
+          csvContent = [headers.join(';'), ...rows.map((row: any[]) => row.join(';'))].join('\r\n')
+        }
+
+        // Add detailed documents section at the bottom for completeness
+        if (activeData.rawItems && activeData.rawItems.length > 0) {
+          csvContent += '\r\n\r\n'
+          csvContent += 'DOCUMENTOS INDIVIDUAIS\r\n'
+          const docHeaders = [
+            'Numero',
+            'Data',
+            'Destinatario',
+            'Gestor',
+            'Vendedor',
+            'Especie',
+            'Canal',
+            'Produto Codigo',
+            'Produto',
+            'Familia',
+            'Valor',
+            'Status',
+          ]
+          const docRows = (activeData.rawItems as HistoricoDocumentoItem[]).map((doc) => [
+            `"${doc.numero_documento}"`,
+            `"${formatDateBR(doc.data_documento)}"`,
+            `"${doc.destinatario_nome.replace(/"/g, '""')}"`,
+            `"${(doc.gestor_tecnico || '').replace(/"/g, '""')}"`,
+            `"${(doc.vendedor || '').replace(/"/g, '""')}"`,
+            `"${doc.especie_destino || ''}"`,
+            `"${doc.canal_vendas || ''}"`,
+            `"${doc.produto_codigo || ''}"`,
+            `"${(doc.produto_descricao || '').replace(/"/g, '""')}"`,
+            `"${doc.produto_familia || ''}"`,
+            `"${formatCurrency(doc.produto_valor_total || doc.valor_total_nota || 0)}"`,
+            `"${doc.status}"`,
+          ])
+          csvContent += [docHeaders.join(';'), ...docRows.map((row) => row.join(';'))].join('\r\n')
+        }
+
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.setAttribute('href', url)
+        link.setAttribute('download', `historico_vendas_${granularity}_${Date.now()}.csv`)
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+      } catch (e) {
+        console.error('Erro ao exportar CSV:', e)
+        throw new Error('Erro ao exportar dados.')
       }
-
-      if (granularity === 'mensal') {
-        const headers = [
-          'Mes/Ano',
-          'Especie',
-          'Gestor Tecnico',
-          'Vendedor',
-          'Canal',
-          'Qtd NFs',
-          'Qtd Pedidos',
-          'Valor Realizado',
-          'Valor Projetado',
-          'Total',
-        ]
-        const rows = data.mensal.map((r) => [
-          `"${r.mesAno}"`,
-          `"${r.especie}"`,
-          `"${r.gestor_tecnico}"`,
-          `"${r.vendedor}"`,
-          `"${r.canal}"`,
-          r.qtdNfs,
-          r.qtdPedidos,
-          `"${formatCurrency(r.valorRealizado)}"`,
-          `"${formatCurrency(r.valorProjetado)}"`,
-          `"${formatCurrency(r.total)}"`,
-        ])
-        csvContent = [headers.join(';'), ...rows.map((row) => row.join(';'))].join('\r\n')
-      } else if (granularity === 'anual') {
-        const headers = [
-          'Ano',
-          'Especie',
-          'Qtd NFs',
-          'Valor Realizado',
-          'Valor Projetado',
-          'Total',
-          'vs Ano Anterior (%)',
-        ]
-        const rows = data.anual.map((r) => [
-          r.ano,
-          `"${r.especie}"`,
-          r.qtdNfs,
-          `"${formatCurrency(r.valorRealizado)}"`,
-          `"${formatCurrency(r.valorProjetado)}"`,
-          `"${formatCurrency(r.total)}"`,
-          r.vsAnoAnteriorPercent !== null ? `"${r.vsAnoAnteriorPercent.toFixed(2)}%"` : '"-"',
-        ])
-        csvContent = [headers.join(';'), ...rows.map((row) => row.join(';'))].join('\r\n')
-      } else {
-        // Quadrienal
-        const headers = [
-          'Ano',
-          'Total Realizado',
-          'Total Projetado',
-          'Crescimento YoY (%)',
-          'CAGR (%)',
-        ]
-        const rows = data.quadrienal.map((r) => [
-          r.ano,
-          `"${formatCurrency(r.totalRealizado)}"`,
-          `"${formatCurrency(r.totalProjetado)}"`,
-          r.crescimentoYoY !== null ? `"${r.crescimentoYoY.toFixed(2)}%"` : '"-"',
-          r.cagr !== null ? `"${r.cagr.toFixed(2)}%"` : '"-"',
-        ])
-        csvContent = [headers.join(';'), ...rows.map((row) => row.join(';'))].join('\r\n')
-      }
-
-      // Add detailed documents section at the bottom for completeness
-      csvContent += '\r\n\r\n'
-      csvContent += 'DOCUMENTOS INDIVIDUAIS\r\n'
-      const docHeaders = [
-        'Numero',
-        'Data',
-        'Destinatario',
-        'Gestor',
-        'Vendedor',
-        'Especie',
-        'Canal',
-        'Produto Codigo',
-        'Produto',
-        'Familia',
-        'Valor',
-        'Status',
-      ]
-      const docRows = data.rawItems.map((doc) => [
-        `"${doc.numero_documento}"`,
-        `"${formatDateBR(doc.data_documento)}"`,
-        `"${doc.destinatario_nome.replace(/"/g, '""')}"`,
-        `"${(doc.gestor_tecnico || '').replace(/"/g, '""')}"`,
-        `"${(doc.vendedor || '').replace(/"/g, '""')}"`,
-        `"${doc.especie_destino || ''}"`,
-        `"${doc.canal_vendas || ''}"`,
-        `"${doc.produto_codigo || ''}"`,
-        `"${(doc.produto_descricao || '').replace(/"/g, '""')}"`,
-        `"${doc.produto_familia || ''}"`,
-        `"${formatCurrency(doc.produto_valor_total || doc.valor_total_nota || 0)}"`,
-        `"${doc.status}"`,
-      ])
-      csvContent += [docHeaders.join(';'), ...docRows.map((row) => row.join(';'))].join('\r\n')
-
-      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.setAttribute('href', url)
-      link.setAttribute('download', `historico_vendas_${granularity}_${Date.now()}.csv`)
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-    } catch (e) {
-      console.error('Erro ao exportar CSV:', e)
-      throw new Error('Erro ao exportar dados.')
-    }
-  }, [granularity, data])
+    },
+    [granularity, data],
+  )
 
   return {
     filters,
@@ -347,6 +361,7 @@ export function useHistorico() {
     applyFilters,
     resetFilters,
     fetchHistorico: () => fetchHistorico(filters),
+    fetchDetail,
     exportCSV,
   }
 }
