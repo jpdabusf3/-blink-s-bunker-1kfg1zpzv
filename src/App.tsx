@@ -29,14 +29,68 @@ import ImportarClientes from './pages/ImportarClientes'
 import RelatorioAtividades from './pages/RelatorioAtividades'
 import PerformanceReport from './pages/PerformanceReport'
 import { SuperAdminRoute } from './components/SuperAdminRoute'
-import UploadNF from './pages/UploadNF'
-import { lazy, Suspense } from 'react'
+import { Component, lazy, Suspense, type ErrorInfo, type ReactNode } from 'react'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AlertCircle, RotateCw } from 'lucide-react'
 import { ThemeProvider } from './components/ThemeProvider'
 
 const Historico = lazy(() => import('./pages/Historico'))
 const HistoricoFunil = lazy(() => import('./pages/HistoricoFunil'))
 const ConfiguracoesLayout = lazy(() => import('./pages/ConfiguracoesLayout'))
+const UploadNF = lazy(() => import('./pages/UploadNF'))
+
+interface ErrorBoundaryProps {
+  children: ReactNode
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean
+}
+
+class RouteErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError(): ErrorBoundaryState {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('RouteErrorBoundary capturou um erro:', error, errorInfo)
+  }
+
+  handleReload = () => {
+    window.location.reload()
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[400px] p-6 text-center space-y-4">
+          <div className="w-12 h-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold text-foreground">
+              Erro ao carregar a pagina. Tente novamente.
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Ocorreu uma falha inesperada ao exibir este módulo.
+            </p>
+          </div>
+          <Button onClick={this.handleReload} variant="default" className="gap-2">
+            <RotateCw className="w-4 h-4" /> Recarregar página
+          </Button>
+        </div>
+      )
+    }
+
+    return this.props.children
+  }
+}
 
 function PageSkeleton() {
   return (
@@ -85,7 +139,16 @@ const App = () => (
                     <Route path="/funil-vendas" element={<FunilVendas />} />
                     <Route path="/swot" element={<SWOT />} />
                     <Route path="/matriz" element={<Matriz />} />
-                    <Route path="/upload-nf" element={<UploadNF />} />
+                    <Route
+                      path="/upload-nf"
+                      element={
+                        <RouteErrorBoundary>
+                          <Suspense fallback={<PageSkeleton />}>
+                            <UploadNF />
+                          </Suspense>
+                        </RouteErrorBoundary>
+                      }
+                    />
                     <Route
                       path="/historico"
                       element={

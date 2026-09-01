@@ -149,13 +149,15 @@ export async function uploadToStorage(file: File): Promise<{ url: string; fileRe
       formData.append('user_id', pb.authStore.model.id)
     }
 
-    const record = await pb.collection('notas_fiscais_files').create(formData)
+    const record = await pb
+      .collection('notas_fiscais_files')
+      .create<{ id: string; arquivo: string }>(formData)
     const fileUrl = pb.files.getUrl(record, record.arquivo)
     return {
       url: fileUrl,
       fileRecordId: record.id,
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Erro ao enviar arquivo para armazenamento:', err)
     throw new Error('Erro ao armazenar arquivo. Tente novamente.')
   }
@@ -203,16 +205,26 @@ export async function callParseFunction(pdfUrl: string, rawText?: string): Promi
       },
     })
     return res
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Erro ao chamar parse-nf-pdf:', err)
-    if (err?.status === 401) {
+    const errorObj = err as
+      | { status?: number; data?: { error?: string }; message?: string }
+      | undefined
+    if (errorObj?.status === 401) {
       throw new Error('Nao autorizado')
     }
-    if (err?.data?.error) {
-      throw new Error(err.data.error)
+    if (errorObj?.data?.error) {
+      throw new Error(errorObj.data.error)
     }
     throw new Error('Erro ao extrair dados da NF. Verifique se o arquivo e um DANFE valido.')
   }
+}
+
+/**
+ * Alias for callParseFunction to support direct parseNF calls
+ */
+export async function parseNF(pdfUrlOrRawText: string, rawText?: string): Promise<ParsedNFData> {
+  return callParseFunction(pdfUrlOrRawText, rawText)
 }
 
 /**
@@ -295,7 +307,7 @@ export async function insertNF(
       }
     }
 
-    const payload: Record<string, any> = {
+    const payload: Record<string, string | number | null> = {
       numero_nf: String(data.numero_nf || '').trim(),
       serie: String(data.serie || '1'),
       chave_acesso: String(data.chave_acesso || '').replace(/\s+/g, ''),
@@ -347,9 +359,9 @@ export async function insertNF(
       user_id: currentUserId,
     }
 
-    const record = await pb.collection('notas_fiscais').create(payload)
+    const record = await pb.collection('notas_fiscais').create<{ id: string }>(payload)
     return record.id
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Erro ao inserir nota fiscal:', err)
     throw err
   }
@@ -361,9 +373,19 @@ export async function insertNF(
 export async function insertItens(
   nfId: string,
   itens: ParsedItem[],
-): Promise<Array<{ id: string; produto_codigo: string; lotes?: any[] }>> {
+): Promise<
+  Array<{
+    id: string
+    produto_codigo: string
+    lotes?: Array<{ lote_codigo: string; lote_quantidade: number }>
+  }>
+> {
   const currentUserId = pb.authStore.model?.id
-  const insertedItens: Array<{ id: string; produto_codigo: string; lotes?: any[] }> = []
+  const insertedItens: Array<{
+    id: string
+    produto_codigo: string
+    lotes?: Array<{ lote_codigo: string; lote_quantidade: number }>
+  }> = []
 
   for (const item of itens) {
     const qtd = isNaN(Number(item.produto_quantidade)) ? 1 : Number(item.produto_quantidade)
@@ -395,7 +417,7 @@ export async function insertItens(
       user_id: currentUserId,
     }
 
-    const rec = await pb.collection('nf_itens').create(payload)
+    const rec = await pb.collection('nf_itens').create<{ id: string }>(payload)
     insertedItens.push({
       id: rec.id,
       produto_codigo: item.produto_codigo,
@@ -468,16 +490,36 @@ export async function getCatalogProductsMap(): Promise<Map<string, CatalogProduc
   }
 }
 
+/**
+ * Saves NF data with items and optional lotes (used as a high-level service call).
+ */
+export async function saveNF(
+  data: Partial<ParsedNFData> & { status?: 'importada' | 'revisada' | 'confirmada' },
+): Promise<string> {
+  const nfId = await insertNF(data)
+  if (data.itens && data.itens.length > 0) {
+    const inserted = await insertItens(nfId, data.itens)
+    for (const item of inserted) {
+      if (item.lotes && item.lotes.length > 0) {
+        await insertLotes(nfId, item.id, item.lotes)
+      }
+    }
+  }
+  return nfId
+}
+
 export const nfService = {
   uploadToStorage,
   deleteFromStorage,
   callParseFunction,
+  parseNF,
   getAtribuicao,
   getGestoresTecnicosEquipe,
   getVendedoresEquipe,
   insertNF,
   insertItens,
   insertLotes,
+  saveNF,
   checkCatalogProducts,
   getCatalogProductsMap,
 }

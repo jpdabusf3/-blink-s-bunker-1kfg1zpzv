@@ -145,10 +145,13 @@ export default function UploadNF() {
       } else {
         setActiveTab('resumo')
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg =
+        (err instanceof Error ? err.message : '') ||
+        'Preencha todos os campos obrigatorios antes de confirmar.'
       toast({
         title: 'Erro na importação',
-        description: err.message || 'Preencha todos os campos obrigatorios antes de confirmar.',
+        description: msg,
         variant: 'destructive',
       })
     }
@@ -167,31 +170,38 @@ export default function UploadNF() {
       } else {
         setActiveTab('resumo')
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg =
+        (err instanceof Error ? err.message : '') || 'Erro ao gravar dados da nota fiscal.'
       toast({
         title: 'Erro ao salvar rascunho',
-        description: err.message || 'Erro ao gravar dados da nota fiscal.',
+        description: msg,
         variant: 'destructive',
       })
     }
   }
 
   const handleDescartar = async (fileItem: UploadFileItem) => {
-    await discardFile(fileItem.id)
-    toast({
-      title: 'Arquivo descartado',
-      description: 'O PDF enviado foi removido do armazenamento.',
-    })
-    const remaining = files.filter((f) => f.id !== fileItem.id)
-    if (remaining.length === 0) {
-      setActiveTab('upload')
-    } else {
-      setCurrentFileIndex(0)
+    try {
+      await discardFile(fileItem.id)
+      toast({
+        title: 'Arquivo descartado',
+        description: 'O PDF enviado foi removido do armazenamento.',
+      })
+    } catch (err: unknown) {
+      console.warn('Erro ao descartar:', err)
+    } finally {
+      const remaining = files.filter((f) => f.id !== fileItem.id)
+      if (remaining.length === 0) {
+        setActiveTab('upload')
+      } else {
+        setCurrentFileIndex(0)
+      }
     }
   }
 
   // Update item in table
-  const handleItemChange = (index: number, field: keyof ParsedItem, val: any) => {
+  const handleItemChange = (index: number, field: keyof ParsedItem, val: string | number) => {
     if (!activeFile || !extracted) return
     const currentItens = [...(extracted.itens || [])]
     const item = { ...currentItens[index], [field]: val }
@@ -661,8 +671,10 @@ export default function UploadNF() {
                     </Label>
                     <Select
                       value={extracted.especie_destino || ''}
-                      onValueChange={(val: any) =>
-                        updateExtractedData(activeFile.id, { especie_destino: val })
+                      onValueChange={(val) =>
+                        updateExtractedData(activeFile.id, {
+                          especie_destino: val as ParsedNFData['especie_destino'],
+                        })
                       }
                     >
                       <SelectTrigger
@@ -691,8 +703,10 @@ export default function UploadNF() {
                     </Label>
                     <Select
                       value={extracted.canal_vendas || ''}
-                      onValueChange={(val: any) =>
-                        updateExtractedData(activeFile.id, { canal_vendas: val })
+                      onValueChange={(val) =>
+                        updateExtractedData(activeFile.id, {
+                          canal_vendas: val as ParsedNFData['canal_vendas'],
+                        })
                       }
                     >
                       <SelectTrigger

@@ -59,6 +59,7 @@ export function useUploadNF(): UseUploadNFReturn {
     const loadInitial = async () => {
       try {
         setLoadingTeam(true)
+        setError(null)
         const [gestores, vends, codes] = await Promise.all([
           nfService.getGestoresTecnicosEquipe(),
           nfService.getVendedoresEquipe(),
@@ -69,13 +70,18 @@ export function useUploadNF(): UseUploadNFReturn {
           setVendedores(vends)
           setCatalogCodes(codes)
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.warn('Erro ao carregar dados auxiliares:', err)
+        if (isMounted) {
+          setError('Erro ao conectar com o banco de dados.')
+        }
       } finally {
         if (isMounted) setLoadingTeam(false)
       }
     }
-    loadInitial()
+    loadInitial().catch((e) => {
+      console.error('Unhandled loadInitial error:', e)
+    })
     return () => {
       isMounted = false
     }
@@ -217,10 +223,11 @@ export function useUploadNF(): UseUploadNFReturn {
               : f,
           ),
         )
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Erro na pipeline do arquivo:', item.file.name, err)
         const errMsg =
-          err?.message || 'Erro ao processar arquivo. Verifique se o arquivo e um DANFE valido.'
+          (err instanceof Error ? err.message : '') ||
+          'Erro ao processar arquivo. Verifique se o arquivo e um DANFE valido.'
         setFiles((prev) =>
           prev.map((f) =>
             f.id === item.id
@@ -267,7 +274,9 @@ export function useUploadNF(): UseUploadNFReturn {
         setFiles((prev) => [...prev, ...validFiles])
         // Trigger pipeline for new files
         validFiles.forEach((item) => {
-          processPipeline(item)
+          processPipeline(item).catch((err) => {
+            console.error('Erro na execução da pipeline:', err)
+          })
         })
       }
     },
@@ -278,7 +287,11 @@ export function useUploadNF(): UseUploadNFReturn {
     async (id: string) => {
       const item = files.find((f) => f.id === id)
       if (item) {
-        await processPipeline(item)
+        try {
+          await processPipeline(item)
+        } catch (err: unknown) {
+          console.error('Erro ao retentar arquivo:', err)
+        }
       }
     },
     [files, processPipeline],
@@ -286,11 +299,16 @@ export function useUploadNF(): UseUploadNFReturn {
 
   const removeFile = useCallback(
     async (id: string) => {
-      const item = files.find((f) => f.id === id)
-      if (item && item.fileRecordId) {
-        await nfService.deleteFromStorage(item.fileRecordId)
+      try {
+        const item = files.find((f) => f.id === id)
+        if (item && item.fileRecordId) {
+          await nfService.deleteFromStorage(item.fileRecordId)
+        }
+      } catch (err: unknown) {
+        console.warn('Erro ao remover arquivo do storage:', err)
+      } finally {
+        setFiles((prev) => prev.filter((f) => f.id !== id))
       }
-      setFiles((prev) => prev.filter((f) => f.id !== id))
     },
     [files],
   )
@@ -430,18 +448,18 @@ export function useUploadNF(): UseUploadNFReturn {
             const itemUnit = Number(item.produto_valor_unitario) || 0
             const itemTotal = Number(item.produto_valor_total) || itemQtd * itemUnit
 
-            const historicoPayload: Record<string, any> = {
+            const historicoPayload: Record<string, string | number | null> = {
               origem: 'nf',
               numero_documento: String(data.numero_nf || '').trim(),
               data_documento: dataEmissaoDoc,
-              mes,
-              ano,
-              trimestre,
+              mes: Number(mes) || 1,
+              ano: Number(ano) || new Date().getFullYear(),
+              trimestre: String(trimestre || 'T1'),
               destinatario_nome: String(data.destinatario_nome || '').trim(),
               destinatario_uf: String(data.destinatario_uf || '')
                 .toUpperCase()
                 .trim(),
-              pais,
+              pais: String(pais || 'Brasil'),
               especie_destino: data.especie_destino || '',
               canal_vendas: data.canal_vendas || '',
               gestor_tecnico: gestorNome,
@@ -483,15 +501,18 @@ export function useUploadNF(): UseUploadNFReturn {
         )
 
         return nfId
-      } catch (saveErr: any) {
+      } catch (saveErr: unknown) {
         console.error('Erro ao salvar nota fiscal:', saveErr)
+        const errMsg =
+          (saveErr instanceof Error ? saveErr.message : '') ||
+          'Erro ao gravar dados da nota fiscal.'
         setFiles((prev) =>
           prev.map((f) =>
             f.id === fileId
               ? {
                   ...f,
                   status: 'ready',
-                  errorMessage: saveErr?.message || 'Erro ao gravar dados da nota fiscal.',
+                  errorMessage: errMsg,
                 }
               : f,
           ),
@@ -499,7 +520,7 @@ export function useUploadNF(): UseUploadNFReturn {
         throw saveErr
       }
     },
-    [files],
+    [files, gestoresTecnicos, vendedores],
   )
 
   const activeFile = files[currentFileIndex] || null
