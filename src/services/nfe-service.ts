@@ -170,6 +170,9 @@ export interface ProcessarNfeResponse {
 }
 
 export async function extrairTextoPdf(file: File): Promise<string> {
+  let extractionMethod = 'none'
+
+  // Tentativa 1: pdfjs-dist padrão iterando por TODAS as páginas sem truncar
   try {
     const pdfjs: any = await import(/* @vite-ignore */ 'pdfjs-dist/build/pdf.mjs')
     if (pdfjs?.getDocument) {
@@ -177,7 +180,24 @@ export async function extrairTextoPdf(file: File): Promise<string> {
         pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version || '4.10.38'}/build/pdf.worker.min.mjs`
       }
       const arrayBuffer = await file.arrayBuffer()
-      const doc = await pdfjs.getDocument({ data: arrayBuffer }).promise
+
+      let doc: any = null
+      try {
+        doc = await pdfjs.getDocument({
+          data: arrayBuffer,
+          cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/cmaps/',
+          cMapPacked: true,
+          standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/standard_fonts/',
+          disableFontFace: false,
+        }).promise
+      } catch (docErr) {
+        // Fallback: tentar com disableFontFace e sem cMaps
+        doc = await pdfjs.getDocument({
+          data: arrayBuffer,
+          disableFontFace: true,
+        }).promise
+      }
+
       const pages: string[] = []
       for (let i = 1; i <= doc.numPages; i++) {
         const page = await doc.getPage(i)
@@ -188,21 +208,26 @@ export async function extrairTextoPdf(file: File): Promise<string> {
         pages.push(text)
       }
       const fullText = pages.join('\n')
-      if (fullText.trim().length > 30) {
+      if (fullText.trim().length >= 50) {
+        extractionMethod = `pdfjs-dist (${doc.numPages} paginas)`
+        console.log(
+          `extrairTextoPdf: extraídos ${fullText.length} caracteres via ${extractionMethod}`,
+        )
         return fullText
       }
     }
   } catch (err) {
-    console.warn('pdfjs-dist fallback triggered:', err)
+    console.warn('pdfjs-dist falhou, tentando fallback binario direto:', err)
   }
 
+  // Tentativa 2: Extração binária de strings PDF nativas
   try {
     const buffer = await file.arrayBuffer()
     const bytes = new Uint8Array(buffer)
     let raw = ''
     for (let i = 0; i < bytes.length; i++) {
       const c = bytes[i]
-      if ((c >= 32 && c <= 126) || c === 10 || c === 13 || c === 9) {
+      if ((c >= 32 && c <= 126) || c === 10 || c === 13 || c === 9 || (c >= 192 && c <= 255)) {
         raw += String.fromCharCode(c)
       }
     }
@@ -210,10 +235,23 @@ export async function extrairTextoPdf(file: File): Promise<string> {
     const matches = raw.match(/\(([^()]{2,})\)/g) || []
     if (matches.length > 5) {
       const textStream = matches.map((m) => m.slice(1, -1)).join(' ')
-      if (textStream.trim().length > 30) return textStream
+      if (textStream.trim().length > 50) {
+        extractionMethod = 'binary-pdf-stream-parenthesis'
+        console.log(
+          `extrairTextoPdf: extraídos ${textStream.length} caracteres via ${extractionMethod}`,
+        )
+        return textStream
+      }
     }
-    return raw.substring(0, 16000)
-  } catch {
+
+    if (raw.trim().length > 50) {
+      extractionMethod = 'binary-pdf-ascii-filtered'
+      console.log(`extrairTextoPdf: extraídos ${raw.length} caracteres via ${extractionMethod}`)
+      return raw
+    }
+    return ''
+  } catch (rawErr) {
+    console.error('Falha em todas as tentativas locais de extração de PDF:', rawErr)
     return ''
   }
 }

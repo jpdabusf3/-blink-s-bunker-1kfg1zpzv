@@ -118,12 +118,38 @@ export function useUploadNF(): UseUploadNFReturn {
           ),
         )
 
-        // Read text in browser first as fallback / companion
+        // Read text in browser first as fallback / companion (FIX 7.1, 7.2, 7.3)
         let rawText = ''
         try {
           rawText = await extrairTextoPdf(item.file)
-        } catch {
-          /* intentionally ignored */
+        } catch (extractErr) {
+          console.warn('Erro na extração local de texto do PDF:', extractErr)
+        }
+
+        // FIX 7.1: Se o texto for muito grande (acima de 50.000 caracteres), registre warning mas envie completo
+        if (rawText && rawText.length > 50000) {
+          console.warn(
+            `Texto da NF muito grande (${rawText.length} caracteres), enviando texto completo.`,
+          )
+        }
+
+        // FIX 7.3: Verificação de qualidade do texto
+        if (rawText && rawText.length > 0) {
+          const hasMinLength = rawText.length >= 100
+          const hasDigit = /\d/.test(rawText)
+          const hasDanfeKeyword = /NOTA\s+FISCAL|DANFE|NF-e|NFe/i.test(rawText)
+
+          if (!hasMinLength || !hasDigit || !hasDanfeKeyword) {
+            console.warn(
+              'Qualidade do texto extraído abaixo do esperado. O backend fará extração complementar.',
+              {
+                hasMinLength,
+                hasDigit,
+                hasDanfeKeyword,
+                length: rawText.length,
+              },
+            )
+          }
         }
 
         setFiles((prev) => prev.map((f) => (f.id === item.id ? { ...f, progress: 45 } : f)))

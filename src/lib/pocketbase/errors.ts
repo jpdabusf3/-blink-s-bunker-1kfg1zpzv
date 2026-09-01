@@ -20,28 +20,10 @@ export function extractFieldErrors(error: unknown): FieldErrors {
   return errors
 }
 
-export const ERROR_MESSAGES_PT: Record<string, string> = {
-  PGRST116: 'Registro nao encontrado',
-  '23505': 'Ja existe um produto com este codigo',
-  '23503': 'Referencia invalida',
-  '42501': 'Sem permissao',
-  '23514': 'Valor invalido',
-}
-
 export function getErrorMessage(error: unknown): string {
   if (!(error instanceof ClientResponseError)) {
-    if (error instanceof Error) {
-      if (ERROR_MESSAGES_PT[error.message]) return ERROR_MESSAGES_PT[error.message]
-      return error.message
-    }
-    return 'An unexpected error occurred.'
+    return error instanceof Error ? error.message : 'An unexpected error occurred.'
   }
   const msgs = Object.values(extractFieldErrors(error))
-  if (msgs.length > 0) {
-    return msgs.map((m) => ERROR_MESSAGES_PT[m] || m).join(' ')
-  }
-  if (error.status === 404) return ERROR_MESSAGES_PT.PGRST116
-  if (error.status === 403 || error.status === 401) return ERROR_MESSAGES_PT['42501']
-  if (error.status === 400 && error.message?.includes('UNIQUE')) return ERROR_MESSAGES_PT['23505']
-  return error.message || 'An unexpected error occurred.'
+  return msgs.length > 0 ? msgs.join(' ') : error.message || 'An unexpected error occurred.'
 }
