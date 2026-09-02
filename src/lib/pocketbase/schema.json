@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-02T04:41:37.574Z",
+  "generatedAt": "2026-09-02T18:17:50.773Z",
   "collections": [
     {
       "name": "users",
@@ -449,6 +449,44 @@
           "required": false,
           "system": false,
           "selectValues": ["Champion", "Stakeholder", "Decisor", "Influenciador", "Gatekeepers"]
+        },
+        {
+          "name": "lat",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lng",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "geocode_precision",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["exact", "street", "city", "failed"]
+        },
+        {
+          "name": "address_status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["complete", "partial", "inconsistent", "enriched", "failed"]
+        },
+        {
+          "name": "enriched_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "standardized_address",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -459,7 +497,9 @@
         "CREATE INDEX `idx_factories_gestor_tecnico_id` ON `factories` (gestor_tecnico_id)",
         "CREATE INDEX `idx_factories_vendedor_id` ON `factories` (vendedor_id)",
         "CREATE INDEX `idx_factories_status_funil` ON `factories` (status_funil)",
-        "CREATE INDEX `idx_factories_animalSpecies` ON `factories` (animalSpecies)"
+        "CREATE INDEX `idx_factories_animalSpecies` ON `factories` (animalSpecies)",
+        "CREATE INDEX `idx_factories_geocode_precision` ON `factories` (geocode_precision)",
+        "CREATE INDEX `idx_factories_address_status` ON `factories` (address_status)"
       ]
     },
     {
