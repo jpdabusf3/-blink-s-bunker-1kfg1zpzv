@@ -77,7 +77,14 @@ export default function MapaClientes() {
     return factories.filter((f) => {
       const lat = f.lat ?? f.coordinates?.lat
       const lng = f.lng ?? f.coordinates?.lng
-      return typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0
+      return (
+        typeof lat === 'number' &&
+        typeof lng === 'number' &&
+        !isNaN(lat) &&
+        !isNaN(lng) &&
+        lat !== 0 &&
+        lng !== 0
+      )
     })
   }, [factories])
 
@@ -118,7 +125,8 @@ export default function MapaClientes() {
         })
 
         window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> colaboradores',
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> colaboradores',
           maxZoom: 19,
         }).addTo(map)
 
@@ -171,12 +179,12 @@ export default function MapaClientes() {
         f.address_status === 'complete'
           ? '#10b981'
           : f.address_status === 'enriched'
-          ? '#3b82f6'
-          : f.address_status === 'partial'
-          ? '#f59e0b'
-          : f.address_status === 'inconsistent'
-          ? '#f97316'
-          : '#ef4444'
+            ? '#3b82f6'
+            : f.address_status === 'partial'
+              ? '#f59e0b'
+              : f.address_status === 'inconsistent'
+                ? '#f97316'
+                : '#ef4444'
 
       const customIcon = L.divIcon({
         className: 'custom-map-pin',
@@ -210,8 +218,12 @@ export default function MapaClientes() {
 
       const marker = L.marker([lat, lng], { icon: customIcon })
 
-      const statusLabel = f.address_status ? (ADDRESS_STATUS_LABELS[f.address_status] || f.address_status) : 'Não informado'
-      const precisionLabel = f.geocode_precision ? (GEOCODE_PRECISION_LABELS[f.geocode_precision] || f.geocode_precision) : 'Não informada'
+      const statusLabel = f.address_status
+        ? ADDRESS_STATUS_LABELS[f.address_status] || f.address_status
+        : 'Não informado'
+      const precisionLabel = f.geocode_precision
+        ? GEOCODE_PRECISION_LABELS[f.geocode_precision] || f.geocode_precision
+        : 'Não informada'
       const cityState = [f.city, f.state].filter(Boolean).join(' - ') || 'Localidade não informada'
 
       const popupContent = `
@@ -259,7 +271,8 @@ export default function MapaClientes() {
     setGeocodePrecisionFilter('all')
   }
 
-  const hasFilters = search.trim() !== '' || addressStatusFilter !== 'all' || geocodePrecisionFilter !== 'all'
+  const hasFilters =
+    search.trim() !== '' || addressStatusFilter !== 'all' || geocodePrecisionFilter !== 'all'
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
@@ -277,8 +290,18 @@ export default function MapaClientes() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={loadData} disabled={loading} className="gap-2">
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadData}
+            disabled={loading}
+            className="gap-2"
+          >
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RotateCcw className="w-4 h-4" />
+            )}
             Atualizar
           </Button>
         </div>
@@ -375,7 +398,12 @@ export default function MapaClientes() {
               </div>
 
               {hasFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 px-2 text-xs gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="h-9 px-2 text-xs gap-1"
+                >
                   <RotateCcw className="w-3.5 h-3.5" /> Limpar
                 </Button>
               )}
@@ -410,7 +438,8 @@ export default function MapaClientes() {
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" /> Parcial
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" /> Inconsistente/Falha
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />{' '}
+                  Inconsistente/Falha
                 </span>
               </div>
             </CardHeader>
@@ -433,7 +462,9 @@ export default function MapaClientes() {
                       Nenhum cliente com coordenadas para exibir no mapa.
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      Nenhum cliente cadastrado possui latitude e longitude válidas no momento. Você pode utilizar a opção "Enriquecer Dados" na página de Cadastro para obter as coordenadas automaticamente.
+                      Nenhum cliente cadastrado possui latitude e longitude válidas no momento. Você
+                      pode utilizar a opção "Enriquecer Dados" na página de Cadastro para obter as
+                      coordenadas automaticamente.
                     </p>
                   </div>
                 </div>
@@ -493,7 +524,8 @@ export default function MapaClientes() {
                       >
                         <p className="font-semibold text-xs text-foreground truncate">{f.name}</p>
                         <p className="text-[11px] text-muted-foreground mt-0.5">
-                          {[f.city, f.state].filter(Boolean).join(' - ') || 'Localidade não informada'}
+                          {[f.city, f.state].filter(Boolean).join(' - ') ||
+                            'Localidade não informada'}
                         </p>
                         <div className="flex flex-wrap gap-1 mt-2">
                           {f.address_status && (

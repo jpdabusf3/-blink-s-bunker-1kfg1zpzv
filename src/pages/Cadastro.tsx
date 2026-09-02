@@ -27,6 +27,9 @@ import {
   FileArchive,
   Download,
   Sparkles,
+  MapPin,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
@@ -35,6 +38,7 @@ import { getAllFactories, deleteFactoryPB } from '@/services/factories'
 import { getScopedFactories } from '@/lib/user-scope'
 import { normalizeArray } from '@/lib/utils'
 import { FactoryForm } from '@/components/FactoryForm'
+import { ClientsMapDialog } from '@/components/ClientsMapDialog'
 import { ImportExcelDialog } from '@/components/ImportExcelDialog'
 import { MultiSelect } from '@/components/ui/multi-select'
 import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
@@ -88,8 +92,10 @@ const ADDRESS_STATUS_OPTIONS: { label: string; value: string }[] = [
   { label: 'Parcial', value: 'partial' },
   { label: 'Inconsistente', value: 'inconsistent' },
   { label: 'Enriquecido', value: 'enriched' },
-  { label: 'Falha', value: 'failed' },
+  { label: 'Falhou', value: 'failed' },
 ]
+
+const PAGE_SIZE_OPTIONS = [15, 30, 50, 100]
 
 export default function Cadastro() {
   const { user } = useAuth()
@@ -98,7 +104,12 @@ export default function Cadastro() {
   const [search, setSearch] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [mapModalOpen, setMapModalOpen] = useState(false)
   const [editingFactory, setEditingFactory] = useState<Factory | undefined>(undefined)
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(30)
 
   // Export CSV state
   const [csvExporting, setCsvExporting] = useState(false)
@@ -241,6 +252,7 @@ export default function Cadastro() {
   const [selectedAddressStatuses, setSelectedAddressStatuses] = useState<string[]>([])
 
   const loadData = async () => {
+    setLoading(true)
     try {
       const all = await getAllFactories()
       setFactories(getScopedFactories(all, user))
@@ -266,6 +278,7 @@ export default function Cadastro() {
     setSelectedProfiles([])
     setSelectedProductLines([])
     setSelectedAddressStatuses([])
+    setCurrentPage(1)
   }
 
   const hasActiveFilters =
@@ -278,8 +291,23 @@ export default function Cadastro() {
     selectedProductLines.length > 0 ||
     selectedAddressStatuses.length > 0
 
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [
+    search,
+    selectedRegions,
+    selectedSpecies,
+    selectedStatuses,
+    selectedStatusContatos,
+    selectedProfiles,
+    selectedProductLines,
+    selectedAddressStatuses,
+    pageSize,
+  ])
+
   const filtered = useMemo(() => {
-    return factories.filter((f) => {
+    const list = factories.filter((f) => {
       // Search text match
       if (search.trim()) {
         const q = search.toLowerCase()
@@ -335,6 +363,18 @@ export default function Cadastro() {
 
       return true
     })
+
+    // If 'failed' is selected or highlighted, sort failed clients first for base cleanup
+    if (selectedAddressStatuses.includes('failed')) {
+      return [...list].sort((a, b) => {
+        const aFailed = a.address_status === 'failed' ? 1 : 0
+        const bFailed = b.address_status === 'failed' ? 1 : 0
+        if (aFailed !== bFailed) return bFailed - aFailed
+        return a.name.localeCompare(b.name)
+      })
+    }
+
+    return list
   }, [
     factories,
     search,
@@ -346,6 +386,13 @@ export default function Cadastro() {
     selectedProductLines,
     selectedAddressStatuses,
   ])
+
+  // Pagination calculation
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const paginatedFactories = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    return filtered.slice(startIndex, startIndex + pageSize)
+  }, [filtered, currentPage, pageSize])
 
   const handleEdit = (f: Factory) => {
     setEditingFactory(f)
@@ -455,6 +502,10 @@ export default function Cadastro() {
             <Sparkles className="w-4 h-4" />
             Enriquecer Dados
           </Button>
+          <Button variant="outline" className="gap-2" onClick={() => setMapModalOpen(true)}>
+            <MapPin className="w-4 h-4 text-primary" />
+            Mapa de Clientes
+          </Button>
           <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
             <Upload className="w-4 h-4" /> Importar
           </Button>
@@ -471,8 +522,41 @@ export default function Cadastro() {
 
       <Card className="shadow-subtle">
         <CardHeader>
-          <CardTitle>Fábricas Cadastradas</CardTitle>
-          <CardDescription>{filtered.length} fábrica(s)</CardDescription>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <CardTitle>Fábricas Cadastradas</CardTitle>
+              <CardDescription>
+                {filtered.length} fábrica(s) encontrada(s)
+                {filtered.length > pageSize && (
+                  <>
+                    {' '}
+                    • Exibindo {(currentPage - 1) * pageSize + 1} a{' '}
+                    {Math.min(currentPage * pageSize, filtered.length)}
+                  </>
+                )}
+              </CardDescription>
+            </div>
+            {filtered.length > 0 && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Itens por página:</span>
+                <select
+                  aria-label="Itens por página"
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value))
+                    setCurrentPage(1)
+                  }}
+                  className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  {PAGE_SIZE_OPTIONS.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
         </CardHeader>
         {selectedIds.size > 0 && (
           <div className="px-6 pb-3 -mb-1 flex flex-wrap items-center justify-between gap-3">
@@ -684,7 +768,7 @@ export default function Cadastro() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filtered.map((f) => (
+                    paginatedFactories.map((f) => (
                       <TableRow key={f.id}>
                         <TableCell className="w-10">
                           <Checkbox
@@ -758,6 +842,74 @@ export default function Cadastro() {
               </Table>
             </div>
           )}
+
+          {/* Pagination Controls */}
+          {!loading && totalPages > 1 && (
+            <div className="pt-3 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                Página <span className="font-medium text-foreground">{currentPage}</span> de{' '}
+                <span className="font-medium text-foreground">{totalPages}</span> ({filtered.length}{' '}
+                fábricas no total)
+              </p>
+
+              <div className="flex items-center gap-1.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="h-8 px-2.5 text-xs gap-1"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" /> Anterior
+                </Button>
+
+                <div className="flex items-center gap-1 px-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter((p) => {
+                      // Show first, last, current, and neighbours
+                      return p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1
+                    })
+                    .reduce<number[]>((acc, p) => {
+                      // Insert placeholder logic by keeping unique sorted page numbers
+                      return [...acc, p]
+                    }, [])
+                    .map((p, idx, arr) => {
+                      const prev = arr[idx - 1]
+                      const showEllipsisBefore = prev && p - prev > 1
+
+                      return (
+                        <div key={p} className="flex items-center">
+                          {showEllipsisBefore && (
+                            <span className="px-1 text-xs text-muted-foreground">...</span>
+                          )}
+                          <Button
+                            type="button"
+                            variant={p === currentPage ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setCurrentPage(p)}
+                            className="h-8 w-8 p-0 text-xs font-medium"
+                          >
+                            {p}
+                          </Button>
+                        </div>
+                      )
+                    })}
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="h-8 px-2.5 text-xs gap-1"
+                >
+                  Próxima <ChevronRight className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -784,6 +936,15 @@ export default function Cadastro() {
       </Dialog>
 
       <ImportExcelDialog open={importOpen} onOpenChange={setImportOpen} onImported={loadData} />
+
+      {/* Clients Map Dialog Modal */}
+      <ClientsMapDialog
+        open={mapModalOpen}
+        onOpenChange={setMapModalOpen}
+        factories={factories}
+        loading={loading}
+        onReload={loadData}
+      />
 
       {/* Confirmation Dialog: Enriquecer Dados */}
       <Dialog open={confirmEnrichOpen} onOpenChange={setConfirmEnrichOpen}>
