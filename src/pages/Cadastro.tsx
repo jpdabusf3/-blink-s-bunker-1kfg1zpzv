@@ -25,6 +25,8 @@ import {
   Filter,
   RotateCcw,
   FileArchive,
+  Download,
+  Sparkles,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
@@ -40,6 +42,8 @@ import { exportBatchClientReportsZip, logBatchReportExport } from '@/lib/batchRe
 import { generateClientGoogleDocsHtml, dateStamp } from '@/services/client-reports'
 import { getReportTemplatePreference } from '@/services/report-template-preferences'
 import { REPORT_TEMPLATE_LABEL, type ReportTemplateKey } from '@/lib/reportTemplates'
+import { exportClientsToCSV } from '@/lib/csv-export'
+import { enrichClientData, type EnrichmentSummary } from '@/services/enrichment-service'
 import { FilePlus2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { Factory } from '@/types'
@@ -88,6 +92,15 @@ export default function Cadastro() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [editingFactory, setEditingFactory] = useState<Factory | undefined>(undefined)
+
+  // Export CSV state
+  const [csvExporting, setCsvExporting] = useState(false)
+
+  // Enrichment modal states
+  const [confirmEnrichOpen, setConfirmEnrichOpen] = useState(false)
+  const [enriching, setEnriching] = useState(false)
+  const [enrichSummary, setEnrichSummary] = useState<EnrichmentSummary | null>(null)
+  const [summaryOpen, setSummaryOpen] = useState(false)
 
   // Batch export state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -326,6 +339,50 @@ export default function Cadastro() {
 
   const { logAction } = useFunnelActivityLog()
 
+  const handleExportCSV = async () => {
+    setCsvExporting(true)
+    try {
+      // Respect current active page filters
+      if (filtered.length === 0) {
+        toast.info('Nenhum cliente cadastrado para exportar.')
+        return
+      }
+
+      const { count } = exportClientsToCSV(filtered)
+      toast.success(`${count} clientes exportados com sucesso.`)
+    } catch (err) {
+      console.error('[export csv] erro ao exportar', err)
+      toast.error('Erro ao exportar clientes. Tente novamente.')
+    } finally {
+      setCsvExporting(false)
+    }
+  }
+
+  const handleOpenEnrichConfirm = () => {
+    if (factories.length === 0) {
+      toast.info('Nenhum cliente para enriquecer.')
+      return
+    }
+    setConfirmEnrichOpen(true)
+  }
+
+  const handleStartEnrichment = async () => {
+    setConfirmEnrichOpen(false)
+    setEnriching(true)
+    try {
+      const summary = await enrichClientData({ mode: 'all' })
+      setEnriching(false)
+      setEnrichSummary(summary)
+      setSummaryOpen(true)
+      toast.success('Enriquecimento concluido!')
+      loadData()
+    } catch (err) {
+      console.error('[enrichment] erro ao enriquecer', err)
+      setEnriching(false)
+      toast.error('Erro ao processar enriquecimento. Verifique sua conexao e tente novamente.')
+    }
+  }
+
   const handleDelete = async (id: string) => {
     const factory = factories.find((f) => f.id === id)
     if (!confirm('Excluir esta fábrica?')) return
@@ -360,7 +417,24 @@ export default function Cadastro() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            className="gap-2"
+            disabled={csvExporting}
+            onClick={handleExportCSV}
+          >
+            {csvExporting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            {csvExporting ? 'Exportando...' : 'Exportar CSV'}
+          </Button>
+          <Button variant="outline" className="gap-2" onClick={handleOpenEnrichConfirm}>
+            <Sparkles className="w-4 h-4" />
+            Enriquecer Dados
+          </Button>
           <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
             <Upload className="w-4 h-4" /> Importar
           </Button>
@@ -679,6 +753,95 @@ export default function Cadastro() {
       </Dialog>
 
       <ImportExcelDialog open={importOpen} onOpenChange={setImportOpen} onImported={loadData} />
+
+      {/* Confirmation Dialog: Enriquecer Dados */}
+      <Dialog open={confirmEnrichOpen} onOpenChange={setConfirmEnrichOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enriquecimento de Dados</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Sera feita a busca de CEP, padronizacao de enderecos e geocodificacao de todos os
+            clientes. Isso pode levar alguns minutos. Deseja continuar?
+          </p>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => setConfirmEnrichOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleStartEnrichment} className="gap-2">
+              <Sparkles className="w-4 h-4" />
+              Iniciar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal 1 (Loading): Processando Enriquecimento */}
+      <Dialog open={enriching} onOpenChange={() => {}}>
+        <DialogContent
+          className="max-w-md text-center py-8 [&>button]:hidden"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <div className="p-3 bg-primary/10 rounded-full">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold text-foreground">
+                Processando enriquecimento de dados...
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Isso pode levar alguns minutos. Nao feche esta pagina.
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal 2 (Success): Resumo do Enriquecimento Concluido */}
+      <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enriquecimento Concluido</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2 text-sm">
+            <div className="flex justify-between items-center py-1.5 border-b">
+              <span className="text-muted-foreground">Total processados:</span>
+              <span className="font-semibold text-foreground">
+                {enrichSummary?.total_processed ?? 0}
+              </span>
+            </div>
+            <div className="flex justify-between items-center py-1.5 border-b">
+              <span className="text-muted-foreground">Total enriquecidos:</span>
+              <span className="font-semibold text-foreground">
+                {enrichSummary?.total_enriched ?? 0}
+              </span>
+            </div>
+            <div className="flex justify-between items-center py-1.5 border-b">
+              <span className="text-muted-foreground">Total geocodificados:</span>
+              <span className="font-semibold text-foreground">
+                {enrichSummary?.total_geocoded ?? 0}
+              </span>
+            </div>
+            <div className="flex justify-between items-center py-1.5 border-b">
+              <span className="text-muted-foreground">Total inconsistentes:</span>
+              <span className="font-semibold text-foreground">
+                {enrichSummary?.total_inconsistent ?? 0}
+              </span>
+            </div>
+            <div className="flex justify-between items-center py-1.5 border-b">
+              <span className="text-muted-foreground">Total falhas:</span>
+              <span className="font-semibold text-foreground">
+                {enrichSummary?.total_failed ?? 0}
+              </span>
+            </div>
+          </div>
+          <div className="flex justify-end pt-2">
+            <Button onClick={() => setSummaryOpen(false)}>Fechar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

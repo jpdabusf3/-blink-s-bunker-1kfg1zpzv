@@ -70,6 +70,11 @@ function mapRecordToFactory(record: any): Factory {
     data_importacao: record.data_importacao,
     contato: record.contato,
     status_contato: record.status_contato,
+    cnpj: record.cnpj,
+    geocode_precision: record.geocode_precision,
+    address_status: record.address_status,
+    enriched_at: record.enriched_at,
+    standardized_address: record.standardized_address,
     created: record.created,
     swot: {
       strengths: '',

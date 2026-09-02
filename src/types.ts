@@ -223,6 +223,11 @@ export interface Factory {
   data_importacao?: string
   contato?: string
   status_contato?: 'Champion' | 'Stakeholder' | 'Decisor' | 'Influenciador' | 'Gatekeepers'
+  cnpj?: string
+  geocode_precision?: 'exact' | 'street' | 'city' | 'failed' | string
+  address_status?: 'complete' | 'partial' | 'inconsistent' | 'enriched' | 'failed' | string
+  enriched_at?: string
+  standardized_address?: string
 }
 
 export type GestaoFuncao =
