@@ -19,7 +19,9 @@ import {
   Layers,
   HelpCircle,
   Sparkles,
+  Edit3,
 } from 'lucide-react'
+import { CadastroManualNFForm } from '@/components/CadastroManualNFForm'
 import { extrairTextoPdf } from '@/services/nfe-service'
 import { nfService, type ParsedNFData } from '@/services/nfService'
 import {
@@ -62,6 +64,7 @@ interface UploadNfeDialogProps {
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
   onOpenReviewQueue?: () => void
+  onProcessComplete?: (res: any) => void
 }
 
 export function UploadNfeDialog({
@@ -69,7 +72,9 @@ export function UploadNfeDialog({
   onOpenChange,
   onSuccess,
   onOpenReviewQueue,
+  onProcessComplete,
 }: UploadNfeDialogProps) {
+  const [mainMode, setMainMode] = useState<'upload' | 'manual'>('upload')
   const [activeTab, setActiveTab] = useState<'nfe' | 'excel'>('nfe')
   const [files, setFiles] = useState<File[]>([])
   const [loading, setLoading] = useState(false)
@@ -85,6 +90,7 @@ export function UploadNfeDialog({
   const excelInputRef = useRef<HTMLInputElement>(null)
 
   const resetState = () => {
+    setMainMode('upload')
     setFiles([])
     setLoading(false)
     setCurrentStep('')
@@ -609,8 +615,9 @@ export function UploadNfeDialog({
           <div className="pt-2">
             <CadastroManualNFForm
               onSuccess={() => {
-                onOpenChange(false)
-                resetState()
+                if (onSuccess) {
+                  onSuccess()
+                }
                 if (onProcessComplete) {
                   onProcessComplete({
                     total_processadas: 1,
@@ -620,6 +627,8 @@ export function UploadNfeDialog({
                     resultados: [],
                   })
                 }
+                onOpenChange(false)
+                resetState()
               }}
               onCancel={() => setMainMode('upload')}
             />
