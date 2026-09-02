@@ -83,6 +83,13 @@ const PRODUCT_LINE_OPTIONS = [
   'Blends',
   'Ingredientes',
 ]
+const ADDRESS_STATUS_OPTIONS: { label: string; value: string }[] = [
+  { label: 'Completo', value: 'complete' },
+  { label: 'Parcial', value: 'partial' },
+  { label: 'Inconsistente', value: 'inconsistent' },
+  { label: 'Enriquecido', value: 'enriched' },
+  { label: 'Falha', value: 'failed' },
+]
 
 export default function Cadastro() {
   const { user } = useAuth()
@@ -231,6 +238,7 @@ export default function Cadastro() {
   const [selectedStatusContatos, setSelectedStatusContatos] = useState<string[]>([])
   const [selectedProfiles, setSelectedProfiles] = useState<string[]>([])
   const [selectedProductLines, setSelectedProductLines] = useState<string[]>([])
+  const [selectedAddressStatuses, setSelectedAddressStatuses] = useState<string[]>([])
 
   const loadData = async () => {
     try {
@@ -254,8 +262,10 @@ export default function Cadastro() {
     setSelectedRegions([])
     setSelectedSpecies([])
     setSelectedStatuses([])
+    setSelectedStatusContatos([])
     setSelectedProfiles([])
     setSelectedProductLines([])
+    setSelectedAddressStatuses([])
   }
 
   const hasActiveFilters =
@@ -265,7 +275,8 @@ export default function Cadastro() {
     selectedStatuses.length > 0 ||
     selectedStatusContatos.length > 0 ||
     selectedProfiles.length > 0 ||
-    selectedProductLines.length > 0
+    selectedProductLines.length > 0 ||
+    selectedAddressStatuses.length > 0
 
   const filtered = useMemo(() => {
     return factories.filter((f) => {
@@ -315,6 +326,13 @@ export default function Cadastro() {
         if (!hasLine) return false
       }
 
+      // Address status multi-match
+      if (selectedAddressStatuses.length > 0) {
+        if (!f.address_status || !selectedAddressStatuses.includes(f.address_status)) {
+          return false
+        }
+      }
+
       return true
     })
   }, [
@@ -323,8 +341,10 @@ export default function Cadastro() {
     selectedRegions,
     selectedSpecies,
     selectedStatuses,
+    selectedStatusContatos,
     selectedProfiles,
     selectedProductLines,
+    selectedAddressStatuses,
   ])
 
   const handleEdit = (f: Factory) => {
@@ -539,7 +559,7 @@ export default function Cadastro() {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-2.5">
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">
                   Região
@@ -604,6 +624,17 @@ export default function Cadastro() {
                   value={selectedProductLines}
                   onChange={setSelectedProductLines}
                   placeholder="Todas as linhas"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  Status Endereço
+                </label>
+                <MultiSelect
+                  options={ADDRESS_STATUS_OPTIONS}
+                  value={selectedAddressStatuses}
+                  onChange={setSelectedAddressStatuses}
+                  placeholder="Todos os status"
                 />
               </div>
             </div>

@@ -22,6 +22,7 @@ import HistoricoVendas from './pages/HistoricoVendas'
 import Relatorios from './pages/Relatorios'
 import Documents from './pages/Documents'
 import AdminLogs from './pages/AdminLogs'
+import MapaClientes from './pages/MapaClientes'
 import UsersPage from './pages/Users'
 import TeamManagement from './pages/TeamManagement'
 import GestaoTecnica from './pages/GestaoTecnica'
@@ -130,6 +131,7 @@ const App = () => (
 
                     <Route path="/" element={<Index />} />
                     <Route path="/cadastro" element={<Cadastro />} />
+                    <Route path="/mapa" element={<MapaClientes />} />
                     <Route path="/funil" element={<Funil />} />
                     <Route path="/funil-vendas" element={<FunilVendas />} />
                     <Route path="/swot" element={<SWOT />} />

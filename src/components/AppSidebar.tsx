@@ -26,6 +26,7 @@ import {
   Upload,
   Settings2,
   Package,
+  MapPin,
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
@@ -42,6 +43,7 @@ export function AppSidebar() {
   const menu = [
     { name: t('nav.dashboard'), path: '/', icon: Home },
     { name: t('nav.cadastro'), path: '/cadastro', icon: Building2 },
+    { name: 'Mapa de Clientes', path: '/mapa', icon: MapPin },
     { name: 'Importar Clientes', path: '/importar-clientes', icon: Upload },
     { name: t('nav.funil'), path: '/funil', icon: BarChart2 },
     { name: 'Funil de Vendas', path: '/funil-vendas', icon: Layers },

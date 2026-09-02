@@ -169,6 +169,8 @@ export interface Factory {
     | 'Indústrias'
   documents?: Document[]
   scoreHistory?: ScoreHistory[]
+  lat?: number
+  lng?: number
   coordinates?: {
     lat: number
     lng: number
