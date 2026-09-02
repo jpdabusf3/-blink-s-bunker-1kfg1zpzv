@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import pb from '@/lib/pocketbase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { isManager } from '@/lib/user-scope'
+import { useRealtime } from '@/hooks/use-realtime'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
@@ -18,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, normalizeNumberBR } from '@/lib/utils'
 import {
   BarChart,
   Bar,
@@ -33,10 +34,10 @@ import {
   Cell,
 } from 'recharts'
 import { ChartContainer } from '@/components/ui/chart'
-import { Loader2, FileSpreadsheet, FileArchive } from 'lucide-react'
+import { Loader2, FileSpreadsheet, FileArchive, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { exportOrdersToExcel } from '@/lib/exportUtils'
+import { exportOrdersToExcel, exportOrdersToPDF } from '@/lib/exportUtils'
 import { useAppContext } from '@/store/AppContext'
 import { UserFilter } from '@/components/UserFilter'
 import { MatrizVendasReport } from '@/components/MatrizVendasReport'
@@ -132,26 +133,94 @@ export default function Relatorios() {
   const [regionFilter, setRegionFilter] = useState<string>('all')
   const [salesOwnerFilter, setSalesOwnerFilter] = useState<string>('all')
 
-  useEffect(() => {
-    pb.collection('orders')
-      .getFullList({
-        expand: 'factoryId',
-      })
-      .then((res) => {
-        setOrders(res)
-      })
-      .catch(() => {
-        setOrders([])
-        toast({
-          title: 'Não foi possível carregar os dados.',
-          description: 'Tente novamente em instantes.',
-          variant: 'destructive',
+  const loadData = async () => {
+    try {
+      // Carregar pedidos legados da collection orders
+      let legacyOrders: any[] = []
+      try {
+        legacyOrders = await pb.collection('orders').getFullList({ expand: 'factoryId' })
+      } catch {
+        legacyOrders = []
+      }
+
+      // Carregar historico_vendas (vendas implantadas manuais e via PDF)
+      let historicoList: any[] = []
+      try {
+        historicoList = await pb.collection('historico_vendas').getFullList({
+          expand: 'gestor_tecnico_id,vendedor_id',
+          sort: '-created',
         })
+      } catch {
+        historicoList = []
+      }
+
+      // Converter itens de historico_vendas para a interface unificada de pedidos
+      const convertedHistorico = historicoList.map((h) => {
+        const dataDoc = h.data_documento || h.data || h.created?.slice(0, 10) || ''
+        const clientName = h.destinatario_nome || h.cliente || 'Cliente'
+        const rawValor = h.produto_valor_total || h.valor || h.valor_total_nota || 0
+        const totalVal = normalizeNumberBR(rawValor)
+        const qtd = normalizeNumberBR(h.produto_quantidade) || 1
+        const line = h.produto_familia || h.especie_destino || h.especie || 'Geral'
+        const prod = h.produto_descricao || h.produto_codigo || 'Item'
+        const ownerName =
+          h.vendedor ||
+          h.gestor_tecnico ||
+          h.expand?.vendedor_id?.nome ||
+          h.expand?.gestor_tecnico_id?.nome ||
+          'Não atribuído'
+
+        // Tentar relacionar com factory existente pelo nome do cliente
+        const matchedFactory = factories.find(
+          (f) => f.name && f.name.toLowerCase().trim() === clientName.toLowerCase().trim(),
+        )
+
+        const factoryData = matchedFactory || {
+          id: `cust_${clientName.replace(/\W+/g, '_')}`,
+          name: clientName,
+          state: h.destinatario_uf || '',
+          stateRegion: 'Outros',
+          salesChannel: h.canal_vendas === 'Direto' ? 'Direct' : 'Indirect',
+          indirectChannelType: h.canal_vendas || 'Revendas',
+          salesOwner: ownerName,
+          salesOwnerName: ownerName,
+        }
+
+        return {
+          id: h.id,
+          orderDate: dataDoc,
+          totalValue: totalVal,
+          quantity: qtd,
+          line,
+          product: prod,
+          factoryId: factoryData.id,
+          salesOwner: ownerName,
+          expand: {
+            factoryId: factoryData,
+          },
+        }
       })
-      .finally(() => {
-        setLoading(false)
+
+      setOrders([...legacyOrders, ...convertedHistorico])
+    } catch {
+      setOrders([])
+      toast({
+        title: 'Não foi possível carregar os dados.',
+        description: 'Tente novamente em instantes.',
+        variant: 'destructive',
       })
-  }, [])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [factories])
+
+  useRealtime('historico_vendas', () => loadData())
+  useRealtime('notas_fiscais', () => loadData())
+  useRealtime('orders', () => loadData())
 
   const states = useMemo(() => {
     const s = new Set<string>()
@@ -297,6 +366,16 @@ export default function Relatorios() {
               </SelectContent>
             </Select>
           </div>
+          <Button
+            onClick={() =>
+              exportOrdersToPDF(filteredOrders, factories, { template: reportTemplate })
+            }
+            variant="outline"
+            className="gap-2"
+          >
+            <FileText className="w-4 h-4" />
+            Exportar PDF
+          </Button>
           <Button
             onClick={() => exportOrdersToExcel(filteredOrders, factories)}
             variant="outline"

@@ -109,9 +109,61 @@ export default function HistoricoVendas() {
   const handleDelete = async (id: string) => {
     try {
       await deleteHistoricoVenda(id)
-      toast({ title: 'Excluído', description: 'Registro removido.' })
+      toast({ title: 'Excluído', description: 'Registro removido com sucesso.' })
     } catch {
-      toast({ title: 'Erro', variant: 'destructive' })
+      toast({
+        title: 'Erro ao excluir',
+        description: 'Não foi possível remover o registro. Tente novamente.',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleExportExcel = () => {
+    if (filtered.length === 0) {
+      toast({
+        title: 'Sem dados para exportar',
+        description: 'Nenhum registro encontrado com os filtros atuais.',
+        variant: 'destructive',
+      })
+      return
+    }
+    try {
+      exportHistoricoVendasToExcel(filtered)
+      toast({
+        title: 'Exportação concluída',
+        description: `${filtered.length} registro(s) exportados em formato Excel (.csv).`,
+      })
+    } catch {
+      toast({
+        title: 'Erro ao exportar',
+        description: 'Não foi possível gerar a planilha. Tente novamente.',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleExportPDF = () => {
+    if (filtered.length === 0) {
+      toast({
+        title: 'Sem dados para exportar',
+        description: 'Nenhum registro encontrado com os filtros atuais.',
+        variant: 'destructive',
+      })
+      return
+    }
+    try {
+      exportHistoricoVendasToPDF(filtered)
+      toast({
+        title: 'Documento PDF gerado',
+        description: 'Janela de impressão aberta com os dados da tela.',
+      })
+    } catch (err) {
+      toast({
+        title: 'Erro ao gerar PDF',
+        description: err instanceof Error ? err.message : 'Não foi possível gerar o PDF.',
+        variant: 'destructive',
+      })
     }
   }
 
@@ -130,6 +182,22 @@ export default function HistoricoVendas() {
             onClick={() => setNfeUploadOpen(true)}
           >
             <Sparkles className="w-4 h-4" /> Leitor de NF (PDF)
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={handleExportExcel}
+            disabled={filtered.length === 0}
+          >
+            <FileSpreadsheet className="w-4 h-4" /> Exportar Excel
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={handleExportPDF}
+            disabled={filtered.length === 0}
+          >
+            <FileText className="w-4 h-4" /> Exportar PDF
           </Button>
           <Button variant="outline" className="gap-2" onClick={downloadPedidoModel}>
             <Download className="w-4 h-4" /> Baixar Modelo

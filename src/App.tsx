@@ -39,7 +39,7 @@ import { ThemeProvider } from './components/ThemeProvider'
 
 const Historico = lazy(() => import('./pages/Historico'))
 const HistoricoFunil = lazy(() => import('./pages/HistoricoFunil'))
-const ConfiguracoesLayout = lazy(() => import('./pages/ConfiguracoesLayout'))
+
 const Produtos = lazy(() => import('./pages/Produtos'))
 
 interface ErrorBoundaryProps {
@@ -127,14 +127,7 @@ const App = () => (
                         </Suspense>
                       }
                     />
-                    <Route
-                      path="/configuracoes-layout"
-                      element={
-                        <Suspense fallback={<PageSkeleton />}>
-                          <ConfiguracoesLayout />
-                        </Suspense>
-                      }
-                    />
+
                     <Route path="/" element={<Index />} />
                     <Route path="/cadastro" element={<Cadastro />} />
                     <Route path="/funil" element={<Funil />} />

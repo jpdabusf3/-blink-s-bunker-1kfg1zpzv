@@ -560,333 +560,385 @@ export function UploadNfeDialog({
         onOpenChange(v)
       }}
     >
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className={`max-h-[92vh] overflow-y-auto transition-all ${mainMode === 'manual' ? 'max-w-4xl' : 'max-w-2xl'}`}
+      >
         <DialogHeader>
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-primary/10 text-primary">
-              <Sparkles className="w-5 h-5" />
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                {mainMode === 'upload' ? (
+                  <Sparkles className="w-5 h-5" />
+                ) : (
+                  <Edit3 className="w-5 h-5" />
+                )}
+              </div>
+              <div>
+                <DialogTitle className="text-xl">
+                  {mainMode === 'upload'
+                    ? 'Cadastro e Leitor de Notas Fiscais'
+                    : 'Cadastro Manual de Nota Fiscal'}
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  {mainMode === 'upload'
+                    ? 'Importação inteligente via DANFE/NFe em PDF ou planilha Excel.'
+                    : 'Preencha os dados cadastrais e adicione produtos do catálogo Blink.'}
+                </DialogDescription>
+              </div>
             </div>
-            <div>
-              <DialogTitle className="text-xl">
-                Leitor Automático de Notas Fiscais (PDF)
-              </DialogTitle>
-              <DialogDescription className="text-xs">
-                Importação inteligente com extração de DANFE/NFe (Blink Bioscience), validação de
-                catálogo e fila de conferência.
-              </DialogDescription>
-            </div>
+
+            {/* Toggle superior: Upload PDF vs Cadastro Manual */}
+            <Tabs
+              value={mainMode}
+              onValueChange={(v) => setMainMode(v as 'upload' | 'manual')}
+              className="shrink-0"
+            >
+              <TabsList className="grid grid-cols-2">
+                <TabsTrigger value="upload" className="gap-1.5 text-xs">
+                  <UploadCloud className="w-3.5 h-3.5" /> Upload PDF
+                </TabsTrigger>
+                <TabsTrigger value="manual" className="gap-1.5 text-xs">
+                  <Edit3 className="w-3.5 h-3.5" /> Cadastro Manual
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-          <TabsList className="grid grid-cols-2 w-full">
-            <TabsTrigger value="nfe" className="gap-2">
-              <FileText className="w-4 h-4" /> Notas Fiscais (PDF)
-            </TabsTrigger>
-            <TabsTrigger value="excel" className="gap-2">
-              <FileSpreadsheet className="w-4 h-4" /> Modelo Planilha Excel
-            </TabsTrigger>
-          </TabsList>
+        {mainMode === 'manual' ? (
+          <div className="pt-2">
+            <CadastroManualNFForm
+              onSuccess={() => {
+                onOpenChange(false)
+                resetState()
+                if (onProcessComplete) {
+                  onProcessComplete({
+                    total_processadas: 1,
+                    pendentes_revisao: 0,
+                    pendencias_produto: 0,
+                    duplicadas_ignoradas: 0,
+                    resultados: [],
+                  })
+                }
+              }}
+              onCancel={() => setMainMode('upload')}
+            />
+          </div>
+        ) : (
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+            <TabsList className="grid grid-cols-2 w-full">
+              <TabsTrigger value="nfe" className="gap-2">
+                <FileText className="w-4 h-4" /> Notas Fiscais (PDF)
+              </TabsTrigger>
+              <TabsTrigger value="excel" className="gap-2">
+                <FileSpreadsheet className="w-4 h-4" /> Modelo Planilha Excel
+              </TabsTrigger>
+            </TabsList>
 
-          {/* TAB 1: NOTAS FISCAIS EM PDF */}
-          <TabsContent value="nfe" className="space-y-4 pt-2">
-            {!response && !loading && (
-              <>
-                <div
-                  onDragOver={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    handleFilesSelected(e.dataTransfer.files)
-                  }}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-primary/30 hover:border-primary/60 bg-muted/20 hover:bg-muted/40 rounded-xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 group"
-                >
-                  <div className="p-4 rounded-full bg-primary/10 text-primary group-hover:scale-110 transition-transform">
-                    <UploadCloud className="w-8 h-8" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="font-semibold text-sm">
-                      Arraste PDFs de Nota Fiscal aqui ou clique para selecionar
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Suporta upload único ou em lote (ex: NF 322, 323, 324). Máximo 25MB por
-                      arquivo.
-                    </p>
-                  </div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept="application/pdf,.pdf"
-                    className="hidden"
-                    onChange={(e) => handleFilesSelected(e.target.files)}
-                  />
-                </div>
-
-                {/* Lista de arquivos selecionados */}
-                {files.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                      <span>{files.length} arquivo(s) preparado(s) para leitura</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 text-[11px] text-destructive hover:text-destructive"
-                        onClick={() => setFiles([])}
-                      >
-                        Limpar todos
-                      </Button>
+            {/* TAB 1: NOTAS FISCAIS EM PDF */}
+            <TabsContent value="nfe" className="space-y-4 pt-2">
+              {!response && !loading && (
+                <>
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleFilesSelected(e.dataTransfer.files)
+                    }}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-primary/30 hover:border-primary/60 bg-muted/20 hover:bg-muted/40 rounded-xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 group"
+                  >
+                    <div className="p-4 rounded-full bg-primary/10 text-primary group-hover:scale-110 transition-transform">
+                      <UploadCloud className="w-8 h-8" />
                     </div>
+                    <div className="space-y-1">
+                      <p className="font-semibold text-sm">
+                        Arraste PDFs de Nota Fiscal aqui ou clique para selecionar
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Suporta upload único ou em lote (ex: NF 322, 323, 324). Máximo 25MB por
+                        arquivo.
+                      </p>
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept="application/pdf,.pdf"
+                      className="hidden"
+                      onChange={(e) => handleFilesSelected(e.target.files)}
+                    />
+                  </div>
 
-                    <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
-                      {files.map((f, i) => (
+                  {/* Lista de arquivos selecionados */}
+                  {files.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                        <span>{files.length} arquivo(s) preparado(s) para leitura</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-[11px] text-destructive hover:text-destructive"
+                          onClick={() => setFiles([])}
+                        >
+                          Limpar todos
+                        </Button>
+                      </div>
+
+                      <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                        {files.map((f, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center justify-between p-2.5 rounded-lg border bg-card text-xs"
+                          >
+                            <div className="flex items-center gap-2.5 truncate">
+                              <FileText className="w-4 h-4 text-primary shrink-0" />
+                              <span className="font-medium truncate">{f.name}</span>
+                              <span className="text-muted-foreground text-[10px]">
+                                ({(f.size / 1024).toFixed(0)} KB)
+                              </span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                removeFile(i)
+                              }}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Destaque das regras de negócio */}
+                  <div className="bg-muted/40 rounded-lg p-3 text-xs text-muted-foreground space-y-1 border">
+                    <p className="font-medium text-foreground flex items-center gap-1.5">
+                      <HelpCircle className="w-3.5 h-3.5 text-primary" /> O que é extraído e
+                      validado:
+                    </p>
+                    <ul className="list-disc list-inside space-y-0.5 text-[11px] pl-1">
+                      <li>
+                        <strong>Número da NF e Data de Emissão</strong>
+                      </li>
+                      <li>
+                        <strong>Dados do Cliente:</strong> Razão Social, CNPJ/CPF, Endereço de
+                        entrega
+                      </li>
+                      <li>
+                        <strong>Produtos:</strong> Código, Nome, Quantidade, Valor Unitário e Total
+                      </li>
+                      <li>
+                        <strong>Impostos & Frete:</strong> ICMS, PIS, COFINS, Modalidade FOB/CIF
+                      </li>
+                      <li>
+                        <strong>Validação Inteligente:</strong> Produtos não encontrados no catálogo
+                        e duplicatas são destacados para sua conferência na Fila de Revisão.
+                      </li>
+                    </ul>
+                  </div>
+
+                  {errorMsg && (
+                    <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 p-3 rounded-lg border border-destructive/20">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{errorMsg}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleProcessNfe}
+                      disabled={files.length === 0}
+                      className="gap-2 min-w-[140px]"
+                    >
+                      <Sparkles className="w-4 h-4" /> Processar{' '}
+                      {files.length > 0 && `(${files.length})`}
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {/* LOADING STATE */}
+              {loading && (
+                <div className="py-12 flex flex-col items-center justify-center gap-4 text-center">
+                  <div className="relative">
+                    <div className="p-4 rounded-full bg-primary/10 text-primary animate-pulse">
+                      <Sparkles className="w-10 h-10" />
+                    </div>
+                    <Loader2 className="w-6 h-6 animate-spin text-primary absolute -bottom-1 -right-1" />
+                  </div>
+                  <div className="space-y-1 max-w-sm">
+                    <h4 className="font-semibold text-base">Lendo e Estruturando Nota Fiscal</h4>
+                    <p className="text-xs text-muted-foreground">
+                      {currentStep || 'Processando...'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* RESULT STATE */}
+              {response && !loading && (
+                <div className="space-y-4 pt-1">
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-xl p-3">
+                      <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                        {response.pendentes_revisao}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">Prontos p/ Revisão</p>
+                    </div>
+                    <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 rounded-xl p-3">
+                      <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                        {response.pendencias_produto}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">Pendência de Produto</p>
+                    </div>
+                    <div className="bg-slate-100 dark:bg-slate-800/50 border rounded-xl p-3">
+                      <p className="text-2xl font-bold text-slate-600 dark:text-slate-400">
+                        {response.duplicadas_ignoradas}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">Duplicadas Ignoradas</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      Detalhes do processamento:
+                    </p>
+                    <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+                      {response.resultados.map((r, i) => (
                         <div
                           key={i}
-                          className="flex items-center justify-between p-2.5 rounded-lg border bg-card text-xs"
+                          className={`p-3 rounded-lg border text-xs flex flex-col gap-1.5 ${
+                            r.status === 'duplicada_ignorada'
+                              ? 'bg-slate-50 dark:bg-slate-900/40 border-slate-200'
+                              : r.status === 'pendencia_produto'
+                                ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/40'
+                                : 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800/40'
+                          }`}
                         >
-                          <div className="flex items-center gap-2.5 truncate">
-                            <FileText className="w-4 h-4 text-primary shrink-0" />
-                            <span className="font-medium truncate">{f.name}</span>
-                            <span className="text-muted-foreground text-[10px]">
-                              ({(f.size / 1024).toFixed(0)} KB)
-                            </span>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {r.status === 'duplicada_ignorada' ? (
+                                <Badge variant="outline" className="text-[10px]">
+                                  Duplicada
+                                </Badge>
+                              ) : r.status === 'pendencia_produto' ? (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] bg-amber-100 text-amber-800 border-amber-300"
+                                >
+                                  Pendência de Produto
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] bg-emerald-100 text-emerald-800 border-emerald-300"
+                                >
+                                  Pronto
+                                </Badge>
+                              )}
+                              <span className="font-semibold">
+                                {r.numero_nf ? `NF ${r.numero_nf}` : r.arquivo}
+                              </span>
+                            </div>
+                            {r.valor ? (
+                              <span className="font-bold text-primary">
+                                {new Intl.NumberFormat('pt-BR', {
+                                  style: 'currency',
+                                  currency: 'BRL',
+                                }).format(r.valor)}
+                              </span>
+                            ) : null}
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              removeFile(i)
-                            }}
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </Button>
+                          <p className="text-muted-foreground">{r.cliente || r.arquivo}</p>
+                          {r.motivo_pendencia && (
+                            <div className="flex items-start gap-1.5 text-amber-700 dark:text-amber-400 text-[11px] bg-amber-100/50 dark:bg-amber-950/40 p-2 rounded">
+                              <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                              <span>{r.motivo_pendencia}</span>
+                            </div>
+                          )}
+                          <p className="text-[11px] text-muted-foreground italic">{r.mensagem}</p>
                         </div>
                       ))}
                     </div>
                   </div>
-                )}
 
-                {/* Destaque das regras de negócio */}
-                <div className="bg-muted/40 rounded-lg p-3 text-xs text-muted-foreground space-y-1 border">
-                  <p className="font-medium text-foreground flex items-center gap-1.5">
-                    <HelpCircle className="w-3.5 h-3.5 text-primary" /> O que é extraído e validado:
-                  </p>
-                  <ul className="list-disc list-inside space-y-0.5 text-[11px] pl-1">
-                    <li>
-                      <strong>Número da NF e Data de Emissão</strong>
-                    </li>
-                    <li>
-                      <strong>Dados do Cliente:</strong> Razão Social, CNPJ/CPF, Endereço de entrega
-                    </li>
-                    <li>
-                      <strong>Produtos:</strong> Código, Nome, Quantidade, Valor Unitário e Total
-                    </li>
-                    <li>
-                      <strong>Impostos & Frete:</strong> ICMS, PIS, COFINS, Modalidade FOB/CIF
-                    </li>
-                    <li>
-                      <strong>Validação Inteligente:</strong> Produtos não encontrados no catálogo e
-                      duplicatas são destacados para sua conferência na Fila de Revisão.
-                    </li>
-                  </ul>
-                </div>
-
-                {errorMsg && (
-                  <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 p-3 rounded-lg border border-destructive/20">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{errorMsg}</span>
-                  </div>
-                )}
-
-                <div className="flex justify-end gap-2 pt-2">
-                  <Button variant="outline" onClick={() => onOpenChange(false)}>
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleProcessNfe}
-                    disabled={files.length === 0}
-                    className="gap-2 min-w-[140px]"
-                  >
-                    <Sparkles className="w-4 h-4" /> Processar{' '}
-                    {files.length > 0 && `(${files.length})`}
-                  </Button>
-                </div>
-              </>
-            )}
-
-            {/* LOADING STATE */}
-            {loading && (
-              <div className="py-12 flex flex-col items-center justify-center gap-4 text-center">
-                <div className="relative">
-                  <div className="p-4 rounded-full bg-primary/10 text-primary animate-pulse">
-                    <Sparkles className="w-10 h-10" />
-                  </div>
-                  <Loader2 className="w-6 h-6 animate-spin text-primary absolute -bottom-1 -right-1" />
-                </div>
-                <div className="space-y-1 max-w-sm">
-                  <h4 className="font-semibold text-base">Lendo e Estruturando Nota Fiscal</h4>
-                  <p className="text-xs text-muted-foreground">{currentStep || 'Processando...'}</p>
-                </div>
-              </div>
-            )}
-
-            {/* RESULT STATE */}
-            {response && !loading && (
-              <div className="space-y-4 pt-1">
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-xl p-3">
-                    <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                      {response.pendentes_revisao}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">Prontos p/ Revisão</p>
-                  </div>
-                  <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 rounded-xl p-3">
-                    <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                      {response.pendencias_produto}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">Pendência de Produto</p>
-                  </div>
-                  <div className="bg-slate-100 dark:bg-slate-800/50 border rounded-xl p-3">
-                    <p className="text-2xl font-bold text-slate-600 dark:text-slate-400">
-                      {response.duplicadas_ignoradas}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">Duplicadas Ignoradas</p>
+                  <div className="flex gap-2 pt-2">
+                    <Button variant="outline" onClick={resetState} className="flex-1">
+                      Nova Importação
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        onOpenChange(false)
+                        if (onOpenReviewQueue) onOpenReviewQueue()
+                      }}
+                      className="flex-1 gap-2 bg-primary"
+                    >
+                      <Layers className="w-4 h-4" /> Abrir Fila de Revisão
+                    </Button>
                   </div>
                 </div>
+              )}
+            </TabsContent>
 
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-muted-foreground">
-                    Detalhes do processamento:
-                  </p>
-                  <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
-                    {response.resultados.map((r, i) => (
-                      <div
-                        key={i}
-                        className={`p-3 rounded-lg border text-xs flex flex-col gap-1.5 ${
-                          r.status === 'duplicada_ignorada'
-                            ? 'bg-slate-50 dark:bg-slate-900/40 border-slate-200'
-                            : r.status === 'pendencia_produto'
-                              ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/40'
-                              : 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800/40'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            {r.status === 'duplicada_ignorada' ? (
-                              <Badge variant="outline" className="text-[10px]">
-                                Duplicada
-                              </Badge>
-                            ) : r.status === 'pendencia_produto' ? (
-                              <Badge
-                                variant="outline"
-                                className="text-[10px] bg-amber-100 text-amber-800 border-amber-300"
-                              >
-                                Pendência de Produto
-                              </Badge>
-                            ) : (
-                              <Badge
-                                variant="outline"
-                                className="text-[10px] bg-emerald-100 text-emerald-800 border-emerald-300"
-                              >
-                                Pronto
-                              </Badge>
-                            )}
-                            <span className="font-semibold">
-                              {r.numero_nf ? `NF ${r.numero_nf}` : r.arquivo}
-                            </span>
-                          </div>
-                          {r.valor ? (
-                            <span className="font-bold text-primary">
-                              {new Intl.NumberFormat('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL',
-                              }).format(r.valor)}
-                            </span>
-                          ) : null}
-                        </div>
-                        <p className="text-muted-foreground">{r.cliente || r.arquivo}</p>
-                        {r.motivo_pendencia && (
-                          <div className="flex items-start gap-1.5 text-amber-700 dark:text-amber-400 text-[11px] bg-amber-100/50 dark:bg-amber-950/40 p-2 rounded">
-                            <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                            <span>{r.motivo_pendencia}</span>
-                          </div>
-                        )}
-                        <p className="text-[11px] text-muted-foreground italic">{r.mensagem}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <Button variant="outline" onClick={resetState} className="flex-1">
-                    Nova Importação
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      onOpenChange(false)
-                      if (onOpenReviewQueue) onOpenReviewQueue()
-                    }}
-                    className="flex-1 gap-2 bg-primary"
-                  >
-                    <Layers className="w-4 h-4" /> Abrir Fila de Revisão
-                  </Button>
-                </div>
-              </div>
-            )}
-          </TabsContent>
-
-          {/* TAB 2: MODELO EXCEL */}
-          <TabsContent value="excel" className="space-y-4 pt-2">
-            <div
-              onClick={() => excelInputRef.current?.click()}
-              className="border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 rounded-xl p-8 text-center cursor-pointer bg-muted/10 hover:bg-muted/20 transition-all flex flex-col items-center justify-center gap-2"
-            >
-              <FileSpreadsheet className="w-10 h-10 text-muted-foreground" />
-              <p className="text-sm font-medium">
-                {excelFile ? excelFile.name : 'Selecione uma planilha de pedidos (.xlsx ou .csv)'}
-              </p>
-              <p className="text-xs text-muted-foreground">Importação direta em lote</p>
-              <input
-                ref={excelInputRef}
-                type="file"
-                accept=".xlsx,.csv"
-                className="hidden"
-                onChange={(e) => setExcelFile(e.target.files?.[0] || null)}
-              />
-            </div>
-
-            <div className="flex justify-between items-center text-xs">
-              <Button
-                variant="link"
-                size="sm"
-                onClick={downloadPedidoModel}
-                className="gap-1.5 p-0 h-auto"
+            {/* TAB 2: MODELO EXCEL */}
+            <TabsContent value="excel" className="space-y-4 pt-2">
+              <div
+                onClick={() => excelInputRef.current?.click()}
+                className="border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 rounded-xl p-8 text-center cursor-pointer bg-muted/10 hover:bg-muted/20 transition-all flex flex-col items-center justify-center gap-2"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5" /> Baixar modelo de planilha
-              </Button>
-            </div>
+                <FileSpreadsheet className="w-10 h-10 text-muted-foreground" />
+                <p className="text-sm font-medium">
+                  {excelFile ? excelFile.name : 'Selecione uma planilha de pedidos (.xlsx ou .csv)'}
+                </p>
+                <p className="text-xs text-muted-foreground">Importação direta em lote</p>
+                <input
+                  ref={excelInputRef}
+                  type="file"
+                  accept=".xlsx,.csv"
+                  className="hidden"
+                  onChange={(e) => setExcelFile(e.target.files?.[0] || null)}
+                />
+              </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleProcessExcel}
-                disabled={!excelFile || excelLoading}
-                className="gap-2"
-              >
-                {excelLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                Importar Planilha
-              </Button>
-            </div>
-          </TabsContent>
-        </Tabs>
+              <div className="flex justify-between items-center text-xs">
+                <Button
+                  variant="link"
+                  size="sm"
+                  onClick={downloadPedidoModel}
+                  className="gap-1.5 p-0 h-auto"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" /> Baixar modelo de planilha
+                </Button>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleProcessExcel}
+                  disabled={!excelFile || excelLoading}
+                  className="gap-2"
+                >
+                  {excelLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Importar Planilha
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
+        )}
       </DialogContent>
     </Dialog>
   )

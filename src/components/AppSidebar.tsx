@@ -65,7 +65,6 @@ export function AppSidebar() {
       ? [{ name: t('nav.auditoria'), path: '/admin/logs', icon: ScrollText }]
       : []),
     { name: 'Histórico Funil', path: '/historico-funil', icon: ClipboardList },
-    { name: 'Config. Layout', path: '/configuracoes-layout', icon: Settings2 },
   ]
 
   return (

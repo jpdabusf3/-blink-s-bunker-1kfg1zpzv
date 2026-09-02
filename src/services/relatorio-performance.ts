@@ -48,13 +48,82 @@ function inDateRange(dateStr: string, ini: string, fim: string): boolean {
   return true
 }
 
-function filterVendas(vendas: HistoricoVenda[], f: PerformanceFilters): HistoricoVenda[] {
+function normalizeEspecie(esp?: string): string {
+  if (!esp) return ''
+  const u = esp.toUpperCase().trim()
+  if (u === 'AVES' || u === 'AVE') return 'AVE'
+  if (u === 'SUINOS' || u === 'SUINO') return 'SUINO'
+  if (u === 'PETS' || u === 'PET') return 'PET'
+  if (u === 'RUMINANTES' || u === 'BOVINO' || u === 'BOVINOS') return 'BOVINO'
+  if (u === 'AQUA') return 'AQUA'
+  return u
+}
+
+function normalizeCanal(c?: string): string {
+  if (!c) return ''
+  const clean = c.trim()
+  if (clean === 'Indústria' || clean === 'Industria') return 'Indústria'
+  return clean
+}
+
+function filterVendas(
+  vendas: HistoricoVenda[],
+  f: PerformanceFilters,
+  gestaoTecnica: GestaoTecnica[],
+): HistoricoVenda[] {
+  // Mapas por nome para cruzar caso os IDs sejam de coleções diferentes (ex: equipe vs gestao_tecnica ou nomes diretos)
+  const gestorMapById = new Map(
+    gestaoTecnica
+      .filter((g) => g.funcao === 'gestor_tecnico')
+      .map((g) => [g.id, g.nome.toLowerCase().trim()]),
+  )
+  const vendedorMapById = new Map(
+    gestaoTecnica
+      .filter((g) => g.funcao === 'vendedor')
+      .map((g) => [g.id, g.nome.toLowerCase().trim()]),
+  )
+
+  const targetGestorName = f.gestorId !== 'all' ? gestorMapById.get(f.gestorId) : null
+  const targetVendedorName = f.vendedorId !== 'all' ? vendedorMapById.get(f.vendedorId) : null
+
   return vendas.filter((v) => {
-    if (!inDateRange(v.data, f.dataInicial, f.dataFinal)) return false
-    if (f.gestorId !== 'all' && v.gestor_tecnico_id !== f.gestorId) return false
-    if (f.vendedorId !== 'all' && v.vendedor_id !== f.vendedorId) return false
-    if (f.especie !== 'all' && v.especie !== f.especie) return false
-    if (f.canalVendas !== 'all' && v.canal_vendas !== f.canalVendas) return false
+    const dataVal = v.data_documento || v.data || ''
+    if (!inDateRange(dataVal, f.dataInicial, f.dataFinal)) return false
+
+    if (f.gestorId !== 'all') {
+      const matchId = v.gestor_tecnico_id === f.gestorId
+      const vGestorNome = (v.gestor_tecnico || v.expand?.gestor_tecnico_id?.nome || '')
+        .toLowerCase()
+        .trim()
+      const matchName =
+        targetGestorName && vGestorNome
+          ? vGestorNome.includes(targetGestorName) || targetGestorName.includes(vGestorNome)
+          : false
+      if (!matchId && !matchName) return false
+    }
+
+    if (f.vendedorId !== 'all') {
+      const matchId = v.vendedor_id === f.vendedorId
+      const vVendNome = (v.vendedor || v.expand?.vendedor_id?.nome || '').toLowerCase().trim()
+      const matchName =
+        targetVendedorName && vVendNome
+          ? vVendNome.includes(targetVendedorName) || targetVendedorName.includes(vVendNome)
+          : false
+      if (!matchId && !matchName) return false
+    }
+
+    if (f.especie !== 'all') {
+      const normV = normalizeEspecie(v.especie_destino || v.especie)
+      const normF = normalizeEspecie(f.especie)
+      if (normV !== normF && (v.especie_destino || v.especie) !== f.especie) return false
+    }
+
+    if (f.canalVendas !== 'all') {
+      const normV = normalizeCanal(v.canal_vendas)
+      const normF = normalizeCanal(f.canalVendas)
+      if (normV !== normF && v.canal_vendas !== f.canalVendas) return false
+    }
+
     return true
   })
 }
@@ -62,7 +131,7 @@ function filterVendas(vendas: HistoricoVenda[], f: PerformanceFilters): Historic
 function distEspecie(records: HistoricoVenda[]) {
   const m = new Map<string, number>()
   records.forEach((r) => {
-    const e = r.especie || 'OUTRO'
+    const e = r.especie_destino || r.especie || 'OUTRO'
     m.set(e, (m.get(e) || 0) + 1)
   })
   return Array.from(m.entries()).map(([name, value]) => ({ name, value }))
@@ -70,15 +139,17 @@ function distEspecie(records: HistoricoVenda[]) {
 
 function distRelation(
   records: HistoricoVenda[],
-  field: 'gestor_tecnico_id' | 'vendedor_id',
+  nameField: 'gestor_tecnico' | 'vendedor',
+  idField: 'gestor_tecnico_id' | 'vendedor_id',
   nameMap: Map<string, string>,
 ) {
   const m = new Map<string, number>()
   records.forEach((r) => {
-    const id = r[field]
-    if (!id) return
-    const name = nameMap.get(id) || id
-    m.set(name, (m.get(name) || 0) + (r.valor || 0))
+    const val = r.produto_valor_total || r.valor || 0
+    const explicitName = r[nameField]
+    const id = r[idField]
+    const resolvedName = explicitName || (id ? nameMap.get(id) : null) || 'Não informado'
+    m.set(resolvedName, (m.get(resolvedName) || 0) + val)
   })
   return Array.from(m.entries()).map(([name, value]) => ({ name, value }))
 }
@@ -86,11 +157,12 @@ function distRelation(
 function buildMemberPerf(
   member: GestaoTecnica,
   sales: HistoricoVenda[],
-  relField: 'gestor_tecnico_id' | 'vendedor_id',
+  relNameField: 'gestor_tecnico' | 'vendedor',
+  relIdField: 'gestor_tecnico_id' | 'vendedor_id',
   nameMap: Map<string, string>,
   metaValor: number,
 ): MemberPerformance {
-  const valorTotal = sales.reduce((s, v) => s + (v.valor || 0), 0)
+  const valorTotal = sales.reduce((s, v) => s + (v.produto_valor_total || v.valor || 0), 0)
   return {
     id: member.id,
     nome: member.nome,
@@ -98,7 +170,7 @@ function buildMemberPerf(
     totalVendas: sales.length,
     valorTotal,
     distribuicaoEspecie: distEspecie(sales),
-    distribuicaoRelacionado: distRelation(sales, relField, nameMap),
+    distribuicaoRelacionado: distRelation(sales, relNameField, relIdField, nameMap),
     metaValor,
     metaProgresso: metaValor > 0 ? (valorTotal / metaValor) * 100 : 0,
   }
@@ -121,7 +193,7 @@ export async function fetchPerformanceData(filters: PerformanceFilters): Promise
     /* noop */
   }
 
-  const filtered = filterVendas(vendas, filters)
+  const filtered = filterVendas(vendas, filters, gestaoTecnica)
   const gestaoMap = new Map(gestaoTecnica.map((g) => [g.id, g.nome]))
 
   const metasByVend = new Map<string, number>()
@@ -139,32 +211,52 @@ export async function fetchPerformanceData(filters: PerformanceFilters): Promise
     }
   })
 
-  const valorTotal = filtered.reduce((s, v) => s + (v.valor || 0), 0)
+  const valorTotal = filtered.reduce((s, v) => s + (v.produto_valor_total || v.valor || 0), 0)
   const summary: ExecutiveSummary = {
     totalVendas: filtered.length,
     valorTotal,
     ticketMedio: filtered.length > 0 ? valorTotal / filtered.length : 0,
-    numClientes: new Set(filtered.map((v) => v.cliente)).size,
+    numClientes: new Set(filtered.map((v) => v.destinatario_nome || v.cliente || 'Desconhecido'))
+      .size,
     taxaConversao: atividadesCount > 0 ? (filtered.length / atividadesCount) * 100 : 0,
   }
 
   const gestores = gestaoTecnica
     .filter((g) => g.funcao === 'gestor_tecnico')
     .map((g) => {
-      const sales = filtered.filter((v) => v.gestor_tecnico_id === g.id)
+      const gNomeClean = g.nome.toLowerCase().trim()
+      const sales = filtered.filter((v) => {
+        if (v.gestor_tecnico_id === g.id) return true
+        const vGName = (v.gestor_tecnico || v.expand?.gestor_tecnico_id?.nome || '')
+          .toLowerCase()
+          .trim()
+        return vGName ? vGName.includes(gNomeClean) || gNomeClean.includes(vGName) : false
+      })
       const linkedVends = gestorVends.get(g.id) || new Set<string>()
       const metaValor = Array.from(linkedVends).reduce(
         (s, vid) => s + (metasByVend.get(vid) || 0),
         0,
       )
-      return buildMemberPerf(g, sales, 'vendedor_id', gestaoMap, metaValor)
+      return buildMemberPerf(g, sales, 'vendedor', 'vendedor_id', gestaoMap, metaValor)
     })
 
   const vendedores = gestaoTecnica
     .filter((g) => g.funcao === 'vendedor')
     .map((g) => {
-      const sales = filtered.filter((v) => v.vendedor_id === g.id)
-      return buildMemberPerf(g, sales, 'gestor_tecnico_id', gestaoMap, metasByVend.get(g.id) || 0)
+      const vNomeClean = g.nome.toLowerCase().trim()
+      const sales = filtered.filter((v) => {
+        if (v.vendedor_id === g.id) return true
+        const vVName = (v.vendedor || v.expand?.vendedor_id?.nome || '').toLowerCase().trim()
+        return vVName ? vVName.includes(vNomeClean) || vNomeClean.includes(vVName) : false
+      })
+      return buildMemberPerf(
+        g,
+        sales,
+        'gestor_tecnico',
+        'gestor_tecnico_id',
+        gestaoMap,
+        metasByVend.get(g.id) || 0,
+      )
     })
 
   return {
