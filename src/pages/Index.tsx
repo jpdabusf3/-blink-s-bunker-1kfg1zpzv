@@ -14,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { MapCard } from '@/components/dashboard/MapCard'
 import { ScoreEvolutionCard } from '@/components/dashboard/ScoreEvolutionCard'
 import { DashboardCharts } from '@/components/dashboard/DashboardCharts'
 import { FactoryListCard } from '@/components/dashboard/FactoryListCard'
@@ -283,7 +282,6 @@ export default function Index() {
       case 'maps':
         return (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-1">
-            <MapCard regionFilter={effectiveRegionFilter} />
             <ScoreEvolutionCard regionFilter={effectiveRegionFilter} />
           </div>
         )
