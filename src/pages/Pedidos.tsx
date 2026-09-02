@@ -83,14 +83,18 @@ export default function Pedidos() {
 
   const loadData = useCallback(async () => {
     try {
-      const [vendas, nfes] = await Promise.all([
+      const [vendas, nfes, nfRecords] = await Promise.all([
         getHistoricoVendas(),
         getNfePedidos('all').catch(() => []),
+        pb
+          .collection('notas_fiscais')
+          .getFullList({ filter: 'status="importada" || status="pendente"' })
+          .catch(() => []),
       ])
       setPedidos(vendas)
-      const pCount = nfes.filter(
-        (n) => n.status === 'pendente' || n.status === 'pendencia_produto',
-      ).length
+      const pCount =
+        nfes.filter((n) => n.status === 'pendente' || n.status === 'pendencia_produto').length +
+        nfRecords.length
       setPendentesCount(pCount)
     } catch {
       setPedidos([])
@@ -111,6 +115,7 @@ export default function Pedidos() {
 
   useRealtime('historico_vendas', () => loadData())
   useRealtime('nfe_pedidos', () => loadData())
+  useRealtime('notas_fiscais', () => loadData())
 
   const filtered = useMemo(() => {
     let r = [...pedidos]
