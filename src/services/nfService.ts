@@ -334,15 +334,13 @@ export async function insertNF(
       data.valor_total_nota === null ||
       data.valor_total_nota === undefined ||
       data.valor_total_nota === ('' as unknown)
-        ? null
+        ? 0
         : normalizeNumberBR(data.valor_total_nota)
 
     const valProdutosNum =
       data.valor_total_produtos !== undefined && data.valor_total_produtos !== null
         ? normalizeNumberBR(data.valor_total_produtos)
-        : valTotalNotaNum !== null
-          ? valTotalNotaNum
-          : 0
+        : valTotalNotaNum
 
     const payload: Record<string, string | number | null> = {
       numero_nf: String(data.numero_nf || '').trim(),
@@ -372,7 +370,7 @@ export async function insertNF(
       valor_ipi: normalizeNumberBR(data.valor_ipi),
       valor_total_produtos: valProdutosNum,
       valor_total_nota: valTotalNotaNum,
-      raw_text: data.raw_text || null,
+      raw_text: data.raw_text || '',
       frete_modalidade: data.frete_modalidade === 'FOB' ? 'FOB' : 'CIF',
       volumes_quantidade: normalizeNumberBR(data.volumes_quantidade),
       volumes_especie: String(data.volumes_especie || 'Paletes'),
@@ -389,11 +387,24 @@ export async function insertNF(
       user_id: currentUserId,
     }
 
+    // Clean up null relation fields if empty to avoid PB validation rejections
+    if (!payload.gestor_tecnico_id) delete payload.gestor_tecnico_id
+    if (!payload.vendedor_id) delete payload.vendedor_id
+    if (!payload.fatura_vencimento) delete payload.fatura_vencimento
+    if (!payload.canal_vendas) delete payload.canal_vendas
+    if (!payload.especie_destino) delete payload.especie_destino
+
     const record = await pb.collection('notas_fiscais').create<{ id: string }>(payload)
     return record.id
   } catch (err: unknown) {
     console.error('Erro ao inserir nota fiscal:', err)
-    throw new Error('Erro ao gravar no banco de dados. Verifique os dados e tente novamente.')
+    const errorDetails = (err as any)?.data?.data
+      ? JSON.stringify((err as any).data.data)
+      : (err as any)?.message || ''
+    const fullMsg = errorDetails
+      ? `Erro ao gravar no banco de dados (${errorDetails}). Verifique os dados e tente novamente.`
+      : 'Erro ao gravar no banco de dados. Verifique os dados e tente novamente.'
+    throw new Error(fullMsg)
   }
 }
 
@@ -446,7 +457,16 @@ export async function insertItens(
       user_id: currentUserId,
     }
 
-    const rec = await pb.collection('nf_itens').create<{ id: string }>(payload)
+    let rec: { id: string }
+    try {
+      rec = await pb.collection('nf_itens').create<{ id: string }>(payload)
+    } catch (itErr) {
+      console.error('Erro ao inserir item de NF:', itErr)
+      const itErrDetails = (itErr as any)?.data?.data
+        ? JSON.stringify((itErr as any).data.data)
+        : (itErr as any)?.message || ''
+      throw new Error(`Erro ao gravar item da nota fiscal (${itErrDetails}).`)
+    }
     insertedItens.push({
       id: rec.id,
       produto_codigo: item.produto_codigo,
@@ -471,13 +491,17 @@ export async function insertLotes(
   for (const lot of lotes) {
     if (!lot.lote_codigo || !String(lot.lote_codigo).trim()) continue
     const lotQtd = normalizeNumberBR(lot.lote_quantidade)
-    await pb.collection('nf_lotes').create({
-      nota_fiscal_id: nfId,
-      nf_item_id: itemId,
-      lote_codigo: String(lot.lote_codigo).trim(),
-      lote_quantidade: lotQtd,
-      user_id: currentUserId,
-    })
+    try {
+      await pb.collection('nf_lotes').create({
+        nota_fiscal_id: nfId,
+        nf_item_id: itemId,
+        lote_codigo: String(lot.lote_codigo).trim(),
+        lote_quantidade: lotQtd,
+        user_id: currentUserId,
+      })
+    } catch (lotErr) {
+      console.warn('Erro ao inserir lote:', lotErr)
+    }
   }
 }
 
