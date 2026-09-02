@@ -401,8 +401,12 @@ export function useUploadNF(): UseUploadNFReturn {
           status: asDraft ? 'importada' : 'confirmada',
         })
 
-        // Insert items into nf_itens
-        const insertedItens = await nfService.insertItens(nfId, data.itens || [])
+        // Insert items into nf_itens com fallback seguro de valor
+        const insertedItens = await nfService.insertItens(
+          nfId,
+          data.itens || [],
+          data.valor_total_nota,
+        )
 
         // Insert lotes into nf_lotes
         for (const insItem of insertedItens) {

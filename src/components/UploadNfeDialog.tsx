@@ -233,8 +233,12 @@ export function UploadNfeDialog({
             status: 'importada',
           })
 
-          // Inserir itens
-          const insertedItens = await nfService.insertItens(nfId, itens)
+          // Inserir itens com fallback seguro do valor_total_nota
+          const insertedItens = await nfService.insertItens(
+            nfId,
+            itens,
+            parsedData.valor_total_nota,
+          )
 
           // Inserir lotes
           for (const insItem of insertedItens) {

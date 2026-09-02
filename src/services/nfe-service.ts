@@ -169,96 +169,89 @@ export interface ProcessarNfeResponse {
   resultados: ProcessarNfeResultado[]
 }
 
+export function isReadablePdfText(text: string): boolean {
+  if (!text || typeof text !== 'string') return false
+  const trimmed = text.trim()
+  if (trimmed.length < 30) return false
+
+  // Se houver excesso de sequências de corrupção binária tipo UMuMbMe
+  const corruptMatches = trimmed.match(/\b[A-Z][a-z][A-Z][a-z][A-Z][a-z]\b/g)
+  if (corruptMatches && corruptMatches.length > 5) return false
+
+  // Deve conter palavras/termos típicos de NF ou letras normais legíveis
+  const hasDanfeKeywords =
+    /NOTA|FISCAL|DANFE|DESTINAT|EMISS|PRODUTO|VALOR|ICMS|CNPJ|CLIENTE|BLINK|NUTTRIA/i.test(trimmed)
+  const hasReadableLettersAndNumbers = /[A-Za-z]{3,}/.test(trimmed) && /\d/.test(trimmed)
+
+  return hasDanfeKeywords || hasReadableLettersAndNumbers
+}
+
 export async function extrairTextoPdf(file: File): Promise<string> {
   let extractionMethod = 'none'
 
-  // Tentativa 1: pdfjs-dist padrão iterando por TODAS as páginas sem truncar
-  try {
-    const pdfjs: any = await import(/* @vite-ignore */ 'pdfjs-dist/build/pdf.mjs')
-    if (pdfjs?.getDocument) {
-      if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-        pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version || '4.10.38'}/build/pdf.worker.min.mjs`
-      }
-      const arrayBuffer = await file.arrayBuffer()
+  // Tentativa 1: pdfjs-dist via CDN dinâmico moderno (jsdelivr / esm.sh)
+  const cdnUrls = [
+    'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs',
+    'https://esm.sh/pdfjs-dist@4.10.38/build/pdf.mjs',
+  ]
 
-      let doc: any = null
-      try {
-        doc = await pdfjs.getDocument({
-          data: arrayBuffer,
-          cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/cmaps/',
-          cMapPacked: true,
-          standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/standard_fonts/',
-          disableFontFace: false,
-        }).promise
-      } catch (docErr) {
-        // Fallback: tentar com disableFontFace e sem cMaps
+  for (const cdnUrl of cdnUrls) {
+    try {
+      const pdfjs: any = await import(/* @vite-ignore */ cdnUrl)
+      if (pdfjs?.getDocument) {
+        if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+          pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs`
+        }
+        const arrayBuffer = await file.arrayBuffer()
+
+        let doc: any = null
         try {
+          doc = await pdfjs.getDocument({
+            data: arrayBuffer,
+            cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/cmaps/',
+            cMapPacked: true,
+            standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/standard_fonts/',
+            disableFontFace: false,
+          }).promise
+        } catch {
+          // Fallback doc
           doc = await pdfjs.getDocument({
             data: arrayBuffer,
             disableFontFace: true,
           }).promise
-        } catch (docErr2) {
-          console.warn('Falha no getDocument pdfjs:', docErr2)
         }
-      }
 
-      if (doc && doc.numPages) {
-        const pages: string[] = []
-        for (let i = 1; i <= doc.numPages; i++) {
-          const page = await doc.getPage(i)
-          const content = await page.getTextContent()
-          const text = content.items
-            .map((item: any) => (typeof item.str === 'string' ? item.str : ''))
-            .join(' ')
-          pages.push(text)
-        }
-        const fullText = pages.join('\n')
-        if (fullText.trim().length >= 20) {
-          extractionMethod = `pdfjs-dist (${doc.numPages} paginas)`
-          console.log(
-            `extrairTextoPdf: extraídos ${fullText.length} caracteres via ${extractionMethod}`,
-          )
-          return fullText
+        if (doc && doc.numPages) {
+          const pages: string[] = []
+          for (let i = 1; i <= doc.numPages; i++) {
+            const page = await doc.getPage(i)
+            const content = await page.getTextContent()
+            const text = content.items
+              .map((item: any) => (typeof item.str === 'string' ? item.str : ''))
+              .join(' ')
+            pages.push(text)
+          }
+          const fullText = pages.join('\n')
+          if (isReadablePdfText(fullText)) {
+            extractionMethod = `pdfjs-cdn (${doc.numPages} paginas)`
+            console.log(
+              `extrairTextoPdf: extraídos ${fullText.length} caracteres legíveis via ${extractionMethod}`,
+            )
+            return fullText
+          }
         }
       }
+    } catch (err) {
+      console.warn(`Tentativa de extração via ${cdnUrl} falhou:`, err)
     }
-  } catch (err) {
-    console.warn('pdfjs-dist falhou, tentando fallback binario direto:', err)
   }
-  // Tentativa 2: Extração binária de strings PDF nativas
-  try {
-    const buffer = await file.arrayBuffer()
-    const bytes = new Uint8Array(buffer)
-    let raw = ''
-    for (let i = 0; i < bytes.length; i++) {
-      const c = bytes[i]
-      if ((c >= 32 && c <= 126) || c === 10 || c === 13 || c === 9 || (c >= 192 && c <= 255)) {
-        raw += String.fromCharCode(c)
-      }
-    }
 
-    const matches = raw.match(/\(([^()]{2,})\)/g) || []
-    if (matches.length > 5) {
-      const textStream = matches.map((m) => m.slice(1, -1)).join(' ')
-      if (textStream.trim().length > 50) {
-        extractionMethod = 'binary-pdf-stream-parenthesis'
-        console.log(
-          `extrairTextoPdf: extraídos ${textStream.length} caracteres via ${extractionMethod}`,
-        )
-        return textStream
-      }
-    }
-
-    if (raw.trim().length > 50) {
-      extractionMethod = 'binary-pdf-ascii-filtered'
-      console.log(`extrairTextoPdf: extraídos ${raw.length} caracteres via ${extractionMethod}`)
-      return raw
-    }
-    return ''
-  } catch (rawErr) {
-    console.error('Falha em todas as tentativas locais de extração de PDF:', rawErr)
-    return ''
-  }
+  // Se não foi possível obter texto legível pelo browser, retornar string vazia
+  // para que o servidor PocketBase processe o arquivo diretamente via pdf_url e IA
+  console.info(
+    '[extrairTextoPdf] Extração local não obteve texto limpo/legível. Deixando o processamento para o backend via pdf_url.',
+  )
+  return ''
 }
 
 export async function processarNfePdfs(
