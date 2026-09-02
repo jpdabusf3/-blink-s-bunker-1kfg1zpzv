@@ -24,7 +24,19 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Loader2, TrendingUp, Plus, Upload, Download, Edit2, Trash2, Filter } from 'lucide-react'
+import {
+  Loader2,
+  TrendingUp,
+  Plus,
+  Upload,
+  Download,
+  Edit2,
+  Trash2,
+  Filter,
+  FileSpreadsheet,
+  FileText,
+  Sparkles,
+} from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
@@ -37,6 +49,10 @@ import {
   type HistoricoVenda,
 } from '@/services/historico-vendas'
 import {
+  exportHistoricoVendasToExcel,
+  exportHistoricoVendasToPDF,
+} from '@/lib/exportHistoricoVendas'
+import {
   getGestoresTecnicos,
   getVendedoresGestao,
   type GestaoTecnica,
@@ -44,7 +60,6 @@ import {
 import { VendaForm } from '@/components/VendaForm'
 import { UploadPedidoDialog } from '@/components/UploadPedidoDialog'
 import { UploadNfeDialog } from '@/components/UploadNfeDialog'
-import { Sparkles } from 'lucide-react'
 
 export default function HistoricoVendas() {
   const { toast } = useToast()
