@@ -342,6 +342,12 @@ export async function insertNF(
         ? normalizeNumberBR(data.valor_total_produtos)
         : valTotalNotaNum
 
+    // Truncamento defensivo para raw_text de auditoria
+    let safeRawText = String(data.raw_text || '')
+    if (safeRawText.length > 4000) {
+      safeRawText = safeRawText.slice(0, 4000) + ' ...[texto truncado]'
+    }
+
     const payload: Record<string, string | number | null> = {
       numero_nf: String(data.numero_nf || '').trim(),
       serie: String(data.serie || '1'),
@@ -370,7 +376,7 @@ export async function insertNF(
       valor_ipi: normalizeNumberBR(data.valor_ipi),
       valor_total_produtos: valProdutosNum,
       valor_total_nota: valTotalNotaNum,
-      raw_text: data.raw_text || '',
+      raw_text: safeRawText,
       frete_modalidade: data.frete_modalidade === 'FOB' ? 'FOB' : 'CIF',
       volumes_quantidade: normalizeNumberBR(data.volumes_quantidade),
       volumes_especie: String(data.volumes_especie || 'Paletes'),
@@ -398,9 +404,28 @@ export async function insertNF(
     return record.id
   } catch (err: unknown) {
     console.error('Erro ao inserir nota fiscal:', err)
-    const errorDetails = (err as any)?.data?.data
-      ? JSON.stringify((err as any).data.data)
-      : (err as any)?.message || ''
+    const errObj = err as any
+    const responseData = errObj?.response?.data || errObj?.data?.data || errObj?.data
+    let detailedFieldErrors = ''
+
+    if (responseData && typeof responseData === 'object') {
+      const fieldList: string[] = []
+      for (const [key, val] of Object.entries(responseData)) {
+        if (val && typeof val === 'object') {
+          const msg = (val as any).message || (val as any).code || JSON.stringify(val)
+          fieldList.push(`campo "${key}": ${msg}`)
+        } else if (typeof val === 'string') {
+          fieldList.push(`campo "${key}": ${val}`)
+        }
+      }
+      if (fieldList.length > 0) {
+        detailedFieldErrors = fieldList.join(', ')
+      } else {
+        detailedFieldErrors = JSON.stringify(responseData)
+      }
+    }
+
+    const errorDetails = detailedFieldErrors || errObj?.message || ''
     const fullMsg = errorDetails
       ? `Erro ao gravar no banco de dados (${errorDetails}). Verifique os dados e tente novamente.`
       : 'Erro ao gravar no banco de dados. Verifique os dados e tente novamente.'
@@ -462,9 +487,22 @@ export async function insertItens(
       rec = await pb.collection('nf_itens').create<{ id: string }>(payload)
     } catch (itErr) {
       console.error('Erro ao inserir item de NF:', itErr)
-      const itErrDetails = (itErr as any)?.data?.data
-        ? JSON.stringify((itErr as any).data.data)
-        : (itErr as any)?.message || ''
+      const errObj = itErr as any
+      const responseData = errObj?.response?.data || errObj?.data?.data || errObj?.data
+      let detailedFieldErrors = ''
+      if (responseData && typeof responseData === 'object') {
+        const fieldList: string[] = []
+        for (const [key, val] of Object.entries(responseData)) {
+          if (val && typeof val === 'object') {
+            const msg = (val as any).message || (val as any).code || JSON.stringify(val)
+            fieldList.push(`campo "${key}": ${msg}`)
+          } else if (typeof val === 'string') {
+            fieldList.push(`campo "${key}": ${val}`)
+          }
+        }
+        if (fieldList.length > 0) detailedFieldErrors = fieldList.join(', ')
+      }
+      const itErrDetails = detailedFieldErrors || errObj?.message || ''
       throw new Error(`Erro ao gravar item da nota fiscal (${itErrDetails}).`)
     }
     insertedItens.push({

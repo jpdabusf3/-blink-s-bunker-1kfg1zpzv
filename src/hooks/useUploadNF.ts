@@ -578,14 +578,14 @@ export function useUploadNF(): UseUploadNFReturn {
         return nfId
       } catch (saveErr: unknown) {
         console.error('Erro completo ao salvar nota fiscal:', saveErr)
-        toast({
-          title: 'Erro ao salvar',
-          description: 'Erro ao salvar nota fiscal. Tente novamente.',
-          variant: 'destructive',
-        })
         const errMsg =
           (saveErr instanceof Error ? saveErr.message : '') ||
           'Erro ao salvar nota fiscal. Tente novamente.'
+        toast({
+          title: 'Erro ao salvar',
+          description: errMsg,
+          variant: 'destructive',
+        })
         setFiles((prev) =>
           prev.map((f) =>
             f.id === fileId

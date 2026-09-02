@@ -434,10 +434,31 @@ export function UploadNfeDialog({
           })
         } catch (itemErr: any) {
           console.error(`Erro ao processar arquivo ${file.name}:`, itemErr)
-          const msg =
+          const responseData =
+            itemErr?.response?.data?.data ||
+            itemErr?.response?.data ||
+            itemErr?.data?.data ||
+            itemErr?.data
+          let detailedFieldErrors = ''
+          if (responseData && typeof responseData === 'object') {
+            const fieldList: string[] = []
+            for (const [key, val] of Object.entries(responseData)) {
+              if (val && typeof val === 'object') {
+                const fMsg = (val as any).message || (val as any).code || JSON.stringify(val)
+                fieldList.push(`campo "${key}": ${fMsg}`)
+              } else if (typeof val === 'string') {
+                fieldList.push(`campo "${key}": ${val}`)
+              }
+            }
+            if (fieldList.length > 0) {
+              detailedFieldErrors = ` (${fieldList.join(', ')})`
+            }
+          }
+          const baseMsg =
             itemErr?.message ||
             itemErr?.data?.message ||
             'Não foi possível extrair os dados da nota fiscal.'
+          const msg = detailedFieldErrors ? `${baseMsg}${detailedFieldErrors}` : baseMsg
           resultados.push({
             arquivo: file.name,
             status: 'erro',
@@ -476,10 +497,28 @@ export function UploadNfeDialog({
         onSuccess()
       }
     } catch (err: any) {
-      const msg =
+      const responseData =
+        err?.response?.data?.data || err?.response?.data || err?.data?.data || err?.data
+      let detailedFieldErrors = ''
+      if (responseData && typeof responseData === 'object') {
+        const fieldList: string[] = []
+        for (const [key, val] of Object.entries(responseData)) {
+          if (val && typeof val === 'object') {
+            const fMsg = (val as any).message || (val as any).code || JSON.stringify(val)
+            fieldList.push(`campo "${key}": ${fMsg}`)
+          } else if (typeof val === 'string') {
+            fieldList.push(`campo "${key}": ${val}`)
+          }
+        }
+        if (fieldList.length > 0) {
+          detailedFieldErrors = ` (${fieldList.join(', ')})`
+        }
+      }
+      const baseMsg =
         err?.response?.data?.message ||
         err?.message ||
         'Não foi possível processar as notas fiscais. Verifique o arquivo.'
+      const msg = detailedFieldErrors ? `${baseMsg}${detailedFieldErrors}` : baseMsg
       setErrorMsg(msg)
       toast.error(msg)
     } finally {
