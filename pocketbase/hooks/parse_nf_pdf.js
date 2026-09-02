@@ -320,6 +320,40 @@ routerAdd(
         return ''
       }
 
+      // Função auxiliar para sanitizar razão social do cliente/destinatário
+      function sanitizeCustomerName(raw) {
+        if (!raw) return ''
+        var s = String(raw)
+          .replace(/[\r\n\t]+/g, ' ')
+          .replace(/[^A-Za-zÀ-ÿ0-9\s\.\-&]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+
+        if (!s) return ''
+        if (s.length > 60) return ''
+
+        // Rejeitar se contiver termos de impostos/totais/danfe
+        var forbiddenTermsRegex =
+          /\b(VALOR|TOTAL|BASE\s+DE\s+C[AÁ]LCULO|FATURA|DUPLICATA|DUPLICATAS|VENCIMENTO|ICMS|IPI|PIS|COFINS|FRETE|SEGURO|DESCONTO|PRODUTO|PRODUTOS|RECEBEMOS|DESTINAT[AÁ]RIO|REMETENTE|EMISS[AÃ]O|PROTOCOLO)\b/i
+        if (forbiddenTermsRegex.test(s)) return ''
+
+        // Rejeitar se contiver padrão de data (DD/MM/YYYY ou DD MM YYYY) ou R$
+        if (/\b\d{1,2}[\/\s\.-]\d{1,2}[\/\s\.-]\d{2,4}\b/.test(s)) return ''
+        if (/R\$/i.test(s)) return ''
+
+        // Rejeitar se tiver 2 ou mais números com 2+ dígitos ou números longos
+        var numMatches = s.match(/\b\d{2,}\b/g) || []
+        if (numMatches.length >= 2) return ''
+
+        // Contar dígitos vs letras
+        var digitsCount = (s.match(/\d/g) || []).length
+        var lettersCount = (s.match(/[A-Za-zÀ-ÿ]/g) || []).length
+        if (lettersCount < 4) return ''
+        if (digitsCount > lettersCount * 0.3) return ''
+
+        return s
+      }
+
       function extractDestinatarioNome(text, cnpjDest) {
         // 5.1 Busca por nomes conhecidos como Feedpro, Nuttria, etc.
         var knownNames = [
@@ -331,7 +365,10 @@ routerAdd(
         ]
         for (var k = 0; k < knownNames.length; k++) {
           if (new RegExp(knownNames[k].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(text)) {
-            return { val: knownNames[k], pattern: 'known_customer_match' }
+            var sanitizedKnown = sanitizeCustomerName(knownNames[k])
+            if (sanitizedKnown) {
+              return { val: sanitizedKnown, pattern: 'known_customer_match' }
+            }
           }
         }
 
@@ -341,45 +378,65 @@ routerAdd(
         var match
         while ((match = regexLabel.exec(text)) !== null) {
           var cand = match[1].trim()
-          // Limpa caracteres não alfabéticos exceto espaços, hífens, pontos e &
-          cand = cand
-            .replace(/[^A-Za-zÀ-ÿ0-9\s\.\-&]/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim()
-          // Ignorar se for o emitente "BLINK BIOSCIENCE" ou rótulos
+          // Ignorar se for o emitente "BLINK BIOSCIENCE"
           if (/BLINK\s+BIOSCIENCE/i.test(cand)) continue
-          if (/CNPJ|CALCULO|DADOS/i.test(cand) && cand.length < 20) continue
+          var cleanLabelCand = sanitizeCustomerName(cand)
+          if (!cleanLabelCand) continue
           // Valide: no mínimo 2 palavras e no mínimo 8 caracteres
-          var words = cand.split(/\s+/).filter(function (w) {
+          var words = cleanLabelCand.split(/\s+/).filter(function (w) {
             return w.length > 1
           })
-          var hasCorruptPattern = /[A-Z][a-z][A-Z][a-z]/.test(cand)
-          if (words.length >= 2 && cand.length >= 8 && !hasCorruptPattern) {
-            return { val: cand, pattern: 'label_razao_social' }
+          var hasCorruptPattern = /[A-Z][a-z][A-Z][a-z]/.test(cleanLabelCand)
+          if (words.length >= 2 && cleanLabelCand.length >= 8 && !hasCorruptPattern) {
+            return { val: cleanLabelCand, pattern: 'label_razao_social' }
           }
         }
 
-        // 5.3 Fallback baseado no CNPJ: texto na linha do CNPJ ou 1-5 linhas antes/depois
+        // 5.3 (Anterior 5.4) Prioridade: Buscar linhas que contêm Ltda, S.A., S/A, Eireli, ME, LTDA, Agropecuária, Nutrição
+        var allLines = text.split(/\r?\n/)
+        for (var al = 0; al < allLines.length; al++) {
+          var aLine = allLines[al].trim()
+          if (
+            /\b(?:Ltda|LTDA|S\.A\.|S\/A|Eireli|EIRELI|ME|Agropecu[aá]ria|Nutri[cç][aã]o|Nutricao|Agro)\b/i.test(
+              aLine,
+            )
+          ) {
+            if (!/BLINK\s+BIOSCIENCE/i.test(aLine) && !/RECEBEMOS/i.test(aLine)) {
+              var cleanCompany = sanitizeCustomerName(aLine)
+              if (cleanCompany && cleanCompany.length >= 6) {
+                var cWords = cleanCompany.split(/\s+/).filter(function (w) {
+                  return w.length > 1
+                })
+                if (cWords.length >= 2 && !/[A-Z][a-z][A-Z][a-z]/.test(cleanCompany)) {
+                  return { val: cleanCompany, pattern: 'company_suffix_search' }
+                }
+              }
+            }
+          }
+        }
+
+        // 5.4 (Anterior 5.3) Fallback baseado no CNPJ: texto na linha do CNPJ ou 1-5 linhas antes/depois
         if (cnpjDest) {
           var lines = text.split(/\r?\n/)
           for (var l = 0; l < lines.length; l++) {
             if (lines[l].indexOf(cnpjDest) !== -1) {
               // Checar 1 a 4 linhas antes
               for (var prev = l - 1; prev >= Math.max(0, l - 4); prev--) {
-                var prevLine = lines[prev]
-                  .replace(/[^A-Za-zÀ-ÿ0-9\s\.\-&]/g, ' ')
-                  .replace(/\s+/g, ' ')
-                  .trim()
+                var rawPrevLine = lines[prev]
                 if (
-                  prevLine.indexOf('DESTINAT') !== -1 ||
-                  prevLine.indexOf('REMETENTE') !== -1 ||
-                  prevLine.indexOf('EMISS') !== -1 ||
-                  prevLine.indexOf('PROTOCOLO') !== -1
+                  rawPrevLine.indexOf('DESTINAT') !== -1 ||
+                  rawPrevLine.indexOf('REMETENTE') !== -1 ||
+                  rawPrevLine.indexOf('EMISS') !== -1 ||
+                  rawPrevLine.indexOf('PROTOCOLO') !== -1
                 )
                   continue
-                if (/BLINK\s+BIOSCIENCE/i.test(prevLine)) continue
-                if (/^(Mirassol|Maringa|Curitiba|Sao Paulo|Zona Rural|RUA)/i.test(prevLine))
+                if (/BLINK\s+BIOSCIENCE/i.test(rawPrevLine)) continue
+                if (/^(Mirassol|Maringa|Curitiba|Sao Paulo|Zona Rural|RUA)/i.test(rawPrevLine))
                   continue
+
+                var prevLine = sanitizeCustomerName(rawPrevLine)
+                if (!prevLine) continue
+
                 var pWords = prevLine.split(/\s+/).filter(function (w) {
                   return w.length > 1
                 })
@@ -391,39 +448,21 @@ routerAdd(
               // Checar se o nome está na mesma linha antes do CNPJ
               var parts = lines[l].split(cnpjDest)
               if (parts[0]) {
-                var sameLineClean = parts[0]
-                  .replace(/[^A-Za-zÀ-ÿ0-9\s\.\-&]/g, ' ')
-                  .replace(/\s+/g, ' ')
-                  .trim()
-                if (!/BLINK\s+BIOSCIENCE/i.test(sameLineClean)) {
-                  var sWords = sameLineClean.split(/\s+/).filter(function (w) {
-                    return w.length > 1
-                  })
-                  if (
-                    sWords.length >= 2 &&
-                    sameLineClean.length >= 6 &&
-                    !/[A-Z][a-z][A-Z][a-z]/.test(sameLineClean)
-                  ) {
-                    return { val: sameLineClean, pattern: 'cnpj_context_same_line' }
+                if (!/BLINK\s+BIOSCIENCE/i.test(parts[0])) {
+                  var sameLineClean = sanitizeCustomerName(parts[0])
+                  if (sameLineClean) {
+                    var sWords = sameLineClean.split(/\s+/).filter(function (w) {
+                      return w.length > 1
+                    })
+                    if (
+                      sWords.length >= 2 &&
+                      sameLineClean.length >= 6 &&
+                      !/[A-Z][a-z][A-Z][a-z]/.test(sameLineClean)
+                    ) {
+                      return { val: sameLineClean, pattern: 'cnpj_context_same_line' }
+                    }
                   }
                 }
-              }
-            }
-          }
-        }
-
-        // 5.4 Buscar linhas que contêm Ltda, S.A., Eireli ou Agro
-        var allLines = text.split(/\r?\n/)
-        for (var al = 0; al < allLines.length; al++) {
-          var aLine = allLines[al].trim()
-          if (/Ltda|S\.A\.|Eireli|Agropecu[aá]ria|Nutri[cç][aã]o/i.test(aLine)) {
-            if (!/BLINK\s+BIOSCIENCE/i.test(aLine) && !/RECEBEMOS/i.test(aLine)) {
-              var cleanCompany = aLine
-                .replace(/[^A-Za-zÀ-ÿ0-9\s\.\-&]/g, ' ')
-                .replace(/\s+/g, ' ')
-                .trim()
-              if (cleanCompany.length >= 6) {
-                return { val: cleanCompany, pattern: 'company_suffix_search' }
               }
             }
           }
@@ -1292,9 +1331,9 @@ routerAdd(
 
         // Bloco B — Destinatário
         destinatario_nome:
-          destinatarioNome ||
-          (aiData && (aiData.destinatario_nome || aiData.cliente_nome)) ||
-          'Cliente Não Identificado',
+          sanitizeCustomerName(
+            destinatarioNome || (aiData && (aiData.destinatario_nome || aiData.cliente_nome)),
+          ) || 'Cliente Não Identificado',
         destinatario_cnpj:
           destinatarioCnpj || (aiData && (aiData.destinatario_cnpj || aiData.cliente_cnpj)) || '',
         destinatario_ie:
