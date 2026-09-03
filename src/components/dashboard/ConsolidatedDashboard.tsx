@@ -119,13 +119,15 @@ export function ConsolidatedDashboard({
             </h3>
           </div>
           <div className="text-lg sm:text-2xl font-bold">
+            <span className="text-green-500">{kpis.ativoCount}</span>
+            <span className="text-muted-foreground text-sm"> / </span>
             <span className="text-red-500">{kpis.inativoCount}</span>
             <span className="text-muted-foreground text-sm"> / </span>
-            <span className="text-yellow-500">{kpis.mensalCount}</span>
-            <span className="text-muted-foreground text-sm"> / </span>
-            <span className="text-green-500">{kpis.ativoCount}</span>
+            <span className="text-muted-foreground">{kpis.encerradasCount}</span>
           </div>
-          <div className="text-[10px] text-muted-foreground">Inativo / Mensal / Ativo</div>
+          <div className="text-[10px] text-muted-foreground">
+            Ativo / Inativo / Negociações Encerradas
+          </div>
         </Card>
         <Card className="shadow-subtle p-4">
           <div className="flex items-center gap-2 mb-1">

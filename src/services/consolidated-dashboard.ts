@@ -6,9 +6,11 @@ import type { Factory } from '@/types'
 
 export interface ConsolidatedKPIs {
   totalFunnelValue: number
-  inativoCount: number
-  mensalCount: number
   ativoCount: number
+  inativoCount: number
+  encerradasCount: number
+  /** @deprecated mantido para retrocompatibilidade */
+  mensalCount?: number
   totalTarget: number
   totalAchieved: number
   achievementPct: number
@@ -153,11 +155,20 @@ export async function fetchConsolidatedData(): Promise<ConsolidatedData> {
   const totalAchieved = metas.reduce((s, m) => s + (m.valor_realizado || 0), 0)
   const totalSales = vendas.reduce((s, v) => s + (v.valor || 0), 0)
 
+  // Mesma lógica de derivação do Funil de Vendas baseada em funnelStage:
+  // Fechamento -> Ativo
+  // Pós-venda -> Inativo
+  // Perda -> Negociações Encerradas
+  const ativoCount = factories.filter((f) => f.funnelStage === 'Fechamento').length
+  const inativoCount = factories.filter((f) => f.funnelStage === 'Pós-venda').length
+  const encerradasCount = factories.filter((f) => f.funnelStage === 'Perda').length
+
   const kpis: ConsolidatedKPIs = {
     totalFunnelValue,
-    inativoCount: funnelFactories.filter((f) => f.status_funil === 'Inativo').length,
-    mensalCount: funnelFactories.filter((f) => f.status_funil === 'Mensal').length,
-    ativoCount: funnelFactories.filter((f) => f.status_funil === 'Ativo').length,
+    ativoCount,
+    inativoCount,
+    encerradasCount,
+    mensalCount: 0,
     totalTarget,
     totalAchieved,
     achievementPct: totalTarget > 0 ? (totalAchieved / totalTarget) * 100 : 0,

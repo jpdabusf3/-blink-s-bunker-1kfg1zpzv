@@ -45,9 +45,9 @@ export function ExecutiveDashboardCard() {
   const kpis = useMemo(() => {
     const funnelValue = factories.reduce((s, f) => s + (f.valor_medio || 0), 0)
     const dist = {
-      Inativo: factories.filter((f) => f.status_funil === 'Inativo').length,
-      Mensal: factories.filter((f) => f.status_funil === 'Mensal').length,
-      Ativo: factories.filter((f) => f.status_funil === 'Ativo').length,
+      Ativo: factories.filter((f) => f.funnelStage === 'Fechamento').length,
+      Inativo: factories.filter((f) => f.funnelStage === 'Pós-venda').length,
+      Encerradas: factories.filter((f) => f.funnelStage === 'Perda').length,
     }
     const totalMeta = metas.reduce((s, m) => s + (m.meta_valor || 0), 0)
     const totalRealizado = metas.reduce((s, m) => s + (m.valor_realizado || 0), 0)
@@ -114,8 +114,8 @@ export function ExecutiveDashboardCard() {
       color: 'text-primary',
     },
     {
-      label: 'Status Funil (A/M/I)',
-      value: `${kpis.dist.Ativo}/${kpis.dist.Mensal}/${kpis.dist.Inativo}`,
+      label: 'Status Funil (A/I/Enc)',
+      value: `${kpis.dist.Ativo}/${kpis.dist.Inativo}/${kpis.dist.Encerradas}`,
       color: '',
     },
     {

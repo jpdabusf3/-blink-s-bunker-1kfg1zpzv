@@ -74,7 +74,7 @@ export function exportFullDashboardToPDF(
     kpis
       ? `<h2>Indicadores Consolidados</h2><div class="kpis">
   <div class="kpi"><b>${formatCompactCurrency(kpis.totalFunnelValue)}</b><span>Valor Total Funil</span></div>
-  <div class="kpi"><b>${kpis.inativoCount} / ${kpis.mensalCount} / ${kpis.ativoCount}</b><span>Inativo / Mensal / Ativo</span></div>
+  <div class="kpi"><b>${kpis.ativoCount} / ${kpis.inativoCount} / ${kpis.encerradasCount}</b><span>Ativo / Inativo / Negociações Encerradas</span></div>
   <div class="kpi"><b>${kpis.achievementPct.toFixed(1)}%</b><span>Atingimento Meta</span></div>
   <div class="kpi"><b>${formatCompactCurrency(kpis.totalSales)}</b><span>Total Vendas</span></div></div>`
       : ''
