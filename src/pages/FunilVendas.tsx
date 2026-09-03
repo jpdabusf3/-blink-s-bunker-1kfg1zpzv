@@ -64,7 +64,26 @@ import { exportBatchClientReportsZip, logBatchReportExport } from '@/lib/batchRe
 import { useToast } from '@/hooks/use-toast'
 import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
 
-const STATUS_COLUMNS = ['Inativo', 'Mensal', 'Ativo'] as const
+export type FunilVendasStatus = 'Ativo' | 'Inativo' | 'Negociações Encerradas'
+
+const STATUS_COLUMNS: readonly FunilVendasStatus[] = [
+  'Ativo',
+  'Inativo',
+  'Negociações Encerradas',
+] as const
+
+const FUNNEL_STAGE_TO_STATUS: Record<string, FunilVendasStatus> = {
+  Fechamento: 'Ativo',
+  'Pós-venda': 'Inativo',
+  Perda: 'Negociações Encerradas',
+}
+
+const STATUS_TO_FUNNEL_STAGE: Record<FunilVendasStatus, 'Fechamento' | 'Pós-venda' | 'Perda'> = {
+  Ativo: 'Fechamento',
+  Inativo: 'Pós-venda',
+  'Negociações Encerradas': 'Perda',
+}
+
 const SPECIES = [
   'Ruminantes',
   'Aves',
@@ -106,11 +125,11 @@ export default function FunilVendas() {
   const [panelForm, setPanelForm] = useState<{
     proximos_passos: string
     acao: string
-    status_funil: string
+    status_funil: FunilVendasStatus
   }>({
     proximos_passos: '',
     acao: '',
-    status_funil: 'Inativo',
+    status_funil: 'Ativo',
   })
 
   // Persisted "Modelo Visual" report template preference (per user).
@@ -174,21 +193,31 @@ export default function FunilVendas() {
 
   const scoped = useMemo(() => getScopedFactories(factories, user), [factories, user])
 
-  // Only factories that have placed at least one order.
-  const withOrders = useMemo(() => scoped.filter((f) => !!f.ultimo_pedido), [scoped])
+  // Clientes derivados automaticamente pelo funnelStage (apenas Fechamento, Pós-venda e Perda)
+  const funilVendasClients = useMemo(() => {
+    return scoped
+      .filter((f) => f.funnelStage in FUNNEL_STAGE_TO_STATUS)
+      .map((f) => {
+        const derivedStatus = FUNNEL_STAGE_TO_STATUS[f.funnelStage]
+        return {
+          ...f,
+          status_funil: derivedStatus as any,
+        }
+      })
+  }, [scoped])
 
   const filtered = useMemo(
     () =>
-      withOrders.filter((f) => {
-        if (!f.status_funil) return false
+      funilVendasClients.filter((f) => {
+        const status = f.status_funil as FunilVendasStatus
         if (filters.vendedor !== 'all' && f.vendedor_id !== filters.vendedor) return false
         if (filters.gestor !== 'all' && f.gestor_tecnico_id !== filters.gestor) return false
         if (filters.canal !== 'all' && f.profile_type !== filters.canal) return false
         if (filters.especie !== 'all' && f.animalSpecies !== filters.especie) return false
-        if (filters.status !== 'all' && f.status_funil !== filters.status) return false
+        if (filters.status !== 'all' && status !== filters.status) return false
         return true
       }),
-    [withOrders, filters],
+    [funilVendasClients, filters],
   )
 
   const selectedFactory = useMemo(
@@ -199,27 +228,46 @@ export default function FunilVendas() {
   const openPanel = (factoryId: string) => {
     const f = factories.find((x) => x.id === factoryId)
     setSelectedFactoryId(factoryId)
+    const currentStatus: FunilVendasStatus =
+      (f?.funnelStage && FUNNEL_STAGE_TO_STATUS[f.funnelStage]) || 'Ativo'
     setPanelForm({
       proximos_passos: f?.proximos_passos || '',
       acao: f?.acao || '',
-      status_funil: f?.status_funil || 'Inativo',
+      status_funil: currentStatus,
     })
   }
 
   const closePanel = () => setSelectedFactoryId(null)
 
-  const handleStatusChange = async (factoryId: string, newStatus: string, oldStatus: string) => {
+  const handleStatusChange = async (
+    factoryId: string,
+    newStatus: FunilVendasStatus,
+    oldStatus: FunilVendasStatus,
+  ) => {
     if (newStatus === oldStatus) return
     const factory = factories.find((f) => f.id === factoryId)
+    const oldStage = factory?.funnelStage || STATUS_TO_FUNNEL_STAGE[oldStatus]
+    const newStage = STATUS_TO_FUNNEL_STAGE[newStatus]
+
+    // Atualização otimista
     setFactories((prev) =>
       prev.map((f) =>
-        f.id === factoryId ? { ...f, status_funil: newStatus as Factory['status_funil'] } : f,
+        f.id === factoryId
+          ? {
+              ...f,
+              funnelStage: newStage,
+              status_funil: newStatus as any,
+            }
+          : f,
       ),
     )
     try {
-      await updateFactoryPB(factoryId, { status_funil: newStatus } as any)
+      await updateFactoryPB(factoryId, {
+        funnelStage: newStage,
+        status_funil: newStatus,
+      } as any)
       await logActivity(
-        `Status Funil: ${oldStatus} → ${newStatus}`,
+        `Status Funil de Vendas: ${oldStatus} → ${newStatus} (${newStage})`,
         `Cliente: ${factory?.name || ''}`,
         factoryId,
         'factories',
@@ -228,6 +276,8 @@ export default function FunilVendas() {
           tipo: 'status',
           status_anterior: oldStatus,
           status_novo: newStatus,
+          etapa_anterior: oldStage,
+          etapa_nova: newStage,
           origem: 'funil_vendas',
         },
       )
@@ -239,47 +289,73 @@ export default function FunilVendas() {
         entity_name: factory?.name || '',
         old_value: oldStatus,
         new_value: newStatus,
-        description: `Moveu negocio ${factory?.name || ''} de ${oldStatus} para ${newStatus}`,
+        description: `Moveu negócio ${factory?.name || ''} de ${oldStatus} (${oldStage}) para ${newStatus} (${newStage})`,
       })
     } catch {
+      // Reversão em caso de erro
       setFactories((prev) =>
         prev.map((f) =>
-          f.id === factoryId ? { ...f, status_funil: oldStatus as Factory['status_funil'] } : f,
+          f.id === factoryId
+            ? {
+                ...f,
+                funnelStage: oldStage,
+                status_funil: oldStatus as any,
+              }
+            : f,
         ),
       )
+      toast({
+        title: 'Erro ao mover cliente',
+        description: 'Não foi possível atualizar o status no servidor.',
+        variant: 'destructive',
+      })
     }
   }
 
   const handlePanelSave = async () => {
     if (!selectedFactory) return
-    const oldStatus = selectedFactory.status_funil || ''
+    const currentDerivedStatus: FunilVendasStatus =
+      FUNNEL_STAGE_TO_STATUS[selectedFactory.funnelStage] || 'Ativo'
+    const oldStatus = currentDerivedStatus
+    const oldStage = selectedFactory.funnelStage
+    const newStatus = panelForm.status_funil
+    const newStage = STATUS_TO_FUNNEL_STAGE[newStatus]
+    const stageChanged = newStatus !== oldStatus
+
+    const prevFactory = { ...selectedFactory }
+
+    // Atualização otimista
+    setFactories((prev) =>
+      prev.map((f) =>
+        f.id === selectedFactory.id
+          ? {
+              ...f,
+              funnelStage: newStage,
+              status_funil: newStatus as any,
+              proximos_passos: panelForm.proximos_passos,
+              acao: panelForm.acao,
+            }
+          : f,
+      ),
+    )
+
     try {
       await updateFactoryPB(selectedFactory.id, {
-        status_funil: panelForm.status_funil,
+        funnelStage: newStage,
+        status_funil: newStatus,
         proximos_passos: panelForm.proximos_passos,
         acao: panelForm.acao,
       } as any)
-      setFactories((prev) =>
-        prev.map((f) =>
-          f.id === selectedFactory.id
-            ? {
-                ...f,
-                status_funil: panelForm.status_funil as Factory['status_funil'],
-                proximos_passos: panelForm.proximos_passos,
-                acao: panelForm.acao,
-              }
-            : f,
-        ),
-      )
+
       await logActivity(
         `Painel Funil atualizado`,
-        `Cliente: ${selectedFactory.name} • Status: ${panelForm.status_funil} • Próximos passos: ${panelForm.proximos_passos} • Ação: ${panelForm.acao}`,
+        `Cliente: ${selectedFactory.name} • Status: ${newStatus} (${newStage}) • Próximos passos: ${panelForm.proximos_passos} • Ação: ${panelForm.acao}`,
         selectedFactory.id,
         'factories',
       )
-      if (panelForm.status_funil !== oldStatus) {
+      if (stageChanged) {
         await logActivity(
-          `Status Funil: ${oldStatus} → ${panelForm.status_funil}`,
+          `Status Funil: ${oldStatus} → ${newStatus} (${newStage})`,
           `Cliente: ${selectedFactory.name}`,
           selectedFactory.id,
           'factories',
@@ -290,8 +366,8 @@ export default function FunilVendas() {
           entity_id: selectedFactory.id,
           entity_name: selectedFactory.name,
           old_value: oldStatus,
-          new_value: panelForm.status_funil,
-          description: `Moveu negocio ${selectedFactory.name} de ${oldStatus} para ${panelForm.status_funil}`,
+          new_value: newStatus,
+          description: `Moveu negócio ${selectedFactory.name} de ${oldStatus} para ${newStatus} (${newStage})`,
         })
       }
       // Funnel activity log: deal updated
@@ -300,11 +376,17 @@ export default function FunilVendas() {
         entity_type: 'deal',
         entity_id: selectedFactory.id,
         entity_name: selectedFactory.name,
-        description: `Atualizou negocio ${selectedFactory.name}`,
+        description: `Atualizou negócio ${selectedFactory.name}`,
       })
       closePanel()
     } catch {
-      /* noop */
+      // Reversão
+      setFactories((prev) => prev.map((f) => (f.id === selectedFactory.id ? prevFactory : f)))
+      toast({
+        title: 'Erro ao salvar',
+        description: 'Não foi possível salvar as alterações no servidor.',
+        variant: 'destructive',
+      })
     }
   }
 
@@ -314,7 +396,7 @@ export default function FunilVendas() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Funil de Vendas</h1>
           <p className="text-muted-foreground text-sm">
-            Gestão de clientes por status do funil comercial (apenas com pedidos).
+            Gestão de clientes por status do funil comercial (alimentado pelo Funil).
           </p>
         </div>
         <div className="flex gap-2 flex-wrap items-end">
@@ -589,11 +671,16 @@ export default function FunilVendas() {
                             key={s}
                             size="sm"
                             variant={f.status_funil === s ? 'default' : 'outline'}
-                            className="h-6 text-[10px] flex-1 px-1"
+                            className="h-6 text-[9px] flex-1 px-1 truncate"
                             disabled={f.status_funil === s}
+                            title={s}
                             onClick={(e) => {
                               e.stopPropagation()
-                              handleStatusChange(f.id, s, f.status_funil || '')
+                              handleStatusChange(
+                                f.id,
+                                s,
+                                (f.status_funil as FunilVendasStatus) || 'Ativo',
+                              )
                             }}
                           >
                             {s}
@@ -629,7 +716,15 @@ export default function FunilVendas() {
               <div className="rounded-lg border bg-muted/40 p-3 text-sm space-y-1">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Situação atual:</span>
-                  <Badge variant="secondary">{selectedFactory.status_funil || '—'}</Badge>
+                  <Badge variant="secondary">
+                    {FUNNEL_STAGE_TO_STATUS[selectedFactory.funnelStage] ||
+                      selectedFactory.status_funil ||
+                      '—'}
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Estágio do Funil:</span>
+                  <span className="font-medium">{selectedFactory.funnelStage || '—'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Último pedido:</span>
@@ -667,7 +762,9 @@ export default function FunilVendas() {
                 <Label>Categoria do Funil</Label>
                 <Select
                   value={panelForm.status_funil}
-                  onValueChange={(v) => setPanelForm((p) => ({ ...p, status_funil: v }))}
+                  onValueChange={(v) =>
+                    setPanelForm((p) => ({ ...p, status_funil: v as FunilVendasStatus }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />

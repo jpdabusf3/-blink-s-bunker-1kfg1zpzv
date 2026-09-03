@@ -5,7 +5,9 @@ import { formatCurrency, formatCompactCurrency } from './utils'
 export function exportFullDashboardToPDF(
   funnelItems: Factory[],
   dashboardData: ConsolidatedData | null,
-  filters: { vendedor: string; especie: string; status: string },
+  filters:
+    | { vendedor?: string; gestor?: string; canal?: string; especie?: string; status?: string }
+    | any,
   periodView: 'mensal' | 'trimestral' = 'mensal',
 ) {
   const win = window.open('', '_blank')
