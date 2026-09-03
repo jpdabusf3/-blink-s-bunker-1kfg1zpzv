@@ -3,10 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gestão Blink</title>
-    <meta name="description" content="Projeto gerado usando Skip (https://goskip.dev)" />
-    <meta name="author" content="Skip (https://goskip.dev)" />
-    <meta property="og:image" content="/og-image.png" />
+    <title>Blink CRM</title>
+
+    <!-- Favicon & Icons -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon.png" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Theme Color and Mobile Meta Tags -->
+    <meta name="theme-color" content="#F5C518" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Blink CRM" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Blink CRM" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Blink CRM - Inteligencia Comercial" />
+    <meta property="og:description" content="Plataforma de gestao comercial Blink Biotech" />
+    <meta property="og:image" content="https://dagtlwojkqyivnjgveda.supabase.co/storage/v1/object/public/assets/2Logo_Blink.ico.png" />
+    <meta property="og:type" content="website" />
+
+    <meta name="description" content="Inteligencia Comercial Blink Biotech" />
+    <meta name="author" content="Blink Biotech" />
     <meta name="keywords" content="Mycolink,betalink,adosrventes." />
     <!-- Leaflet via CDN -->
     <link
@@ -28,5 +50,24 @@
     <script src="https://goskip.dev/skip.js"></script>
     <!-- @skip-protected: Do not remove. App entrypoint. -->
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+        window.addEventListener('load', function () {
+          // Guard against breaking Vite local HMR during development if requested
+          if (!window.location.port || window.location.port === '4173' || window.location.protocol === 'https:') {
+            navigator.serviceWorker
+              .register('/sw.js')
+              .then(function (reg) {
+                console.log('[SW] Service Worker registrado com escopo:', reg.scope);
+              })
+              .catch(function (err) {
+                console.warn('[SW] Falha ao registrar Service Worker:', err);
+              });
+          }
+        });
+      }
+    </script>
   </body>
 </html>

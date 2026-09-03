@@ -1,0 +1,57 @@
+{
+  "name": "Blink CRM",
+  "short_name": "Blink",
+  "description": "Inteligencia Comercial Blink Biotech",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0A0A0A",
+  "theme_color": "#F5C518",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "categories": [
+    "business",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Notas Fiscais",
+      "short_name": "NFs",
+      "url": "/upload-nf",
+      "description": "Leitor de notas fiscais"
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Painel",
+      "url": "/dashboard",
+      "description": "Painel principal"
+    }
+  ]
+}
