@@ -16,8 +16,11 @@ import {
   PackageCheck,
   Layers,
   Plus,
+  Edit3,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { CadastroManualNFForm } from '@/components/CadastroManualNFForm'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -52,6 +55,7 @@ import { formatCurrency, normalizeNumberBR } from '@/lib/utils'
 export function UploadNF() {
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [mode, setMode] = useState<'upload' | 'manual'>('upload')
   const [isDragging, setIsDragging] = useState(false)
   const [activeTab, setActiveTab] = useState<'upload' | 'revisao' | 'resumo'>('upload')
 
