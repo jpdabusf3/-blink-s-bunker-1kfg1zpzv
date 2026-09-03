@@ -72,10 +72,38 @@ const STATUS_COLUMNS: readonly FunilVendasStatus[] = [
   'Negociações Encerradas',
 ] as const
 
-const FUNNEL_STAGE_TO_STATUS: Record<string, FunilVendasStatus> = {
-  Fechamento: 'Ativo',
-  'Pós-venda': 'Inativo',
-  Perda: 'Negociações Encerradas',
+const FUNNEL_STAGES_PERMITIDOS = new Set(['Fechamento', 'Pós-venda', 'Perda'])
+
+export function deriveFunilVendasStatus(
+  funnelStage: string | undefined,
+  ultimoPedido?: string | null,
+): FunilVendasStatus | null {
+  if (!funnelStage || !FUNNEL_STAGES_PERMITIDOS.has(funnelStage)) {
+    return null
+  }
+
+  if (funnelStage === 'Fechamento') {
+    return 'Ativo'
+  }
+
+  if (funnelStage === 'Perda') {
+    return 'Negociações Encerradas'
+  }
+
+  // funnelStage === 'Pós-venda'
+  if (ultimoPedido) {
+    const dataPedido = new Date(ultimoPedido)
+    if (!isNaN(dataPedido.getTime())) {
+      const hoje = new Date()
+      const diffMs = hoje.getTime() - dataPedido.getTime()
+      const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+      if (diffDias > 180) {
+        return 'Inativo'
+      }
+    }
+  }
+
+  return 'Ativo'
 }
 
 const STATUS_TO_FUNNEL_STAGE: Record<FunilVendasStatus, 'Fechamento' | 'Pós-venda' | 'Perda'> = {
@@ -196,9 +224,9 @@ export default function FunilVendas() {
   // Clientes derivados automaticamente pelo funnelStage (apenas Fechamento, Pós-venda e Perda)
   const funilVendasClients = useMemo(() => {
     return scoped
-      .filter((f) => f.funnelStage in FUNNEL_STAGE_TO_STATUS)
+      .filter((f) => FUNNEL_STAGES_PERMITIDOS.has(f.funnelStage))
       .map((f) => {
-        const derivedStatus = FUNNEL_STAGE_TO_STATUS[f.funnelStage]
+        const derivedStatus = deriveFunilVendasStatus(f.funnelStage, f.ultimo_pedido) || 'Ativo'
         return {
           ...f,
           status_funil: derivedStatus as any,
@@ -229,7 +257,9 @@ export default function FunilVendas() {
     const f = factories.find((x) => x.id === factoryId)
     setSelectedFactoryId(factoryId)
     const currentStatus: FunilVendasStatus =
-      (f?.funnelStage && FUNNEL_STAGE_TO_STATUS[f.funnelStage]) || 'Ativo'
+      deriveFunilVendasStatus(f?.funnelStage, f?.ultimo_pedido) ||
+      (f?.status_funil as FunilVendasStatus) ||
+      'Ativo'
     setPanelForm({
       proximos_passos: f?.proximos_passos || '',
       acao: f?.acao || '',
@@ -315,7 +345,7 @@ export default function FunilVendas() {
   const handlePanelSave = async () => {
     if (!selectedFactory) return
     const currentDerivedStatus: FunilVendasStatus =
-      FUNNEL_STAGE_TO_STATUS[selectedFactory.funnelStage] || 'Ativo'
+      deriveFunilVendasStatus(selectedFactory.funnelStage, selectedFactory.ultimo_pedido) || 'Ativo'
     const oldStatus = currentDerivedStatus
     const oldStage = selectedFactory.funnelStage
     const newStatus = panelForm.status_funil
@@ -717,7 +747,10 @@ export default function FunilVendas() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Situação atual:</span>
                   <Badge variant="secondary">
-                    {FUNNEL_STAGE_TO_STATUS[selectedFactory.funnelStage] ||
+                    {deriveFunilVendasStatus(
+                      selectedFactory.funnelStage,
+                      selectedFactory.ultimo_pedido,
+                    ) ||
                       selectedFactory.status_funil ||
                       '—'}
                   </Badge>
