@@ -497,6 +497,12 @@ export default function Index() {
           ))}
         </div>
       )}
+
+      <footer className="pt-4 border-t border-border/40 text-center sm:text-right">
+        <p className="text-xs text-muted-foreground">
+          Ativo: compra ≤ 180 dias / Inativo: sem compra &gt; 180 dias
+        </p>
+      </footer>
     </div>
   )
 }
