@@ -8,7 +8,12 @@
  * - status_funil (dias_sem_comprar <= 90: 'Ativo', <= 180: 'Mensal', > 180: 'Inativo')
  *
  * Preserva integralmente todos os outros dados de factories.
- * Denylist: (cliente normalizado == "animall", venda cliente normalizado == "pecuarianutricaoanimalltda") nunca casa.
+ *
+ * REGRAS DE MATCHING:
+ * 1. Se normalize(cliente_factory) === 'animall' OU normalize(cliente_factory).length < 10:
+ *    somente casamento EXATO (normFact === normClienteVenda). Nunca substring.
+ * 2. Caso geral (>= 10 caracteres no factory e >= 6 na venda):
+ *    substring bidirecional permitida (normFact contém normClienteVenda ou vice-versa).
  */
 
 onRecordAfterCreateSuccess((e) => {
@@ -17,6 +22,42 @@ onRecordAfterCreateSuccess((e) => {
     var vendaRecord = e.record
     if (!vendaRecord) return
 
+    function normalizeName(s) {
+      if (!s) return ''
+      return String(s)
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]/g, '')
+        .trim()
+    }
+
+    function matchFactorySale(normFact, normClienteVenda) {
+      if (!normFact || !normClienteVenda) return false
+
+      if (normFact === 'animall') {
+        return normClienteVenda === 'animall'
+      }
+
+      if (normFact.length < 10) {
+        return normFact === normClienteVenda
+      }
+
+      if (normFact === normClienteVenda) {
+        return true
+      }
+
+      var minLen = Math.min(normFact.length, normClienteVenda.length)
+      if (
+        minLen >= 6 &&
+        (normFact.indexOf(normClienteVenda) !== -1 || normClienteVenda.indexOf(normFact) !== -1)
+      ) {
+        return true
+      }
+
+      return false
+    }
+
     var clienteVenda = ''
     if (typeof vendaRecord.getString === 'function') {
       clienteVenda = vendaRecord.getString('cliente') || ''
@@ -24,13 +65,7 @@ onRecordAfterCreateSuccess((e) => {
       clienteVenda = vendaRecord.cliente
     }
 
-    var normClienteVenda = String(clienteVenda || '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]/g, '')
-      .trim()
-
+    var normClienteVenda = normalizeName(clienteVenda)
     if (!normClienteVenda) return
 
     // Buscar todas as factories para encontrar matches
@@ -51,37 +86,11 @@ onRecordAfterCreateSuccess((e) => {
     var matchingFactories = []
     for (var f = 0; f < allFactories.length; f++) {
       var fact = allFactories[f]
-      var factName = fact.getString('name') || ''
-      var normFact = String(factName)
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]/g, '')
-        .trim()
+      var factName = fact.getString ? fact.getString('name') : fact.name || ''
+      var normFact = normalizeName(factName)
       if (!normFact) continue
 
-      // Denylist check
-      if (
-        (normFact === 'animall' && normClienteVenda === 'pecuarianutricaoanimalltda') ||
-        (normFact === 'pecuarianutricaoanimalltda' && normClienteVenda === 'animall')
-      ) {
-        continue
-      }
-
-      var isMatch = false
-      if (normFact === normClienteVenda) {
-        isMatch = true
-      } else {
-        var minLen = Math.min(normFact.length, normClienteVenda.length)
-        if (
-          minLen >= 6 &&
-          (normFact.indexOf(normClienteVenda) !== -1 || normClienteVenda.indexOf(normFact) !== -1)
-        ) {
-          isMatch = true
-        }
-      }
-
-      if (isMatch) {
+      if (matchFactorySale(normFact, normClienteVenda)) {
         matchingFactories.push(fact)
       }
     }
@@ -106,24 +115,21 @@ onRecordAfterCreateSuccess((e) => {
     var salesData = []
     for (var i = 0; i < allSales.length; i++) {
       var sale = allSales[i]
-      var sCliente = sale.getString('cliente') || ''
-      var sData = sale.getString('data') || ''
-      var sNumDoc = (sale.getString('numero_documento') || '').trim()
-      var sValor = sale.getFloat ? sale.getFloat('valor') : Number(sale.get('valor')) || 0
+      var sCliente = sale.getString ? sale.getString('cliente') : sale.cliente || ''
+      var sData = sale.getString ? sale.getString('data') : sale.data || ''
+      var sNumDoc = (
+        (sale.getString ? sale.getString('numero_documento') : sale.numero_documento) || ''
+      ).trim()
+      var sValor = sale.getFloat
+        ? sale.getFloat('valor')
+        : Number(sale.get ? sale.get('valor') : sale.valor) || 0
       var sValorTotalNota = sale.getFloat
         ? sale.getFloat('valor_total_nota')
-        : Number(sale.get('valor_total_nota')) || 0
-
-      var normSC = String(sCliente)
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]/g, '')
-        .trim()
+        : Number(sale.get ? sale.get('valor_total_nota') : sale.valor_total_nota) || 0
 
       salesData.push({
         cliente: sCliente,
-        normCliente: normSC,
+        normCliente: normalizeName(sCliente),
         data: sData,
         numero_documento: sNumDoc,
         valor: sValor,
@@ -135,46 +141,34 @@ onRecordAfterCreateSuccess((e) => {
 
     for (var m = 0; m < matchingFactories.length; m++) {
       var targetFactory = matchingFactories[m]
-      var tName = targetFactory.getString('name') || ''
-      var tId = targetFactory.getString('id') || targetFactory.id || ''
-      var normTarget = String(tName)
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]/g, '')
-        .trim()
+      var tName = targetFactory.getString
+        ? targetFactory.getString('name')
+        : targetFactory.name || ''
+      var tId = targetFactory.getString ? targetFactory.getString('id') : targetFactory.id || ''
+      var normTarget = normalizeName(tName)
 
       var matchedSales = []
       for (var si = 0; si < salesData.length; si++) {
         var sd = salesData[si]
         if (!sd.normCliente) continue
 
-        if (
-          (normTarget === 'animall' && sd.normCliente === 'pecuarianutricaoanimalltda') ||
-          (normTarget === 'pecuarianutricaoanimalltda' && sd.normCliente === 'animall')
-        ) {
-          continue
-        }
-
-        var match = false
-        if (normTarget === sd.normCliente) {
-          match = true
-        } else {
-          var minL = Math.min(normTarget.length, sd.normCliente.length)
-          if (
-            minL >= 6 &&
-            (normTarget.indexOf(sd.normCliente) !== -1 || sd.normCliente.indexOf(normTarget) !== -1)
-          ) {
-            match = true
-          }
-        }
-
-        if (match) {
+        if (matchFactorySale(normTarget, sd.normCliente)) {
           matchedSales.push(sd)
         }
       }
 
-      if (matchedSales.length === 0) continue
+      if (matchedSales.length === 0) {
+        if (normTarget === 'animall' || normTarget.length < 10) {
+          $app
+            .db()
+            .newQuery(
+              "UPDATE factories SET valor_medio = 0, valor_atual = 0, ultimo_pedido = '', status_funil = '' WHERE id = {:id}",
+            )
+            .bind({ id: tId })
+            .execute()
+        }
+        continue
+      }
 
       var gruposMap = {}
       for (var gi = 0; gi < matchedSales.length; gi++) {
@@ -299,6 +293,42 @@ onRecordAfterUpdateSuccess((e) => {
     var vendaRecord = e.record
     if (!vendaRecord) return
 
+    function normalizeName(s) {
+      if (!s) return ''
+      return String(s)
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]/g, '')
+        .trim()
+    }
+
+    function matchFactorySale(normFact, normClienteVenda) {
+      if (!normFact || !normClienteVenda) return false
+
+      if (normFact === 'animall') {
+        return normClienteVenda === 'animall'
+      }
+
+      if (normFact.length < 10) {
+        return normFact === normClienteVenda
+      }
+
+      if (normFact === normClienteVenda) {
+        return true
+      }
+
+      var minLen = Math.min(normFact.length, normClienteVenda.length)
+      if (
+        minLen >= 6 &&
+        (normFact.indexOf(normClienteVenda) !== -1 || normClienteVenda.indexOf(normFact) !== -1)
+      ) {
+        return true
+      }
+
+      return false
+    }
+
     var clienteVenda = ''
     if (typeof vendaRecord.getString === 'function') {
       clienteVenda = vendaRecord.getString('cliente') || ''
@@ -306,13 +336,7 @@ onRecordAfterUpdateSuccess((e) => {
       clienteVenda = vendaRecord.cliente
     }
 
-    var normClienteVenda = String(clienteVenda || '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]/g, '')
-      .trim()
-
+    var normClienteVenda = normalizeName(clienteVenda)
     if (!normClienteVenda) return
 
     // Buscar todas as factories para encontrar matches
@@ -333,37 +357,11 @@ onRecordAfterUpdateSuccess((e) => {
     var matchingFactories = []
     for (var f = 0; f < allFactories.length; f++) {
       var fact = allFactories[f]
-      var factName = fact.getString('name') || ''
-      var normFact = String(factName)
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]/g, '')
-        .trim()
+      var factName = fact.getString ? fact.getString('name') : fact.name || ''
+      var normFact = normalizeName(factName)
       if (!normFact) continue
 
-      // Denylist check
-      if (
-        (normFact === 'animall' && normClienteVenda === 'pecuarianutricaoanimalltda') ||
-        (normFact === 'pecuarianutricaoanimalltda' && normClienteVenda === 'animall')
-      ) {
-        continue
-      }
-
-      var isMatch = false
-      if (normFact === normClienteVenda) {
-        isMatch = true
-      } else {
-        var minLen = Math.min(normFact.length, normClienteVenda.length)
-        if (
-          minLen >= 6 &&
-          (normFact.indexOf(normClienteVenda) !== -1 || normClienteVenda.indexOf(normFact) !== -1)
-        ) {
-          isMatch = true
-        }
-      }
-
-      if (isMatch) {
+      if (matchFactorySale(normFact, normClienteVenda)) {
         matchingFactories.push(fact)
       }
     }
@@ -388,24 +386,21 @@ onRecordAfterUpdateSuccess((e) => {
     var salesData = []
     for (var i = 0; i < allSales.length; i++) {
       var sale = allSales[i]
-      var sCliente = sale.getString('cliente') || ''
-      var sData = sale.getString('data') || ''
-      var sNumDoc = (sale.getString('numero_documento') || '').trim()
-      var sValor = sale.getFloat ? sale.getFloat('valor') : Number(sale.get('valor')) || 0
+      var sCliente = sale.getString ? sale.getString('cliente') : sale.cliente || ''
+      var sData = sale.getString ? sale.getString('data') : sale.data || ''
+      var sNumDoc = (
+        (sale.getString ? sale.getString('numero_documento') : sale.numero_documento) || ''
+      ).trim()
+      var sValor = sale.getFloat
+        ? sale.getFloat('valor')
+        : Number(sale.get ? sale.get('valor') : sale.valor) || 0
       var sValorTotalNota = sale.getFloat
         ? sale.getFloat('valor_total_nota')
-        : Number(sale.get('valor_total_nota')) || 0
-
-      var normSC = String(sCliente)
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]/g, '')
-        .trim()
+        : Number(sale.get ? sale.get('valor_total_nota') : sale.valor_total_nota) || 0
 
       salesData.push({
         cliente: sCliente,
-        normCliente: normSC,
+        normCliente: normalizeName(sCliente),
         data: sData,
         numero_documento: sNumDoc,
         valor: sValor,
@@ -417,46 +412,34 @@ onRecordAfterUpdateSuccess((e) => {
 
     for (var m = 0; m < matchingFactories.length; m++) {
       var targetFactory = matchingFactories[m]
-      var tName = targetFactory.getString('name') || ''
-      var tId = targetFactory.getString('id') || targetFactory.id || ''
-      var normTarget = String(tName)
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]/g, '')
-        .trim()
+      var tName = targetFactory.getString
+        ? targetFactory.getString('name')
+        : targetFactory.name || ''
+      var tId = targetFactory.getString ? targetFactory.getString('id') : targetFactory.id || ''
+      var normTarget = normalizeName(tName)
 
       var matchedSales = []
       for (var si = 0; si < salesData.length; si++) {
         var sd = salesData[si]
         if (!sd.normCliente) continue
 
-        if (
-          (normTarget === 'animall' && sd.normCliente === 'pecuarianutricaoanimalltda') ||
-          (normTarget === 'pecuarianutricaoanimalltda' && sd.normCliente === 'animall')
-        ) {
-          continue
-        }
-
-        var match = false
-        if (normTarget === sd.normCliente) {
-          match = true
-        } else {
-          var minL = Math.min(normTarget.length, sd.normCliente.length)
-          if (
-            minL >= 6 &&
-            (normTarget.indexOf(sd.normCliente) !== -1 || sd.normCliente.indexOf(normTarget) !== -1)
-          ) {
-            match = true
-          }
-        }
-
-        if (match) {
+        if (matchFactorySale(normTarget, sd.normCliente)) {
           matchedSales.push(sd)
         }
       }
 
-      if (matchedSales.length === 0) continue
+      if (matchedSales.length === 0) {
+        if (normTarget === 'animall' || normTarget.length < 10) {
+          $app
+            .db()
+            .newQuery(
+              "UPDATE factories SET valor_medio = 0, valor_atual = 0, ultimo_pedido = '', status_funil = '' WHERE id = {:id}",
+            )
+            .bind({ id: tId })
+            .execute()
+        }
+        continue
+      }
 
       var gruposMap = {}
       for (var gi = 0; gi < matchedSales.length; gi++) {
