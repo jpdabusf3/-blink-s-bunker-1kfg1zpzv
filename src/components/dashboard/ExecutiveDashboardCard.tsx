@@ -8,6 +8,7 @@ import { getHistoricoVendas, type HistoricoVenda } from '@/services/historico-ve
 import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { useRealtime } from '@/hooks/use-realtime'
 import { formatCompactCurrency, formatCurrency } from '@/lib/utils'
+import { deriveFunilVendasStatus, FUNNEL_STAGES_PERMITIDOS } from '@/lib/funnel-status'
 
 export function ExecutiveDashboardCard() {
   const { factories } = useAppContext()
@@ -43,11 +44,18 @@ export function ExecutiveDashboardCard() {
   })
 
   const kpis = useMemo(() => {
-    const funnelValue = factories.reduce((s, f) => s + (f.valor_medio || 0), 0)
+    const funnelFactories = factories.filter((f) => FUNNEL_STAGES_PERMITIDOS.has(f.funnelStage))
+    const funnelValue = funnelFactories.reduce((s, f) => s + (f.valor_medio || 0), 0)
     const dist = {
-      Ativo: factories.filter((f) => f.funnelStage === 'Fechamento').length,
-      Inativo: factories.filter((f) => f.funnelStage === 'Pós-venda').length,
-      Encerradas: factories.filter((f) => f.funnelStage === 'Perda').length,
+      Ativo: 0,
+      Inativo: 0,
+      Encerradas: 0,
+    }
+    for (const f of funnelFactories) {
+      const status = deriveFunilVendasStatus(f.funnelStage, f.ultimo_pedido)
+      if (status === 'Ativo') dist.Ativo++
+      else if (status === 'Inativo') dist.Inativo++
+      else if (status === 'Negociações Encerradas') dist.Encerradas++
     }
     const totalMeta = metas.reduce((s, m) => s + (m.meta_valor || 0), 0)
     const totalRealizado = metas.reduce((s, m) => s + (m.valor_realizado || 0), 0)

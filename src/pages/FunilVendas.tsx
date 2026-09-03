@@ -63,54 +63,21 @@ import {
 import { exportBatchClientReportsZip, logBatchReportExport } from '@/lib/batchReportExport'
 import { useToast } from '@/hooks/use-toast'
 import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
+import {
+  type FunilVendasStatus,
+  deriveFunilVendasStatus,
+  STATUS_TO_FUNNEL_STAGE,
+  FUNNEL_STAGES_PERMITIDOS,
+} from '@/lib/funnel-status'
 
-export type FunilVendasStatus = 'Ativo' | 'Inativo' | 'Negociações Encerradas'
+export type { FunilVendasStatus }
+export { deriveFunilVendasStatus }
 
 const STATUS_COLUMNS: readonly FunilVendasStatus[] = [
   'Ativo',
   'Inativo',
   'Negociações Encerradas',
 ] as const
-
-const FUNNEL_STAGES_PERMITIDOS = new Set(['Fechamento', 'Pós-venda', 'Perda'])
-
-export function deriveFunilVendasStatus(
-  funnelStage: string | undefined,
-  ultimoPedido?: string | null,
-): FunilVendasStatus | null {
-  if (!funnelStage || !FUNNEL_STAGES_PERMITIDOS.has(funnelStage)) {
-    return null
-  }
-
-  if (funnelStage === 'Fechamento') {
-    return 'Ativo'
-  }
-
-  if (funnelStage === 'Perda') {
-    return 'Negociações Encerradas'
-  }
-
-  // funnelStage === 'Pós-venda'
-  if (ultimoPedido) {
-    const dataPedido = new Date(ultimoPedido)
-    if (!isNaN(dataPedido.getTime())) {
-      const hoje = new Date()
-      const diffMs = hoje.getTime() - dataPedido.getTime()
-      const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-      if (diffDias > 180) {
-        return 'Inativo'
-      }
-    }
-  }
-
-  return 'Ativo'
-}
-
-const STATUS_TO_FUNNEL_STAGE: Record<FunilVendasStatus, 'Fechamento' | 'Pós-venda' | 'Perda'> = {
-  Ativo: 'Fechamento',
-  Inativo: 'Pós-venda',
-  'Negociações Encerradas': 'Perda',
-}
 
 const SPECIES = [
   'Ruminantes',

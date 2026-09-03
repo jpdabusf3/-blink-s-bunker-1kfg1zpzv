@@ -3,6 +3,7 @@ import { getHistoricoVendas } from '@/services/historico-vendas'
 import { getGestoresTecnicos } from '@/services/gestao-tecnica'
 import { getAllFactories } from '@/services/factories'
 import type { Factory } from '@/types'
+import { deriveFunilVendasStatus, FUNNEL_STAGES_PERMITIDOS } from '@/lib/funnel-status'
 
 export interface ConsolidatedKPIs {
   totalFunnelValue: number
@@ -149,19 +150,26 @@ export async function fetchConsolidatedData(): Promise<ConsolidatedData> {
     getAllFactories(),
   ])
 
-  const funnelFactories = factories.filter((f) => f.status_funil)
+  const funnelFactories = factories.filter((f) => FUNNEL_STAGES_PERMITIDOS.has(f.funnelStage))
   const totalFunnelValue = funnelFactories.reduce((s, f) => s + (f.valor_medio || 0), 0)
   const totalTarget = metas.reduce((s, m) => s + (m.meta_valor || 0), 0)
   const totalAchieved = metas.reduce((s, m) => s + (m.valor_realizado || 0), 0)
   const totalSales = vendas.reduce((s, v) => s + (v.valor || 0), 0)
 
-  // Mesma lógica de derivação do Funil de Vendas baseada em funnelStage:
+  // Mesma lógica de derivação do Funil de Vendas baseada em deriveFunilVendasStatus:
   // Fechamento -> Ativo
-  // Pós-venda -> Inativo
+  // Pós-venda -> Inativo se ultimo_pedido > 180 dias; senão Ativo
   // Perda -> Negociações Encerradas
-  const ativoCount = factories.filter((f) => f.funnelStage === 'Fechamento').length
-  const inativoCount = factories.filter((f) => f.funnelStage === 'Pós-venda').length
-  const encerradasCount = factories.filter((f) => f.funnelStage === 'Perda').length
+  let ativoCount = 0
+  let inativoCount = 0
+  let encerradasCount = 0
+
+  for (const f of funnelFactories) {
+    const status = deriveFunilVendasStatus(f.funnelStage, f.ultimo_pedido)
+    if (status === 'Ativo') ativoCount++
+    else if (status === 'Inativo') inativoCount++
+    else if (status === 'Negociações Encerradas') encerradasCount++
+  }
 
   const kpis: ConsolidatedKPIs = {
     totalFunnelValue,
