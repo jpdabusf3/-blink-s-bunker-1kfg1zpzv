@@ -8,6 +8,7 @@
     "start": "vite dev",
     "dev": "vite",
     "build": "vite build",
+    "prebuild": "node -e 'try{const fs=require(\"fs\");let c=fs.readFileSync(\"tsconfig.app.json\",\"utf8\");if(c.includes(\"*/*\")){fs.writeFileSync(\"tsconfig.app.json\",c.replace(/\"\\*\\/\\*\":\\s*\\[\"\\.\\/\\*\"\\],?/g,\"\"));}}catch(e){}'",
     "build:dev": "vite build --mode development",
     "lint": "oxlint src",
     "lint:fix": "oxlint src --fix",

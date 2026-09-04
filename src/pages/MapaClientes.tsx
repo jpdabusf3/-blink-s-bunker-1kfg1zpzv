@@ -33,6 +33,7 @@ import { getAllFactories } from '@/services/factories'
 import { getScopedFactories } from '@/lib/user-scope'
 import { normalizeArray } from '@/lib/utils'
 import { BLINK_LOCATIONS, BLINK_MARINGA_CD } from '@/constants/blinkLocations'
+import { CLIENT_PROFILE_CATEGORIES, matchesAnyProfileCategory } from '@/constants/clientCategories'
 import { useOsrmRoute } from '@/hooks/use-osrm-route'
 import type { Factory } from '@/types'
 
@@ -112,17 +113,6 @@ export default function MapaClientes() {
     })
   }, [factories])
 
-  // Opções dinâmicas de Perfil / Categoria descobertas a partir dos clientes existentes
-  const profileOptions = useMemo(() => {
-    const set = new Set<string>()
-    factories.forEach((f) => {
-      normalizeArray(f.profile_type).forEach((p) => {
-        if (p && p.trim()) set.add(p.trim())
-      })
-    })
-    return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'))
-  }, [factories])
-
   // Filtros aplicados sobre os clientes com coordenadas válidas
   const filteredFactories = useMemo(() => {
     return validFactories.filter((f) => {
@@ -141,7 +131,10 @@ export default function MapaClientes() {
       }
       if (profileFilter !== 'all') {
         const profs = normalizeArray(f.profile_type)
-        if (!profs.includes(profileFilter)) return false
+        if (f.carteira && f.carteira.trim() && !profs.includes(f.carteira.trim())) {
+          profs.push(f.carteira.trim())
+        }
+        if (!matchesAnyProfileCategory(profs, [profileFilter])) return false
       }
       return true
     })
@@ -585,7 +578,7 @@ export default function MapaClientes() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos os Perfis</SelectItem>
-                    {profileOptions.map((prof) => (
+                    {CLIENT_PROFILE_CATEGORIES.map((prof) => (
                       <SelectItem key={prof} value={prof}>
                         {prof}
                       </SelectItem>

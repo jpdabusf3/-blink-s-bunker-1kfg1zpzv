@@ -50,6 +50,7 @@ import { exportClientsToCSV } from '@/lib/csv-export'
 import { enrichClientData, type EnrichmentSummary } from '@/services/enrichment-service'
 import { FilePlus2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { CLIENT_PROFILE_CATEGORIES, matchesAnyProfileCategory } from '@/constants/clientCategories'
 import type { Factory } from '@/types'
 
 const REGION_OPTIONS = ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul']
@@ -64,35 +65,12 @@ const SPECIES_OPTIONS = [
   'Multi espécie',
 ]
 const STATUS_OPTIONS = ['Atendido', 'Não atendido', 'Prospeção']
-const STATUS_CONTATO_OPTIONS = [
-  'Champion',
-  'Stakeholder',
-  'Decisor',
-  'Influenciador',
-  'Gatekeepers',
-]
-const PROFILE_OPTIONS = [
-  'Indústria',
-  'Cooperativa',
-  'Integradora',
-  'Premixeira',
-  'Produtores',
-  'Distribuidor',
-  'Outros',
-]
 const PRODUCT_LINE_OPTIONS = [
   'Adsorventes',
   'Prebióticos',
   'Minerais Orgânicos',
   'Blends',
   'Ingredientes',
-]
-const ADDRESS_STATUS_OPTIONS: { label: string; value: string }[] = [
-  { label: 'Completo', value: 'complete' },
-  { label: 'Parcial', value: 'partial' },
-  { label: 'Inconsistente', value: 'inconsistent' },
-  { label: 'Enriquecido', value: 'enriched' },
-  { label: 'Falhou', value: 'failed' },
 ]
 
 const PAGE_SIZE_OPTIONS = [15, 30, 50, 100]
@@ -249,10 +227,8 @@ export default function Cadastro() {
   const [selectedRegions, setSelectedRegions] = useState<string[]>([])
   const [selectedSpecies, setSelectedSpecies] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
-  const [selectedStatusContatos, setSelectedStatusContatos] = useState<string[]>([])
   const [selectedProfiles, setSelectedProfiles] = useState<string[]>([])
   const [selectedProductLines, setSelectedProductLines] = useState<string[]>([])
-  const [selectedAddressStatuses, setSelectedAddressStatuses] = useState<string[]>([])
 
   const loadData = async () => {
     setLoading(true)
@@ -300,41 +276,6 @@ export default function Cadastro() {
     return Array.from(vends).sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }, [factories])
 
-  const dynamicProfileOptions = useMemo(() => {
-    const profs = new Set<string>()
-    factories.forEach((f) => {
-      normalizeArray(f.profile_type).forEach((p) => {
-        if (p && p.trim()) profs.add(p.trim())
-      })
-      if (f.carteira && f.carteira.trim()) {
-        profs.add(f.carteira.trim())
-      }
-    })
-    return Array.from(profs).sort((a, b) => a.localeCompare(b, 'pt-BR'))
-  }, [factories])
-
-  const dynamicAddressStatusOptions = useMemo(() => {
-    const present = new Set<string>()
-    factories.forEach((f) => {
-      if (f.address_status && f.address_status.trim()) {
-        present.add(f.address_status.trim())
-      }
-    })
-    const mapLabel: Record<string, string> = {
-      complete: 'Completo',
-      partial: 'Parcial',
-      inconsistent: 'Inconsistente',
-      enriched: 'Enriquecido',
-      failed: 'Falhou',
-    }
-    return Array.from(present)
-      .map((val) => ({
-        label: mapLabel[val] || val,
-        value: val,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'))
-  }, [factories])
-
   const dynamicRegionOptions = useMemo(() => {
     const regs = new Set<string>()
     factories.forEach((f) => {
@@ -365,14 +306,6 @@ export default function Cadastro() {
     return Array.from(sts).sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }, [factories])
 
-  const dynamicStatusContatoOptions = useMemo(() => {
-    const scs = new Set<string>()
-    factories.forEach((f) => {
-      if (f.status_contato && f.status_contato.trim()) scs.add(f.status_contato.trim())
-    })
-    return Array.from(scs).sort((a, b) => a.localeCompare(b, 'pt-BR'))
-  }, [factories])
-
   const dynamicProductLineOptions = useMemo(() => {
     const lines = new Set<string>()
     factories.forEach((f) => {
@@ -391,10 +324,8 @@ export default function Cadastro() {
     setSelectedRegions([])
     setSelectedSpecies([])
     setSelectedStatuses([])
-    setSelectedStatusContatos([])
     setSelectedProfiles([])
     setSelectedProductLines([])
-    setSelectedAddressStatuses([])
     setCurrentPage(1)
   }
 
@@ -406,10 +337,8 @@ export default function Cadastro() {
     selectedRegions.length > 0 ||
     selectedSpecies.length > 0 ||
     selectedStatuses.length > 0 ||
-    selectedStatusContatos.length > 0 ||
     selectedProfiles.length > 0 ||
-    selectedProductLines.length > 0 ||
-    selectedAddressStatuses.length > 0
+    selectedProductLines.length > 0
 
   // Reset page to 1 when filters change
   useEffect(() => {
@@ -422,15 +351,13 @@ export default function Cadastro() {
     selectedRegions,
     selectedSpecies,
     selectedStatuses,
-    selectedStatusContatos,
     selectedProfiles,
     selectedProductLines,
-    selectedAddressStatuses,
     pageSize,
   ])
 
   const filtered = useMemo(() => {
-    const list = factories.filter((f) => {
+    return factories.filter((f) => {
       // Search text match
       if (search.trim()) {
         const q = search.toLowerCase()
@@ -481,21 +408,15 @@ export default function Cadastro() {
         if (!hasStatus) return false
       }
 
-      // Status do Contato match
-      if (selectedStatusContatos.length > 0) {
-        if (!f.status_contato || !selectedStatusContatos.includes(f.status_contato)) {
+      // Perfil / Carteira multi-match com categorias fixas e correspondência tolerante
+      if (selectedProfiles.length > 0) {
+        const clientProfiles = normalizeArray(f.profile_type)
+        if (f.carteira && f.carteira.trim() && !clientProfiles.includes(f.carteira.trim())) {
+          clientProfiles.push(f.carteira.trim())
+        }
+        if (!matchesAnyProfileCategory(clientProfiles, selectedProfiles)) {
           return false
         }
-      }
-
-      // Perfil / Carteira multi-match (procura em profile_type ou carteira)
-      if (selectedProfiles.length > 0) {
-        const factoryProfiles = normalizeArray(f.profile_type)
-        if (f.carteira && f.carteira.trim() && !factoryProfiles.includes(f.carteira.trim())) {
-          factoryProfiles.push(f.carteira.trim())
-        }
-        const hasProfile = selectedProfiles.some((p) => factoryProfiles.includes(p))
-        if (!hasProfile) return false
       }
 
       // Product line affinity multi-match
@@ -505,27 +426,8 @@ export default function Cadastro() {
         if (!hasLine) return false
       }
 
-      // Address status multi-match
-      if (selectedAddressStatuses.length > 0) {
-        if (!f.address_status || !selectedAddressStatuses.includes(f.address_status)) {
-          return false
-        }
-      }
-
       return true
     })
-
-    // If 'failed' is selected or highlighted, sort failed clients first for base cleanup
-    if (selectedAddressStatuses.includes('failed')) {
-      return [...list].sort((a, b) => {
-        const aFailed = a.address_status === 'failed' ? 1 : 0
-        const bFailed = b.address_status === 'failed' ? 1 : 0
-        if (aFailed !== bFailed) return bFailed - aFailed
-        return a.name.localeCompare(b.name)
-      })
-    }
-
-    return list
   }, [
     factories,
     search,
@@ -535,10 +437,8 @@ export default function Cadastro() {
     selectedRegions,
     selectedSpecies,
     selectedStatuses,
-    selectedStatusContatos,
     selectedProfiles,
     selectedProductLines,
-    selectedAddressStatuses,
   ])
 
   // Pagination calculation
@@ -797,7 +697,7 @@ export default function Cadastro() {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">
                   Fábrica
@@ -836,7 +736,7 @@ export default function Cadastro() {
                   Perfil / Carteira
                 </label>
                 <MultiSelect
-                  options={dynamicProfileOptions}
+                  options={[...CLIENT_PROFILE_CATEGORIES]}
                   value={selectedProfiles}
                   onChange={setSelectedProfiles}
                   placeholder="Todos os perfis"
@@ -877,17 +777,6 @@ export default function Cadastro() {
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Status do Contato
-                </label>
-                <MultiSelect
-                  options={dynamicStatusContatoOptions}
-                  value={selectedStatusContatos}
-                  onChange={setSelectedStatusContatos}
-                  placeholder="Todos os status"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">
                   Linha de Produtos
                 </label>
                 <MultiSelect
@@ -895,17 +784,6 @@ export default function Cadastro() {
                   value={selectedProductLines}
                   onChange={setSelectedProductLines}
                   placeholder="Todas as linhas"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Status Endereço
-                </label>
-                <MultiSelect
-                  options={dynamicAddressStatusOptions}
-                  value={selectedAddressStatuses}
-                  onChange={setSelectedAddressStatuses}
-                  placeholder="Todos os status"
                 />
               </div>
             </div>
