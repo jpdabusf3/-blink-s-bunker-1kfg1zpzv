@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -10,12 +12,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Loader2, MapPin, Search, RotateCcw, Building2, AlertTriangle, Layers } from 'lucide-react'
+import {
+  Loader2,
+  MapPin,
+  Search,
+  RotateCcw,
+  Building2,
+  AlertTriangle,
+  Layers,
+  Navigation,
+  ExternalLink,
+  X,
+  Clock,
+  Compass,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
 import { getAllFactories } from '@/services/factories'
 import { getScopedFactories } from '@/lib/user-scope'
+import { normalizeArray } from '@/lib/utils'
+import { BLINK_LOCATIONS, BLINK_MARINGA_CD } from '@/constants/blinkLocations'
+import { useOsrmRoute } from '@/hooks/use-osrm-route'
 import type { Factory } from '@/types'
 
 declare global {
@@ -46,11 +64,17 @@ export default function MapaClientes() {
   const [search, setSearch] = useState('')
   const [addressStatusFilter, setAddressStatusFilter] = useState('all')
   const [geocodePrecisionFilter, setGeocodePrecisionFilter] = useState('all')
+  const [profileFilter, setProfileFilter] = useState('all')
+  const [showBlinkLocations, setShowBlinkLocations] = useState(true)
   const [selectedClient, setSelectedClient] = useState<Factory | null>(null)
+
+  const { calculating, route, calculateRouteToCD, clearRoute } = useOsrmRoute()
 
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
   const markersLayerRef = useRef<any>(null)
+  const blinkLayerRef = useRef<any>(null)
+  const routeLayerRef = useRef<any>(null)
 
   const loadData = async () => {
     setLoading(true)
@@ -88,6 +112,17 @@ export default function MapaClientes() {
     })
   }, [factories])
 
+  // Opções dinâmicas de Perfil / Categoria descobertas a partir dos clientes existentes
+  const profileOptions = useMemo(() => {
+    const set = new Set<string>()
+    factories.forEach((f) => {
+      normalizeArray(f.profile_type).forEach((p) => {
+        if (p && p.trim()) set.add(p.trim())
+      })
+    })
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [factories])
+
   // Filtros aplicados sobre os clientes com coordenadas válidas
   const filteredFactories = useMemo(() => {
     return validFactories.filter((f) => {
@@ -104,15 +139,18 @@ export default function MapaClientes() {
       if (geocodePrecisionFilter !== 'all') {
         if (f.geocode_precision !== geocodePrecisionFilter) return false
       }
+      if (profileFilter !== 'all') {
+        const profs = normalizeArray(f.profile_type)
+        if (!profs.includes(profileFilter)) return false
+      }
       return true
     })
-  }, [validFactories, search, addressStatusFilter, geocodePrecisionFilter])
+  }, [validFactories, search, addressStatusFilter, geocodePrecisionFilter, profileFilter])
 
   // Inicialização do Leaflet Map
   useEffect(() => {
     if (!mapContainerRef.current) return
 
-    // Aguarda carregar Leaflet da CDN se necessário
     const initLeaflet = () => {
       if (!window.L || !mapContainerRef.current) return
 
@@ -130,9 +168,14 @@ export default function MapaClientes() {
           maxZoom: 19,
         }).addTo(map)
 
+        const routeLayer = window.L.layerGroup().addTo(map)
         const markersLayer = window.L.layerGroup().addTo(map)
+        const blinkLayer = window.L.layerGroup().addTo(map)
+
         mapInstanceRef.current = map
+        routeLayerRef.current = routeLayer
         markersLayerRef.current = markersLayer
+        blinkLayerRef.current = blinkLayer
       }
     }
 
@@ -153,11 +196,81 @@ export default function MapaClientes() {
         mapInstanceRef.current.remove()
         mapInstanceRef.current = null
         markersLayerRef.current = null
+        blinkLayerRef.current = null
+        routeLayerRef.current = null
       }
     }
   }, [])
 
-  // Atualização dos Marcadores no Mapa
+  // Atualização dos Pontos Fixos Blink no Mapa
+  useEffect(() => {
+    if (!mapInstanceRef.current || !blinkLayerRef.current || !window.L) return
+
+    const L = window.L
+    const blinkLayer = blinkLayerRef.current
+    blinkLayer.clearLayers()
+
+    if (!showBlinkLocations) return
+
+    BLINK_LOCATIONS.forEach((loc) => {
+      // Marcador com cor dourada (#F5C518 / #d97706) e ícone industrial/predial
+      const isCD = loc.type === 'cd'
+      const pinColor = isCD ? '#F5C518' : '#0f172a'
+      const iconTextColor = isCD ? '#0f172a' : '#F5C518'
+      const badgeText = isCD ? 'CD' : loc.type === 'fabrica' ? 'FÁBRICA' : 'SEDE'
+
+      const blinkIcon = L.divIcon({
+        className: 'custom-blink-pin',
+        html: `
+          <div style="
+            background: linear-gradient(135deg, ${pinColor} 0%, #d97706 100%);
+            width: 36px;
+            height: 36px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+            border: 3px solid #ffffff;
+            cursor: pointer;
+            position: relative;
+          ">
+            <div style="
+              transform: rotate(45deg);
+              font-family: sans-serif;
+              font-weight: 800;
+              font-size: 10px;
+              color: ${iconTextColor};
+              letter-spacing: -0.5px;
+            ">${badgeText}</div>
+          </div>
+        `,
+        iconSize: [36, 36],
+        iconAnchor: [18, 36],
+        popupAnchor: [0, -36],
+      })
+
+      const marker = L.marker([loc.lat, loc.lng], { icon: blinkIcon, zIndexOffset: 1000 })
+
+      const popupContent = `
+        <div style="font-family: sans-serif; font-size: 13px; min-width: 240px; padding: 4px;">
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+            <span style="background: #F5C518; color: #0f172a; font-weight: 800; font-size: 10px; padding: 2px 6px; border-radius: 4px;">BLINK</span>
+            <span style="font-weight: 700; font-size: 12px; color: #64748b; text-transform: uppercase;">Ponto Fixo</span>
+          </div>
+          <h4 style="font-weight: 700; font-size: 14px; margin: 0 0 4px 0; color: #0f172a; line-height: 1.3;">${loc.name}</h4>
+          <p style="margin: 0 0 6px 0; color: #475569; font-size: 12px; line-height: 1.4;">${loc.addressText}</p>
+          ${loc.phone ? `<p style="margin: 4px 0 0 0; color: #0f172a; font-size: 12px;"><strong>Telefone:</strong> ${loc.phone}</p>` : ''}
+        </div>
+      `
+
+      marker.bindPopup(popupContent)
+      marker.addTo(blinkLayer)
+    })
+  }, [showBlinkLocations])
+
+  // Atualização dos Marcadores de Clientes no Mapa
   useEffect(() => {
     if (!mapInstanceRef.current || !markersLayerRef.current || !window.L) return
 
@@ -170,6 +283,11 @@ export default function MapaClientes() {
     if (filteredFactories.length === 0) return
 
     const bounds = L.latLngBounds([])
+
+    // Adiciona pontos de referência aos bounds caso visíveis
+    if (showBlinkLocations) {
+      BLINK_LOCATIONS.forEach((l) => bounds.extend([l.lat, l.lng]))
+    }
 
     filteredFactories.forEach((f) => {
       const lat = (f.lat ?? f.coordinates?.lat)!
@@ -225,11 +343,13 @@ export default function MapaClientes() {
         ? GEOCODE_PRECISION_LABELS[f.geocode_precision] || f.geocode_precision
         : 'Não informada'
       const cityState = [f.city, f.state].filter(Boolean).join(' - ') || 'Localidade não informada'
+      const perfilLabel = normalizeArray(f.profile_type).join(', ') || 'Não informado'
 
       const popupContent = `
-        <div style="font-family: sans-serif; font-size: 13px; min-width: 200px; padding: 2px;">
+        <div style="font-family: sans-serif; font-size: 13px; min-width: 220px; padding: 2px;">
           <h4 style="font-weight: 700; font-size: 14px; margin: 0 0 4px 0; color: #0f172a;">${f.name}</h4>
-          <p style="margin: 0 0 6px 0; color: #475569; font-size: 12px;"><strong>Localização:</strong> ${cityState}</p>
+          <p style="margin: 0 0 4px 0; color: #475569; font-size: 12px;"><strong>Localização:</strong> ${cityState}</p>
+          <p style="margin: 0 0 6px 0; color: #475569; font-size: 12px;"><strong>Perfil / Carteira:</strong> ${perfilLabel}</p>
           <div style="margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
             <span style="color: #64748b; font-size: 12px;">Status Endereço:</span>
             <span style="font-weight: 600; font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #e2e8f0; color: #1e293b;">${statusLabel}</span>
@@ -239,12 +359,64 @@ export default function MapaClientes() {
             <span style="font-weight: 600; font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #e2e8f0; color: #1e293b;">${precisionLabel}</span>
           </div>
           ${f.standardized_address ? `<p style="margin: 6px 0 0 0; padding-top: 4px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b;">${f.standardized_address}</p>` : ''}
+          <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 6px;">
+            <button
+              id="btn-rota-${f.id}"
+              style="
+                background: #2563eb;
+                color: #ffffff;
+                border: none;
+                border-radius: 6px;
+                padding: 6px 10px;
+                font-size: 11px;
+                font-weight: 600;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+              "
+            >
+              Mostrar rota até o CD (Maringá)
+            </button>
+            <a
+              href="https://www.google.com/maps/dir/?api=1&origin=${lat},${lng}&destination=${BLINK_MARINGA_CD.lat},${BLINK_MARINGA_CD.lng}"
+              target="_blank"
+              rel="noopener noreferrer"
+              style="
+                background: #f1f5f9;
+                color: #0f172a;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 5px 10px;
+                font-size: 11px;
+                font-weight: 600;
+                text-decoration: none;
+                text-align: center;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
+              "
+            >
+              Abrir no Google Maps ↗
+            </a>
+          </div>
         </div>
       `
 
       marker.bindPopup(popupContent)
       marker.on('click', () => {
         setSelectedClient(f)
+      })
+
+      marker.on('popupopen', () => {
+        const btn = document.getElementById(`btn-rota-${f.id}`)
+        if (btn) {
+          btn.onclick = () => {
+            handleCalculateRoute(f)
+          }
+        }
       })
 
       marker.addTo(markersLayer)
@@ -254,7 +426,42 @@ export default function MapaClientes() {
     if (bounds.isValid()) {
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 })
     }
-  }, [filteredFactories])
+  }, [filteredFactories, showBlinkLocations])
+
+  // Desenho da Rota no Mapa
+  useEffect(() => {
+    if (!mapInstanceRef.current || !routeLayerRef.current || !window.L) return
+
+    const L = window.L
+    const map = mapInstanceRef.current
+    const routeLayer = routeLayerRef.current
+    routeLayer.clearLayers()
+
+    if (!route || route.coordinates.length === 0) return
+
+    // Polyline principal da rota em azul vibrante
+    const polyline = L.polyline(route.coordinates, {
+      color: '#2563eb',
+      weight: 5,
+      opacity: 0.85,
+      lineCap: 'round',
+      lineJoin: 'round',
+    })
+
+    polyline.addTo(routeLayer)
+
+    // Ajusta visualização do mapa para englobar a rota inteira
+    const bounds = polyline.getBounds()
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [60, 60] })
+    }
+  }, [route])
+
+  const handleCalculateRoute = (f: Factory) => {
+    const lat = f.lat ?? f.coordinates?.lat
+    const lng = f.lng ?? f.coordinates?.lng
+    calculateRouteToCD(f.name, lat, lng)
+  }
 
   const handleCenterOnClient = (f: Factory) => {
     setSelectedClient(f)
@@ -269,10 +476,14 @@ export default function MapaClientes() {
     setSearch('')
     setAddressStatusFilter('all')
     setGeocodePrecisionFilter('all')
+    setProfileFilter('all')
   }
 
   const hasFilters =
-    search.trim() !== '' || addressStatusFilter !== 'all' || geocodePrecisionFilter !== 'all'
+    search.trim() !== '' ||
+    addressStatusFilter !== 'all' ||
+    geocodePrecisionFilter !== 'all' ||
+    profileFilter !== 'all'
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
@@ -353,7 +564,7 @@ export default function MapaClientes() {
 
       {/* Filter Bar */}
       <Card className="shadow-subtle">
-        <CardContent className="p-4">
+        <CardContent className="p-4 space-y-3">
           <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -366,7 +577,25 @@ export default function MapaClientes() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <div className="w-full sm:w-[180px]">
+              {/* Filtro Perfil/Categoria */}
+              <div className="w-full sm:w-[190px]">
+                <Select value={profileFilter} onValueChange={setProfileFilter}>
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="Perfil / Categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os Perfis</SelectItem>
+                    {profileOptions.map((prof) => (
+                      <SelectItem key={prof} value={prof}>
+                        {prof}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Status Endereço */}
+              <div className="w-full sm:w-[170px]">
                 <Select value={addressStatusFilter} onValueChange={setAddressStatusFilter}>
                   <SelectTrigger className="h-9 text-xs">
                     <SelectValue placeholder="Status Endereço" />
@@ -382,7 +611,8 @@ export default function MapaClientes() {
                 </Select>
               </div>
 
-              <div className="w-full sm:w-[180px]">
+              {/* Precisão Geocode */}
+              <div className="w-full sm:w-[170px]">
                 <Select value={geocodePrecisionFilter} onValueChange={setGeocodePrecisionFilter}>
                   <SelectTrigger className="h-9 text-xs">
                     <SelectValue placeholder="Precisão Geocode" />
@@ -409,6 +639,28 @@ export default function MapaClientes() {
               )}
             </div>
           </div>
+
+          {/* Toggle de Pontos de Referência Blink */}
+          <div className="pt-2 border-t border-border flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="toggle-blink-locations"
+                checked={showBlinkLocations}
+                onCheckedChange={setShowBlinkLocations}
+              />
+              <Label
+                htmlFor="toggle-blink-locations"
+                className="cursor-pointer font-medium text-xs flex items-center gap-1.5"
+              >
+                <span className="w-2.5 h-2.5 rounded-full bg-[#F5C518] inline-block border border-slate-700" />
+                Exibir pontos fixos da Blink (CD Maringá, Fábrica PY, Matriz Indaiatuba, Escritório
+                SP)
+              </Label>
+            </div>
+            <span className="text-muted-foreground text-[11px]">
+              {showBlinkLocations ? '4 pontos de referência ativos' : 'Pontos fixos ocultos'}
+            </span>
+          </div>
         </CardContent>
       </Card>
 
@@ -416,7 +668,7 @@ export default function MapaClientes() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Map View */}
         <div className="lg:col-span-3">
-          <Card className="shadow-subtle overflow-hidden flex flex-col h-[600px] relative">
+          <Card className="shadow-subtle overflow-hidden flex flex-col h-[650px] relative">
             <CardHeader className="py-3 px-4 border-b bg-card flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -424,10 +676,11 @@ export default function MapaClientes() {
                   Mapa Interativo do Brasil
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  {filteredFactories.length} marcador(es) plotado(s)
+                  {filteredFactories.length} cliente(s) plotado(s)
+                  {showBlinkLocations ? ' + 4 pontos fixos Blink' : ''}
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-2 text-xs">
+              <div className="flex items-center gap-2 text-xs flex-wrap">
                 <span className="flex items-center gap-1">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" /> Completo
                 </span>
@@ -441,6 +694,12 @@ export default function MapaClientes() {
                   <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />{' '}
                   Inconsistente/Falha
                 </span>
+                {showBlinkLocations && (
+                  <span className="flex items-center gap-1 font-semibold text-slate-900 dark:text-amber-400">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#F5C518] inline-block border border-slate-600" />{' '}
+                    Blink
+                  </span>
+                )}
               </div>
             </CardHeader>
 
@@ -449,6 +708,80 @@ export default function MapaClientes() {
                 <div className="absolute inset-0 z-[1000] bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center space-y-3">
                   <Loader2 className="w-8 h-8 animate-spin text-primary" />
                   <p className="text-sm font-medium text-foreground">Carregando dados do mapa...</p>
+                </div>
+              )}
+
+              {/* Overlay de rota ativa */}
+              {route && (
+                <div className="absolute top-4 left-4 z-[500] bg-background/95 backdrop-blur border rounded-lg p-3 shadow-lg max-w-sm pointer-events-auto">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-primary/10 text-primary p-1.5 rounded-md">
+                        <Navigation className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-foreground truncate max-w-[200px]">
+                          Rota até o CD Maringá
+                        </p>
+                        <p className="text-[11px] text-muted-foreground truncate max-w-[200px]">
+                          {route.clientName}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                      onClick={clearRoute}
+                      title="Limpar rota"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 mt-3 pt-2 border-t text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <Compass className="w-3.5 h-3.5 text-blue-600" />
+                      <div>
+                        <span className="text-[10px] text-muted-foreground block">Distância</span>
+                        <span className="font-bold text-foreground">
+                          {route.distanceKm.toLocaleString('pt-BR')} km
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-blue-600" />
+                      <div>
+                        <span className="text-[10px] text-muted-foreground block">Tempo Est.</span>
+                        <span className="font-bold text-foreground">{route.durationFormatted}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs flex-1 gap-1"
+                      asChild
+                    >
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&origin=${route.clientLat},${route.clientLng}&destination=${BLINK_MARINGA_CD.lat},${BLINK_MARINGA_CD.lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="w-3 h-3" /> Abrir no Google Maps
+                      </a>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs text-muted-foreground hover:text-destructive"
+                      onClick={clearRoute}
+                    >
+                      Limpar rota
+                    </Button>
+                  </div>
                 </div>
               )}
 
@@ -480,7 +813,8 @@ export default function MapaClientes() {
                       Nenhum cliente corresponde aos filtros selecionados.
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      Tente alterar os termos de busca ou remover os filtros de status e precisão.
+                      Tente alterar os termos de busca ou remover os filtros de perfil, status e
+                      precisão.
                     </p>
                   </div>
                   <Button variant="outline" size="sm" onClick={clearFilters}>
@@ -496,7 +830,7 @@ export default function MapaClientes() {
 
         {/* Sidebar list of clients */}
         <div className="lg:col-span-1">
-          <Card className="shadow-subtle h-[600px] flex flex-col">
+          <Card className="shadow-subtle h-[650px] flex flex-col">
             <CardHeader className="py-3 px-4 border-b">
               <CardTitle className="text-sm font-semibold flex items-center justify-between">
                 <span>Clientes no Mapa</span>
@@ -514,6 +848,7 @@ export default function MapaClientes() {
                 <div className="divide-y divide-border">
                   {filteredFactories.map((f) => {
                     const isSelected = selectedClient?.id === f.id
+                    const profiles = normalizeArray(f.profile_type)
                     return (
                       <div
                         key={f.id}
@@ -528,17 +863,64 @@ export default function MapaClientes() {
                             'Localidade não informada'}
                         </p>
                         <div className="flex flex-wrap gap-1 mt-2">
+                          {profiles.map((p) => (
+                            <Badge
+                              key={p}
+                              variant="secondary"
+                              className="text-[10px] px-1.5 py-0 h-4"
+                            >
+                              {p}
+                            </Badge>
+                          ))}
                           {f.address_status && (
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
                               {ADDRESS_STATUS_LABELS[f.address_status] || f.address_status}
                             </Badge>
                           )}
-                          {f.geocode_precision && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
-                              {GEOCODE_PRECISION_LABELS[f.geocode_precision] || f.geocode_precision}
-                            </Badge>
-                          )}
                         </div>
+
+                        {isSelected && (
+                          <div
+                            className="mt-3 pt-2 border-t flex flex-col gap-1.5"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="h-7 text-xs w-full gap-1.5"
+                              disabled={calculating}
+                              onClick={() => handleCalculateRoute(f)}
+                            >
+                              {calculating ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Navigation className="w-3.5 h-3.5" />
+                              )}
+                              Mostrar rota até CD (Maringá)
+                            </Button>
+                            {(() => {
+                              const lat = f.lat ?? f.coordinates?.lat
+                              const lng = f.lng ?? f.coordinates?.lng
+                              if (typeof lat !== 'number' || typeof lng !== 'number') return null
+                              return (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs w-full gap-1"
+                                  asChild
+                                >
+                                  <a
+                                    href={`https://www.google.com/maps/dir/?api=1&origin=${lat},${lng}&destination=${BLINK_MARINGA_CD.lat},${BLINK_MARINGA_CD.lng}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    <ExternalLink className="w-3 h-3" /> Abrir no Google Maps
+                                  </a>
+                                </Button>
+                              )
+                            })()}
+                          </div>
+                        )}
                       </div>
                     )
                   })}

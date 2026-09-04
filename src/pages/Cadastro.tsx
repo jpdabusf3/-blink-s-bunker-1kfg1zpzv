@@ -243,6 +243,9 @@ export default function Cadastro() {
   }
 
   // Multi-select filters
+  const [selectedFactories, setSelectedFactories] = useState<string[]>([])
+  const [selectedGestores, setSelectedGestores] = useState<string[]>([])
+  const [selectedVendedores, setSelectedVendedores] = useState<string[]>([])
   const [selectedRegions, setSelectedRegions] = useState<string[]>([])
   const [selectedSpecies, setSelectedSpecies] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
@@ -269,8 +272,104 @@ export default function Cadastro() {
 
   useRealtime('factories', () => loadData())
 
+  // Opções dinâmicas para os filtros baseadas nos dados cadastrados
+  const dynamicFactoryOptions = useMemo(() => {
+    const names = new Set<string>()
+    factories.forEach((f) => {
+      if (f.name && f.name.trim()) names.add(f.name.trim())
+    })
+    return Array.from(names).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [factories])
+
+  const dynamicGestoresOptions = useMemo(() => {
+    const gestores = new Set<string>()
+    factories.forEach((f) => {
+      const name = f.gestor_tecnico_name?.trim() || f.expand?.gestor_tecnico_id?.nome?.trim()
+      if (name) gestores.add(name)
+    })
+    return Array.from(gestores).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [factories])
+
+  const dynamicVendedoresOptions = useMemo(() => {
+    const vends = new Set<string>()
+    factories.forEach((f) => {
+      const name = f.vendedor_name?.trim() || f.expand?.vendedor_id?.nome?.trim()
+      if (name) vends.add(name)
+    })
+    return Array.from(vends).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [factories])
+
+  const dynamicProfileOptions = useMemo(() => {
+    const profs = new Set<string>()
+    // Popula a partir dos registros existentes
+    factories.forEach((f) => {
+      normalizeArray(f.profile_type).forEach((p) => {
+        if (p && p.trim()) profs.add(p.trim())
+      })
+    })
+    // Assegura também opções padrão se a lista ainda for pequena
+    PROFILE_OPTIONS.forEach((p) => profs.add(p))
+    return Array.from(profs).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [factories])
+
+  const dynamicRegionOptions = useMemo(() => {
+    const regs = new Set<string>()
+    factories.forEach((f) => {
+      normalizeArray(f.region).forEach((r) => {
+        if (r && r.trim()) regs.add(r.trim())
+      })
+    })
+    REGION_OPTIONS.forEach((r) => regs.add(r))
+    return Array.from(regs).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [factories])
+
+  const dynamicSpeciesOptions = useMemo(() => {
+    const species = new Set<string>()
+    factories.forEach((f) => {
+      normalizeArray(f.animalSpecies).forEach((s) => {
+        if (s && s.trim()) species.add(s.trim())
+      })
+    })
+    SPECIES_OPTIONS.forEach((s) => species.add(s))
+    return Array.from(species).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [factories])
+
+  const dynamicStatusOptions = useMemo(() => {
+    const sts = new Set<string>()
+    factories.forEach((f) => {
+      normalizeArray(f.status).forEach((s) => {
+        if (s && s.trim()) sts.add(s.trim())
+      })
+    })
+    STATUS_OPTIONS.forEach((s) => sts.add(s))
+    return Array.from(sts).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [factories])
+
+  const dynamicStatusContatoOptions = useMemo(() => {
+    const scs = new Set<string>()
+    factories.forEach((f) => {
+      if (f.status_contato && f.status_contato.trim()) scs.add(f.status_contato.trim())
+    })
+    STATUS_CONTATO_OPTIONS.forEach((s) => scs.add(s))
+    return Array.from(scs).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [factories])
+
+  const dynamicProductLineOptions = useMemo(() => {
+    const lines = new Set<string>()
+    factories.forEach((f) => {
+      normalizeArray(f.productLineAffinity).forEach((l) => {
+        if (l && l.trim()) lines.add(l.trim())
+      })
+    })
+    PRODUCT_LINE_OPTIONS.forEach((l) => lines.add(l))
+    return Array.from(lines).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [factories])
+
   const clearFilters = () => {
     setSearch('')
+    setSelectedFactories([])
+    setSelectedGestores([])
+    setSelectedVendedores([])
     setSelectedRegions([])
     setSelectedSpecies([])
     setSelectedStatuses([])
@@ -283,6 +382,9 @@ export default function Cadastro() {
 
   const hasActiveFilters =
     search.trim() !== '' ||
+    selectedFactories.length > 0 ||
+    selectedGestores.length > 0 ||
+    selectedVendedores.length > 0 ||
     selectedRegions.length > 0 ||
     selectedSpecies.length > 0 ||
     selectedStatuses.length > 0 ||
@@ -296,6 +398,9 @@ export default function Cadastro() {
     setCurrentPage(1)
   }, [
     search,
+    selectedFactories,
+    selectedGestores,
+    selectedVendedores,
     selectedRegions,
     selectedSpecies,
     selectedStatuses,
@@ -319,6 +424,24 @@ export default function Cadastro() {
         if (!matchText) return false
       }
 
+      // Fábrica filtro
+      if (selectedFactories.length > 0) {
+        if (!selectedFactories.includes(f.name.trim())) return false
+      }
+
+      // Gestor Técnico filtro
+      if (selectedGestores.length > 0) {
+        const gestorName =
+          f.gestor_tecnico_name?.trim() || f.expand?.gestor_tecnico_id?.nome?.trim()
+        if (!gestorName || !selectedGestores.includes(gestorName)) return false
+      }
+
+      // Vendedor filtro
+      if (selectedVendedores.length > 0) {
+        const vendName = f.vendedor_name?.trim() || f.expand?.vendedor_id?.nome?.trim()
+        if (!vendName || !selectedVendedores.includes(vendName)) return false
+      }
+
       // Region multi-match (any selected matches any in factory)
       if (selectedRegions.length > 0) {
         const factoryRegions = normalizeArray(f.region)
@@ -338,6 +461,13 @@ export default function Cadastro() {
         const factoryStatuses = normalizeArray(f.status)
         const hasStatus = selectedStatuses.some((st) => factoryStatuses.includes(st))
         if (!hasStatus) return false
+      }
+
+      // Status do Contato match
+      if (selectedStatusContatos.length > 0) {
+        if (!f.status_contato || !selectedStatusContatos.includes(f.status_contato)) {
+          return false
+        }
       }
 
       // Profile type multi-match
@@ -378,6 +508,9 @@ export default function Cadastro() {
   }, [
     factories,
     search,
+    selectedFactories,
+    selectedGestores,
+    selectedVendedores,
     selectedRegions,
     selectedSpecies,
     selectedStatuses,
@@ -643,13 +776,57 @@ export default function Cadastro() {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2.5">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  Fábrica
+                </label>
+                <MultiSelect
+                  options={dynamicFactoryOptions}
+                  value={selectedFactories}
+                  onChange={setSelectedFactories}
+                  placeholder="Todas as fábricas"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  Gestor Técnico
+                </label>
+                <MultiSelect
+                  options={dynamicGestoresOptions}
+                  value={selectedGestores}
+                  onChange={setSelectedGestores}
+                  placeholder="Todos os gestores"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  Vendedor
+                </label>
+                <MultiSelect
+                  options={dynamicVendedoresOptions}
+                  value={selectedVendedores}
+                  onChange={setSelectedVendedores}
+                  placeholder="Todos os vendedores"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  Perfil / Carteira
+                </label>
+                <MultiSelect
+                  options={dynamicProfileOptions}
+                  value={selectedProfiles}
+                  onChange={setSelectedProfiles}
+                  placeholder="Todos os perfis"
+                />
+              </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">
                   Região
                 </label>
                 <MultiSelect
-                  options={REGION_OPTIONS}
+                  options={dynamicRegionOptions}
                   value={selectedRegions}
                   onChange={setSelectedRegions}
                   placeholder="Todas as regiões"
@@ -660,7 +837,7 @@ export default function Cadastro() {
                   Espécie Animal
                 </label>
                 <MultiSelect
-                  options={SPECIES_OPTIONS}
+                  options={dynamicSpeciesOptions}
                   value={selectedSpecies}
                   onChange={setSelectedSpecies}
                   placeholder="Todas as espécies"
@@ -671,7 +848,7 @@ export default function Cadastro() {
                   Status
                 </label>
                 <MultiSelect
-                  options={STATUS_OPTIONS}
+                  options={dynamicStatusOptions}
                   value={selectedStatuses}
                   onChange={setSelectedStatuses}
                   placeholder="Todos os status"
@@ -682,7 +859,7 @@ export default function Cadastro() {
                   Status do Contato
                 </label>
                 <MultiSelect
-                  options={STATUS_CONTATO_OPTIONS}
+                  options={dynamicStatusContatoOptions}
                   value={selectedStatusContatos}
                   onChange={setSelectedStatusContatos}
                   placeholder="Todos os status"
@@ -690,21 +867,10 @@ export default function Cadastro() {
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Perfil / Carteira
-                </label>
-                <MultiSelect
-                  options={PROFILE_OPTIONS}
-                  value={selectedProfiles}
-                  onChange={setSelectedProfiles}
-                  placeholder="Todos os perfis"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">
                   Linha de Produtos
                 </label>
                 <MultiSelect
-                  options={PRODUCT_LINE_OPTIONS}
+                  options={dynamicProductLineOptions}
                   value={selectedProductLines}
                   onChange={setSelectedProductLines}
                   placeholder="Todas as linhas"

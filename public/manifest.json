@@ -10,10 +10,7 @@
   "theme_color": "#F5C518",
   "lang": "pt-BR",
   "dir": "ltr",
-  "categories": [
-    "business",
-    "productivity"
-  ],
+  "categories": ["business", "productivity"],
   "icons": [
     {
       "src": "/icon-192.png",
