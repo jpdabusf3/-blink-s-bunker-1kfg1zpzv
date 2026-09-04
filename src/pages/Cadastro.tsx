@@ -273,6 +273,7 @@ export default function Cadastro() {
   useRealtime('factories', () => loadData())
 
   // Opções dinâmicas para os filtros baseadas nos dados cadastrados
+  // Opções dinâmicas para os filtros baseadas estritamente nos dados cadastrados (distintas, ordenadas e sem vazios)
   const dynamicFactoryOptions = useMemo(() => {
     const names = new Set<string>()
     factories.forEach((f) => {
@@ -301,15 +302,37 @@ export default function Cadastro() {
 
   const dynamicProfileOptions = useMemo(() => {
     const profs = new Set<string>()
-    // Popula a partir dos registros existentes
     factories.forEach((f) => {
       normalizeArray(f.profile_type).forEach((p) => {
         if (p && p.trim()) profs.add(p.trim())
       })
+      if (f.carteira && f.carteira.trim()) {
+        profs.add(f.carteira.trim())
+      }
     })
-    // Assegura também opções padrão se a lista ainda for pequena
-    PROFILE_OPTIONS.forEach((p) => profs.add(p))
     return Array.from(profs).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [factories])
+
+  const dynamicAddressStatusOptions = useMemo(() => {
+    const present = new Set<string>()
+    factories.forEach((f) => {
+      if (f.address_status && f.address_status.trim()) {
+        present.add(f.address_status.trim())
+      }
+    })
+    const mapLabel: Record<string, string> = {
+      complete: 'Completo',
+      partial: 'Parcial',
+      inconsistent: 'Inconsistente',
+      enriched: 'Enriquecido',
+      failed: 'Falhou',
+    }
+    return Array.from(present)
+      .map((val) => ({
+        label: mapLabel[val] || val,
+        value: val,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'))
   }, [factories])
 
   const dynamicRegionOptions = useMemo(() => {
@@ -319,7 +342,6 @@ export default function Cadastro() {
         if (r && r.trim()) regs.add(r.trim())
       })
     })
-    REGION_OPTIONS.forEach((r) => regs.add(r))
     return Array.from(regs).sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }, [factories])
 
@@ -330,7 +352,6 @@ export default function Cadastro() {
         if (s && s.trim()) species.add(s.trim())
       })
     })
-    SPECIES_OPTIONS.forEach((s) => species.add(s))
     return Array.from(species).sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }, [factories])
 
@@ -341,7 +362,6 @@ export default function Cadastro() {
         if (s && s.trim()) sts.add(s.trim())
       })
     })
-    STATUS_OPTIONS.forEach((s) => sts.add(s))
     return Array.from(sts).sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }, [factories])
 
@@ -350,7 +370,6 @@ export default function Cadastro() {
     factories.forEach((f) => {
       if (f.status_contato && f.status_contato.trim()) scs.add(f.status_contato.trim())
     })
-    STATUS_CONTATO_OPTIONS.forEach((s) => scs.add(s))
     return Array.from(scs).sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }, [factories])
 
@@ -361,7 +380,6 @@ export default function Cadastro() {
         if (l && l.trim()) lines.add(l.trim())
       })
     })
-    PRODUCT_LINE_OPTIONS.forEach((l) => lines.add(l))
     return Array.from(lines).sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }, [factories])
 
@@ -470,9 +488,12 @@ export default function Cadastro() {
         }
       }
 
-      // Profile type multi-match
+      // Perfil / Carteira multi-match (procura em profile_type ou carteira)
       if (selectedProfiles.length > 0) {
         const factoryProfiles = normalizeArray(f.profile_type)
+        if (f.carteira && f.carteira.trim() && !factoryProfiles.includes(f.carteira.trim())) {
+          factoryProfiles.push(f.carteira.trim())
+        }
         const hasProfile = selectedProfiles.some((p) => factoryProfiles.includes(p))
         if (!hasProfile) return false
       }
@@ -881,7 +902,7 @@ export default function Cadastro() {
                   Status Endereço
                 </label>
                 <MultiSelect
-                  options={ADDRESS_STATUS_OPTIONS}
+                  options={dynamicAddressStatusOptions}
                   value={selectedAddressStatuses}
                   onChange={setSelectedAddressStatuses}
                   placeholder="Todos os status"
@@ -917,6 +938,7 @@ export default function Cadastro() {
                     </TableHead>
                     <TableHead>Nome</TableHead>
                     <TableHead>Cidade/UF</TableHead>
+                    <TableHead>Perfil/Carteira</TableHead>
                     <TableHead>Espécie</TableHead>
                     <TableHead>Funil</TableHead>
                     <TableHead>Contato</TableHead>
@@ -929,80 +951,102 @@ export default function Cadastro() {
                 <TableBody>
                   {filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center text-muted-foreground h-16">
+                      <TableCell colSpan={11} className="text-center text-muted-foreground h-16">
                         Nenhuma fábrica encontrada.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    paginatedFactories.map((f) => (
-                      <TableRow key={f.id}>
-                        <TableCell className="w-10">
-                          <Checkbox
-                            checked={selectedIds.has(f.id)}
-                            onCheckedChange={(v) => {
-                              setSelectedIds((prev) => {
-                                const next = new Set(prev)
-                                if (v) next.add(f.id)
-                                else next.delete(f.id)
-                                return next
-                              })
-                            }}
-                            aria-label={`Selecionar ${f.name}`}
-                          />
-                        </TableCell>
-                        <TableCell className="font-medium">{f.name}</TableCell>
-                        <TableCell className="text-sm">
-                          {[f.city, f.state].filter(Boolean).join('/') || '-'}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {normalizeArray(f.animalSpecies).length === 0 ? (
-                              <span className="text-muted-foreground">-</span>
+                    paginatedFactories.map((f) => {
+                      const profileItems = Array.from(
+                        new Set([
+                          ...normalizeArray(f.profile_type).filter(Boolean),
+                          ...(f.carteira?.trim() ? [f.carteira.trim()] : []),
+                        ]),
+                      )
+
+                      return (
+                        <TableRow key={f.id}>
+                          <TableCell className="w-10">
+                            <Checkbox
+                              checked={selectedIds.has(f.id)}
+                              onCheckedChange={(v) => {
+                                setSelectedIds((prev) => {
+                                  const next = new Set(prev)
+                                  if (v) next.add(f.id)
+                                  else next.delete(f.id)
+                                  return next
+                                })
+                              }}
+                              aria-label={`Selecionar ${f.name}`}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium">{f.name}</TableCell>
+                          <TableCell className="text-sm">
+                            {[f.city, f.state].filter(Boolean).join('/') || '-'}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {profileItems.length === 0 ? (
+                                <span className="text-muted-foreground">-</span>
+                              ) : (
+                                profileItems.map((item) => (
+                                  <Badge key={item} variant="secondary" className="text-xs">
+                                    {item}
+                                  </Badge>
+                                ))
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {normalizeArray(f.animalSpecies).length === 0 ? (
+                                <span className="text-muted-foreground">-</span>
+                              ) : (
+                                normalizeArray(f.animalSpecies).map((sp) => (
+                                  <Badge key={sp} variant="outline" className="text-xs">
+                                    {sp}
+                                  </Badge>
+                                ))
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs">{f.funnelStage}</TableCell>
+                          <TableCell className="text-sm">
+                            {f.contato || <span className="text-muted-foreground">-</span>}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {f.status_contato ? (
+                              <Badge variant="outline" className="text-xs">
+                                {f.status_contato}
+                              </Badge>
                             ) : (
-                              normalizeArray(f.animalSpecies).map((sp) => (
-                                <Badge key={sp} variant="outline" className="text-xs">
-                                  {sp}
-                                </Badge>
-                              ))
+                              <span className="text-muted-foreground">-</span>
                             )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-xs">{f.funnelStage}</TableCell>
-                        <TableCell className="text-sm">
-                          {f.contato || <span className="text-muted-foreground">-</span>}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {f.status_contato ? (
-                            <Badge variant="outline" className="text-xs">
-                              {f.status_contato}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {f.gestor_tecnico_name || (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {f.vendedor_name || <span className="text-muted-foreground">-</span>}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(f)}>
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(f.id)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {f.gestor_tecnico_name || (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {f.vendedor_name || <span className="text-muted-foreground">-</span>}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(f)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(f.id)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
                   )}
                 </TableBody>
               </Table>
