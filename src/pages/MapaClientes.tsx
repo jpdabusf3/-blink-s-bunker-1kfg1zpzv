@@ -30,6 +30,7 @@ import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
 import { getAllFactories } from '@/services/factories'
+import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { getScopedFactories } from '@/lib/user-scope'
 import { normalizeArray } from '@/lib/utils'
 import { BLINK_LOCATIONS, BLINK_MARINGA_CD } from '@/constants/blinkLocations'
@@ -63,8 +64,9 @@ export default function MapaClientes() {
   const [factories, setFactories] = useState<Factory[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [gestaoTecnicaList, setGestaoTecnicaList] = useState<GestaoTecnica[]>([])
+  const [vendedorFilter, setVendedorFilter] = useState('all')
   const [addressStatusFilter, setAddressStatusFilter] = useState('all')
-  const [geocodePrecisionFilter, setGeocodePrecisionFilter] = useState('all')
   const [profileFilter, setProfileFilter] = useState('all')
   const [showBlinkLocations, setShowBlinkLocations] = useState(true)
   const [selectedClient, setSelectedClient] = useState<Factory | null>(null)
@@ -80,8 +82,12 @@ export default function MapaClientes() {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const all = await getAllFactories()
+      const [all, gestao] = await Promise.all([
+        getAllFactories(),
+        getGestaoTecnica().catch(() => [] as GestaoTecnica[]),
+      ])
       setFactories(getScopedFactories(all, user))
+      setGestaoTecnicaList(gestao)
     } catch (err) {
       console.error('[mapa] erro ao carregar clientes', err)
       toast.error('Erro ao carregar clientes do mapa. Tente novamente.')
@@ -96,6 +102,11 @@ export default function MapaClientes() {
   }, [loadData])
 
   useRealtime('factories', loadData)
+  useRealtime('gestao_tecnica', () => {
+    getGestaoTecnica()
+      .then(setGestaoTecnicaList)
+      .catch(() => {})
+  })
 
   // Clientes com coordenadas válidas (lat e lng preenchidos e diferentes de 0)
   const validFactories = useMemo(() => {
@@ -113,6 +124,17 @@ export default function MapaClientes() {
     })
   }, [factories])
 
+  // Opções dinâmicas de vendedores sincronizadas com gestao_tecnica
+  const dynamicVendedoresOptions = useMemo(() => {
+    const vends = new Set<string>()
+    gestaoTecnicaList.forEach((m) => {
+      if (m.funcao === 'vendedor' && m.nome && m.nome.trim()) {
+        vends.add(m.nome.trim())
+      }
+    })
+    return Array.from(vends).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [gestaoTecnicaList])
+
   // Contagem estática por categoria sobre o conjunto completo de clientes carregados
   const profileCategoryCounts = useMemo(() => {
     return countClientsByCategory(factories)
@@ -127,13 +149,19 @@ export default function MapaClientes() {
         const matchName = f.name?.toLowerCase()?.includes(q) ?? false
         const matchCity = f.city?.toLowerCase()?.includes(q) ?? false
         const matchState = f.state?.toLowerCase()?.includes(q) ?? false
-        if (!matchName && !matchCity && !matchState) return false
+        const matchGestor = f.gestor_tecnico_name?.toLowerCase()?.includes(q) ?? false
+        const matchVendedor = f.vendedor_name?.toLowerCase()?.includes(q) ?? false
+        if (!matchName && !matchCity && !matchState && !matchGestor && !matchVendedor) return false
+      }
+      if (vendedorFilter !== 'all') {
+        const vendName =
+          f.vendedor_name?.trim() ||
+          f.expand?.vendedor_id?.nome?.trim() ||
+          f.expand?.vendedor?.nome?.trim()
+        if (!vendName || vendName !== vendedorFilter) return false
       }
       if (addressStatusFilter !== 'all') {
         if (f.address_status !== addressStatusFilter) return false
-      }
-      if (geocodePrecisionFilter !== 'all') {
-        if (f.geocode_precision !== geocodePrecisionFilter) return false
       }
       if (profileFilter !== 'all') {
         const profs = normalizeArray(f.profile_type)
@@ -144,7 +172,7 @@ export default function MapaClientes() {
       }
       return true
     })
-  }, [validFactories, search, addressStatusFilter, geocodePrecisionFilter, profileFilter])
+  }, [validFactories, search, vendedorFilter, addressStatusFilter, profileFilter])
 
   // Inicialização do Leaflet Map
   useEffect(() => {
@@ -477,15 +505,15 @@ export default function MapaClientes() {
 
   const clearFilters = () => {
     setSearch('')
+    setVendedorFilter('all')
     setAddressStatusFilter('all')
-    setGeocodePrecisionFilter('all')
     setProfileFilter('all')
   }
 
   const hasFilters =
     search.trim() !== '' ||
+    vendedorFilter !== 'all' ||
     addressStatusFilter !== 'all' ||
-    geocodePrecisionFilter !== 'all' ||
     profileFilter !== 'all'
 
   return (
@@ -580,6 +608,23 @@ export default function MapaClientes() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              {/* Filtro Vendedor */}
+              <div className="w-full sm:w-[190px]">
+                <Select value={vendedorFilter} onValueChange={setVendedorFilter}>
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="Todos os vendedores" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os vendedores</SelectItem>
+                    {dynamicVendedoresOptions.map((vend) => (
+                      <SelectItem key={vend} value={vend}>
+                        {vend}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Filtro Perfil/Categoria */}
               <div className="w-full sm:w-[210px]">
                 <Select value={profileFilter} onValueChange={setProfileFilter}>
@@ -609,22 +654,6 @@ export default function MapaClientes() {
                     <SelectItem value="enriched">Enriquecido</SelectItem>
                     <SelectItem value="partial">Parcial</SelectItem>
                     <SelectItem value="inconsistent">Inconsistente</SelectItem>
-                    <SelectItem value="failed">Falha</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Precisão Geocode */}
-              <div className="w-full sm:w-[170px]">
-                <Select value={geocodePrecisionFilter} onValueChange={setGeocodePrecisionFilter}>
-                  <SelectTrigger className="h-9 text-xs">
-                    <SelectValue placeholder="Precisão Geocode" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas as Precisões</SelectItem>
-                    <SelectItem value="exact">Exata (Número)</SelectItem>
-                    <SelectItem value="street">Rua/Logradouro</SelectItem>
-                    <SelectItem value="city">Cidade/Município</SelectItem>
                     <SelectItem value="failed">Falha</SelectItem>
                   </SelectContent>
                 </Select>
@@ -816,8 +845,7 @@ export default function MapaClientes() {
                       Nenhum cliente corresponde aos filtros selecionados.
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      Tente alterar os termos de busca ou remover os filtros de perfil, status e
-                      precisão.
+                      Tente alterar os termos de busca ou remover os filtros aplicados.
                     </p>
                   </div>
                   <Button variant="outline" size="sm" onClick={clearFilters}>
