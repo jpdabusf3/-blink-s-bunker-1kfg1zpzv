@@ -55,9 +55,10 @@ function mapRecordToFactory(record: any): Factory {
     technicalManager: record.technicalManager,
     technicalManagerName: record.expand?.technicalManager?.name || '',
     gestor_tecnico_id: record.gestor_tecnico_id,
-    gestor_tecnico_name: record.expand?.gestor_tecnico_id?.nome || '',
+    gestor_tecnico_name:
+      record.expand?.gestor_tecnico?.nome || record.expand?.gestor_tecnico_id?.nome || '',
     vendedor_id: record.vendedor_id,
-    vendedor_name: record.expand?.vendedor_id?.nome || '',
+    vendedor_name: record.expand?.vendedor?.nome || record.expand?.vendedor_id?.nome || '',
     ultima_edicao_origem: record.ultima_edicao_origem,
     carteira: record.carteira,
     grupo_cliente: record.grupo_cliente,
@@ -101,7 +102,7 @@ function mapRecordToFactory(record: any): Factory {
 export async function getAllFactories(): Promise<Factory[]> {
   const records = await pb.collection('factories').getFullList({
     sort: '-created',
-    expand: 'salesOwner,technicalManager,gestor_tecnico_id,vendedor_id',
+    expand: 'salesOwner,technicalManager,gestor_tecnico,vendedor',
   })
   return records.map(mapRecordToFactory)
 }

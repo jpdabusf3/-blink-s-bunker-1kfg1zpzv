@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -77,7 +77,7 @@ export default function MapaClientes() {
   const blinkLayerRef = useRef<any>(null)
   const routeLayerRef = useRef<any>(null)
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true)
     try {
       const all = await getAllFactories()
@@ -89,13 +89,13 @@ export default function MapaClientes() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user])
 
   useEffect(() => {
     loadData()
-  }, [user])
+  }, [loadData])
 
-  useRealtime('factories', () => loadData())
+  useRealtime('factories', loadData)
 
   // Clientes com coordenadas válidas (lat e lng preenchidos e diferentes de 0)
   const validFactories = useMemo(() => {
@@ -121,11 +121,12 @@ export default function MapaClientes() {
   // Filtros aplicados sobre os clientes com coordenadas válidas
   const filteredFactories = useMemo(() => {
     return validFactories.filter((f) => {
+      if (!f) return false
       if (search.trim()) {
         const q = search.toLowerCase()
-        const matchName = f.name?.toLowerCase().includes(q)
-        const matchCity = f.city?.toLowerCase().includes(q)
-        const matchState = f.state?.toLowerCase().includes(q)
+        const matchName = f.name?.toLowerCase()?.includes(q) ?? false
+        const matchCity = f.city?.toLowerCase()?.includes(q) ?? false
+        const matchState = f.state?.toLowerCase()?.includes(q) ?? false
         if (!matchName && !matchCity && !matchState) return false
       }
       if (addressStatusFilter !== 'all') {
@@ -174,6 +175,10 @@ export default function MapaClientes() {
         routeLayerRef.current = routeLayer
         markersLayerRef.current = markersLayer
         blinkLayerRef.current = blinkLayer
+
+        setTimeout(() => {
+          map.invalidateSize()
+        }, 200)
       }
     }
 
