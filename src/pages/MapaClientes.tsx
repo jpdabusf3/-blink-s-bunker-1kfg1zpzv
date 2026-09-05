@@ -33,7 +33,11 @@ import { getAllFactories } from '@/services/factories'
 import { getScopedFactories } from '@/lib/user-scope'
 import { normalizeArray } from '@/lib/utils'
 import { BLINK_LOCATIONS, BLINK_MARINGA_CD } from '@/constants/blinkLocations'
-import { CLIENT_PROFILE_CATEGORIES, matchesAnyProfileCategory } from '@/constants/clientCategories'
+import {
+  CLIENT_PROFILE_CATEGORIES,
+  matchesAnyProfileCategory,
+  countClientsByCategory,
+} from '@/constants/clientCategories'
 import { useOsrmRoute } from '@/hooks/use-osrm-route'
 import type { Factory } from '@/types'
 
@@ -111,6 +115,11 @@ export default function MapaClientes() {
         lng !== 0
       )
     })
+  }, [factories])
+
+  // Contagem estática por categoria sobre o conjunto completo de clientes carregados
+  const profileCategoryCounts = useMemo(() => {
+    return countClientsByCategory(factories)
   }, [factories])
 
   // Filtros aplicados sobre os clientes com coordenadas válidas
@@ -571,7 +580,7 @@ export default function MapaClientes() {
 
             <div className="flex flex-wrap items-center gap-2">
               {/* Filtro Perfil/Categoria */}
-              <div className="w-full sm:w-[190px]">
+              <div className="w-full sm:w-[210px]">
                 <Select value={profileFilter} onValueChange={setProfileFilter}>
                   <SelectTrigger className="h-9 text-xs">
                     <SelectValue placeholder="Perfil / Categoria" />
@@ -580,7 +589,7 @@ export default function MapaClientes() {
                     <SelectItem value="all">Todos os Perfis</SelectItem>
                     {CLIENT_PROFILE_CATEGORIES.map((prof) => (
                       <SelectItem key={prof} value={prof}>
-                        {prof}
+                        {prof} ({profileCategoryCounts[prof] ?? 0})
                       </SelectItem>
                     ))}
                   </SelectContent>

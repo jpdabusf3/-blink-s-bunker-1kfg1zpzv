@@ -50,7 +50,11 @@ import { exportClientsToCSV } from '@/lib/csv-export'
 import { enrichClientData, type EnrichmentSummary } from '@/services/enrichment-service'
 import { FilePlus2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { CLIENT_PROFILE_CATEGORIES, matchesAnyProfileCategory } from '@/constants/clientCategories'
+import {
+  CLIENT_PROFILE_CATEGORIES,
+  matchesAnyProfileCategory,
+  countClientsByCategory,
+} from '@/constants/clientCategories'
 import type { Factory } from '@/types'
 
 const REGION_OPTIONS = ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul']
@@ -315,6 +319,18 @@ export default function Cadastro() {
     })
     return Array.from(lines).sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }, [factories])
+
+  // Contagem estática por categoria sobre o conjunto completo de clientes carregados
+  const profileCategoryCounts = useMemo(() => {
+    return countClientsByCategory(factories)
+  }, [factories])
+
+  const profileOptionsWithCounts = useMemo(() => {
+    return CLIENT_PROFILE_CATEGORIES.map((cat) => ({
+      value: cat,
+      label: `${cat} (${profileCategoryCounts[cat] ?? 0})`,
+    }))
+  }, [profileCategoryCounts])
 
   const clearFilters = () => {
     setSearch('')
@@ -736,7 +752,7 @@ export default function Cadastro() {
                   Perfil / Carteira
                 </label>
                 <MultiSelect
-                  options={[...CLIENT_PROFILE_CATEGORIES]}
+                  options={profileOptionsWithCounts}
                   value={selectedProfiles}
                   onChange={setSelectedProfiles}
                   placeholder="Todos os perfis"

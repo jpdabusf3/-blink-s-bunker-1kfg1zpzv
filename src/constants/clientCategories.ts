@@ -54,6 +54,60 @@ const CANONICAL_KEYS: Record<ClientProfileCategory, string> = {
 }
 
 /**
+ * Mapeia um valor bruto qualquer de perfil para uma das 8 categorias canônicas
+ * usando correspondência tolerante a acentos, caixa e singular/plural.
+ * Se nenhuma das 8 categorias casar, retorna null.
+ */
+export function toCanonicalCategory(
+  rawProfileValue: string | null | undefined,
+): ClientProfileCategory | null {
+  if (!rawProfileValue || !rawProfileValue.trim()) return null
+  const clean = rawProfileValue.trim()
+
+  for (const cat of CLIENT_PROFILE_CATEGORIES) {
+    if (matchesProfileCategory(clean, cat)) {
+      return cat
+    }
+  }
+
+  return null
+}
+
+/**
+ * Normaliza um valor de perfil: se corresponder a uma das 8 categorias canônicas,
+ * retorna o nome canônico exato. Caso contrário, preserva a string original intacta.
+ */
+export function normalizeProfileValue(rawProfileValue: string): string {
+  const canonical = toCanonicalCategory(rawProfileValue)
+  return canonical || rawProfileValue
+}
+
+/**
+ * Normaliza uma lista de perfis:
+ * 1. Mapeia cada elemento para a categoria canônica caso haja casamento tolerante
+ * 2. Preserva elementos sem correspondência
+ * 3. Remove duplicatas mantendo a ordem
+ */
+export function normalizeProfileList(profiles: (string | null | undefined)[]): string[] {
+  const seen = new Set<string>()
+  const result: string[] = []
+
+  for (const p of profiles) {
+    if (p === null || p === undefined) continue
+    const trimmed = String(p).trim()
+    if (!trimmed) continue
+
+    const normalized = normalizeProfileValue(trimmed)
+    if (!seen.has(normalized)) {
+      seen.add(normalized)
+      result.push(normalized)
+    }
+  }
+
+  return result
+}
+
+/**
  * Retorna true se um valor de perfil/carteira fornecido (ex: "Cooperativa", "industria", "Revendas", etc.)
  * corresponde à categoria canônica de destino.
  */
@@ -102,4 +156,42 @@ export function matchesAnyProfileCategory(
   return selectedCategories.some((selected) =>
     clientProfiles.some((cp) => matchesProfileCategory(cp, selected)),
   )
+}
+
+/**
+ * Conta clientes por categoria canônica usando o mesmo casamento tolerante.
+ * Aceita uma lista de clientes que tenham a propriedade profile_type (e opcionalmente carteira).
+ */
+export function countClientsByCategory<
+  T extends { profile_type?: string[] | string; carteira?: string },
+>(clients: T[]): Record<ClientProfileCategory, number> {
+  const counts = CLIENT_PROFILE_CATEGORIES.reduce(
+    (acc, cat) => {
+      acc[cat] = 0
+      return acc
+    },
+    {} as Record<ClientProfileCategory, number>,
+  )
+
+  for (const client of clients) {
+    const rawList: string[] = []
+    if (Array.isArray(client.profile_type)) {
+      rawList.push(...client.profile_type.filter(Boolean))
+    } else if (typeof client.profile_type === 'string' && client.profile_type.trim()) {
+      rawList.push(client.profile_type.trim())
+    }
+
+    if (client.carteira && client.carteira.trim() && !rawList.includes(client.carteira.trim())) {
+      rawList.push(client.carteira.trim())
+    }
+
+    // Para cada categoria canônica, verifica se este cliente pertence a ela
+    for (const cat of CLIENT_PROFILE_CATEGORIES) {
+      if (rawList.some((p) => matchesProfileCategory(p, cat))) {
+        counts[cat]++
+      }
+    }
+  }
+
+  return counts
 }

@@ -61,7 +61,7 @@ interface MetaFormProps {
 
 export function MetaForm({ onSubmit, initialData, vendedores, gestores, onCancel }: MetaFormProps) {
   const form = useForm<MetaFormValues>({
-    resolver: zodResolver(metaSchema),
+    resolver: zodResolver(metaSchema) as any,
     defaultValues: {
       vendedor_id: initialData?.vendedor_id || '',
       gestor_tecnico_id: initialData?.gestor_tecnico_id || 'all',

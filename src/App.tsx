@@ -108,7 +108,7 @@ function PageSkeleton() {
 
 const App = () => (
   <ThemeProvider defaultTheme="system" storageKey="blink-theme" attribute="class">
-    <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
+    <BrowserRouter>
       <AuthProvider>
         <I18nProvider>
           <AppProvider>

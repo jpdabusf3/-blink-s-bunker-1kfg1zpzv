@@ -33,7 +33,8 @@ import { toast } from 'sonner'
 async function extractPdfText(file: File): Promise<string> {
   // Preferred path: pdfjs-dist (lazy import keeps it optional at bundle time).
   try {
-    const pdfjs: any = await import(/* @vite-ignore */ 'pdfjs-dist/build/pdf.mjs')
+    const pdfjsModule = 'pdfjs-dist/build/pdf.mjs'
+    const pdfjs: any = await import(/* @vite-ignore */ pdfjsModule)
     if (pdfjs?.getDocument) {
       const workerUrl = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
       pdfjs.GlobalWorkerOptions.workerSrc = workerUrl

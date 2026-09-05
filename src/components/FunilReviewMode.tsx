@@ -446,32 +446,44 @@ export function FunilReviewMode() {
                   </td>
                   <td className="p-3 space-y-1">
                     <Badge variant="outline" className="text-[10px] block w-fit">
-                      {f.profile_type || 'Indústria'}
+                      {Array.isArray(f.profile_type)
+                        ? f.profile_type.join(', ')
+                        : f.profile_type || 'Indústria'}
                     </Badge>
                     <span className="text-[11px] text-muted-foreground font-medium block">
-                      {f.animalSpecies || 'Multiespécie'}
+                      {Array.isArray(f.animalSpecies)
+                        ? f.animalSpecies.join(', ')
+                        : f.animalSpecies || 'Multiespécie'}
                     </span>
                   </td>
                   <td className="p-3 space-y-1">
                     <Badge
                       variant={
-                        f.status === 'Atendido'
+                        (
+                          Array.isArray(f.status)
+                            ? f.status.includes('Atendido')
+                            : f.status === 'Atendido'
+                        )
                           ? 'default'
-                          : f.status === 'Prospeção'
+                          : (
+                                Array.isArray(f.status)
+                                  ? f.status.includes('Prospeção')
+                                  : f.status === 'Prospeção'
+                              )
                             ? 'secondary'
                             : 'outline'
                       }
                       className="text-[10px]"
                     >
-                      {f.status}
+                      {Array.isArray(f.status) ? f.status.join(', ') : f.status || '-'}
                     </Badge>
                     <div className="text-[10px] text-primary font-semibold">{f.funnelStage}</div>
                   </td>
                   <td className="p-3">
                     <Select
-                      value={currentPriority}
-                      onValueChange={(v) =>
-                        setEditValues((p) => ({ ...p, [f.id]: { ...p[f.id], priority: v } }))
+                      value={typeof currentPriority === 'string' ? currentPriority : ''}
+                      onValueChange={(v: string) =>
+                        setEditValues((p) => ({ ...p, [f.id]: { ...p[f.id], priority: v as any } }))
                       }
                     >
                       <SelectTrigger className="h-8 text-xs">
@@ -504,7 +516,7 @@ export function FunilReviewMode() {
                   </td>
                   <td className="p-3">
                     <Select
-                      value={currentOwner}
+                      value={typeof currentOwner === 'string' ? currentOwner : ''}
                       onValueChange={(v) =>
                         setEditValues((p) => ({ ...p, [f.id]: { ...p[f.id], salesOwner: v } }))
                       }
