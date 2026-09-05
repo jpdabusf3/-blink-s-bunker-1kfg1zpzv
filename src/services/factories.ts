@@ -102,7 +102,7 @@ function mapRecordToFactory(record: any): Factory {
 export async function getAllFactories(): Promise<Factory[]> {
   const records = await pb.collection('factories').getFullList({
     sort: '-created',
-    expand: 'salesOwner,technicalManager,gestor_tecnico,vendedor',
+    expand: 'salesOwner,technicalManager,gestor_tecnico,vendedor,gestor_tecnico_id,vendedor_id',
   })
   return records.map(mapRecordToFactory)
 }

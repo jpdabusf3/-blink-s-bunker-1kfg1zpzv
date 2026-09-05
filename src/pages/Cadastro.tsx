@@ -228,6 +228,8 @@ export default function Cadastro() {
   const [selectedFactories, setSelectedFactories] = useState<string[]>([])
   const [selectedGestores, setSelectedGestores] = useState<string[]>([])
   const [selectedVendedores, setSelectedVendedores] = useState<string[]>([])
+  const [selectedStates, setSelectedStates] = useState<string[]>([])
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([])
   const [selectedRegions, setSelectedRegions] = useState<string[]>([])
   const [selectedSpecies, setSelectedSpecies] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
@@ -274,10 +276,32 @@ export default function Cadastro() {
   const dynamicVendedoresOptions = useMemo(() => {
     const vends = new Set<string>()
     factories.forEach((f) => {
-      const name = f.vendedor_name?.trim() || f.expand?.vendedor_id?.nome?.trim()
+      const name =
+        f.vendedor_name?.trim() ||
+        f.expand?.vendedor_id?.nome?.trim() ||
+        f.expand?.vendedor?.nome?.trim()
       if (name) vends.add(name)
     })
     return Array.from(vends).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [factories])
+
+  const dynamicStateOptions = useMemo(() => {
+    const states = new Set<string>()
+    factories.forEach((f) => {
+      if (f.state && f.state.trim()) {
+        states.add(f.state.trim().toUpperCase())
+      }
+    })
+    return Array.from(states).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [factories])
+
+  const dynamicCountryOptions = useMemo(() => {
+    const countries = new Set<string>()
+    factories.forEach((f) => {
+      const countryVal = f.country?.trim() || 'Brasil'
+      countries.add(countryVal)
+    })
+    return Array.from(countries).sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }, [factories])
 
   const dynamicRegionOptions = useMemo(() => {
@@ -337,6 +361,8 @@ export default function Cadastro() {
     setSelectedFactories([])
     setSelectedGestores([])
     setSelectedVendedores([])
+    setSelectedStates([])
+    setSelectedCountries([])
     setSelectedRegions([])
     setSelectedSpecies([])
     setSelectedStatuses([])
@@ -350,6 +376,8 @@ export default function Cadastro() {
     selectedFactories.length > 0 ||
     selectedGestores.length > 0 ||
     selectedVendedores.length > 0 ||
+    selectedStates.length > 0 ||
+    selectedCountries.length > 0 ||
     selectedRegions.length > 0 ||
     selectedSpecies.length > 0 ||
     selectedStatuses.length > 0 ||
@@ -364,6 +392,8 @@ export default function Cadastro() {
     selectedFactories,
     selectedGestores,
     selectedVendedores,
+    selectedStates,
+    selectedCountries,
     selectedRegions,
     selectedSpecies,
     selectedStatuses,
@@ -393,14 +423,31 @@ export default function Cadastro() {
       // Gestor Técnico filtro
       if (selectedGestores.length > 0) {
         const gestorName =
-          f.gestor_tecnico_name?.trim() || f.expand?.gestor_tecnico_id?.nome?.trim()
+          f.gestor_tecnico_name?.trim() ||
+          f.expand?.gestor_tecnico_id?.nome?.trim() ||
+          f.expand?.gestor_tecnico?.nome?.trim()
         if (!gestorName || !selectedGestores.includes(gestorName)) return false
       }
 
       // Vendedor filtro
       if (selectedVendedores.length > 0) {
-        const vendName = f.vendedor_name?.trim() || f.expand?.vendedor_id?.nome?.trim()
+        const vendName =
+          f.vendedor_name?.trim() ||
+          f.expand?.vendedor_id?.nome?.trim() ||
+          f.expand?.vendedor?.nome?.trim()
         if (!vendName || !selectedVendedores.includes(vendName)) return false
+      }
+
+      // Estado filtro
+      if (selectedStates.length > 0) {
+        const clientState = f.state?.trim().toUpperCase()
+        if (!clientState || !selectedStates.includes(clientState)) return false
+      }
+
+      // País filtro
+      if (selectedCountries.length > 0) {
+        const clientCountry = f.country?.trim() || 'Brasil'
+        if (!selectedCountries.includes(clientCountry)) return false
       }
 
       // Region multi-match (any selected matches any in factory)
@@ -450,6 +497,8 @@ export default function Cadastro() {
     selectedFactories,
     selectedGestores,
     selectedVendedores,
+    selectedStates,
+    selectedCountries,
     selectedRegions,
     selectedSpecies,
     selectedStatuses,
@@ -716,13 +765,13 @@ export default function Cadastro() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Fábrica
+                  Clientes
                 </label>
                 <MultiSelect
                   options={dynamicFactoryOptions}
                   value={selectedFactories}
                   onChange={setSelectedFactories}
-                  placeholder="Todas as fábricas"
+                  placeholder="Todos os clientes"
                 />
               </div>
               <div>
@@ -745,6 +794,26 @@ export default function Cadastro() {
                   value={selectedVendedores}
                   onChange={setSelectedVendedores}
                   placeholder="Todos os vendedores"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  Estado
+                </label>
+                <MultiSelect
+                  options={dynamicStateOptions}
+                  value={selectedStates}
+                  onChange={setSelectedStates}
+                  placeholder="Todos os estados"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">País</label>
+                <MultiSelect
+                  options={dynamicCountryOptions}
+                  value={selectedCountries}
+                  onChange={setSelectedCountries}
+                  placeholder="Todos os países"
                 />
               </div>
               <div>
