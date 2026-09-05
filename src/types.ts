@@ -1,4 +1,15 @@
-export type Region = 'Norte' | 'Nordeste' | 'Centro-Oeste' | 'Sudeste' | 'Sul'
+export type Region =
+  | 'Norte'
+  | 'Nordeste'
+  | 'Centro-Oeste'
+  | 'Sudeste'
+  | 'Sul'
+  | 'Médio-Norte'
+  | 'Oeste'
+  | 'Leste'
+  | 'Noroeste'
+  | 'Sudoeste'
+  | 'Centro'
 export type Status = 'Atendido' | 'Não atendido' | 'Prospeção'
 export type FunnelStage =
   | 'Lead'
@@ -230,6 +241,12 @@ export interface Factory {
   address_status?: 'complete' | 'partial' | 'inconsistent' | 'enriched' | 'failed' | string
   enriched_at?: string
   standardized_address?: string
+  updated?: string
+  expand?: {
+    gestor_tecnico_id?: { id: string; nome: string }
+    vendedor_id?: { id: string; nome: string }
+    [key: string]: any
+  }
 }
 
 export type GestaoFuncao =

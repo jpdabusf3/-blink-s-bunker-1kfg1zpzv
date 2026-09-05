@@ -58,7 +58,7 @@ export function getScopedOrders(orders: Order[], factories: Factory[], user: any
   )
   return orders.filter((o) => {
     const countryMatch = !country || o.country === country
-    return allowedFactoryIds.has(o.factoryId) || (countryMatch && o.region === area)
+    return allowedFactoryIds.has(o.factoryId) || (countryMatch && (o as any).region === area)
   })
 }
 

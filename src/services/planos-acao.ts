@@ -43,5 +43,6 @@ export const updatePlanoAcao = (id: string, patch: Partial<NewPlanoAcao>): Promi
     status: patch.status,
   })
 
-export const deletePlanoAcao = (id: string): Promise<void> =>
-  pb.collection('planos_acao').delete(id)
+export const deletePlanoAcao = async (id: string): Promise<void> => {
+  await pb.collection('planos_acao').delete(id)
+}

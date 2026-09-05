@@ -125,7 +125,7 @@ export function DashboardCharts({ regionFilter = 'Todas as Regiões' }: { region
       endDate.setHours(23, 59, 59, 999)
 
       for (const order of orders) {
-        const orderDate = new Date(order.orderDate || order.created)
+        const orderDate = new Date(order.orderDate || (order as any).created)
         if (orderDate >= startDate && orderDate <= endDate) {
           let match = false
           const catType = target.categoryType

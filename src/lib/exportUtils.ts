@@ -27,7 +27,7 @@ export function exportOrdersToExcel(filteredOrders: Order[], factories: Factory[
         new Date(o.orderDate).toLocaleDateString('pt-BR'),
         `"${(factory?.name || 'Desconhecida').replace(/"/g, '""')}"`,
         `"${(channelLabel || '-').replace(/"/g, '""')}"`,
-        `"${(factory?.region || '-').replace(/"/g, '""')}"`,
+        `"${String(Array.isArray(factory?.region) ? factory?.region.join(', ') : (factory?.region || '-')).replace(/"/g, '""')}"`,
         `"${o.product.replace(/"/g, '""')}"`,
         `"${(o.line || '-').replace(/"/g, '""')}"`,
         o.quantity,
@@ -51,7 +51,7 @@ export function exportOrdersToExcel(filteredOrders: Order[], factories: Factory[
 export function exportOrdersToPDF(
   filteredOrders: Order[],
   factories: Factory[],
-  filters: { factoryIdParam: string; productLine: string; startDate: string; endDate: string },
+  filters?: { factoryIdParam?: string; productLine?: string; startDate?: string; endDate?: string; template?: string },
 ) {
   const printWindow = window.open('', '_blank')
   if (!printWindow) return false
@@ -91,9 +91,9 @@ export function exportOrdersToPDF(
         
         <div class="filters">
           <strong>Filtros aplicados:</strong>
-          <div>Fábrica: ${filters.factoryIdParam !== 'all' ? factories.find((f) => f.id === filters.factoryIdParam)?.name || filters.factoryIdParam : 'Todas as Fábricas'}</div>
-          <div>Linha de Produto: ${filters.productLine !== 'all' ? filters.productLine : 'Todas as Linhas'}</div>
-          <div>Período: ${filters.startDate ? new Date(filters.startDate).toLocaleDateString('pt-BR') : 'Início'} até ${filters.endDate ? new Date(filters.endDate).toLocaleDateString('pt-BR') : 'Hoje'}</div>
+          <div>Fábrica: ${filters?.factoryIdParam && filters.factoryIdParam !== 'all' ? factories.find((f) => f.id === filters.factoryIdParam)?.name || filters.factoryIdParam : 'Todas as Fábricas'}</div>
+          <div>Linha de Produto: ${filters?.productLine && filters.productLine !== 'all' ? filters.productLine : 'Todas as Linhas'}</div>
+          <div>Período: ${filters?.startDate ? new Date(filters.startDate).toLocaleDateString('pt-BR') : 'Início'} até ${filters?.endDate ? new Date(filters.endDate).toLocaleDateString('pt-BR') : 'Hoje'}</div>
         </div>
 
         <table>

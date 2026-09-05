@@ -41,16 +41,14 @@ interface LeafletMap {
   invalidateSize: () => void
 }
 
-interface LeafletStatic {
+export interface LeafletStatic {
   map: (element: HTMLElement, options?: Record<string, unknown>) => LeafletMap
   tileLayer: (
     url: string,
     options?: Record<string, unknown>,
   ) => { addTo: (map: LeafletMap) => void }
   layerGroup: () => {
-    addTo: (map: LeafletMap) => {
-      clearLayers: () => void
-    }
+    addTo: (map: LeafletMap) => any
     clearLayers: () => void
   }
   divIcon: (options: Record<string, unknown>) => unknown
@@ -59,6 +57,8 @@ interface LeafletStatic {
     extend: (latLng: [number, number]) => void
     isValid: () => boolean
   }
+  polyline?: any
+  [key: string]: any
 }
 
 declare global {

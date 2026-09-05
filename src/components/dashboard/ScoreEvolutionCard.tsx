@@ -79,7 +79,7 @@ export function ScoreEvolutionCard({
             <Tooltip
               content={
                 <ChartTooltipContent
-                  labelFormatter={(v) => new Date(v).toLocaleDateString('pt-BR')}
+                  labelFormatter={(v: any) => new Date(v).toLocaleDateString('pt-BR')}
                 />
               }
             />

@@ -41,11 +41,7 @@ import {
 import { useOsrmRoute } from '@/hooks/use-osrm-route'
 import type { Factory } from '@/types'
 
-declare global {
-  interface Window {
-    L?: any
-  }
-}
+// Window.L is declared in src/components/ClientsMapDialog.tsx
 
 const ADDRESS_STATUS_LABELS: Record<string, string> = {
   complete: 'Completo',

@@ -100,15 +100,15 @@ export async function exportExecutiveMacroReport(
     const continent = COUNTRY_TO_CONTINENT[f.country || ''] || 'Outro'
     const country = f.country || 'Brasil'
     const state = f.state || f.city || 'Não informado'
-    const region = f.stateRegion || f.region || 'Não informado'
-    const key = `${continent}|${country}|${state}|${region}`
+    const regionStr = String(f.stateRegion || (Array.isArray(f.region) ? f.region.join(', ') : f.region) || 'Não informado')
+    const key = `${continent}|${country}|${state}|${regionStr}`
 
     if (!aggregates.has(key)) {
       aggregates.set(key, {
         continent,
         country,
         state,
-        region,
+        region: regionStr,
         count: 0,
         potential: 0,
         capacity: 0,

@@ -71,7 +71,13 @@ export function HistoricalComparisonCard({
     Realizado: Math.round(c.actual),
   }))
 
-  const availableRegions = [...new Set(factories.map((f) => f.region).filter(Boolean))]
+  const availableRegions = [
+    ...new Set(
+      factories
+        .flatMap((f) => (Array.isArray(f.region) ? f.region : [f.region]))
+        .filter(Boolean),
+    ),
+  ]
   const availableLines = [...new Set(orders.map((o) => o.line).filter(Boolean))]
   const availableChannels = [
     ...new Set(
@@ -147,11 +153,14 @@ export function HistoricalComparisonCard({
                 <SelectValue placeholder="Selecione..." />
               </SelectTrigger>
               <SelectContent>
-                {catValues.map((v) => (
-                  <SelectItem key={v} value={v}>
-                    {v}
-                  </SelectItem>
-                ))}
+                {catValues.map((v) => {
+                  const valStr = String(v)
+                  return (
+                    <SelectItem key={valStr} value={valStr}>
+                      {valStr}
+                    </SelectItem>
+                  )
+                })}
               </SelectContent>
             </Select>
           )}

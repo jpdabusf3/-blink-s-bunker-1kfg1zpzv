@@ -38,7 +38,7 @@ export function GlobalRankingCard() {
         factories.filter((f) => f.region === region || f.stateRegion === region).map((f) => f.id),
       )
       const regionOrders = orders.filter(
-        (o) => regionFactoryIds.has(o.factoryId) || o.region === region,
+        (o) => regionFactoryIds.has(o.factoryId) || (o as any).region === region,
       )
       const sales = regionOrders.reduce((s, o) => s + o.totalValue, 0)
       const regionTargets = targets.filter(

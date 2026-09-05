@@ -325,9 +325,11 @@ export async function insertNF(
     }
 
     // Map canal_vendas to match notas_fiscais schema (Industria vs Indústria)
-    let canalVendasClean = data.canal_vendas || null
-    if (canalVendasClean === ('Indústria' as unknown)) {
-      canalVendasClean = 'Industria' as ParsedNFData['canal_vendas']
+    let canalVendasClean: ParsedNFData['canal_vendas'] | null = data.canal_vendas || null
+    if ((canalVendasClean as unknown) === 'Indústria') {
+      canalVendasClean = 'Industria'
+    } else if (canalVendasClean === ('' as unknown)) {
+      canalVendasClean = null
     }
 
     const valTotalNotaNum =

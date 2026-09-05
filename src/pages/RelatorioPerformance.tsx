@@ -7,9 +7,10 @@ import {
 } from '@/services/gestao-tecnica'
 import {
   fetchPerformanceData,
-  type PerformanceData,
+  DEFAULT_FILTERS,
+  type PerformanceReportData,
   type PerformanceFilters,
-} from '@/services/relatorio-performance'
+} from '@/services/performance-report'
 import { exportPerformanceToExcel, exportPerformanceToPDF } from '@/lib/exportPerformance'
 import { PerformanceFilters as PerfFilters } from '@/components/performance/PerformanceFilters'
 import { PerformanceReportTable } from '@/components/performance/PerformanceReportTable'
@@ -19,18 +20,14 @@ import { Loader2, FileSpreadsheet, FileText, Trophy, Medal, Award } from 'lucide
 import { formatCurrency } from '@/lib/utils'
 
 export default function RelatorioPerformance() {
-  const [data, setData] = useState<PerformanceData | null>(null)
+  const [data, setData] = useState<PerformanceReportData | null>(null)
   const [loading, setLoading] = useState(true)
   const [gestores, setGestores] = useState<GestaoTecnica[]>([])
   const [vendedores, setVendedores] = useState<GestaoTecnica[]>([])
-  const [filters, setFilters] = useState<PerformanceFilters>({
-    gestorId: 'all',
-    vendedorId: 'all',
-    especie: 'all',
-    canalVendas: 'all',
-    dataInicial: '',
-    dataFinal: '',
-  })
+  const [filters, setFilters] = useState<PerformanceFilters>(DEFAULT_FILTERS)
+
+  const updateFilter = (key: keyof PerformanceFilters, value: string) =>
+    setFilters((prev) => ({ ...prev, [key]: value }))
 
   const loadData = useCallback(async () => {
     try {
@@ -104,7 +101,7 @@ export default function RelatorioPerformance() {
           <Button
             variant="outline"
             className="gap-2"
-            onClick={() => exportPerformanceToExcel(data, filters)}
+            onClick={() => exportPerformanceToExcel(data)}
             disabled={loading}
           >
             <FileSpreadsheet className="w-4 h-4" /> Exportar Excel
@@ -112,7 +109,7 @@ export default function RelatorioPerformance() {
           <Button
             variant="outline"
             className="gap-2"
-            onClick={() => exportPerformanceToPDF(data, filters)}
+            onClick={() => exportPerformanceToPDF(data)}
             disabled={loading}
           >
             <FileText className="w-4 h-4" /> Gerar PDF
@@ -122,7 +119,7 @@ export default function RelatorioPerformance() {
 
       <PerfFilters
         filters={filters}
-        onChange={setFilters}
+        onChange={updateFilter}
         gestores={gestores}
         vendedores={vendedores}
       />
@@ -169,7 +166,7 @@ export default function RelatorioPerformance() {
               <Trophy className="w-5 h-5 text-primary" /> Ranking de Gestores
             </CardTitle>
           </CardHeader>
-          <CardContent>{renderRanking(data.rankingGestores)}</CardContent>
+          <CardContent>{renderRanking(data.gestorRanking)}</CardContent>
         </Card>
         <Card className="shadow-subtle">
           <CardHeader>
@@ -177,7 +174,7 @@ export default function RelatorioPerformance() {
               <Trophy className="w-5 h-5 text-primary" /> Ranking de Vendedores
             </CardTitle>
           </CardHeader>
-          <CardContent>{renderRanking(data.rankingVendedores)}</CardContent>
+          <CardContent>{renderRanking(data.vendedorRanking)}</CardContent>
         </Card>
       </div>
     </div>

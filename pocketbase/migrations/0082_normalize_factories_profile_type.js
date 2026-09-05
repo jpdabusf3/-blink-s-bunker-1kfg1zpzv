@@ -1,6 +1,7 @@
 migrate(
   (app) => {
     // 8 Categorias Canônicas com seus radicais para tolerância
+    // Migration 0082 - normalização de profile_type
     const CANONICAL_CATEGORIES = [
       'Cooperativas',
       'Distribuidores',

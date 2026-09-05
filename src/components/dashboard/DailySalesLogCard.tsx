@@ -44,7 +44,7 @@ export function DailySalesLogCard({
           .filter((f) => f.region === regionFilter || f.stateRegion === regionFilter)
           .map((f) => f.id),
       )
-      res = res.filter((o) => regionFactoryIds.has(o.factoryId) || o.region === regionFilter)
+      res = res.filter((o) => regionFactoryIds.has(o.factoryId) || (o as any).region === regionFilter)
     }
     return res
       .sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime())
@@ -65,7 +65,7 @@ export function DailySalesLogCard({
         return (
           factory?.region === regionFilter ||
           factory?.stateRegion === regionFilter ||
-          o.region === regionFilter
+          (o as any).region === regionFilter
         )
       })
       .reduce((s, o) => s + o.totalValue, 0)

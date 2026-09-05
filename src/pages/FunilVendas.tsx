@@ -268,13 +268,10 @@ export default function FunilVendas() {
         `Cliente: ${factory?.name || ''}`,
         factoryId,
         'factories',
-        undefined,
         {
           tipo: 'status',
           status_anterior: oldStatus,
           status_novo: newStatus,
-          etapa_anterior: oldStage,
-          etapa_nova: newStage,
           origem: 'funil_vendas',
         },
       )

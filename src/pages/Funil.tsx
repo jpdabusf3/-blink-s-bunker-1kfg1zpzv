@@ -198,10 +198,9 @@ export default function Funil() {
                               </div>
                             </div>
                             {stale && (
-                              <AlertTriangle
-                                className="w-4 h-4 text-destructive shrink-0"
-                                title="Sem interação recente"
-                              />
+                              <span title="Sem interação recente">
+                                <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
+                              </span>
                             )}
                           </div>
 

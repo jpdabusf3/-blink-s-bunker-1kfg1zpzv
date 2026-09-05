@@ -91,7 +91,14 @@ export function UserEditDialog({
 
   const handleAction = async (
     action: 'edit' | 'deactivate' | 'reactivate',
-    data?: { name?: string; job_title?: string; geographicArea?: string; country?: string },
+    data?: {
+      name?: string
+      job_title?: string
+      geographicArea?: string
+      country?: string
+      whatsapp?: string
+      whatsapp_validated?: boolean
+    },
   ) => {
     if (!user) return
     setSubmitting(true)

@@ -64,8 +64,10 @@ export function OrderForm({ onSubmit, initialFactoryId, initialOrder }: OrderFor
   // Sort factories by priority then name for easier selection
   const sortedFactories = [...factories].sort((a, b) => {
     const pMap: Record<string, number> = { High: 1, Medium: 2, Low: 3 }
-    const pA = pMap[a.priority || 'Medium'] || 2
-    const pB = pMap[b.priority || 'Medium'] || 2
+    const prioA = Array.isArray(a.priority) ? a.priority[0] : a.priority
+    const prioB = Array.isArray(b.priority) ? b.priority[0] : b.priority
+    const pA = pMap[prioA || 'Medium'] || 2
+    const pB = pMap[prioB || 'Medium'] || 2
     if (pA !== pB) return pA - pB
     return a.name.localeCompare(b.name)
   })

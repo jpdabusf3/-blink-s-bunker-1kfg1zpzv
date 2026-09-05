@@ -25,8 +25,9 @@ export const createInvitation = (data: {
   country?: string
 }): Promise<Invitation> => pb.collection('invitations').create(data)
 
-export const deleteInvitation = (id: string): Promise<void> =>
-  pb.collection('invitations').delete(id)
+export const deleteInvitation = async (id: string): Promise<void> => {
+  await pb.collection('invitations').delete(id)
+}
 
 export const updateInvitation = (id: string, data: Partial<Invitation>): Promise<Invitation> =>
   pb.collection('invitations').update(id, data)
