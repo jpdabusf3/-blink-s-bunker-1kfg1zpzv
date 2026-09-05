@@ -35,6 +35,7 @@ import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
 import { getAllFactories, deleteFactoryPB } from '@/services/factories'
+import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { getScopedFactories } from '@/lib/user-scope'
 import { normalizeArray } from '@/lib/utils'
 import { FactoryForm } from '@/components/FactoryForm'
@@ -225,8 +226,8 @@ export default function Cadastro() {
   }
 
   // Multi-select filters
+  const [gestaoTecnicaList, setGestaoTecnicaList] = useState<GestaoTecnica[]>([])
   const [selectedFactories, setSelectedFactories] = useState<string[]>([])
-  const [selectedGestores, setSelectedGestores] = useState<string[]>([])
   const [selectedVendedores, setSelectedVendedores] = useState<string[]>([])
   const [selectedStates, setSelectedStates] = useState<string[]>([])
   const [selectedCountries, setSelectedCountries] = useState<string[]>([])
@@ -239,8 +240,12 @@ export default function Cadastro() {
   const loadData = async () => {
     setLoading(true)
     try {
-      const all = await getAllFactories()
+      const [all, gestao] = await Promise.all([
+        getAllFactories(),
+        getGestaoTecnica().catch(() => [] as GestaoTecnica[]),
+      ])
       setFactories(getScopedFactories(all, user))
+      setGestaoTecnicaList(gestao)
     } catch {
       setFactories([])
     } finally {
@@ -253,6 +258,11 @@ export default function Cadastro() {
   }, [user])
 
   useRealtime('factories', () => loadData())
+  useRealtime('gestao_tecnica', () => {
+    getGestaoTecnica()
+      .then(setGestaoTecnicaList)
+      .catch(() => {})
+  })
 
   // Opções dinâmicas para os filtros baseadas nos dados cadastrados
   // Opções dinâmicas para os filtros baseadas estritamente nos dados cadastrados (distintas, ordenadas e sem vazios)
@@ -264,26 +274,15 @@ export default function Cadastro() {
     return Array.from(names).sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }, [factories])
 
-  const dynamicGestoresOptions = useMemo(() => {
-    const gestores = new Set<string>()
-    factories.forEach((f) => {
-      const name = f.gestor_tecnico_name?.trim() || f.expand?.gestor_tecnico_id?.nome?.trim()
-      if (name) gestores.add(name)
-    })
-    return Array.from(gestores).sort((a, b) => a.localeCompare(b, 'pt-BR'))
-  }, [factories])
-
   const dynamicVendedoresOptions = useMemo(() => {
     const vends = new Set<string>()
-    factories.forEach((f) => {
-      const name =
-        f.vendedor_name?.trim() ||
-        f.expand?.vendedor_id?.nome?.trim() ||
-        f.expand?.vendedor?.nome?.trim()
-      if (name) vends.add(name)
+    gestaoTecnicaList.forEach((m) => {
+      if (m.funcao === 'vendedor' && m.nome && m.nome.trim()) {
+        vends.add(m.nome.trim())
+      }
     })
     return Array.from(vends).sort((a, b) => a.localeCompare(b, 'pt-BR'))
-  }, [factories])
+  }, [gestaoTecnicaList])
 
   const dynamicStateOptions = useMemo(() => {
     const states = new Set<string>()
@@ -359,7 +358,6 @@ export default function Cadastro() {
   const clearFilters = () => {
     setSearch('')
     setSelectedFactories([])
-    setSelectedGestores([])
     setSelectedVendedores([])
     setSelectedStates([])
     setSelectedCountries([])
@@ -374,7 +372,6 @@ export default function Cadastro() {
   const hasActiveFilters =
     search.trim() !== '' ||
     selectedFactories.length > 0 ||
-    selectedGestores.length > 0 ||
     selectedVendedores.length > 0 ||
     selectedStates.length > 0 ||
     selectedCountries.length > 0 ||
@@ -390,7 +387,6 @@ export default function Cadastro() {
   }, [
     search,
     selectedFactories,
-    selectedGestores,
     selectedVendedores,
     selectedStates,
     selectedCountries,
@@ -420,16 +416,7 @@ export default function Cadastro() {
         if (!selectedFactories.includes(f.name.trim())) return false
       }
 
-      // Gestor Técnico filtro
-      if (selectedGestores.length > 0) {
-        const gestorName =
-          f.gestor_tecnico_name?.trim() ||
-          f.expand?.gestor_tecnico_id?.nome?.trim() ||
-          f.expand?.gestor_tecnico?.nome?.trim()
-        if (!gestorName || !selectedGestores.includes(gestorName)) return false
-      }
-
-      // Vendedor filtro
+      // Vendedor filtro (sincronizado da collection gestao_tecnica via relação)
       if (selectedVendedores.length > 0) {
         const vendName =
           f.vendedor_name?.trim() ||
@@ -495,7 +482,6 @@ export default function Cadastro() {
     factories,
     search,
     selectedFactories,
-    selectedGestores,
     selectedVendedores,
     selectedStates,
     selectedCountries,
@@ -772,17 +758,6 @@ export default function Cadastro() {
                   value={selectedFactories}
                   onChange={setSelectedFactories}
                   placeholder="Todos os clientes"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Gestor Técnico
-                </label>
-                <MultiSelect
-                  options={dynamicGestoresOptions}
-                  value={selectedGestores}
-                  onChange={setSelectedGestores}
-                  placeholder="Todos os gestores"
                 />
               </div>
               <div>
