@@ -13,7 +13,7 @@ import {
 } from '@/services/performance-report'
 import { exportPerformanceToExcel, exportPerformanceToPDF } from '@/lib/exportPerformance'
 import { PerformanceFilters as PerfFilters } from '@/components/performance/PerformanceFilters'
-import { PerformanceReportTable } from '@/components/performance/PerformanceReportTable'
+import { PerformanceTables } from '@/components/performance/PerformanceTables'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Loader2, FileSpreadsheet, FileText, Trophy, Medal, Award } from 'lucide-react'
@@ -141,42 +141,12 @@ export default function RelatorioPerformance() {
         ))}
       </div>
 
-      <Card className="shadow-subtle">
-        <CardHeader>
-          <CardTitle>Relatório por Gestor Técnico</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <PerformanceReportTable members={data.gestores} relacionadoLabel="Vendedores" />
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-subtle">
-        <CardHeader>
-          <CardTitle>Relatório por Vendedor</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <PerformanceReportTable members={data.vendedores} relacionadoLabel="Gestores" />
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="shadow-subtle">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-primary" /> Ranking de Gestores
-            </CardTitle>
-          </CardHeader>
-          <CardContent>{renderRanking(data.gestorRanking)}</CardContent>
-        </Card>
-        <Card className="shadow-subtle">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-primary" /> Ranking de Vendedores
-            </CardTitle>
-          </CardHeader>
-          <CardContent>{renderRanking(data.vendedorRanking)}</CardContent>
-        </Card>
-      </div>
+      <PerformanceTables
+        gestores={data.gestores}
+        vendedores={data.vendedores}
+        gestorRanking={data.gestorRanking}
+        vendedorRanking={data.vendedorRanking}
+      />
     </div>
   )
 }

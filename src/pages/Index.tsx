@@ -5,7 +5,8 @@ import { useAuth } from '@/hooks/use-auth'
 import { isManager } from '@/lib/user-scope'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { formatCompactCurrency } from '@/lib/utils'
+import { formatCompactCurrency, normalizeArray } from '@/lib/utils'
+import { deriveFunilVendasStatus } from '@/lib/funnel-status'
 import { Download, GripVertical, Filter, Globe, MapPin, Compass } from 'lucide-react'
 import {
   Select,
@@ -138,11 +139,12 @@ export default function Index() {
   const filteredFactories = factories.filter((f) => {
     const regionMatch =
       effectiveRegionFilter === 'Todas as Regiões' ||
-      f.region === effectiveRegionFilter ||
+      normalizeArray(f.region).includes(effectiveRegionFilter) ||
       f.stateRegion === effectiveRegionFilter
     const ownerMatch = salesOwnerFilter === 'all' || f.salesOwner === salesOwnerFilter
     const stateMatch = stateFilter === 'all' || f.state === stateFilter
-    const speciesMatch = speciesFilter === 'all' || f.animalSpecies === speciesFilter
+    const speciesMatch =
+      speciesFilter === 'all' || normalizeArray(f.animalSpecies).includes(speciesFilter)
     return regionMatch && ownerMatch && stateMatch && speciesMatch
   })
 
@@ -152,8 +154,11 @@ export default function Index() {
       (s, f) => s + f.potentialValue * (f.winProbability / 100),
       0,
     ),
-    active: filteredFactories.filter((f) => f.status === 'Atendido').length,
-    prospect: filteredFactories.filter((f) => f.status === 'Prospeção').length,
+    active: filteredFactories.filter(
+      (f) => deriveFunilVendasStatus(f.funnelStage, f.ultimo_pedido) === 'Ativo',
+    ).length,
+    prospect: filteredFactories.filter((f) => normalizeArray(f.status).includes('Prospeção'))
+      .length,
   }
 
   const handleExportPDF = () => {

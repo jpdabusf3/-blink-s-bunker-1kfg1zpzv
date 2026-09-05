@@ -53,12 +53,8 @@ export const ProdutoSchema = z.object({
     .min(1, 'Código é obrigatório')
     .regex(CODIGO_PRODUTO_REGEX, 'Codigo invalido. Use o formato XXXX.XX000.'),
   nome: z.string().min(1, 'Nome é obrigatório').trim(),
-  categoria: z.enum(CATEGORIAS_PRODUTO, {
-    errorMap: () => ({ message: 'Selecione uma categoria válida' }),
-  }),
-  linha: z.enum(LINHAS_PRODUTO, {
-    errorMap: () => ({ message: 'Selecione uma linha válida' }),
-  }),
+  categoria: z.enum(CATEGORIAS_PRODUTO),
+  linha: z.enum(LINHAS_PRODUTO),
   ativo: z.boolean().default(true),
 })
 
@@ -66,12 +62,8 @@ export type ProdutoFormData = z.infer<typeof ProdutoSchema>
 
 export const ProdutoUpdateSchema = z.object({
   nome: z.string().min(1, 'Nome é obrigatório').trim(),
-  categoria: z.enum(CATEGORIAS_PRODUTO, {
-    errorMap: () => ({ message: 'Selecione uma categoria válida' }),
-  }),
-  linha: z.enum(LINHAS_PRODUTO, {
-    errorMap: () => ({ message: 'Selecione uma linha válida' }),
-  }),
+  categoria: z.enum(CATEGORIAS_PRODUTO),
+  linha: z.enum(LINHAS_PRODUTO),
   ativo: z.boolean().default(true),
 })
 
@@ -178,7 +170,7 @@ export const produtosService = {
     } catch (err: unknown) {
       console.error('Erro ao criar produto:', err)
       if (err instanceof z.ZodError) {
-        throw new Error(err.errors[0]?.message || 'Dados inválidos.')
+        throw new Error(err.issues[0]?.message || 'Dados inválidos.')
       }
       if (err instanceof Error) {
         throw err
@@ -203,7 +195,7 @@ export const produtosService = {
     } catch (err: unknown) {
       console.error('Erro ao atualizar produto:', err)
       if (err instanceof z.ZodError) {
-        throw new Error(err.errors[0]?.message || 'Dados inválidos.')
+        throw new Error(err.issues[0]?.message || 'Dados inválidos.')
       }
       if (err instanceof Error) {
         throw err

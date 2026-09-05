@@ -73,9 +73,7 @@ export function HistoricalComparisonCard({
 
   const availableRegions = [
     ...new Set(
-      factories
-        .flatMap((f) => (Array.isArray(f.region) ? f.region : [f.region]))
-        .filter(Boolean),
+      factories.flatMap((f) => (Array.isArray(f.region) ? f.region : [f.region])).filter(Boolean),
     ),
   ]
   const availableLines = [...new Set(orders.map((o) => o.line).filter(Boolean))]

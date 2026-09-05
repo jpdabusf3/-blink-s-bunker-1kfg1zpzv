@@ -44,7 +44,9 @@ export function DailySalesLogCard({
           .filter((f) => f.region === regionFilter || f.stateRegion === regionFilter)
           .map((f) => f.id),
       )
-      res = res.filter((o) => regionFactoryIds.has(o.factoryId) || (o as any).region === regionFilter)
+      res = res.filter(
+        (o) => regionFactoryIds.has(o.factoryId) || (o as any).region === regionFilter,
+      )
     }
     return res
       .sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime())

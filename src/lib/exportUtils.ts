@@ -27,7 +27,7 @@ export function exportOrdersToExcel(filteredOrders: Order[], factories: Factory[
         new Date(o.orderDate).toLocaleDateString('pt-BR'),
         `"${(factory?.name || 'Desconhecida').replace(/"/g, '""')}"`,
         `"${(channelLabel || '-').replace(/"/g, '""')}"`,
-        `"${String(Array.isArray(factory?.region) ? factory?.region.join(', ') : (factory?.region || '-')).replace(/"/g, '""')}"`,
+        `"${String(Array.isArray(factory?.region) ? factory?.region.join(', ') : factory?.region || '-').replace(/"/g, '""')}"`,
         `"${o.product.replace(/"/g, '""')}"`,
         `"${(o.line || '-').replace(/"/g, '""')}"`,
         o.quantity,
@@ -51,7 +51,13 @@ export function exportOrdersToExcel(filteredOrders: Order[], factories: Factory[
 export function exportOrdersToPDF(
   filteredOrders: Order[],
   factories: Factory[],
-  filters?: { factoryIdParam?: string; productLine?: string; startDate?: string; endDate?: string; template?: string },
+  filters?: {
+    factoryIdParam?: string
+    productLine?: string
+    startDate?: string
+    endDate?: string
+    template?: string
+  },
 ) {
   const printWindow = window.open('', '_blank')
   if (!printWindow) return false
