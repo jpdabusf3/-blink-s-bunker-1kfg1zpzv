@@ -38,8 +38,12 @@ import { getAllFactories, deleteFactoryPB, updateFactoryPB } from '@/services/fa
 import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { EditableMemberSelect } from '@/components/EditableMemberSelect'
 import { AtribuicaoDialog } from '@/components/AtribuicaoDialog'
+import { ClientAssignmentHistoryDialog } from '@/components/ClientAssignmentHistoryDialog'
+import { AssignmentAuditGlobalDialog } from '@/components/AssignmentAuditGlobalDialog'
+import { BatchAssignConfirmDialog } from '@/components/BatchAssignConfirmDialog'
+import { logActivity, logActivityBatch } from '@/services/activity-logs'
 import { useAppContext } from '@/store/AppContext'
-import { UserCheck } from 'lucide-react'
+import { UserCheck, History, ShieldCheck, Users, CheckSquare } from 'lucide-react'
 import { getScopedFactories } from '@/lib/user-scope'
 import { factoryMatchesAnyVendedor } from '@/lib/vendedorFilterHelper'
 import { normalizeArray } from '@/lib/utils'
@@ -95,7 +99,15 @@ export default function Cadastro() {
   const [mapModalOpen, setMapModalOpen] = useState(false)
   const [editingFactory, setEditingFactory] = useState<Factory | undefined>(undefined)
   const [atribuicaoFactory, setAtribuicaoFactory] = useState<Factory | null>(null)
+  const [historyFactory, setHistoryFactory] = useState<Factory | null>(null)
+  const [globalAuditOpen, setGlobalAuditOpen] = useState(false)
   const { updateFactory } = useAppContext()
+
+  // Batch assignment state
+  const [batchVendedorId, setBatchVendedorId] = useState<string>('keep')
+  const [batchGestorId, setBatchGestorId] = useState<string>('keep')
+  const [batchConfirmOpen, setBatchConfirmOpen] = useState(false)
+  const [batchAssigning, setBatchAssigning] = useState(false)
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1)
@@ -627,7 +639,23 @@ export default function Cadastro() {
         vendedor_name: vendedorNome || undefined,
       })
 
-      // Log de atividade best-effort
+      // Registro persistente na activity_logs (auditoria da carteira)
+      logActivity(
+        `Atribuição de Vendedor: ${target?.name || 'Cliente'}`,
+        `Vendedor alterado de "${oldName}" para "${newName}". Cliente: ${target?.name || factoryId}`,
+        factoryId,
+        'factories',
+        {
+          tipo: 'atribuicao',
+          status_anterior: oldName,
+          status_novo: newName,
+          origem: 'manual',
+        },
+      ).catch((err) => {
+        console.warn('[handleUpdateVendedor] logActivity falhou', err)
+      })
+
+      // Log de atividade secundário no funil
       logAction({
         action_type: 'assign',
         entity_type: 'client',
@@ -688,7 +716,23 @@ export default function Cadastro() {
         gestor_tecnico_name: gestorNome || undefined,
       })
 
-      // Log de atividade best-effort
+      // Registro persistente na activity_logs (auditoria da carteira)
+      logActivity(
+        `Atribuição de Gestor Técnico: ${target?.name || 'Cliente'}`,
+        `Gestor técnico alterado de "${oldName}" para "${newName}". Cliente: ${target?.name || factoryId}`,
+        factoryId,
+        'factories',
+        {
+          tipo: 'atribuicao',
+          status_anterior: oldName,
+          status_novo: newName,
+          origem: 'manual',
+        },
+      ).catch((err) => {
+        console.warn('[handleUpdateGestorTecnico] logActivity falhou', err)
+      })
+
+      // Log de atividade secundário no funil
       logAction({
         action_type: 'assign',
         entity_type: 'client',
@@ -717,6 +761,12 @@ export default function Cadastro() {
       gestor_tecnico_name: string | null
     },
   ) => {
+    const target = factories.find((f) => f.id === factoryId)
+    const oldVend = target?.vendedor_name || 'Não atribuído'
+    const newVend = assignments.vendedor_name || 'Não atribuído'
+    const oldGest = target?.gestor_tecnico_name || 'Não atribuído'
+    const newGest = assignments.gestor_tecnico_name || 'Não atribuído'
+
     try {
       await updateFactoryPB(factoryId, {
         vendedor_id: assignments.vendedor_id || '',
@@ -765,11 +815,209 @@ export default function Cadastro() {
         gestor_tecnico_name: assignments.gestor_tecnico_name || undefined,
       })
 
+      // Registro de auditoria na activity_logs
+      const changes: string[] = []
+      if (oldVend !== newVend) changes.push(`Vendedor: "${oldVend}" → "${newVend}"`)
+      if (oldGest !== newGest) changes.push(`Gestor Técnico: "${oldGest}" → "${newGest}"`)
+
+      if (changes.length > 0) {
+        logActivity(
+          `Atribuições editadas: ${target?.name || 'Cliente'}`,
+          changes.join(' | '),
+          factoryId,
+          'factories',
+          {
+            tipo: 'atribuicao',
+            status_anterior: `${oldVend} / ${oldGest}`,
+            status_novo: `${newVend} / ${newGest}`,
+            origem: 'manual',
+          },
+        ).catch(() => {})
+      }
+
       toast.success('Atribuições atualizadas com sucesso')
     } catch (err: any) {
       console.error('[handleSaveModalAssignments] falha ao atualizar', err)
       toast.error(err?.message || 'Erro ao atualizar atribuições.')
       throw err
+    }
+  }
+
+  // Executa atribuição em lote sobre os clientes selecionados
+  const handleApplyBatchAssign = async () => {
+    const selectedClients = factories.filter((f) => selectedIds.has(f.id))
+    if (selectedClients.length === 0) {
+      toast.error('Nenhum cliente selecionado.')
+      return
+    }
+
+    const applyVendedor = batchVendedorId !== 'keep'
+    const applyGestor = batchGestorId !== 'keep'
+
+    if (!applyVendedor && !applyGestor) {
+      toast.info('Selecione uma alteração para vendedor ou gestor técnico.')
+      return
+    }
+
+    const resolvedVendedorMember =
+      applyVendedor && batchVendedorId !== 'none'
+        ? activeGestaoTecnica.find((m) => m.id === batchVendedorId)
+        : null
+    const targetVendedorId = applyVendedor
+      ? batchVendedorId === 'none'
+        ? ''
+        : batchVendedorId
+      : null
+    const targetVendedorName = applyVendedor ? resolvedVendedorMember?.nome || null : null
+
+    const resolvedGestorMember =
+      applyGestor && batchGestorId !== 'none'
+        ? activeGestaoTecnica.find((m) => m.id === batchGestorId)
+        : null
+    const targetGestorId = applyGestor ? (batchGestorId === 'none' ? '' : batchGestorId) : null
+    const targetGestorName = applyGestor ? resolvedGestorMember?.nome || null : null
+
+    setBatchAssigning(true)
+    let successCount = 0
+    let failCount = 0
+    const auditEntries: Array<{
+      action: string
+      details: string
+      recordId: string
+      collectionName: string
+      tipo: string
+      status_anterior: string
+      status_novo: string
+      origem: string
+    }> = []
+
+    try {
+      for (const client of selectedClients) {
+        const payload: Record<string, any> = {}
+        const clientChanges: string[] = []
+
+        let oldVend = client.vendedor_name || 'Não atribuído'
+        let newVend = oldVend
+        let oldGest = client.gestor_tecnico_name || 'Não atribuído'
+        let newGest = oldGest
+
+        if (applyVendedor) {
+          payload.vendedor_id = targetVendedorId
+          newVend = targetVendedorName || 'Não atribuído'
+          if (oldVend !== newVend) {
+            clientChanges.push(`Vendedor: "${oldVend}" → "${newVend}"`)
+          }
+        }
+
+        if (applyGestor) {
+          payload.gestor_tecnico_id = targetGestorId
+          newGest = targetGestorName || 'Não atribuído'
+          if (oldGest !== newGest) {
+            clientChanges.push(`Gestor: "${oldGest}" → "${newGest}"`)
+          }
+        }
+
+        try {
+          await updateFactoryPB(client.id, payload as any)
+          successCount++
+
+          // Auditoria se houve mudança efetiva
+          if (clientChanges.length > 0) {
+            auditEntries.push({
+              action: `Rebalanceamento em lote: ${client.name}`,
+              details: clientChanges.join(' | '),
+              recordId: client.id,
+              collectionName: 'factories',
+              tipo: 'atribuicao',
+              status_anterior: `${oldVend} / ${oldGest}`,
+              status_novo: `${newVend} / ${newGest}`,
+              origem: 'manual',
+            })
+          }
+        } catch (itemErr) {
+          console.error('[batchAssign] falha no cliente', client.name, itemErr)
+          failCount++
+        }
+      }
+
+      // Atualiza estado local de factories em memória
+      setFactories((prev) =>
+        prev.map((f) => {
+          if (!selectedIds.has(f.id)) return f
+          const nextVendedorId = applyVendedor ? targetVendedorId || undefined : f.vendedor_id
+          const nextVendedorName = applyVendedor ? targetVendedorName || undefined : f.vendedor_name
+          const nextGestorId = applyGestor ? targetGestorId || undefined : f.gestor_tecnico_id
+          const nextGestorName = applyGestor ? targetGestorName || undefined : f.gestor_tecnico_name
+
+          return {
+            ...f,
+            vendedor_id: nextVendedorId,
+            vendedor_name: nextVendedorName,
+            gestor_tecnico_id: nextGestorId,
+            gestor_tecnico_name: nextGestorName,
+            expand: {
+              ...f.expand,
+              vendedor_id: nextVendedorId
+                ? { id: nextVendedorId, nome: nextVendedorName || '' }
+                : undefined,
+              vendedor: nextVendedorId
+                ? { id: nextVendedorId, nome: nextVendedorName || '' }
+                : undefined,
+              gestor_tecnico_id: nextGestorId
+                ? { id: nextGestorId, nome: nextGestorName || '' }
+                : undefined,
+              gestor_tecnico: nextGestorId
+                ? { id: nextGestorId, nome: nextGestorName || '' }
+                : undefined,
+            },
+          }
+        }),
+      )
+
+      // Atualiza store global AppContext para cada cliente afetado
+      selectedClients.forEach((client) => {
+        const patch: Partial<Factory> = {}
+        if (applyVendedor) {
+          patch.vendedor_id = targetVendedorId || undefined
+          patch.vendedor_name = targetVendedorName || undefined
+        }
+        if (applyGestor) {
+          patch.gestor_tecnico_id = targetGestorId || undefined
+          patch.gestor_tecnico_name = targetGestorName || undefined
+        }
+        updateFactory(client.id, patch)
+      })
+
+      // Grava logs de auditoria no backend (batch ou um por um)
+      if (auditEntries.length > 0) {
+        logActivityBatch(auditEntries).catch((err) => {
+          console.warn('[handleApplyBatchAssign] batch audit failed, falling back', err)
+          // fallback fire-and-forget
+          auditEntries.forEach((entry) => {
+            logActivity(entry.action, entry.details, entry.recordId, entry.collectionName, {
+              tipo: entry.tipo,
+              status_anterior: entry.status_anterior,
+              status_novo: entry.status_novo,
+              origem: entry.origem,
+            }).catch(() => {})
+          })
+        })
+      }
+
+      if (failCount === 0) {
+        toast.success(
+          `${successCount} cliente(s) atualizado(s) com sucesso! Histórico de auditoria registrado.`,
+        )
+      } else {
+        toast.warning(`${successCount} cliente(s) atualizados, ${failCount} falharam.`)
+      }
+
+      // Limpa seleções de lote
+      setSelectedIds(new Set())
+      setBatchVendedorId('keep')
+      setBatchGestorId('keep')
+    } finally {
+      setBatchAssigning(false)
     }
   }
 
@@ -808,6 +1056,15 @@ export default function Cadastro() {
           <Button variant="outline" className="gap-2" onClick={() => setMapModalOpen(true)}>
             <MapPin className="w-4 h-4 text-primary" />
             Mapa de Clientes
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => setGlobalAuditOpen(true)}
+            title="Ver histórico geral de transferências e auditoria da carteira"
+          >
+            <ShieldCheck className="w-4 h-4 text-primary" />
+            Auditoria da Carteira
           </Button>
           <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
             <Upload className="w-4 h-4" /> Importar
@@ -862,45 +1119,119 @@ export default function Cadastro() {
           </div>
         </CardHeader>
         {selectedIds.size > 0 && (
-          <div className="px-6 pb-3 -mb-1 flex flex-wrap items-center justify-between gap-3">
-            <span className="text-sm font-medium text-muted-foreground">
-              {selectedIds.size} cliente(s) selecionado(s)
-            </span>
-            <div className="flex items-center gap-2">
+          <div className="mx-6 mb-3 p-3 rounded-lg border bg-primary/5 border-primary/20 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Badge variant="default" className="gap-1 font-semibold">
+                  <CheckSquare className="w-3.5 h-3.5" />
+                  {selectedIds.size} selecionado(s)
+                </Badge>
+                <span className="text-xs text-muted-foreground hidden sm:inline">
+                  (da página ou filtrados)
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs"
+                  disabled={batchExporting || batchAssigning}
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  Limpar seleção
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs gap-1.5"
+                  disabled={batchExporting || batchAssigning}
+                  onClick={handleBatchExport}
+                >
+                  {batchExporting ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <FileArchive className="w-3.5 h-3.5" />
+                  )}
+                  Exportar PDFs (ZIP)
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs gap-1.5"
+                  disabled={batchExporting || batchAssigning}
+                  onClick={handleBatchGoogleDocsExport}
+                >
+                  {batchExporting ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <FilePlus2 className="w-3.5 h-3.5" />
+                  )}
+                  Google Docs
+                </Button>
+              </div>
+            </div>
+
+            {/* Barra de Rebalanceamento / Atribuição em Lote */}
+            <div className="pt-2 border-t border-primary/10 flex flex-wrap items-center gap-2.5">
+              <span className="text-xs font-semibold flex items-center gap-1.5 text-foreground shrink-0">
+                <Users className="w-4 h-4 text-primary" />
+                Atribuição em Lote:
+              </span>
+
+              {/* Seletor Vendedor */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">Vendedor:</span>
+                <select
+                  value={batchVendedorId}
+                  onChange={(e) => setBatchVendedorId(e.target.value)}
+                  disabled={batchAssigning}
+                  aria-label="Selecionar novo vendedor para lote"
+                  className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="keep">-- Manter atual --</option>
+                  <option value="none">Nenhum / Desatribuir</option>
+                  {activeGestaoTecnica.map((m) => (
+                    <option key={`v-${m.id}`} value={m.id}>
+                      {m.nome} ({m.funcao || 'Membro'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Seletor Gestor Técnico */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">Gestor Técnico:</span>
+                <select
+                  value={batchGestorId}
+                  onChange={(e) => setBatchGestorId(e.target.value)}
+                  disabled={batchAssigning}
+                  aria-label="Selecionar novo gestor técnico para lote"
+                  className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="keep">-- Manter atual --</option>
+                  <option value="none">Nenhum / Desatribuir</option>
+                  {activeGestaoTecnica.map((m) => (
+                    <option key={`g-${m.id}`} value={m.id}>
+                      {m.nome} ({m.funcao || 'Membro'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <Button
-                variant="ghost"
                 size="sm"
-                disabled={batchExporting}
-                onClick={() => setSelectedIds(new Set())}
+                className="h-8 text-xs gap-1.5 ml-auto"
+                disabled={
+                  batchAssigning || (batchVendedorId === 'keep' && batchGestorId === 'keep')
+                }
+                onClick={() => setBatchConfirmOpen(true)}
               >
-                Limpar seleção
-              </Button>
-              <Button
-                size="sm"
-                className="gap-2"
-                disabled={batchExporting}
-                onClick={handleBatchExport}
-              >
-                {batchExporting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                {batchAssigning ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : (
-                  <FileArchive className="w-4 h-4" />
+                  <UserCheck className="w-3.5 h-3.5" />
                 )}
-                Exportar PDFs em Lote (ZIP)
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-2"
-                disabled={batchExporting}
-                onClick={handleBatchGoogleDocsExport}
-              >
-                {batchExporting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <FilePlus2 className="w-4 h-4" />
-                )}
-                Exportar Google Docs em Lote
+                Aplicar Atribuição ({selectedIds.size})
               </Button>
             </div>
           </div>
@@ -1059,17 +1390,21 @@ export default function Cadastro() {
                     <TableHead className="w-10">
                       <Checkbox
                         checked={
-                          filtered.length > 0 && filtered.every((f) => selectedIds.has(f.id))
+                          paginatedFactories.length > 0 &&
+                          paginatedFactories.every((f) => selectedIds.has(f.id))
                         }
                         onCheckedChange={(checked) => {
                           setSelectedIds((prev) => {
                             const next = new Set(prev)
-                            if (checked) filtered.forEach((f) => next.add(f.id))
-                            else filtered.forEach((f) => next.delete(f.id))
+                            if (checked) {
+                              paginatedFactories.forEach((f) => next.add(f.id))
+                            } else {
+                              paginatedFactories.forEach((f) => next.delete(f.id))
+                            }
                             return next
                           })
                         }}
-                        aria-label="Selecionar todos"
+                        aria-label="Selecionar todos da página"
                       />
                     </TableHead>
                     <TableHead>Nome</TableHead>
@@ -1184,6 +1519,15 @@ export default function Cadastro() {
                             />
                           </TableCell>
                           <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setHistoryFactory(f)}
+                              title="Histórico de atribuições (auditoria deste cliente)"
+                              className="hover:text-primary"
+                            >
+                              <History className="w-4 h-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -1323,6 +1667,42 @@ export default function Cadastro() {
         factory={atribuicaoFactory}
         members={activeGestaoTecnica}
         onSave={handleSaveModalAssignments}
+      />
+
+      {/* Modal de Histórico de Atribuições do Cliente Individual */}
+      <ClientAssignmentHistoryDialog
+        factory={historyFactory}
+        open={!!historyFactory}
+        onOpenChange={(open) => {
+          if (!open) setHistoryFactory(null)
+        }}
+      />
+
+      {/* Modal de Auditoria Geral da Carteira */}
+      <AssignmentAuditGlobalDialog open={globalAuditOpen} onOpenChange={setGlobalAuditOpen} />
+
+      {/* Modal de Confirmação de Atribuição em Lote */}
+      <BatchAssignConfirmDialog
+        open={batchConfirmOpen}
+        onOpenChange={setBatchConfirmOpen}
+        selectedFactories={factories.filter((f) => selectedIds.has(f.id))}
+        applyVendedor={batchVendedorId !== 'keep'}
+        newVendedorName={
+          batchVendedorId === 'keep'
+            ? null
+            : batchVendedorId === 'none'
+              ? null
+              : activeGestaoTecnica.find((m) => m.id === batchVendedorId)?.nome || null
+        }
+        applyGestor={batchGestorId !== 'keep'}
+        newGestorName={
+          batchGestorId === 'keep'
+            ? null
+            : batchGestorId === 'none'
+              ? null
+              : activeGestaoTecnica.find((m) => m.id === batchGestorId)?.nome || null
+        }
+        onConfirm={handleApplyBatchAssign}
       />
 
       {/* Clients Map Dialog Modal */}
