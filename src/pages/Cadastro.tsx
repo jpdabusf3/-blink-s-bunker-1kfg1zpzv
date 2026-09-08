@@ -37,6 +37,7 @@ import { useRealtime } from '@/hooks/use-realtime'
 import { getAllFactories, deleteFactoryPB } from '@/services/factories'
 import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { getScopedFactories } from '@/lib/user-scope'
+import { factoryMatchesAnyVendedor } from '@/lib/vendedorFilterHelper'
 import { normalizeArray } from '@/lib/utils'
 import { FactoryForm } from '@/components/FactoryForm'
 import { ClientsMapDialog } from '@/components/ClientsMapDialog'
@@ -416,13 +417,9 @@ export default function Cadastro() {
         if (!selectedFactories.includes(f.name.trim())) return false
       }
 
-      // Vendedor filtro (sincronizado da collection gestao_tecnica via relação)
+      // Vendedor filtro (sincronizado da collection gestao_tecnica via relação e fallback de salesOwner/gestor)
       if (selectedVendedores.length > 0) {
-        const vendName =
-          f.vendedor_name?.trim() ||
-          f.expand?.vendedor_id?.nome?.trim() ||
-          f.expand?.vendedor?.nome?.trim()
-        if (!vendName || !selectedVendedores.includes(vendName)) return false
+        if (!factoryMatchesAnyVendedor(f, selectedVendedores)) return false
       }
 
       // Estado filtro
@@ -1089,7 +1086,7 @@ export default function Cadastro() {
       <ClientsMapDialog
         open={mapModalOpen}
         onOpenChange={setMapModalOpen}
-        factories={factories}
+        factories={filtered}
         loading={loading}
         onReload={loadData}
       />

@@ -69,6 +69,7 @@ import {
   STATUS_TO_FUNNEL_STAGE,
   FUNNEL_STAGES_PERMITIDOS,
 } from '@/lib/funnel-status'
+import { factoryMatchesVendedor } from '@/lib/vendedorFilterHelper'
 
 export type { FunilVendasStatus }
 export { deriveFunilVendasStatus }
@@ -205,7 +206,7 @@ export default function FunilVendas() {
     () =>
       funilVendasClients.filter((f) => {
         const status = f.status_funil as FunilVendasStatus
-        if (filters.vendedor !== 'all' && f.vendedor_id !== filters.vendedor) return false
+        if (filters.vendedor !== 'all' && !factoryMatchesVendedor(f, filters.vendedor)) return false
         if (filters.gestor !== 'all' && f.gestor_tecnico_id !== filters.gestor) return false
         if (filters.canal !== 'all' && f.profile_type !== filters.canal) return false
         if (filters.especie !== 'all' && f.animalSpecies !== filters.especie) return false

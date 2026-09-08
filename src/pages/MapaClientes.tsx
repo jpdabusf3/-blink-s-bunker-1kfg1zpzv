@@ -32,6 +32,7 @@ import { useRealtime } from '@/hooks/use-realtime'
 import { getAllFactories } from '@/services/factories'
 import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { getScopedFactories } from '@/lib/user-scope'
+import { factoryMatchesVendedor } from '@/lib/vendedorFilterHelper'
 import { normalizeArray } from '@/lib/utils'
 import { BLINK_LOCATIONS, BLINK_MARINGA_CD } from '@/constants/blinkLocations'
 import {
@@ -154,11 +155,7 @@ export default function MapaClientes() {
         if (!matchName && !matchCity && !matchState && !matchGestor && !matchVendedor) return false
       }
       if (vendedorFilter !== 'all') {
-        const vendName =
-          f.vendedor_name?.trim() ||
-          f.expand?.vendedor_id?.nome?.trim() ||
-          f.expand?.vendedor?.nome?.trim()
-        if (!vendName || vendName !== vendedorFilter) return false
+        if (!factoryMatchesVendedor(f, vendedorFilter)) return false
       }
       if (addressStatusFilter !== 'all') {
         if (f.address_status !== addressStatusFilter) return false
