@@ -12,6 +12,7 @@ export interface UserListItem {
   deactivated?: boolean
   whatsapp?: string
   whatsapp_validated?: boolean
+  gestao_tecnica_id?: string
 }
 
 export interface UserReportLog {

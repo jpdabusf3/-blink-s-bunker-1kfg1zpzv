@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-08T18:58:53.239Z",
+  "generatedAt": "2026-09-08T19:08:26.567Z",
   "collections": [
     {
       "name": "users",
@@ -79,11 +79,19 @@
           "type": "bool",
           "required": false,
           "system": false
+        },
+        {
+          "name": "gestao_tecnica_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "gestao_tecnica"
         }
       ],
       "indexes": [
         "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
-        "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
+        "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''",
+        "CREATE INDEX `idx_users_gestao_tecnica_id` ON `users` (gestao_tecnica_id)"
       ]
     },
     {
