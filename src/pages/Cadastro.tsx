@@ -34,8 +34,12 @@ import {
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
-import { getAllFactories, deleteFactoryPB } from '@/services/factories'
+import { getAllFactories, deleteFactoryPB, updateFactoryPB } from '@/services/factories'
 import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
+import { EditableMemberSelect } from '@/components/EditableMemberSelect'
+import { AtribuicaoDialog } from '@/components/AtribuicaoDialog'
+import { useAppContext } from '@/store/AppContext'
+import { UserCheck } from 'lucide-react'
 import { getScopedFactories } from '@/lib/user-scope'
 import { factoryMatchesAnyVendedor } from '@/lib/vendedorFilterHelper'
 import { normalizeArray } from '@/lib/utils'
@@ -90,6 +94,8 @@ export default function Cadastro() {
   const [importOpen, setImportOpen] = useState(false)
   const [mapModalOpen, setMapModalOpen] = useState(false)
   const [editingFactory, setEditingFactory] = useState<Factory | undefined>(undefined)
+  const [atribuicaoFactory, setAtribuicaoFactory] = useState<Factory | null>(null)
+  const { updateFactory } = useAppContext()
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1)
@@ -278,11 +284,18 @@ export default function Cadastro() {
   const dynamicVendedoresOptions = useMemo(() => {
     const vends = new Set<string>()
     gestaoTecnicaList.forEach((m) => {
-      if (m.funcao === 'vendedor' && m.nome && m.nome.trim()) {
+      if (m.ativo !== false && m.nome && m.nome.trim()) {
         vends.add(m.nome.trim())
       }
     })
     return Array.from(vends).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [gestaoTecnicaList])
+
+  // Membros ativos da Gestão Técnica para seleção de vendedor e gestor técnico
+  const activeGestaoTecnica = useMemo(() => {
+    return gestaoTecnicaList
+      .filter((m) => m.ativo !== false)
+      .sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'))
   }, [gestaoTecnicaList])
 
   const dynamicStateOptions = useMemo(() => {
@@ -569,6 +582,194 @@ export default function Cadastro() {
       loadData()
     } catch {
       toast.error('Erro ao excluir')
+    }
+  }
+
+  // Atualização direta de Vendedor de uma fábrica
+  const handleUpdateVendedor = async (
+    factoryId: string,
+    vendedorId: string | null,
+    vendedorNome: string | null,
+  ) => {
+    const target = factories.find((f) => f.id === factoryId)
+    const oldName = target?.vendedor_name || 'Não atribuído'
+    const newName = vendedorNome || 'Não atribuído'
+
+    try {
+      // Grava no backend PocketBase: apenas o campo vendedor_id
+      await updateFactoryPB(factoryId, {
+        vendedor_id: vendedorId || '',
+      } as any)
+
+      // Atualiza estado local de factories imediatamente em memória
+      setFactories((prev) =>
+        prev.map((f) =>
+          f.id === factoryId
+            ? {
+                ...f,
+                vendedor_id: vendedorId || undefined,
+                vendedor_name: vendedorNome || undefined,
+                expand: {
+                  ...f.expand,
+                  vendedor_id: vendedorId
+                    ? { id: vendedorId, nome: vendedorNome || '' }
+                    : undefined,
+                  vendedor: vendedorId ? { id: vendedorId, nome: vendedorNome || '' } : undefined,
+                },
+              }
+            : f,
+        ),
+      )
+
+      // Atualiza o store global do app
+      updateFactory(factoryId, {
+        vendedor_id: vendedorId || undefined,
+        vendedor_name: vendedorNome || undefined,
+      })
+
+      // Log de atividade best-effort
+      logAction({
+        action_type: 'assign',
+        entity_type: 'client',
+        entity_id: factoryId,
+        entity_name: target?.name || factoryId,
+        old_value: oldName,
+        new_value: newName,
+        description: `Alterou vendedor de "${oldName}" para "${newName}"`,
+      })
+
+      toast.success(`Vendedor atualizado: ${newName}`)
+    } catch (err: any) {
+      console.error('[handleUpdateVendedor] falha ao atualizar', err)
+      toast.error(err?.message || 'Erro ao atualizar vendedor. Tente novamente.')
+      throw err
+    }
+  }
+
+  // Atualização direta de Gestor Técnico de uma fábrica
+  const handleUpdateGestorTecnico = async (
+    factoryId: string,
+    gestorId: string | null,
+    gestorNome: string | null,
+  ) => {
+    const target = factories.find((f) => f.id === factoryId)
+    const oldName = target?.gestor_tecnico_name || 'Não atribuído'
+    const newName = gestorNome || 'Não atribuído'
+
+    try {
+      // Grava no backend PocketBase: apenas o campo gestor_tecnico_id
+      await updateFactoryPB(factoryId, {
+        gestor_tecnico_id: gestorId || '',
+      } as any)
+
+      // Atualiza estado local de factories imediatamente em memória
+      setFactories((prev) =>
+        prev.map((f) =>
+          f.id === factoryId
+            ? {
+                ...f,
+                gestor_tecnico_id: gestorId || undefined,
+                gestor_tecnico_name: gestorNome || undefined,
+                expand: {
+                  ...f.expand,
+                  gestor_tecnico_id: gestorId
+                    ? { id: gestorId, nome: gestorNome || '' }
+                    : undefined,
+                  gestor_tecnico: gestorId ? { id: gestorId, nome: gestorNome || '' } : undefined,
+                },
+              }
+            : f,
+        ),
+      )
+
+      // Atualiza o store global do app
+      updateFactory(factoryId, {
+        gestor_tecnico_id: gestorId || undefined,
+        gestor_tecnico_name: gestorNome || undefined,
+      })
+
+      // Log de atividade best-effort
+      logAction({
+        action_type: 'assign',
+        entity_type: 'client',
+        entity_id: factoryId,
+        entity_name: target?.name || factoryId,
+        old_value: oldName,
+        new_value: newName,
+        description: `Alterou gestor técnico de "${oldName}" para "${newName}"`,
+      })
+
+      toast.success(`Gestor técnico atualizado: ${newName}`)
+    } catch (err: any) {
+      console.error('[handleUpdateGestorTecnico] falha ao atualizar', err)
+      toast.error(err?.message || 'Erro ao atualizar gestor técnico. Tente novamente.')
+      throw err
+    }
+  }
+
+  // Salvar ambos via modal de atribuição
+  const handleSaveModalAssignments = async (
+    factoryId: string,
+    assignments: {
+      vendedor_id: string | null
+      vendedor_name: string | null
+      gestor_tecnico_id: string | null
+      gestor_tecnico_name: string | null
+    },
+  ) => {
+    try {
+      await updateFactoryPB(factoryId, {
+        vendedor_id: assignments.vendedor_id || '',
+        gestor_tecnico_id: assignments.gestor_tecnico_id || '',
+      } as any)
+
+      setFactories((prev) =>
+        prev.map((f) =>
+          f.id === factoryId
+            ? {
+                ...f,
+                vendedor_id: assignments.vendedor_id || undefined,
+                vendedor_name: assignments.vendedor_name || undefined,
+                gestor_tecnico_id: assignments.gestor_tecnico_id || undefined,
+                gestor_tecnico_name: assignments.gestor_tecnico_name || undefined,
+                expand: {
+                  ...f.expand,
+                  vendedor_id: assignments.vendedor_id
+                    ? { id: assignments.vendedor_id, nome: assignments.vendedor_name || '' }
+                    : undefined,
+                  vendedor: assignments.vendedor_id
+                    ? { id: assignments.vendedor_id, nome: assignments.vendedor_name || '' }
+                    : undefined,
+                  gestor_tecnico_id: assignments.gestor_tecnico_id
+                    ? {
+                        id: assignments.gestor_tecnico_id,
+                        nome: assignments.gestor_tecnico_name || '',
+                      }
+                    : undefined,
+                  gestor_tecnico: assignments.gestor_tecnico_id
+                    ? {
+                        id: assignments.gestor_tecnico_id,
+                        nome: assignments.gestor_tecnico_name || '',
+                      }
+                    : undefined,
+                },
+              }
+            : f,
+        ),
+      )
+
+      updateFactory(factoryId, {
+        vendedor_id: assignments.vendedor_id || undefined,
+        vendedor_name: assignments.vendedor_name || undefined,
+        gestor_tecnico_id: assignments.gestor_tecnico_id || undefined,
+        gestor_tecnico_name: assignments.gestor_tecnico_name || undefined,
+      })
+
+      toast.success('Atribuições atualizadas com sucesso')
+    } catch (err: any) {
+      console.error('[handleSaveModalAssignments] falha ao atualizar', err)
+      toast.error(err?.message || 'Erro ao atualizar atribuições.')
+      throw err
     }
   }
 
@@ -959,15 +1160,45 @@ export default function Cadastro() {
                             )}
                           </TableCell>
                           <TableCell className="text-sm">
-                            {f.gestor_tecnico_name || (
-                              <span className="text-muted-foreground">-</span>
-                            )}
+                            <EditableMemberSelect
+                              currentId={f.gestor_tecnico_id}
+                              currentName={f.gestor_tecnico_name}
+                              members={activeGestaoTecnica}
+                              onSelect={(newId, newName) =>
+                                handleUpdateGestorTecnico(f.id, newId, newName)
+                              }
+                              placeholder="Sem gestor"
+                              searchPlaceholder="Buscar gestor..."
+                            />
                           </TableCell>
                           <TableCell className="text-sm">
-                            {f.vendedor_name || <span className="text-muted-foreground">-</span>}
+                            <EditableMemberSelect
+                              currentId={f.vendedor_id}
+                              currentName={f.vendedor_name}
+                              members={activeGestaoTecnica}
+                              onSelect={(newId, newName) =>
+                                handleUpdateVendedor(f.id, newId, newName)
+                              }
+                              placeholder="Sem vendedor"
+                              searchPlaceholder="Buscar vendedor..."
+                            />
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(f)}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setAtribuicaoFactory(f)}
+                              title="Editar atribuição de vendedor e gestor"
+                              className="hover:text-primary"
+                            >
+                              <UserCheck className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(f)}
+                              title="Editar cadastro completo"
+                            >
                               <Edit className="w-4 h-4" />
                             </Button>
                             <Button
@@ -975,6 +1206,7 @@ export default function Cadastro() {
                               size="icon"
                               onClick={() => handleDelete(f.id)}
                               className="text-destructive"
+                              title="Excluir fábrica"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -1081,6 +1313,17 @@ export default function Cadastro() {
       </Dialog>
 
       <ImportExcelDialog open={importOpen} onOpenChange={setImportOpen} onImported={loadData} />
+
+      {/* Modal de Atribuição Rápida de Vendedor e Gestor Técnico */}
+      <AtribuicaoDialog
+        open={!!atribuicaoFactory}
+        onOpenChange={(open) => {
+          if (!open) setAtribuicaoFactory(null)
+        }}
+        factory={atribuicaoFactory}
+        members={activeGestaoTecnica}
+        onSave={handleSaveModalAssignments}
+      />
 
       {/* Clients Map Dialog Modal */}
       <ClientsMapDialog

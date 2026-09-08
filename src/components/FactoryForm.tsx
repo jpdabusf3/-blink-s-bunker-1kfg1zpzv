@@ -15,11 +15,7 @@ import { MultiSelect, MultiSelectOption } from '@/components/ui/multi-select'
 import { useAppContext } from '@/store/AppContext'
 import { useAuth } from '@/hooks/use-auth'
 import { isManager } from '@/lib/user-scope'
-import {
-  getGestoresTecnicos,
-  getVendedoresGestao,
-  type GestaoTecnica,
-} from '@/services/gestao-tecnica'
+import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { COUNTRIES } from '@/lib/countries'
 import { createFactoryPB, updateFactoryPB } from '@/services/factories'
 import { logActivity } from '@/services/activity-logs'
@@ -91,8 +87,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
   const { logAction } = useFunnelActivityLog()
   const userIsManager = isManager(user)
   const userArea = user?.geographicArea || ''
-  const [gestores, setGestores] = useState<GestaoTecnica[]>([])
-  const [vendedores, setVendedores] = useState<GestaoTecnica[]>([])
+  const [teamMembers, setTeamMembers] = useState<GestaoTecnica[]>([])
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const [gestorTecnicoId, setGestorTecnicoId] = useState<string>(factory?.gestor_tecnico_id || '')
@@ -135,10 +130,12 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
   }, [salesChannelState])
 
   useEffect(() => {
-    Promise.all([getGestoresTecnicos(), getVendedoresGestao()])
-      .then(([g, v]) => {
-        setGestores(g)
-        setVendedores(v)
+    getGestaoTecnica()
+      .then((all) => {
+        const active = all
+          .filter((m) => m.ativo !== false)
+          .sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'))
+        setTeamMembers(active)
       })
       .catch(() => {})
   }, [])
@@ -151,8 +148,8 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
     const focusValue = fd.get('focusLevel') as string
     const finalFocus = isNaN(Number(focusValue)) ? focusValue : Number(focusValue)
 
-    const gestorTecnico = gestores.find((g) => g.id === gestorTecnicoId)
-    const vendedor = vendedores.find((v) => v.id === vendedorId)
+    const gestorTecnico = teamMembers.find((g) => g.id === gestorTecnicoId)
+    const vendedor = teamMembers.find((v) => v.id === vendedorId)
 
     const errors: Record<string, string> = {}
     if (!fd.get('name')) errors.name = 'Nome é obrigatório'
@@ -498,11 +495,18 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
                 <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Selecione Gestor Técnico" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-60">
                   <SelectItem value="none">Nenhum / Não atribuído</SelectItem>
-                  {gestores.map((g) => (
+                  {teamMembers.map((g) => (
                     <SelectItem key={g.id} value={g.id}>
-                      {g.nome}
+                      {g.nome} —{' '}
+                      <span className="text-muted-foreground">
+                        {g.funcao === 'gestor_tecnico'
+                          ? 'gestor técnico'
+                          : g.funcao === 'vendedor'
+                            ? 'vendedor'
+                            : g.funcao?.replace(/_/g, ' ') || 'membro'}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -514,11 +518,18 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
                 <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Selecione Vendedor" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-60">
                   <SelectItem value="none">Nenhum / Não atribuído</SelectItem>
-                  {vendedores.map((v) => (
+                  {teamMembers.map((v) => (
                     <SelectItem key={v.id} value={v.id}>
-                      {v.nome}
+                      {v.nome} —{' '}
+                      <span className="text-muted-foreground">
+                        {v.funcao === 'gestor_tecnico'
+                          ? 'gestor técnico'
+                          : v.funcao === 'vendedor'
+                            ? 'vendedor'
+                            : v.funcao?.replace(/_/g, ' ') || 'membro'}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
