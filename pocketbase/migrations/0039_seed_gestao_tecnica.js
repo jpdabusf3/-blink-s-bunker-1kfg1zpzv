@@ -3,7 +3,7 @@ migrate(
     var col = app.findCollectionByNameOrId('gestao_tecnica')
 
     var members = [
-      { nome: 'Rodrigo Garginal', funcao: 'gestor_tecnico', regiao: 'MT', ativo: true },
+      { nome: 'Rodrigo Gardinal', funcao: 'gestor_tecnico', regiao: 'MT', ativo: true },
       { nome: 'Jessica Dilkin', funcao: 'gestor_tecnico', regiao: 'MT', ativo: true },
       { nome: 'Tais Fauro', funcao: 'gestor_tecnico', regiao: 'MT', ativo: true },
       { nome: 'Wagner Zacatei', funcao: 'gestor_tecnico', regiao: 'MT', ativo: true },

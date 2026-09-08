@@ -67,7 +67,7 @@ export function downloadImportTemplate(): void {
       status_contato: 'Decisor',
       funil: 'prospeccao',
       valor: 50000,
-      gestor: 'Rodrigo Garginal',
+      gestor: 'Rodrigo Gardinal',
       vendedor: 'Felipe Leão',
     },
     {

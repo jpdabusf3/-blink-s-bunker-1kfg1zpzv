@@ -88,7 +88,7 @@ migrate(
 
     // Seed dos 8 membros em equipe
     const membros = [
-      { nome: 'Rodrigo Garginal', cargo: 'Gestor Tecnico', email: '', regiao: '', ativo: true },
+      { nome: 'Rodrigo Gardinal', cargo: 'Gestor Tecnico', email: '', regiao: '', ativo: true },
       { nome: 'Jessica Dilkin', cargo: 'Gestor Tecnico', email: '', regiao: '', ativo: true },
       { nome: 'Tais Fauro', cargo: 'Gestor Tecnico', email: '', regiao: '', ativo: true },
       { nome: 'Wagner Zacatei', cargo: 'Gestor Tecnico', email: '', regiao: '', ativo: true },

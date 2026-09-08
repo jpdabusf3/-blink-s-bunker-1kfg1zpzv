@@ -161,7 +161,7 @@ export function downloadPedidoModel(): void {
       data: '2026-08-10',
       cliente: 'Exemplo Fazenda',
       especie: 'BOVINO',
-      gestor_tecnico: 'Rodrigo Garginal',
+      gestor_tecnico: 'Rodrigo Gardinal',
       vendedor: 'Felipe Leão',
       canal_vendas: 'Direto',
       valor: 15000.5,
