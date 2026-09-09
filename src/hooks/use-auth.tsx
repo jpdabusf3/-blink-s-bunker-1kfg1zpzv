@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+  useMemo,
+  type ReactNode,
+} from 'react'
 import pb from '@/lib/pocketbase/client'
 
 interface AuthContextType {
@@ -28,11 +36,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<any>(pb.authStore.isValid ? pb.authStore.record : null)
   const [isAuthenticated, setIsAuthenticated] = useState(pb.authStore.isValid)
   const [loading, setLoading] = useState(true)
+  const prevUserRef = useRef<any>(user)
 
   useEffect(() => {
     const unsubscribe = pb.authStore.onChange((_token, record) => {
-      setUser(pb.authStore.isValid ? record : null)
-      setIsAuthenticated(pb.authStore.isValid)
+      const valid = pb.authStore.isValid
+      setIsAuthenticated(valid)
+      if (!valid || !record) {
+        prevUserRef.current = null
+        setUser(null)
+        return
+      }
+
+      // Compara se os campos relevantes do usuário mudaram antes de atualizar o state.
+      // Se apenas o token foi renovado no background sem alteração de dados do usuário,
+      // mantém a mesma referência para evitar render cascata em todas as abas.
+      const prev = prevUserRef.current
+      if (
+        prev &&
+        prev.id === record.id &&
+        prev.email === record.email &&
+        prev.role === record.role &&
+        prev.name === record.name &&
+        prev.job_title === record.job_title &&
+        prev.geographicArea === record.geographicArea &&
+        prev.country === record.country &&
+        prev.avatar === record.avatar &&
+        prev.deactivated === record.deactivated
+      ) {
+        return
+      }
+
+      prevUserRef.current = record
+      setUser(record)
     })
 
     if (pb.authStore.isValid) {
@@ -117,9 +153,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     pb.authStore.clear()
   }
 
-  return (
-    <AuthContext.Provider value={{ user, isAuthenticated, signUp, signIn, signOut, loading }}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({ user, isAuthenticated, signUp, signIn, signOut, loading }),
+    [user, isAuthenticated, loading],
   )
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

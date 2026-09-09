@@ -3,6 +3,7 @@ import {
   useContext,
   useState,
   useEffect,
+  useCallback,
   type ReactNode,
   type Dispatch,
   type SetStateAction,
@@ -101,15 +102,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       .catch(() => {})
   }, [isAuthenticated, authLoading])
 
-  useRealtime(
-    'factories',
-    () => {
-      getAllFactories()
-        .then((data) => setFactories(deduplicateFactories(data)))
-        .catch(() => {})
-    },
-    isAuthenticated && !authLoading,
-  )
+  const refreshFactories = useCallback(() => {
+    getAllFactories()
+      .then((data) => setFactories(deduplicateFactories(data)))
+      .catch(() => {})
+  }, [])
+
+  useRealtime('factories', refreshFactories, isAuthenticated && !authLoading)
 
   const addFactory = (data: Partial<Factory>) => {
     const newFactory: Factory = {

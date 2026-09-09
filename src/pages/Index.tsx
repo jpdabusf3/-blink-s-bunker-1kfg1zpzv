@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAppContext } from '@/store/AppContext'
 import { useScopedFactories } from '@/hooks/use-scoped-data'
 import { useAuth } from '@/hooks/use-auth'
@@ -114,7 +114,7 @@ export default function Index() {
   const { tasks } = useAppContext()
   const factories = useScopedFactories()
   const { user } = useAuth()
-  const isLeader = isManager(user)
+  const isLeader = useMemo(() => isManager(user), [user])
   const userRegion = user?.geographicArea || ''
 
   const [regionFilter, setRegionFilter] = useState('Todas as Regiões')
@@ -127,39 +127,52 @@ export default function Index() {
   const { blocks, setBlocks, toggleBlock, reset, periodView, setPeriodView } =
     useDashboardPreferences()
 
-  const moveBlock = (fromIndex: number, toIndex: number) => {
-    const newBlocks = [...blocks]
-    const [moved] = newBlocks.splice(fromIndex, 1)
-    newBlocks.splice(toIndex, 0, moved)
-    setBlocks(newBlocks)
-  }
+  const moveBlock = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      setBlocks((prevBlocks) => {
+        const newBlocks = [...prevBlocks]
+        const [moved] = newBlocks.splice(fromIndex, 1)
+        newBlocks.splice(toIndex, 0, moved)
+        return newBlocks
+      })
+    },
+    [setBlocks],
+  )
 
-  const effectiveRegionFilter = isLeader ? regionFilter : userRegion || 'Todas as Regiões'
+  const effectiveRegionFilter = useMemo(
+    () => (isLeader ? regionFilter : userRegion || 'Todas as Regiões'),
+    [isLeader, regionFilter, userRegion],
+  )
 
-  const filteredFactories = factories.filter((f) => {
-    const regionMatch =
-      effectiveRegionFilter === 'Todas as Regiões' ||
-      normalizeArray(f.region).includes(effectiveRegionFilter) ||
-      f.stateRegion === effectiveRegionFilter
-    const ownerMatch = salesOwnerFilter === 'all' || f.salesOwner === salesOwnerFilter
-    const stateMatch = stateFilter === 'all' || f.state === stateFilter
-    const speciesMatch =
-      speciesFilter === 'all' || normalizeArray(f.animalSpecies).includes(speciesFilter)
-    return regionMatch && ownerMatch && stateMatch && speciesMatch
-  })
+  const filteredFactories = useMemo(() => {
+    return factories.filter((f) => {
+      const regionMatch =
+        effectiveRegionFilter === 'Todas as Regiões' ||
+        normalizeArray(f.region).includes(effectiveRegionFilter) ||
+        f.stateRegion === effectiveRegionFilter
+      const ownerMatch = salesOwnerFilter === 'all' || f.salesOwner === salesOwnerFilter
+      const stateMatch = stateFilter === 'all' || f.state === stateFilter
+      const speciesMatch =
+        speciesFilter === 'all' || normalizeArray(f.animalSpecies).includes(speciesFilter)
+      return regionMatch && ownerMatch && stateMatch && speciesMatch
+    })
+  }, [factories, effectiveRegionFilter, salesOwnerFilter, stateFilter, speciesFilter])
 
-  const metrics = {
-    revenue: filteredFactories.reduce((s, f) => s + f.potentialValue, 0),
-    weighted: filteredFactories.reduce(
-      (s, f) => s + f.potentialValue * (f.winProbability / 100),
-      0,
-    ),
-    active: filteredFactories.filter(
-      (f) => deriveFunilVendasStatus(f.funnelStage, f.ultimo_pedido) === 'Ativo',
-    ).length,
-    prospect: filteredFactories.filter((f) => normalizeArray(f.status).includes('Prospeção'))
-      .length,
-  }
+  const metrics = useMemo(
+    () => ({
+      revenue: filteredFactories.reduce((s, f) => s + f.potentialValue, 0),
+      weighted: filteredFactories.reduce(
+        (s, f) => s + f.potentialValue * (f.winProbability / 100),
+        0,
+      ),
+      active: filteredFactories.filter(
+        (f) => deriveFunilVendasStatus(f.funnelStage, f.ultimo_pedido) === 'Ativo',
+      ).length,
+      prospect: filteredFactories.filter((f) => normalizeArray(f.status).includes('Prospeção'))
+        .length,
+    }),
+    [filteredFactories],
+  )
 
   const handleExportPDF = () => {
     const originalTitle = document.title
