@@ -63,34 +63,104 @@ routerAdd(
         duplicatas = 0
       var errors = []
 
-      for (var i = 0; i < rows.length; i++) {
-        var row = rows[i]
-        var rowNum = i + 2
-        var nome = String(row.nome || row.name || '').trim()
-        var tipo = String(row.tipo || '')
+      function normalizeKey(str) {
+        if (!str) return ''
+        return String(str)
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '')
+      }
+
+      function canonicalEspecie(raw) {
+        if (!raw) return null
+        var norm = String(raw)
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
           .trim()
           .toLowerCase()
-        // CNPJ header can be "cnpj" or "CNPJ"
-        var cnpjRaw = row.cnpj != null ? row.cnpj : row.CNPJ != null ? row.CNPJ : ''
+        if (norm === 'aves' || norm === 'ave') return 'Aves'
+        if (norm === 'suinos' || norm === 'suino') return 'Suinos'
+        if (norm === 'ruminantes' || norm === 'ruminante') return 'Ruminantes'
+        if (norm === 'pet' || norm === 'pets') return 'Pet'
+        if (norm === 'multiespecies' || norm === 'multiespecie') return 'Multiespécies'
+        return null
+      }
+
+      for (var i = 0; i < rows.length; i++) {
+        var row = rows[i] || {}
+        var rowNum = i + 2
+
+        // Build normalized lookup for row keys
+        var normRow = {}
+        var rowKeys = Object.keys(row)
+        for (var k = 0; k < rowKeys.length; k++) {
+          var origKey = rowKeys[k]
+          var nk = normalizeKey(origKey)
+          if (nk && normRow[nk] === undefined) {
+            normRow[nk] = row[origKey]
+          }
+        }
+
+        function getVal() {
+          for (var a = 0; a < arguments.length; a++) {
+            var rawArg = arguments[a]
+            if (
+              row[rawArg] !== undefined &&
+              row[rawArg] !== null &&
+              String(row[rawArg]).trim() !== ''
+            ) {
+              return row[rawArg]
+            }
+            var nArg = normalizeKey(rawArg)
+            if (
+              normRow[nArg] !== undefined &&
+              normRow[nArg] !== null &&
+              String(normRow[nArg]).trim() !== ''
+            ) {
+              return normRow[nArg]
+            }
+          }
+          return ''
+        }
+
+        var nome = String(getVal('nome', 'name')).trim()
+        var tipo = String(getVal('tipo', 'type')).trim().toLowerCase()
+        var cnpjRaw = getVal('cnpj', 'CNPJ')
         var cnpj = cleanCnpj(cnpjRaw)
-        var cidade = String(row.cidade || row.city || '').trim()
-        var estado = String(row.estado || row.state || '').trim()
-        var telefone = String(row.telefone || row.phone || row.contato || '').trim()
-        var email = String(row.email || '').trim()
-        // funil header maps to etapa_funil
-        var etapaFunil = String(
-          row.etapa_funil || row.funnelStage || row.funil || row.Funil || '',
-        ).trim()
+        var cidade = String(getVal('cidade', 'city')).trim()
+        var estado = String(getVal('estado', 'state', 'uf')).trim()
+        var telefone = String(getVal('contato', 'telefone', 'phone')).trim()
+        var email = String(getVal('email')).trim()
+        var etapaFunil = String(getVal('funil', 'etapa_funil', 'funnelStage', 'etapafunil')).trim()
         var valorPotencial = parseNumber(
-          row.valor_potencial || row.potentialValue || row.valor || row.Valor,
+          getVal('valor', 'valor_potencial', 'potentialValue', 'valorpotencial'),
         )
-        var observacoes = String(row.observacoes || row.notes || '').trim()
-        var carteira = String(row.carteira || '').trim()
-        var grupoCliente = String(row.grupo_cliente || row.grupoCliente || '').trim()
-        var especie = String(row.especie || row.Especie || row.animalSpecies || '').trim()
-        var statusContato = String(row.status_contato || row.StatusContato || '').trim()
-        var gestorNome = String(row.gestor || row.gestor_tecnico || '').trim()
-        var vendedorNome = String(row.vendedor || row.Vendedor || '').trim()
+        var observacoes = String(getVal('observacoes', 'notes')).trim()
+        var carteira = String(getVal('carteira')).trim()
+        var grupoCliente = String(getVal('grupo_cliente', 'grupoCliente', 'grupocliente')).trim()
+        var especieRaw = String(getVal('especie', 'Espécie', 'animalSpecies')).trim()
+        var statusContato = String(
+          getVal('status_contato', 'StatusContato', 'statuscontato'),
+        ).trim()
+        var gestorNome = String(getVal('gestor', 'gestor_tecnico', 'gestortecnico')).trim()
+        var vendedorNome = String(getVal('vendedor', 'Vendedor')).trim()
+
+        var especie = ''
+        if (especieRaw) {
+          var canon = canonicalEspecie(especieRaw)
+          if (!canon) {
+            errors.push({
+              linha: rowNum,
+              erro:
+                'espécie inválida: ' +
+                especieRaw +
+                ' (aceitos: Aves, Suinos, Ruminantes, Pet, Multiespécies)',
+            })
+            continue
+          }
+          especie = canon
+        }
 
         if (!nome) {
           errors.push({ linha: rowNum, erro: 'nome é obrigatório' })

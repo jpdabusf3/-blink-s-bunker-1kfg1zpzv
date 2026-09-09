@@ -30,17 +30,17 @@ import {
 import { toast } from 'sonner'
 
 const TEMPLATE_HEADERS = [
-  'nome',
+  'Nome',
   'CNPJ',
-  'especie',
-  'cidade',
-  'estado',
-  'contato',
-  'status_contato',
-  'funil',
-  'valor',
-  'gestor',
-  'vendedor',
+  'Espécie',
+  'Cidade',
+  'Estado',
+  'Contato',
+  'Status Contato',
+  'Funil',
+  'Valor',
+  'Gestor',
+  'Vendedor',
 ]
 
 export default function ImportarClientes() {
