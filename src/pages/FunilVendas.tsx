@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { getAllFactories, updateFactoryPB } from '@/services/factories'
 import { getScopedFactories } from '@/lib/user-scope'
 import { useAuth } from '@/hooks/use-auth'
