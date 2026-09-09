@@ -30,16 +30,9 @@ interface FactoryFormProps {
   onSubmit: () => void
 }
 
-const SPECIES_OPTIONS = [
-  'Ruminantes',
-  'Aves',
-  'Suinos',
-  'Pet',
-  'Aqua',
-  'Equinos',
-  'Outros',
-  'Multi espécie',
-]
+export const CANONICAL_SPECIES = ['Aves', 'Suinos', 'Ruminantes', 'Pet', 'Multiespécies']
+
+export const SPECIES_OPTIONS = CANONICAL_SPECIES
 
 const REGION_OPTIONS = ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul']
 
@@ -93,9 +86,17 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
   const [gestorTecnicoId, setGestorTecnicoId] = useState<string>(factory?.gestor_tecnico_id || '')
   const [vendedorId, setVendedorId] = useState<string>(factory?.vendedor_id || '')
 
-  const [species, setSpecies] = useState<string[]>(() =>
-    factory?.animalSpecies ? normalizeArray(factory.animalSpecies) : ['Ruminantes'],
-  )
+  const [species, setSpecies] = useState<string[]>(() => {
+    if (!factory?.animalSpecies) return ['Ruminantes']
+    const rawList = normalizeArray(factory.animalSpecies)
+    return rawList.map((sp) => {
+      const trimmed = String(sp).trim()
+      if (trimmed.toLowerCase() === 'multi espécie' || trimmed.toLowerCase() === 'multi especie') {
+        return 'Multiespécies'
+      }
+      return trimmed
+    })
+  })
   const [regions, setRegions] = useState<string[]>(() =>
     factory?.region ? normalizeArray(factory.region) : ['Norte'],
   )
@@ -154,7 +155,14 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
     const errors: Record<string, string> = {}
     if (!fd.get('name')) errors.name = 'Nome é obrigatório'
     if (!fd.get('city')) errors.city = 'Cidade é obrigatória'
-    if (species.length === 0) errors.species = 'Selecione ao menos uma espécie'
+    if (species.length === 0) {
+      errors.species = 'Selecione ao menos uma espécie'
+    } else {
+      const hasInvalidSpecies = species.some((sp) => !CANONICAL_SPECIES.includes(sp))
+      if (hasInvalidSpecies) {
+        errors.species = 'Espécie inválida — aceitos: Aves, Suinos, Ruminantes, Pet, Multiespécies'
+      }
+    }
     if (regions.length === 0) errors.regions = 'Selecione ao menos uma região'
     if (carteira.length === 0) errors.carteira = 'Selecione ao menos um perfil em carteira'
     if (priorities.length === 0) errors.priorities = 'Selecione ao menos uma prioridade'

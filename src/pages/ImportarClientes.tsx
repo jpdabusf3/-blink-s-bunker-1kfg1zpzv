@@ -175,19 +175,40 @@ export default function ImportarClientes() {
             </div>
           )}
 
-          <div className="rounded-lg border bg-muted/30 p-3">
-            <p className="text-xs font-semibold text-muted-foreground mb-2">
-              Cabeçalhos esperados:
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {TEMPLATE_HEADERS.map((h) => (
-                <code
-                  key={h}
-                  className="text-[11px] px-2 py-0.5 rounded bg-background border font-mono"
-                >
-                  {h}
-                </code>
-              ))}
+          <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-2">
+                Cabeçalhos esperados:
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {TEMPLATE_HEADERS.map((h) => (
+                  <code
+                    key={h}
+                    className="text-[11px] px-2 py-0.5 rounded bg-background border font-mono"
+                  >
+                    {h}
+                  </code>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t pt-2.5 space-y-1.5 text-xs text-muted-foreground">
+              <p className="font-semibold text-foreground">
+                Colunas com opções válidas predefinidas (validação suspensa no modelo):
+              </p>
+              <p>
+                <strong className="text-foreground">Espécie (Coluna C):</strong> Aves, Suinos,
+                Ruminantes, Pet, Multiespécies
+              </p>
+              <p>
+                <strong className="text-foreground">Status Contato (Coluna G):</strong> Champion,
+                Stakeholder, Decisor, Influenciador, Gatekeepers
+              </p>
+              <p>
+                <strong className="text-foreground">Funil (Coluna H):</strong> Lead, Primeiro
+                Contato, Diagnóstico Técnico, Apresentação, Teste/Trial, Proposta, Negociação,
+                Fechamento, Pós-venda, Perda
+              </p>
             </div>
           </div>
         </CardContent>

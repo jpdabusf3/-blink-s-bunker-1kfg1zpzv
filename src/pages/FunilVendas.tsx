@@ -70,6 +70,7 @@ import {
   FUNNEL_STAGES_PERMITIDOS,
 } from '@/lib/funnel-status'
 import { factoryMatchesVendedor } from '@/lib/vendedorFilterHelper'
+import { CANONICAL_SPECIES } from '@/components/FactoryForm'
 
 export type { FunilVendasStatus }
 export { deriveFunilVendasStatus }
@@ -80,16 +81,8 @@ const STATUS_COLUMNS: readonly FunilVendasStatus[] = [
   'Negociações Encerradas',
 ] as const
 
-const SPECIES = [
-  'Ruminantes',
-  'Aves',
-  'Suinos',
-  'Pet',
-  'Aqua',
-  'Equinos',
-  'Outros',
-  'Multi espécie',
-]
+// 5 espécies canônicas + legadas existentes para compatibilidade de filtro
+const SPECIES = [...CANONICAL_SPECIES, 'Aqua', 'Equinos', 'Outros', 'Multi espécie']
 const CANAL_VENDAS_OPTIONS = [
   'Direto',
   'Distribuidor',
@@ -209,7 +202,23 @@ export default function FunilVendas() {
         if (filters.vendedor !== 'all' && !factoryMatchesVendedor(f, filters.vendedor)) return false
         if (filters.gestor !== 'all' && f.gestor_tecnico_id !== filters.gestor) return false
         if (filters.canal !== 'all' && f.profile_type !== filters.canal) return false
-        if (filters.especie !== 'all' && f.animalSpecies !== filters.especie) return false
+        if (filters.especie !== 'all') {
+          const factorySpecies = Array.isArray(f.animalSpecies)
+            ? f.animalSpecies
+            : [f.animalSpecies].filter(Boolean)
+          const matches = factorySpecies.some((s) => {
+            if (s === filters.especie) return true
+            // Compatibilidade se o filtro for Multiespécies ou Multi espécie
+            if (
+              (filters.especie === 'Multiespécies' && s === 'Multi espécie') ||
+              (filters.especie === 'Multi espécie' && s === 'Multiespécies')
+            ) {
+              return true
+            }
+            return false
+          })
+          if (!matches) return false
+        }
         if (filters.status !== 'all' && status !== filters.status) return false
         return true
       }),

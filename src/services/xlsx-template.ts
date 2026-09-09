@@ -7,6 +7,10 @@
  * - Column widths
  * - Data validation dropdown for the "Espécie" column (C2:C1000) restricted to:
  *   "Aves, Suinos, Ruminantes, Pet, Multiespécies"
+ * - Data validation dropdown for the "Status Contato" column (G2:G1000) restricted to:
+ *   "Champion,Stakeholder,Decisor,Influenciador,Gatekeepers"
+ * - Data validation dropdown for the "Funil" column (H2:H1000) restricted to:
+ *   "Lead,Primeiro Contato,Diagnóstico Técnico,Apresentação,Teste/Trial,Proposta,Negociação,Fechamento,Pós-venda,Perda"
  */
 
 import { buildZip } from './zip-builder'
@@ -238,13 +242,25 @@ ${colWidths.map((c) => `    <col min="${c.min}" max="${c.max}" width="${c.width}
     rowsXmlArr.push(`    <row r="${rowNum}" spans="1:11">\n${cells}\n    </row>`)
   })
 
-  // Data validations: Col C (Espécie), C2:C1000
-  // Restricts to: Aves, Suinos, Ruminantes, Pet, Multiespécies
+  // Data validations:
+  // Col C (Espécie): C2:C1000 -> Aves,Suinos,Ruminantes,Pet,Multiespécies
+  // Col G (Status Contato): G2:G1000 -> Champion,Stakeholder,Decisor,Influenciador,Gatekeepers
+  // Col H (Funil): H2:H1000 -> Lead,Primeiro Contato,Diagnóstico Técnico,Apresentação,Teste/Trial,Proposta,Negociação,Fechamento,Pós-venda,Perda
   // In OpenXML, list validation formula1 is a quoted comma-separated string, e.g. &quot;Aves,Suinos,...&quot;
   const especieList = 'Aves,Suinos,Ruminantes,Pet,Multiespécies'
-  const dataValidationXml = `  <dataValidations count="1">
+  const statusContatoList = 'Champion,Stakeholder,Decisor,Influenciador,Gatekeepers'
+  const funilList =
+    'Lead,Primeiro Contato,Diagnóstico Técnico,Apresentação,Teste/Trial,Proposta,Negociação,Fechamento,Pós-venda,Perda'
+
+  const dataValidationXml = `  <dataValidations count="3">
     <dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="C2:C1000">
       <formula1>&quot;${escapeXml(especieList)}&quot;</formula1>
+    </dataValidation>
+    <dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="G2:G1000">
+      <formula1>&quot;${escapeXml(statusContatoList)}&quot;</formula1>
+    </dataValidation>
+    <dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="H2:H1000">
+      <formula1>&quot;${escapeXml(funilList)}&quot;</formula1>
     </dataValidation>
   </dataValidations>`
 

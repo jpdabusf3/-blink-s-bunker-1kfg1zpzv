@@ -47,7 +47,7 @@ import { UserCheck, History, ShieldCheck, Users, CheckSquare } from 'lucide-reac
 import { getScopedFactories } from '@/lib/user-scope'
 import { factoryMatchesAnyVendedor } from '@/lib/vendedorFilterHelper'
 import { normalizeArray } from '@/lib/utils'
-import { FactoryForm } from '@/components/FactoryForm'
+import { FactoryForm, CANONICAL_SPECIES } from '@/components/FactoryForm'
 import { ClientsMapDialog } from '@/components/ClientsMapDialog'
 import { ImportExcelDialog } from '@/components/ImportExcelDialog'
 import { MultiSelect } from '@/components/ui/multi-select'
@@ -68,16 +68,7 @@ import {
 import type { Factory } from '@/types'
 
 const REGION_OPTIONS = ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul']
-const SPECIES_OPTIONS = [
-  'Ruminantes',
-  'Aves',
-  'Suinos',
-  'Pet',
-  'Aqua',
-  'Equinos',
-  'Outros',
-  'Multi espécie',
-]
+const SPECIES_OPTIONS = CANONICAL_SPECIES
 const STATUS_OPTIONS = ['Atendido', 'Não atendido', 'Prospeção']
 const PRODUCT_LINE_OPTIONS = [
   'Adsorventes',
