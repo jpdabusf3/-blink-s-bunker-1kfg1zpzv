@@ -8,7 +8,6 @@ import {
 } from '@/services/pedidoService'
 import type { EquipeMember } from '@/services/equipe'
 import type { ProdutoCatalogo } from '@/services/nfe-service'
-import { useAuth } from '@/hooks/use-auth'
 
 export interface UsePedidoVendaReturn {
   produtos: ProdutoCatalogo[]
@@ -56,7 +55,6 @@ export interface UsePedidoVendaReturn {
 }
 
 export function usePedidoVenda(): UsePedidoVendaReturn {
-  const { user } = useAuth()
   const [produtos, setProdutos] = useState<ProdutoCatalogo[]>([])
   const [gestoresTecnicos, setGestoresTecnicos] = useState<EquipeMember[]>([])
   const [vendedores, setVendedores] = useState<EquipeMember[]>([])

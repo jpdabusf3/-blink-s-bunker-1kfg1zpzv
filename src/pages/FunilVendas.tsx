@@ -94,6 +94,10 @@ const CANAL_VENDAS_OPTIONS = [
 
 export default function FunilVendas() {
   const { user } = useAuth()
+  const userRef = useRef(user)
+  useEffect(() => {
+    userRef.current = user
+  }, [user])
   const { toast } = useToast()
   const { logAction } = useFunnelActivityLog()
   const [factories, setFactories] = useState<Factory[]>([])
@@ -150,6 +154,12 @@ export default function FunilVendas() {
     }
   }, [])
 
+  const reloadDashboardData = useCallback(() => {
+    fetchConsolidatedData()
+      .then(setDashboardData)
+      .catch(() => {})
+  }, [])
+
   useEffect(() => {
     loadData()
     getVendedoresGestao()
@@ -158,27 +168,16 @@ export default function FunilVendas() {
     getGestoresGestao()
       .then(setGestores)
       .catch(() => {})
+    reloadDashboardData()
+  }, [loadData, reloadDashboardData])
+
+  const handleFactoriesRealtime = useCallback(() => {
+    loadData()
   }, [loadData])
 
-  useRealtime('factories', () => {
-    loadData()
-  })
-
-  useEffect(() => {
-    fetchConsolidatedData()
-      .then(setDashboardData)
-      .catch(() => {})
-  }, [])
-  useRealtime('metas', () => {
-    fetchConsolidatedData()
-      .then(setDashboardData)
-      .catch(() => {})
-  })
-  useRealtime('historico_vendas', () => {
-    fetchConsolidatedData()
-      .then(setDashboardData)
-      .catch(() => {})
-  })
+  useRealtime('factories', handleFactoriesRealtime)
+  useRealtime('metas', reloadDashboardData)
+  useRealtime('historico_vendas', reloadDashboardData)
 
   const scoped = useMemo(() => getScopedFactories(factories, user), [factories, user])
 

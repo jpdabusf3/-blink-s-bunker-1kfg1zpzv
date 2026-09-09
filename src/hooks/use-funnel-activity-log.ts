@@ -100,7 +100,7 @@ export function useFunnelActivityLog() {
   // Initial load
   useEffect(() => {
     fetchActivity({})
-  }, [fetchActivity])
+  }, [])
 
   return {
     data,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -82,6 +82,10 @@ const PAGE_SIZE_OPTIONS = [15, 30, 50, 100]
 
 export default function Cadastro() {
   const { user } = useAuth()
+  const userRef = useRef(user)
+  useEffect(() => {
+    userRef.current = user
+  }, [user])
   const [factories, setFactories] = useState<Factory[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -247,32 +251,43 @@ export default function Cadastro() {
   const [selectedProfiles, setSelectedProfiles] = useState<string[]>([])
   const [selectedProductLines, setSelectedProductLines] = useState<string[]>([])
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true)
     try {
       const [all, gestao] = await Promise.all([
         getAllFactories(),
         getGestaoTecnica().catch(() => [] as GestaoTecnica[]),
       ])
-      setFactories(getScopedFactories(all, user))
+      setFactories(getScopedFactories(all, userRef.current))
       setGestaoTecnicaList(gestao)
     } catch {
       setFactories([])
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
+  // Carrega na montagem ou quando os atributos de escopo do usuário mudarem
+  const userId = user?.id
+  const userRole = user?.job_title
+  const userArea = user?.geographicArea
+  const userCountry = user?.country
   useEffect(() => {
     loadData()
-  }, [user])
+  }, [loadData, userId, userRole, userArea, userCountry])
 
-  useRealtime('factories', () => loadData())
-  useRealtime('gestao_tecnica', () => {
+  const handleFactoriesRealtime = useCallback(() => {
+    loadData()
+  }, [loadData])
+
+  const handleGestaoRealtime = useCallback(() => {
     getGestaoTecnica()
       .then(setGestaoTecnicaList)
       .catch(() => {})
-  })
+  }, [])
+
+  useRealtime('factories', handleFactoriesRealtime)
+  useRealtime('gestao_tecnica', handleGestaoRealtime)
 
   // Opções dinâmicas para os filtros baseadas nos dados cadastrados
   // Opções dinâmicas para os filtros baseadas estritamente nos dados cadastrados (distintas, ordenadas e sem vazios)

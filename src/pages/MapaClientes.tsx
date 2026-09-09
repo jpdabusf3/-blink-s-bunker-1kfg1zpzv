@@ -112,14 +112,18 @@ export default function MapaClientes() {
     loadData()
   }, [loadData, userId, userRole, userArea, userCountry])
 
-  useRealtime('factories', () => {
+  const handleFactoriesRealtime = useCallback(() => {
     loadData()
-  })
-  useRealtime('gestao_tecnica', () => {
+  }, [loadData])
+
+  const handleGestaoRealtime = useCallback(() => {
     getGestaoTecnica()
       .then(setGestaoTecnicaList)
       .catch(() => {})
-  })
+  }, [])
+
+  useRealtime('factories', handleFactoriesRealtime)
+  useRealtime('gestao_tecnica', handleGestaoRealtime)
 
   // Clientes com coordenadas válidas (lat e lng preenchidos e diferentes de 0)
   const validFactories = useMemo(() => {

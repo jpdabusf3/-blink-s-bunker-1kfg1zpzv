@@ -129,14 +129,12 @@ export default function Index() {
 
   const moveBlock = useCallback(
     (fromIndex: number, toIndex: number) => {
-      setBlocks((prevBlocks) => {
-        const newBlocks = [...prevBlocks]
-        const [moved] = newBlocks.splice(fromIndex, 1)
-        newBlocks.splice(toIndex, 0, moved)
-        return newBlocks
-      })
+      const newBlocks = [...blocks]
+      const [moved] = newBlocks.splice(fromIndex, 1)
+      newBlocks.splice(toIndex, 0, moved)
+      setBlocks(newBlocks)
     },
-    [setBlocks],
+    [blocks, setBlocks],
   )
 
   const effectiveRegionFilter = useMemo(

@@ -54,18 +54,21 @@ export default function Metas() {
       .catch(() => {})
   }, [])
 
-  useRealtime('metas', () => {
+  const handleMetasRealtime = useCallback(() => {
     loadData()
-  })
+  }, [])
 
-  useRealtime('gestao_tecnica', () => {
+  const handleGestaoRealtime = useCallback(() => {
     getGestaoTecnica()
       .then((all) => {
         setVendedores(all.filter((g) => g.funcao === 'vendedor'))
         setGestores(all.filter((g) => g.funcao === 'gestor_tecnico'))
       })
       .catch(() => {})
-  })
+  }, [])
+
+  useRealtime('metas', handleMetasRealtime)
+  useRealtime('gestao_tecnica', handleGestaoRealtime)
 
   const editingMeta = useMemo(
     () => (editingId ? (metas.find((m) => m.id === editingId) ?? null) : null),

@@ -231,6 +231,11 @@ export default function HistoricoFunil() {
     [fetchActivity, filters],
   )
 
+  const filtersRef = useRef(filters)
+  useEffect(() => {
+    filtersRef.current = filters
+  }, [filters])
+
   // Reload when filters change
   useEffect(() => {
     fetchActivity(filters, 1)
@@ -246,7 +251,7 @@ export default function HistoricoFunil() {
         n.add(record.id)
         return n
       })
-      fetchActivity(filters, 1)
+      fetchActivity(filtersRef.current, 1)
       // Clear highlight after 3s
       setTimeout(() => {
         setHighlightIds((prev) => {
@@ -257,7 +262,7 @@ export default function HistoricoFunil() {
       }, 3000)
     })
     return unsubscribe
-  }, [subscribeToChanges, fetchActivity, filters])
+  }, [subscribeToChanges, fetchActivity])
 
   return (
     <div className="flex flex-col h-full animate-fade-in space-y-4 pb-10">

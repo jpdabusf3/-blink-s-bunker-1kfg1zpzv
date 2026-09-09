@@ -218,9 +218,13 @@ export default function Relatorios() {
     loadData()
   }, [factories])
 
-  useRealtime('historico_vendas', () => loadData())
-  useRealtime('notas_fiscais', () => loadData())
-  useRealtime('orders', () => loadData())
+  const handleRealtimeReload = useCallback(() => {
+    loadData()
+  }, [])
+
+  useRealtime('historico_vendas', handleRealtimeReload)
+  useRealtime('notas_fiscais', handleRealtimeReload)
+  useRealtime('orders', handleRealtimeReload)
 
   const states = useMemo(() => {
     const s = new Set<string>()
