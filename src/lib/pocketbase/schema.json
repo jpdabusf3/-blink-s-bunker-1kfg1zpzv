@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-09T14:39:00.986Z",
+  "generatedAt": "2026-09-09T14:47:46.816Z",
   "collections": [
     {
       "name": "users",
@@ -394,7 +394,8 @@
             "Aqua",
             "Equinos",
             "Outros",
-            "Multi espécie"
+            "Multi espécie",
+            "Multiespécies"
           ]
         },
         {

@@ -59,6 +59,20 @@ routerAdd(
           .replace(/[^a-z0-9]/g, '')
       }
 
+      // Valores válidos do select animalSpecies no schema de factories:
+      // Ruminantes | Aves | Suinos | Pet | Aqua | Equinos | Outros | Multi espécie | Multiespécies
+      var VALID_ANIMAL_SPECIES = [
+        'Ruminantes',
+        'Aves',
+        'Suinos',
+        'Pet',
+        'Aqua',
+        'Equinos',
+        'Outros',
+        'Multi espécie',
+        'Multiespécies',
+      ]
+
       function canonicalEspecie(raw) {
         if (!raw) return null
         var norm = String(raw)
@@ -66,25 +80,125 @@ routerAdd(
           .replace(/[\u0300-\u036f]/g, '')
           .trim()
           .toLowerCase()
-        if (norm === 'aves' || norm === 'ave') return 'Aves'
-        if (norm === 'suinos' || norm === 'suino') return 'Suinos'
-        if (norm === 'ruminantes' || norm === 'ruminante') return 'Ruminantes'
-        if (norm === 'pet' || norm === 'pets') return 'Pet'
+        var clean = norm.replace(/[^a-z0-9]/g, '')
+
+        if (norm === 'aves' || norm === 'ave' || clean === 'aves' || clean === 'ave') return 'Aves'
         if (
-          norm === 'multiespecies' ||
-          norm === 'multiespecie' ||
-          norm === 'muitiespecies' ||
-          norm === 'muitiespecie' ||
-          norm === 'multi-especie' ||
-          norm === 'multi-especies' ||
+          norm === 'suinos' ||
+          norm === 'suino' ||
+          clean === 'suinos' ||
+          clean === 'suino' ||
+          clean.indexOf('suin') !== -1
+        )
+          return 'Suinos'
+        if (
+          norm === 'ruminantes' ||
+          norm === 'ruminante' ||
+          clean === 'ruminantes' ||
+          clean === 'ruminante' ||
+          clean.indexOf('bovin') !== -1 ||
+          clean.indexOf('rumin') !== -1
+        )
+          return 'Ruminantes'
+        if (norm === 'pet' || norm === 'pets' || clean === 'pet' || clean === 'pets') return 'Pet'
+        if (clean === 'aqua' || clean.indexOf('pisci') !== -1 || clean.indexOf('aqua') !== -1)
+          return 'Aqua'
+        if (clean.indexOf('equin') !== -1 || clean === 'equino' || clean === 'equinos')
+          return 'Equinos'
+        if (
+          clean === 'multiespecies' ||
+          clean === 'multiespecie' ||
+          clean === 'muitiespecies' ||
+          clean === 'muitiespecie' ||
+          clean === 'multiespecie' ||
+          clean === 'multiespecies' ||
           norm === 'multi especie' ||
           norm === 'multi especies' ||
-          norm.replace(/[^a-z0-9]/g, '') === 'multiespecies' ||
-          norm.replace(/[^a-z0-9]/g, '') === 'multiespecie'
+          norm === 'multi-especie' ||
+          norm === 'multi-especies'
         ) {
           return 'Multiespécies'
         }
-        return null
+        if (clean === 'outros' || clean === 'outro') return 'Outros'
+
+        // Fallback seguro para "Outros" para qualquer espécie não mapeada
+        return 'Outros'
+      }
+
+      // Valores válidos do select profile_type no schema de factories:
+      // Indústria | Industria | Produtor | Representantes | Distribuidores | Revendas | Cooperativas | Indústrias | Integradora | Premixeira | Produtores | Outros | Distribuidor
+      var VALID_PROFILE_TYPES = [
+        'Indústria',
+        'Industria',
+        'Produtor',
+        'Representantes',
+        'Distribuidores',
+        'Revendas',
+        'Cooperativas',
+        'Indústrias',
+        'Integradora',
+        'Premixeira',
+        'Produtores',
+        'Outros',
+        'Distribuidor',
+      ]
+
+      function canonicalProfileType(raw) {
+        if (!raw) return ''
+        var s = String(raw).trim()
+        if (!s) return ''
+        // Se já for exatamente um dos valores válidos do select, retorna como está
+        if (VALID_PROFILE_TYPES.indexOf(s) !== -1) return s
+
+        var norm = s
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+        var clean = norm.replace(/[^a-z0-9]/g, '')
+
+        if (clean.indexOf('premix') !== -1) return 'Premixeira' // ex: Premixeiras -> Premixeira
+        if (clean.indexOf('cooperat') !== -1) return 'Cooperativas'
+        if (clean.indexOf('integr') !== -1) return 'Integradora'
+        if (clean.indexOf('revend') !== -1) return 'Revendas'
+        if (clean.indexOf('represent') !== -1) return 'Representantes'
+        if (clean.indexOf('distrib') !== -1) return 'Distribuidores'
+        if (clean.indexOf('produt') !== -1) return 'Produtores'
+        if (clean.indexOf('industr') !== -1) return 'Indústria'
+        if (clean.indexOf('outro') !== -1) return 'Outros'
+
+        return 'Outros'
+      }
+
+      // Valores válidos do select status_contato no schema de factories:
+      // Champion | Stakeholder | Decisor | Influenciador | Gatekeepers
+      var VALID_STATUS_CONTATO = [
+        'Champion',
+        'Stakeholder',
+        'Decisor',
+        'Influenciador',
+        'Gatekeepers',
+      ]
+
+      function canonicalStatusContato(raw) {
+        if (!raw) return ''
+        var s = String(raw).trim()
+        if (!s) return ''
+        if (VALID_STATUS_CONTATO.indexOf(s) !== -1) return s
+
+        var clean = s
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '')
+
+        if (clean === 'champion' || clean === 'champions') return 'Champion'
+        if (clean === 'stakeholder' || clean === 'stakeholders') return 'Stakeholder'
+        if (clean === 'decisor' || clean === 'decisores' || clean === 'decisor(a)') return 'Decisor'
+        if (clean === 'influenciador' || clean === 'influenciadores' || clean === 'influente')
+          return 'Influenciador'
+        if (clean === 'gatekeeper' || clean === 'gatekeepers') return 'Gatekeepers'
+
+        return ''
       }
 
       function canonicalFunnelStage(raw) {
@@ -211,7 +325,10 @@ routerAdd(
         var carteira = String(getVal('carteira')).trim()
         var grupoCliente = String(getVal('grupo_cliente', 'grupoCliente', 'grupocliente')).trim()
         var especieRaw = String(getVal('especie', 'Espécie', 'animalSpecies')).trim()
-        var statusContato = String(
+        var profileTypeRaw = String(
+          getVal('profile_type', 'profileType', 'perfil', 'tipo_perfil', 'categoria'),
+        ).trim()
+        var statusContatoRaw = String(
           getVal('status_contato', 'StatusContato', 'statuscontato'),
         ).trim()
         var gestorNome = String(getVal('gestor', 'gestor_tecnico', 'gestortecnico')).trim()
@@ -219,21 +336,25 @@ routerAdd(
 
         var especie = ''
         if (especieRaw) {
-          var canon = canonicalEspecie(especieRaw)
-          if (!canon) {
-            errors.push({
-              linha: rowNum,
-              erro:
-                'espécie inválida: "' +
-                especieRaw +
-                '" (aceitos: Aves, Suinos, Ruminantes, Pet, Multiespécies)',
-            })
-            continue
+          var canon = canonicalEspecie(especieRaw) || 'Outros'
+          // Garantir que a espécie pertença aos valores do select
+          if (VALID_ANIMAL_SPECIES.indexOf(canon) === -1) {
+            canon = 'Outros'
           }
           especie = canon
           if (especieRaw !== canon) {
             especiesNormalizadas++
           }
+        }
+
+        var profileType = ''
+        if (profileTypeRaw) {
+          profileType = canonicalProfileType(profileTypeRaw)
+        }
+
+        var statusContato = ''
+        if (statusContatoRaw) {
+          statusContato = canonicalStatusContato(statusContatoRaw)
         }
 
         if (!nome) {
@@ -311,6 +432,7 @@ routerAdd(
           if (observacoes) newRec.set('notes', observacoes)
           if (carteira) newRec.set('carteira', carteira.toUpperCase())
           if (grupoCliente) newRec.set('grupo_cliente', grupoCliente)
+          if (profileType) newRec.set('profile_type', profileType)
           if (especie) newRec.set('animalSpecies', especie)
           if (statusContato) newRec.set('status_contato', statusContato)
           if (telefone) newRec.set('contato', telefone)
