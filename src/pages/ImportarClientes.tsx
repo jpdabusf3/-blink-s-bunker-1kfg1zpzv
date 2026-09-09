@@ -100,8 +100,16 @@ export default function ImportarClientes() {
       const res = await importExcel(file)
       setResult(res)
       if (res.success) {
+        const detalhesNorm: string[] = []
+        if (res.especiesNormalizadas && res.especiesNormalizadas > 0) {
+          detalhesNorm.push(`${res.especiesNormalizadas} espécies normalizadas`)
+        }
+        if (res.funisNormalizadosLead && res.funisNormalizadosLead > 0) {
+          detalhesNorm.push(`${res.funisNormalizadosLead} funis ajustados para Lead`)
+        }
+        const normMsg = detalhesNorm.length > 0 ? ` (${detalhesNorm.join(', ')})` : ''
         toast.success(
-          `Importação concluída: ${res.criados} criados, ${res.duplicatas ?? 0} duplicatas ignoradas`,
+          `Importação concluída: ${res.criados} criados, ${res.duplicatas ?? 0} duplicatas ignoradas${normMsg}`,
         )
       }
     } catch (err) {
@@ -320,6 +328,42 @@ export default function ImportarClientes() {
                 <p className="text-xs text-muted-foreground">Erros</p>
               </div>
             </div>
+
+            {/* Resumo de normalizações automáticas */}
+            {((result.especiesNormalizadas && result.especiesNormalizadas > 0) ||
+              (result.funisNormalizadosLead && result.funisNormalizadosLead > 0) ||
+              (result.funisAjustados && result.funisAjustados > 0)) && (
+              <div className="rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 p-4 space-y-2">
+                <p className="text-xs font-semibold text-blue-900 dark:text-blue-300">
+                  Normalizações automáticas realizadas:
+                </p>
+                <div className="flex flex-wrap gap-2 text-xs text-blue-800 dark:text-blue-300">
+                  {result.especiesNormalizadas && result.especiesNormalizadas > 0 ? (
+                    <span className="inline-flex items-center gap-1 bg-blue-100 dark:bg-blue-900/40 px-2.5 py-1 rounded-full">
+                      ✓ {result.especiesNormalizadas}{' '}
+                      {result.especiesNormalizadas === 1
+                        ? 'espécie normalizada para o padrão canônico'
+                        : 'espécies normalizadas para o padrão canônico'}{' '}
+                      (ex.: "Multiespécies")
+                    </span>
+                  ) : null}
+                  {result.funisNormalizadosLead && result.funisNormalizadosLead > 0 ? (
+                    <span className="inline-flex items-center gap-1 bg-blue-100 dark:bg-blue-900/40 px-2.5 py-1 rounded-full">
+                      ✓ {result.funisNormalizadosLead}{' '}
+                      {result.funisNormalizadosLead === 1
+                        ? 'estágio de funil ajustado para Lead'
+                        : 'estágios de funil ajustados para Lead'}{' '}
+                      ("prospecção" → "Lead")
+                    </span>
+                  ) : null}
+                  {result.funisAjustados && result.funisAjustados > 0 ? (
+                    <span className="inline-flex items-center gap-1 bg-blue-100 dark:bg-blue-900/40 px-2.5 py-1 rounded-full">
+                      ✓ {result.funisAjustados} outros estágios de funil padronizados
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            )}
 
             {result.erros.length > 0 && (
               <div className="max-h-72 overflow-y-auto space-y-1">

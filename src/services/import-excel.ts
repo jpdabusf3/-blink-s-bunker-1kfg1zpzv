@@ -12,6 +12,9 @@ export interface ImportResult {
   criados: number
   atualizados: number
   duplicatas?: number
+  especiesNormalizadas?: number
+  funisNormalizadosLead?: number
+  funisAjustados?: number
   erros: ImportError[]
   total: number
 }

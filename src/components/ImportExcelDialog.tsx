@@ -57,8 +57,16 @@ export function ImportExcelDialog({ open, onOpenChange, onImported }: ImportExce
       const res = await importExcel(file)
       setResult(res)
       if (res.success) {
+        const detalhesNorm: string[] = []
+        if (res.especiesNormalizadas && res.especiesNormalizadas > 0) {
+          detalhesNorm.push(`${res.especiesNormalizadas} espécies normalizadas`)
+        }
+        if (res.funisNormalizadosLead && res.funisNormalizadosLead > 0) {
+          detalhesNorm.push(`${res.funisNormalizadosLead} funis ajustados para Lead`)
+        }
+        const normMsg = detalhesNorm.length > 0 ? ` (${detalhesNorm.join(', ')})` : ''
         toast.success(
-          `Importação concluída: ${res.criados} criados, ${res.atualizados} atualizados`,
+          `Importação concluída: ${res.criados} criados, ${res.atualizados} atualizados${normMsg}`,
         )
         onImported()
       }
@@ -138,6 +146,34 @@ export function ImportExcelDialog({ open, onOpenChange, onImported }: ImportExce
                 <p className="text-xs text-muted-foreground">Erros</p>
               </div>
             </div>
+
+            {/* Resumo de normalizações automáticas */}
+            {((result.especiesNormalizadas && result.especiesNormalizadas > 0) ||
+              (result.funisNormalizadosLead && result.funisNormalizadosLead > 0) ||
+              (result.funisAjustados && result.funisAjustados > 0)) && (
+              <div className="rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 p-3 space-y-1.5 text-xs text-blue-800 dark:text-blue-300">
+                <p className="font-semibold text-blue-900 dark:text-blue-200">
+                  Normalizações automáticas:
+                </p>
+                <div className="space-y-1">
+                  {result.especiesNormalizadas && result.especiesNormalizadas > 0 ? (
+                    <p>
+                      ✓ {result.especiesNormalizadas} espécie(s) padronizada(s) para o padrão
+                      canônico (ex.: "Multiespécies")
+                    </p>
+                  ) : null}
+                  {result.funisNormalizadosLead && result.funisNormalizadosLead > 0 ? (
+                    <p>
+                      ✓ {result.funisNormalizadosLead} estágio(s) de funil ajustado(s) de
+                      "prospecção" para "Lead"
+                    </p>
+                  ) : null}
+                  {result.funisAjustados && result.funisAjustados > 0 ? (
+                    <p>✓ {result.funisAjustados} outro(s) estágio(s) padronizado(s)</p>
+                  ) : null}
+                </div>
+              </div>
+            )}
 
             {result.erros.length > 0 && (
               <div className="max-h-48 overflow-y-auto space-y-1">

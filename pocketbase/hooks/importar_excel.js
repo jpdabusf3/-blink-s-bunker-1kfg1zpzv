@@ -41,26 +41,13 @@ routerAdd(
         return parseFloat(s.replace(/[^\d.-]/g, '')) || 0
       }
 
-      var VALID_STAGES = [
-        'prospeccao',
-        'qualificacao',
-        'proposta',
-        'fechamento',
-        'pos_venda',
-        'pos-venda',
-        'lead',
-        'primeiro contato',
-        'diagnostico tecnico',
-        'apresentacao',
-        'teste/trial',
-        'negociacao',
-        'perda',
-      ]
-
       var factoriesCol = $app.findCollectionByNameOrId('factories')
       var created = 0,
         updated = 0,
         duplicatas = 0
+      var especiesNormalizadas = 0
+      var funisNormalizadosLead = 0
+      var funisAjustados = 0
       var errors = []
 
       function normalizeKey(str) {
@@ -83,8 +70,92 @@ routerAdd(
         if (norm === 'suinos' || norm === 'suino') return 'Suinos'
         if (norm === 'ruminantes' || norm === 'ruminante') return 'Ruminantes'
         if (norm === 'pet' || norm === 'pets') return 'Pet'
-        if (norm === 'multiespecies' || norm === 'multiespecie') return 'Multiespécies'
+        if (
+          norm === 'multiespecies' ||
+          norm === 'multiespecie' ||
+          norm === 'muitiespecies' ||
+          norm === 'muitiespecie' ||
+          norm === 'multi-especie' ||
+          norm === 'multi-especies' ||
+          norm === 'multi especie' ||
+          norm === 'multi especies' ||
+          norm.replace(/[^a-z0-9]/g, '') === 'multiespecies' ||
+          norm.replace(/[^a-z0-9]/g, '') === 'multiespecie'
+        ) {
+          return 'Multiespécies'
+        }
         return null
+      }
+
+      function canonicalFunnelStage(raw) {
+        if (!raw) return 'Lead'
+        var norm = String(raw)
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .trim()
+          .toLowerCase()
+        var clean = norm.replace(/[^a-z0-9]/g, '')
+
+        // Variações legadas de prospecção mapeiam diretamente para "Lead"
+        if (
+          norm === 'prospeccao' ||
+          norm === 'prospeccao' ||
+          clean === 'prospeccao' ||
+          clean === 'prospeccao' ||
+          clean === 'prospeccao' ||
+          clean === 'prospecao' ||
+          clean === 'prospeccao' ||
+          clean === 'lead' ||
+          clean === 'leads'
+        ) {
+          return 'Lead'
+        }
+
+        // Estágios canônicos e variações comuns
+        if (clean === 'primeirocontato' || clean === '1contato' || clean === 'contato') {
+          return 'Primeiro Contato'
+        }
+        if (
+          clean === 'diagnosticotecnico' ||
+          clean === 'diagnostico' ||
+          clean === 'diagnosticotec'
+        ) {
+          return 'Diagnóstico Técnico'
+        }
+        if (clean === 'apresentacao' || clean === 'apresentacao') {
+          return 'Apresentação'
+        }
+        if (clean === 'testetrial' || clean === 'teste' || clean === 'trial' || clean === 'test') {
+          return 'Teste/Trial'
+        }
+        if (clean === 'proposta' || clean === 'propostas') {
+          return 'Proposta'
+        }
+        if (clean === 'negociacao' || clean === 'negociacao') {
+          return 'Negociação'
+        }
+        if (clean === 'fechamento' || clean === 'fechado') {
+          return 'Fechamento'
+        }
+        if (
+          clean === 'posvenda' ||
+          clean === 'posvendas' ||
+          norm === 'pos-venda' ||
+          norm === 'pos_venda'
+        ) {
+          return 'Pós-venda'
+        }
+        if (clean === 'perda' || clean === 'perdido' || clean === 'perdas') {
+          return 'Perda'
+        }
+
+        // Termos legados adicionais
+        if (clean === 'qualificacao') {
+          return 'Lead'
+        }
+
+        // Se desconhecido, tolerar normalizando para Lead (equivalente seguro padrão)
+        return 'Lead'
       }
 
       for (var i = 0; i < rows.length; i++) {
@@ -153,13 +224,16 @@ routerAdd(
             errors.push({
               linha: rowNum,
               erro:
-                'espécie inválida: ' +
+                'espécie inválida: "' +
                 especieRaw +
-                ' (aceitos: Aves, Suinos, Ruminantes, Pet, Multiespécies)',
+                '" (aceitos: Aves, Suinos, Ruminantes, Pet, Multiespécies)',
             })
             continue
           }
           especie = canon
+          if (especieRaw !== canon) {
+            especiesNormalizadas++
+          }
         }
 
         if (!nome) {
@@ -172,14 +246,29 @@ routerAdd(
           errors.push({ linha: rowNum, erro: 'tipo deve ser "cliente" ou "prospecto"' })
           continue
         }
+        // CNPJ é opcional. Apenas valida se preenchido.
         if (cnpj && !validateCnpj(cnpj)) {
-          errors.push({ linha: rowNum, erro: 'CNPJ inválido: ' + (row.cnpj || '') })
+          errors.push({ linha: rowNum, erro: 'CNPJ inválido: ' + (cnpjRaw || '') })
           continue
         }
-        if (etapaFunil && VALID_STAGES.indexOf(etapaFunil.toLowerCase()) === -1) {
-          errors.push({ linha: rowNum, erro: 'etapa_funil inválida: ' + etapaFunil })
-          continue
+
+        // Funil: normaliza variações (ex: "prospeccao" -> "Lead", "fechamento" -> "Fechamento")
+        var finalStage = 'Lead'
+        if (etapaFunil) {
+          var canonStage = canonicalFunnelStage(etapaFunil)
+          finalStage = canonStage
+          var etapaLower = etapaFunil.trim().toLowerCase()
+          if (
+            etapaLower.indexOf('prospec') !== -1 ||
+            etapaLower === 'prospeccao' ||
+            etapaLower === 'prospecção'
+          ) {
+            funisNormalizadosLead++
+          } else if (etapaFunil !== canonStage) {
+            funisAjustados++
+          }
         }
+
         var VALID_CARTEIRAS = ['AVES', 'PETS', 'RUMINANTES', 'SUINOS', 'AQUA']
         if (carteira && VALID_CARTEIRAS.indexOf(carteira.toUpperCase()) === -1) {
           errors.push({ linha: rowNum, erro: 'carteira inválida: ' + carteira })
@@ -214,9 +303,9 @@ routerAdd(
           if (telefone) newRec.set('contactPhone', telefone)
           if (email) newRec.set('contact_email', email)
           if (tipo === 'prospecto') {
-            newRec.set('funnelStage', 'prospeccao')
+            newRec.set('funnelStage', 'Lead')
           } else {
-            newRec.set('funnelStage', etapaFunil || 'Lead')
+            newRec.set('funnelStage', finalStage)
           }
           if (valorPotencial) newRec.set('potentialValue', valorPotencial)
           if (observacoes) newRec.set('notes', observacoes)
@@ -258,6 +347,9 @@ routerAdd(
         criados: created,
         atualizados: updated,
         duplicatas: duplicatas,
+        especiesNormalizadas: especiesNormalizadas,
+        funisNormalizadosLead: funisNormalizadosLead,
+        funisAjustados: funisAjustados,
         erros: errors,
         total: rows.length,
       })
