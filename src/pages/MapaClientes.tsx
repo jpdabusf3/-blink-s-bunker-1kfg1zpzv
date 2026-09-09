@@ -44,6 +44,12 @@ import {
   matchesAnyProfileCategory,
   countClientsByCategory,
 } from '@/constants/clientCategories'
+import {
+  getFunnelCategory,
+  FUNNEL_CATEGORY_OPTIONS,
+  FUNNEL_CATEGORY_COLORS,
+  type FunnelCategory,
+} from '@/lib/funnel-status'
 import { useOsrmRoute } from '@/hooks/use-osrm-route'
 import {
   buildPeerCityCache,
@@ -78,6 +84,7 @@ export default function MapaClientes() {
   const [search, setSearch] = useState('')
   const [gestaoTecnicaList, setGestaoTecnicaList] = useState<GestaoTecnica[]>([])
   const [vendedorFilter, setVendedorFilter] = useState('all')
+  const [funnelStatusFilter, setFunnelStatusFilter] = useState<string>('all')
   const [addressStatusFilter, setAddressStatusFilter] = useState('all')
   const [profileFilter, setProfileFilter] = useState('all')
   const [showBlinkLocations, setShowBlinkLocations] = useState(true)
@@ -428,6 +435,10 @@ export default function MapaClientes() {
       if (vendedorFilter !== 'all') {
         if (!factoryMatchesVendedor(f, vendedorFilter)) return false
       }
+      if (funnelStatusFilter !== 'all') {
+        const cat = getFunnelCategory(f)
+        if (cat !== funnelStatusFilter) return false
+      }
       if (addressStatusFilter !== 'all') {
         if (f.address_status !== addressStatusFilter) return false
       }
@@ -440,7 +451,14 @@ export default function MapaClientes() {
       }
       return true
     })
-  }, [validFactories, search, vendedorFilter, addressStatusFilter, profileFilter])
+  }, [
+    validFactories,
+    search,
+    vendedorFilter,
+    funnelStatusFilter,
+    addressStatusFilter,
+    profileFilter,
+  ])
 
   useEffect(() => {
     if (mapInstanceRef.current) {
@@ -621,40 +639,40 @@ export default function MapaClientes() {
       const isStateApprox = f.isApproximateState || f.geocode_precision === 'state'
       const isApproximate = isCityApprox || isStateApprox
 
-      const statusColor = isStateApprox
-        ? '#8b5cf6' // Roxo para centro do Estado
-        : isCityApprox
-          ? '#0284c7' // Azul céu para centróide da Cidade
-          : f.address_status === 'complete'
-            ? '#10b981' // Verde para endereço completo
-            : f.address_status === 'enriched'
-              ? '#3b82f6' // Azul royal para enriquecido
-              : f.address_status === 'partial'
-                ? '#f59e0b' // Âmbar para parcial
-                : f.address_status === 'inconsistent'
-                  ? '#f97316' // Laranja para inconsistente
-                  : '#ef4444' // Vermelho
+      // Cor do pin baseada EXCLUSIVAMENTE na categoria do funil de vendas:
+      // Ativos -> Azul (#2563eb)
+      // Prospectos -> Verde (#16a34a)
+      // Inativos -> Amarelo (#eab308)
+      // Negociação encerrada -> Vermelho (#dc2626)
+      const funnelCat = getFunnelCategory(f)
+      const pinColor = FUNNEL_CATEGORY_COLORS[funnelCat]
 
-      // Ícone ou borda diferenciada quando localização for aproximada (cidade ou estado)
-      const borderStyle = isApproximate
-        ? isStateApprox
-          ? '2.5px dashed #ffffff'
+      // Resolução de conflito visual:
+      // A precisão da localização (Exato, Centróide de Cidade "CID" ou Centróide de Estado "UF")
+      // é comunicada através da forma/badge interna do pin e pelo contorno:
+      // - UF: badge com texto "UF" (fundo roxo escuro translúcido para contraste) + anel tracejado
+      // - CID: badge com texto "CID" (fundo azul escuro translúcido para contraste) + anel pontilhado
+      // - Exato: ponto branco central padrão + anel sólido duplo branco
+      // A cor do corpo do pin SEMPRE expressa o Status do Funil de Vendas (Azul/Verde/Amarelo/Vermelho).
+      const borderStyle = isStateApprox
+        ? '2.5px dashed #ffffff'
+        : isCityApprox
+          ? '2px dotted #ffffff'
           : '2px solid #ffffff'
-        : '2px solid #ffffff'
 
       const innerBadgeHtml = isStateApprox
-        ? `<span style="font-size: 8px; font-weight: 800; color: #ffffff; transform: rotate(45deg); line-height: 1;">UF</span>`
+        ? `<div style="transform: rotate(45deg); display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.45); border-radius: 3px; padding: 1px 2px;"><span style="font-size: 8px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px; line-height: 1;">UF</span></div>`
         : isCityApprox
-          ? `<span style="font-size: 8px; font-weight: 800; color: #ffffff; transform: rotate(45deg); line-height: 1;">CID</span>`
-          : `<div style="width: 8px; height: 8px; background-color: #ffffff; border-radius: 50%; transform: rotate(45deg);"></div>`
+          ? `<div style="transform: rotate(45deg); display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.45); border-radius: 3px; padding: 1px 2px;"><span style="font-size: 8px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px; line-height: 1;">CID</span></div>`
+          : `<div style="width: 8px; height: 8px; background-color: #ffffff; border-radius: 50%; transform: rotate(45deg); box-shadow: 0 1px 2px rgba(0,0,0,0.4);"></div>`
 
-      const pinSize = isApproximate ? 30 : 28
+      const pinSize = isApproximate ? 32 : 28
 
       const customIcon = L.divIcon({
         className: 'custom-map-pin',
         html: `
           <div style="
-            background-color: ${statusColor};
+            background-color: ${pinColor};
             width: ${pinSize}px;
             height: ${pinSize}px;
             border-radius: 50% 50% 50% 0;
@@ -662,7 +680,7 @@ export default function MapaClientes() {
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.4);
             border: ${borderStyle};
             cursor: pointer;
             position: relative;
@@ -686,11 +704,37 @@ export default function MapaClientes() {
       const cityState = [f.city, f.state].filter(Boolean).join(' - ') || 'Localidade não informada'
       const perfilLabel = normalizeArray(f.profile_type).join(', ') || 'Não informado'
 
+      const funnelBadgeBg =
+        funnelCat === 'Ativos'
+          ? '#dbeafe'
+          : funnelCat === 'Prospectos'
+            ? '#dcfce7'
+            : funnelCat === 'Inativos'
+              ? '#fef9c3'
+              : '#fee2e2'
+      const funnelBadgeColor =
+        funnelCat === 'Ativos'
+          ? '#1e40af'
+          : funnelCat === 'Prospectos'
+            ? '#166534'
+            : funnelCat === 'Inativos'
+              ? '#854d0e'
+              : '#991b1b'
+
       const popupContent = `
-        <div style="font-family: sans-serif; font-size: 13px; min-width: 220px; padding: 2px;">
-          <h4 style="font-weight: 700; font-size: 14px; margin: 0 0 4px 0; color: #0f172a;">${f.name}</h4>
+        <div style="font-family: sans-serif; font-size: 13px; min-width: 240px; padding: 2px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px;">
+            <h4 style="font-weight: 700; font-size: 14px; margin: 0; color: #0f172a;">${f.name}</h4>
+            <span style="font-weight: 700; font-size: 10px; padding: 2px 7px; border-radius: 9999px; background: ${funnelBadgeBg}; color: ${funnelBadgeColor}; white-space: nowrap; border: 1px solid ${pinColor}40;">
+              ${funnelCat}
+            </span>
+          </div>
           <p style="margin: 0 0 4px 0; color: #475569; font-size: 12px;"><strong>Localização:</strong> ${cityState}</p>
           <p style="margin: 0 0 6px 0; color: #475569; font-size: 12px;"><strong>Perfil / Carteira:</strong> ${perfilLabel}</p>
+          <div style="margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <span style="color: #64748b; font-size: 12px;">Status do Funil:</span>
+            <span style="font-weight: 700; font-size: 11px; padding: 2px 6px; border-radius: 4px; background: ${funnelBadgeBg}; color: ${funnelBadgeColor};">${funnelCat}</span>
+          </div>
           <div style="margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
             <span style="color: #64748b; font-size: 12px;">Status Endereço:</span>
             <span style="font-weight: 600; font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #e2e8f0; color: #1e293b;">${statusLabel}</span>
@@ -788,7 +832,14 @@ export default function MapaClientes() {
     if (bounds.isValid()) {
       mapInstanceRef.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 })
     }
-  }, [search, vendedorFilter, addressStatusFilter, profileFilter, showBlinkLocations])
+  }, [
+    search,
+    vendedorFilter,
+    funnelStatusFilter,
+    addressStatusFilter,
+    profileFilter,
+    showBlinkLocations,
+  ])
 
   // Desenho da Rota no Mapa
   useEffect(() => {
@@ -844,6 +895,7 @@ export default function MapaClientes() {
   const clearFilters = () => {
     setSearch('')
     setVendedorFilter('all')
+    setFunnelStatusFilter('all')
     setAddressStatusFilter('all')
     setProfileFilter('all')
   }
@@ -851,6 +903,7 @@ export default function MapaClientes() {
   const hasFilters =
     search.trim() !== '' ||
     vendedorFilter !== 'all' ||
+    funnelStatusFilter !== 'all' ||
     addressStatusFilter !== 'all' ||
     profileFilter !== 'all'
 
@@ -952,7 +1005,7 @@ export default function MapaClientes() {
                   <SelectTrigger className="h-9 text-xs">
                     <SelectValue placeholder="Todos os vendedores" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[9999]">
                     <SelectItem value="all">Todos os vendedores</SelectItem>
                     {dynamicVendedoresOptions.map((vend) => (
                       <SelectItem key={vend} value={vend}>
@@ -963,13 +1016,36 @@ export default function MapaClientes() {
                 </Select>
               </div>
 
+              {/* Filtro Status do Funil de Vendas */}
+              <div className="w-full sm:w-[220px]">
+                <Select value={funnelStatusFilter} onValueChange={setFunnelStatusFilter}>
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="Status do funil de vendas" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="all">Status do funil de vendas: Todos</SelectItem>
+                    {FUNNEL_CATEGORY_OPTIONS.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        <span className="flex items-center gap-2">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
+                            style={{ backgroundColor: FUNNEL_CATEGORY_COLORS[cat] }}
+                          />
+                          <span>{cat}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Filtro Perfil/Categoria */}
-              <div className="w-full sm:w-[210px]">
+              <div className="w-full sm:w-[200px]">
                 <Select value={profileFilter} onValueChange={setProfileFilter}>
                   <SelectTrigger className="h-9 text-xs">
                     <SelectValue placeholder="Perfil / Categoria" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[9999]">
                     <SelectItem value="all">Todos os Perfis</SelectItem>
                     {CLIENT_PROFILE_CATEGORIES.map((prof) => (
                       <SelectItem key={prof} value={prof}>
@@ -981,13 +1057,13 @@ export default function MapaClientes() {
               </div>
 
               {/* Status Endereço */}
-              <div className="w-full sm:w-[170px]">
+              <div className="w-full sm:w-[160px]">
                 <Select value={addressStatusFilter} onValueChange={setAddressStatusFilter}>
                   <SelectTrigger className="h-9 text-xs">
                     <SelectValue placeholder="Status Endereço" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os Status</SelectItem>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="all">Todos Endereços</SelectItem>
                     <SelectItem value="complete">Completo</SelectItem>
                     <SelectItem value="enriched">Enriquecido</SelectItem>
                     <SelectItem value="partial">Parcial</SelectItem>
@@ -1061,26 +1137,60 @@ export default function MapaClientes() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-3">
-                <div className="hidden sm:flex items-center gap-2 text-xs flex-wrap">
-                  <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />{' '}
-                    Completo
+                {/* Legenda do Mapa: Cores fixas do Status do Funil de Vendas + Precisão Geocode */}
+                <div className="hidden sm:flex items-center gap-2.5 text-xs flex-wrap">
+                  {/* Cores do Funil de Vendas */}
+                  <span className="flex items-center gap-1" title="Fechamento / Pós-venda recente">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full inline-block shadow-sm"
+                      style={{ backgroundColor: FUNNEL_CATEGORY_COLORS.Ativos }}
+                    />{' '}
+                    Ativos
                   </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block" />{' '}
-                    Enriquecido
+                  <span className="flex items-center gap-1" title="Lead até Negociação">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full inline-block shadow-sm"
+                      style={{ backgroundColor: FUNNEL_CATEGORY_COLORS.Prospectos }}
+                    />{' '}
+                    Prospectos
                   </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-sky-600 inline-block" /> Aprox.
+                  <span className="flex items-center gap-1" title="Pós-venda > 180 dias sem compra">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full inline-block shadow-sm"
+                      style={{ backgroundColor: FUNNEL_CATEGORY_COLORS.Inativos }}
+                    />{' '}
+                    Inativos
+                  </span>
+                  <span className="flex items-center gap-1" title="Etapa Perda">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full inline-block shadow-sm"
+                      style={{ backgroundColor: FUNNEL_CATEGORY_COLORS['Negociação encerrada'] }}
+                    />{' '}
+                    Negociação encerrada
+                  </span>
+
+                  <span className="h-3 w-px bg-border mx-0.5" />
+
+                  {/* Indicadores de Precisão de Localização */}
+                  <span
+                    className="flex items-center gap-1 text-muted-foreground"
+                    title="Centróide de Município (badge CID)"
+                  >
+                    <span className="inline-flex items-center justify-center px-1 rounded text-[9px] font-bold bg-slate-800 text-white">
+                      CID
+                    </span>{' '}
                     Cidade
                   </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-purple-500 inline-block" /> Aprox.
+                  <span
+                    className="flex items-center gap-1 text-muted-foreground"
+                    title="Centróide do Estado (badge UF + tracejado)"
+                  >
+                    <span className="inline-flex items-center justify-center px-1 rounded text-[9px] font-bold bg-slate-800 text-white">
+                      UF
+                    </span>{' '}
                     UF
                   </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" /> Parcial
-                  </span>
+
                   {showBlinkLocations && (
                     <span className="flex items-center gap-1 font-semibold text-slate-900 dark:text-amber-400">
                       <span className="w-2.5 h-2.5 rounded-full bg-[#F5C518] inline-block border border-slate-600" />{' '}
@@ -1249,6 +1359,16 @@ export default function MapaClientes() {
                   {filteredFactories.map((f) => {
                     const isSelected = selectedClient?.id === f.id
                     const profiles = normalizeArray(f.profile_type)
+                    const funnelCat = getFunnelCategory(f)
+                    const funnelBadgeBg =
+                      funnelCat === 'Ativos'
+                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border-blue-300'
+                        : funnelCat === 'Prospectos'
+                          ? 'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300 border-green-300'
+                          : funnelCat === 'Inativos'
+                            ? 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border-amber-300'
+                            : 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300 border-red-300'
+
                     return (
                       <div
                         key={f.id}
@@ -1257,12 +1377,25 @@ export default function MapaClientes() {
                           isSelected ? 'bg-primary/10 border-l-4 border-l-primary' : ''
                         }`}
                       >
-                        <p className="font-semibold text-xs text-foreground truncate">{f.name}</p>
+                        <div className="flex items-center justify-between gap-1">
+                          <p className="font-semibold text-xs text-foreground truncate">{f.name}</p>
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ backgroundColor: FUNNEL_CATEGORY_COLORS[funnelCat] }}
+                            title={`Status do funil: ${funnelCat}`}
+                          />
+                        </div>
                         <p className="text-[11px] text-muted-foreground mt-0.5">
                           {[f.city, f.state].filter(Boolean).join(' - ') ||
                             'Localidade não informada'}
                         </p>
                         <div className="flex flex-wrap gap-1 mt-2">
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] px-1.5 py-0 h-4 font-semibold ${funnelBadgeBg}`}
+                          >
+                            {funnelCat}
+                          </Badge>
                           {profiles.map((p) => (
                             <Badge
                               key={p}
@@ -1272,25 +1405,20 @@ export default function MapaClientes() {
                               {p}
                             </Badge>
                           ))}
-                          {f.address_status && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
-                              {ADDRESS_STATUS_LABELS[f.address_status] || f.address_status}
-                            </Badge>
-                          )}
                           {f.geocode_precision === 'city' && (
                             <Badge
                               variant="outline"
-                              className="text-[10px] px-1.5 py-0 h-4 bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300 border-sky-300"
+                              className="text-[10px] px-1.5 py-0 h-4 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300"
                             >
-                              Cidade (Aprox.)
+                              CID
                             </Badge>
                           )}
                           {f.geocode_precision === 'state' && (
                             <Badge
                               variant="outline"
-                              className="text-[10px] px-1.5 py-0 h-4 bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 border-purple-300"
+                              className="text-[10px] px-1.5 py-0 h-4 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300"
                             >
-                              UF (Aprox.)
+                              UF
                             </Badge>
                           )}
                         </div>
