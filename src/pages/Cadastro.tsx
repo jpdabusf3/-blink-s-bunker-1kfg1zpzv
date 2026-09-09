@@ -57,7 +57,14 @@ import { generateClientGoogleDocsHtml, dateStamp } from '@/services/client-repor
 import { getReportTemplatePreference } from '@/services/report-template-preferences'
 import { REPORT_TEMPLATE_LABEL, type ReportTemplateKey } from '@/lib/reportTemplates'
 import { exportClientsToCSV } from '@/lib/csv-export'
-import { enrichClientData, type EnrichmentSummary } from '@/services/enrichment-service'
+import {
+  enrichClientData,
+  type EnrichmentSummary,
+  getIsEnrichmentInProgress,
+  subscribeEnrichmentStatus,
+} from '@/services/enrichment-service'
+import { getFactoryById } from '@/services/factories'
+import type { RecordSubscription } from 'pocketbase'
 import { FilePlus2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
@@ -276,9 +283,60 @@ export default function Cadastro() {
     loadData()
   }, [loadData, userId, userRole, userArea, userCountry])
 
-  const handleFactoriesRealtime = useCallback(() => {
-    loadData()
-  }, [loadData])
+  // Ref para pausar/ignorar eventos realtime durante enriquecimento em lote
+  const isEnrichingRef = useRef(getIsEnrichmentInProgress())
+  useEffect(() => {
+    return subscribeEnrichmentStatus((inProgress) => {
+      isEnrichingRef.current = inProgress
+    })
+  }, [])
+
+  // Sincronização em tempo real sem desmontar/spinner:
+  // - Se estiver enriquecendo em lote, ignora para evitar tempestade de re-renders
+  // - Para UPDATE: busca apenas o registro alterado com expand e faz merge cirúrgico local
+  // - Para DELETE: remove o registro do array local imediatamente
+  // - Para CREATE ou fallback: revalida silenciosamente em background sem setLoading(true)
+  const handleFactoriesRealtime = useCallback((e: RecordSubscription<any>) => {
+    if (isEnrichingRef.current) {
+      return
+    }
+
+    const action = e.action
+    const recordId = e.record?.id
+
+    if (action === 'delete' && recordId) {
+      setFactories((prev) => prev.filter((f) => f.id !== recordId))
+      return
+    }
+
+    if (action === 'update' && recordId) {
+      getFactoryById(recordId)
+        .then((updated) => {
+          if (!updated) return
+          const scoped = getScopedFactories([updated], userRef.current)
+          setFactories((prev) => {
+            const exists = prev.some((f) => f.id === recordId)
+            if (scoped.length === 0) {
+              // Registro saiu do escopo do usuário
+              return prev.filter((f) => f.id !== recordId)
+            }
+            if (exists) {
+              return prev.map((f) => (f.id === recordId ? scoped[0] : f))
+            }
+            return [scoped[0], ...prev]
+          })
+        })
+        .catch(() => {})
+      return
+    }
+
+    // Para 'create' ou qualquer outro tipo, refetch silencioso SEM spinner
+    getAllFactories()
+      .then((all) => {
+        setFactories(getScopedFactories(all, userRef.current))
+      })
+      .catch(() => {})
+  }, [])
 
   const handleGestaoRealtime = useCallback(() => {
     getGestaoTecnica()

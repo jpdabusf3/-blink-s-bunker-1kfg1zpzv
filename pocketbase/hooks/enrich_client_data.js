@@ -632,6 +632,31 @@ routerAdd(
           totalGeocoded,
         )
 
+      // Log consolidated activity log at the end instead of per-client log
+      try {
+        var logCol = $app.findCollectionByNameOrId('activity_logs')
+        var consolidatedLog = new Record(logCol)
+        consolidatedLog.set('user', userId)
+        consolidatedLog.set('action', 'Enriquecimento de Dados')
+        consolidatedLog.set(
+          'details',
+          'Enriquecimento concluído: ' +
+            totalProcessed +
+            ' processados, ' +
+            totalEnriched +
+            ' enriquecidos (ViaCEP), ' +
+            totalGeocoded +
+            ' geocodificados',
+        )
+        consolidatedLog.set('collectionName', 'factories')
+        consolidatedLog.set('target_collection', 'factories')
+        $app.save(consolidatedLog)
+      } catch (logErr) {
+        $app
+          .logger()
+          .warn('enrich-client-data: falha ao salvar log consolidado', 'error', String(logErr))
+      }
+
       // Step 7: Return summary
       return e.json(200, {
         total_processed: totalProcessed,

@@ -18,7 +18,7 @@ function toPBData(data: Partial<Factory>): Record<string, any> {
   return Object.fromEntries(Object.entries(data).filter(([k]) => !PB_EXCLUDED.includes(k)))
 }
 
-function mapRecordToFactory(record: any): Factory {
+export function mapRecordToFactory(record: any): Factory {
   return {
     id: record.id,
     name: record.name || '',
@@ -96,6 +96,18 @@ function mapRecordToFactory(record: any): Factory {
       roi: 5,
     },
     scoreHistory: [{ date: record.created || new Date().toISOString(), score: 50 }],
+  }
+}
+
+export async function getFactoryById(id: string): Promise<Factory | null> {
+  try {
+    const record = await pb.collection('factories').getOne(id, {
+      expand:
+        'salesOwner,salesOwner.gestao_tecnica_id,technicalManager,gestor_tecnico,vendedor,gestor_tecnico_id,vendedor_id',
+    })
+    return mapRecordToFactory(record)
+  } catch {
+    return null
   }
 }
 

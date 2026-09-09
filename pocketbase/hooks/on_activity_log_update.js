@@ -1,5 +1,14 @@
 onRecordUpdateRequest(
   (e) => {
+    // If request comes from batch enrichment, skip individual activity log to avoid event flood
+    try {
+      const headerSkip = e.requestInfo().headers['x-skip-activity-log']
+      if (headerSkip === '1' || headerSkip === 'true') {
+        e.next()
+        return
+      }
+    } catch (_) {}
+
     const auth = e.requestInfo().auth
     const colName = e.record.collectionName
     const recordName =
