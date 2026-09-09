@@ -25,13 +25,17 @@ import {
   X,
   Clock,
   Compass,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
-import { getAllFactories } from '@/services/factories'
+import { getAllFactories, getFactoryById } from '@/services/factories'
 import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { getScopedFactories } from '@/lib/user-scope'
+import { getIsEnrichmentInProgress, subscribeEnrichmentStatus } from '@/services/enrichment-service'
+import type { RecordSubscription } from 'pocketbase'
 import { factoryMatchesVendedor } from '@/lib/vendedorFilterHelper'
 import { normalizeArray } from '@/lib/utils'
 import { BLINK_LOCATIONS, BLINK_MARINGA_CD } from '@/constants/blinkLocations'
@@ -71,6 +75,7 @@ export default function MapaClientes() {
   const [profileFilter, setProfileFilter] = useState('all')
   const [showBlinkLocations, setShowBlinkLocations] = useState(true)
   const [selectedClient, setSelectedClient] = useState<Factory | null>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   const { calculating, route, calculateRouteToCD, clearRoute } = useOsrmRoute()
 
@@ -112,9 +117,69 @@ export default function MapaClientes() {
     loadData()
   }, [loadData, userId, userRole, userArea, userCountry])
 
-  const handleFactoriesRealtime = useCallback(() => {
-    loadData()
-  }, [loadData])
+  // Ref para pausar/ignorar eventos realtime durante enriquecimento em lote
+  const isEnrichingRef = useRef(getIsEnrichmentInProgress())
+  useEffect(() => {
+    return subscribeEnrichmentStatus((inProgress) => {
+      const wasEnriching = isEnrichingRef.current
+      isEnrichingRef.current = inProgress
+      // Quando o enriquecimento finaliza, dispara UMA sincronização consolidada em segundo plano
+      if (wasEnriching && !inProgress) {
+        getAllFactories()
+          .then((all) => {
+            setFactories(getScopedFactories(all, userRef.current))
+          })
+          .catch(() => {})
+      }
+    })
+  }, [])
+
+  // Sincronização em tempo real sem desmontar mapa / sem resetar zoom / sem spinner:
+  // - Se estiver enriquecendo em lote, ignora para evitar tempestade de re-renders
+  // - Para UPDATE: busca apenas o registro alterado via getFactoryById e faz merge cirúrgico local
+  // - Para DELETE: remove o registro do array local imediatamente
+  // - Para CREATE ou fallback: revalida silenciosamente em background sem setLoading(true)
+  const handleFactoriesRealtime = useCallback((e: RecordSubscription<any>) => {
+    if (isEnrichingRef.current) {
+      return
+    }
+
+    const action = e.action
+    const recordId = e.record?.id
+
+    if (action === 'delete' && recordId) {
+      setFactories((prev) => prev.filter((f) => f.id !== recordId))
+      return
+    }
+
+    if (action === 'update' && recordId) {
+      getFactoryById(recordId)
+        .then((updated) => {
+          if (!updated) return
+          const scoped = getScopedFactories([updated], userRef.current)
+          setFactories((prev) => {
+            const exists = prev.some((f) => f.id === recordId)
+            if (scoped.length === 0) {
+              // Registro saiu do escopo do usuário
+              return prev.filter((f) => f.id !== recordId)
+            }
+            if (exists) {
+              return prev.map((f) => (f.id === recordId ? scoped[0] : f))
+            }
+            return [scoped[0], ...prev]
+          })
+        })
+        .catch(() => {})
+      return
+    }
+
+    // Para 'create' ou qualquer outro tipo, refetch silencioso SEM spinner
+    getAllFactories()
+      .then((all) => {
+        setFactories(getScopedFactories(all, userRef.current))
+      })
+      .catch(() => {})
+  }, [])
 
   const handleGestaoRealtime = useCallback(() => {
     getGestaoTecnica()
@@ -186,6 +251,14 @@ export default function MapaClientes() {
       return true
     })
   }, [validFactories, search, vendedorFilter, addressStatusFilter, profileFilter])
+
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      setTimeout(() => {
+        mapInstanceRef.current?.invalidateSize()
+      }, 150)
+    }
+  }, [isFullscreen])
 
   // Inicialização do Leaflet Map
   useEffect(() => {
@@ -755,11 +828,21 @@ export default function MapaClientes() {
       </Card>
 
       {/* Main Map + Sidebar list */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div
+        className={
+          isFullscreen
+            ? 'fixed inset-0 z-50 bg-background p-4 grid grid-cols-1 lg:grid-cols-4 gap-4 overflow-hidden'
+            : 'grid grid-cols-1 lg:grid-cols-4 gap-6'
+        }
+      >
         {/* Map View */}
-        <div className="lg:col-span-3">
-          <Card className="shadow-subtle overflow-hidden flex flex-col h-[650px] relative">
-            <CardHeader className="py-3 px-4 border-b bg-card flex flex-row items-center justify-between">
+        <div className="lg:col-span-3 h-full">
+          <Card
+            className={`shadow-subtle overflow-hidden flex flex-col relative ${
+              isFullscreen ? 'h-full' : 'h-[650px]'
+            }`}
+          >
+            <CardHeader className="py-3 px-4 border-b bg-card flex flex-row items-center justify-between gap-2">
               <div>
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-primary" />
@@ -770,26 +853,43 @@ export default function MapaClientes() {
                   {showBlinkLocations ? ' + 4 pontos fixos Blink' : ''}
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-2 text-xs flex-wrap">
-                <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" /> Completo
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block" /> Enriquecido
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" /> Parcial
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />{' '}
-                  Inconsistente/Falha
-                </span>
-                {showBlinkLocations && (
-                  <span className="flex items-center gap-1 font-semibold text-slate-900 dark:text-amber-400">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#F5C518] inline-block border border-slate-600" />{' '}
-                    Blink
+              <div className="flex items-center gap-3">
+                <div className="hidden sm:flex items-center gap-2 text-xs flex-wrap">
+                  <span className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />{' '}
+                    Completo
                   </span>
-                )}
+                  <span className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block" />{' '}
+                    Enriquecido
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" /> Parcial
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />{' '}
+                    Inconsistente/Falha
+                  </span>
+                  {showBlinkLocations && (
+                    <span className="flex items-center gap-1 font-semibold text-slate-900 dark:text-amber-400">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#F5C518] inline-block border border-slate-600" />{' '}
+                      Blink
+                    </span>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={() => setIsFullscreen((prev) => !prev)}
+                  title={isFullscreen ? 'Sair da tela cheia' : 'Modo tela cheia'}
+                >
+                  {isFullscreen ? (
+                    <Minimize2 className="w-4 h-4" />
+                  ) : (
+                    <Maximize2 className="w-4 h-4" />
+                  )}
+                </Button>
               </div>
             </CardHeader>
 
@@ -918,8 +1018,8 @@ export default function MapaClientes() {
         </div>
 
         {/* Sidebar list of clients */}
-        <div className="lg:col-span-1">
-          <Card className="shadow-subtle h-[650px] flex flex-col">
+        <div className="lg:col-span-1 h-full">
+          <Card className={`shadow-subtle flex flex-col ${isFullscreen ? 'h-full' : 'h-[650px]'}`}>
             <CardHeader className="py-3 px-4 border-b">
               <CardTitle className="text-sm font-semibold flex items-center justify-between">
                 <span>Clientes no Mapa</span>
