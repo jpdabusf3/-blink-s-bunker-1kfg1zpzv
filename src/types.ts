@@ -237,8 +237,11 @@ export interface Factory {
   contato?: string
   status_contato?: 'Champion' | 'Stakeholder' | 'Decisor' | 'Influenciador' | 'Gatekeepers'
   cnpj?: string
-  geocode_precision?: 'exact' | 'street' | 'city' | 'failed' | string
+  geocode_precision?: 'exact' | 'street' | 'city' | 'state' | 'failed' | string
   address_status?: 'complete' | 'partial' | 'inconsistent' | 'enriched' | 'failed' | string
+  isApproximateCity?: boolean
+  isApproximateState?: boolean
+  locationFallbackPrecision?: 'exact' | 'street' | 'city' | 'state'
   enriched_at?: string
   standardized_address?: string
   updated?: string

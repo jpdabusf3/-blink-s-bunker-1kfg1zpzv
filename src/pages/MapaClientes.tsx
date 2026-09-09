@@ -31,7 +31,7 @@ import {
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
-import { getAllFactories, getFactoryById } from '@/services/factories'
+import { getAllFactories, getFactoryById, updateFactoryPB } from '@/services/factories'
 import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { getScopedFactories } from '@/lib/user-scope'
 import { getIsEnrichmentInProgress, subscribeEnrichmentStatus } from '@/services/enrichment-service'
@@ -45,6 +45,12 @@ import {
   countClientsByCategory,
 } from '@/constants/clientCategories'
 import { useOsrmRoute } from '@/hooks/use-osrm-route'
+import {
+  buildPeerCityCache,
+  getCityCoordinateSync,
+  resolveLocationFallbackSync,
+  fetchCityCoordinateNominatim,
+} from '@/services/city-coordinates'
 import type { Factory } from '@/types'
 
 // Window.L is declared in src/components/ClientsMapDialog.tsx
@@ -60,7 +66,8 @@ const ADDRESS_STATUS_LABELS: Record<string, string> = {
 const GEOCODE_PRECISION_LABELS: Record<string, string> = {
   exact: 'Exata (Número)',
   street: 'Rua/Logradouro',
-  city: 'Cidade/Município',
+  city: 'Aprox. Cidade/Município',
+  state: 'Aprox. Centro do Estado (UF)',
   failed: 'Falha',
 }
 
@@ -190,9 +197,192 @@ export default function MapaClientes() {
   useRealtime('factories', handleFactoriesRealtime)
   useRealtime('gestao_tecnica', handleGestaoRealtime)
 
-  // Clientes com coordenadas válidas (lat e lng preenchidos e diferentes de 0)
+  // Ref para controlar clientes já persistidos ou em persistência na sessão (evita escritas repetidas)
+  const persistedClientIdsRef = useRef<Set<string>>(new Set())
+
+  // Async city resolution state: guarda coordenadas resolvidas dinamicamente via Nominatim
+  const [asyncResolvedCoords, setAsyncResolvedCoords] = useState<
+    Record<string, { lat: number; lng: number }>
+  >({})
+
+  // 1. Constrói o cache de cidades a partir dos clientes que já têm coordenadas exatas válidas
+  useEffect(() => {
+    buildPeerCityCache(factories)
+  }, [factories])
+
+  // 2. Enriquecimento de clientes sem coordenadas com centro da cidade ou centro do estado (síncrono via cache estático/peer/UF)
+  const enrichedFactories = useMemo(() => {
+    return factories.map((f) => {
+      const lat = f.lat ?? f.coordinates?.lat
+      const lng = f.lng ?? f.coordinates?.lng
+      const hasDirectCoord =
+        typeof lat === 'number' &&
+        typeof lng === 'number' &&
+        !isNaN(lat) &&
+        !isNaN(lng) &&
+        lat !== 0 &&
+        lng !== 0
+
+      // Se já tem coordenadas reais, NUNCA é movido
+      if (hasDirectCoord) {
+        return {
+          ...f,
+          isApproximateCity: f.geocode_precision === 'city',
+          isApproximateState: f.geocode_precision === 'state',
+          locationFallbackPrecision:
+            f.geocode_precision === 'city'
+              ? ('city' as const)
+              : f.geocode_precision === 'state'
+                ? ('state' as const)
+                : ('exact' as const),
+        }
+      }
+
+      // Procura primeiro em asyncResolvedCoords (descoberta via Nominatim)
+      if (asyncResolvedCoords[f.id]) {
+        const c = asyncResolvedCoords[f.id]
+        return {
+          ...f,
+          lat: c.lat,
+          lng: c.lng,
+          coordinates: { lat: c.lat, lng: c.lng },
+          geocode_precision: 'city',
+          isApproximateCity: true,
+          isApproximateState: false,
+          locationFallbackPrecision: 'city' as const,
+        }
+      }
+
+      // Procura resolução imediata por cidade e, como fallback, por UF (estado)
+      const locationFallback = resolveLocationFallbackSync(f.city, f.state)
+      if (locationFallback) {
+        const isCity = locationFallback.precision === 'city'
+        const isState = locationFallback.precision === 'state'
+        return {
+          ...f,
+          lat: locationFallback.lat,
+          lng: locationFallback.lng,
+          coordinates: { lat: locationFallback.lat, lng: locationFallback.lng },
+          geocode_precision: isCity ? 'city' : 'state',
+          isApproximateCity: isCity,
+          isApproximateState: isState,
+          locationFallbackPrecision: isCity ? ('city' as const) : ('state' as const),
+        }
+      }
+
+      // Sem coordenadas e sem cidade/estado resolvível
+      return f
+    })
+  }, [factories, asyncResolvedCoords])
+
+  // 3. Clientes sem coordenadas que possuem cidade e ainda não foram resolvidos: dispara Nominatim em background (não bloqueante)
+  useEffect(() => {
+    const unresolved = factories.filter((f) => {
+      const lat = f.lat ?? f.coordinates?.lat
+      const lng = f.lng ?? f.coordinates?.lng
+      const hasDirectCoord =
+        typeof lat === 'number' &&
+        typeof lng === 'number' &&
+        !isNaN(lat) &&
+        !isNaN(lng) &&
+        lat !== 0 &&
+        lng !== 0
+      if (hasDirectCoord) return false
+      if (asyncResolvedCoords[f.id]) return false
+      if (!f.city || !f.city.trim()) return false
+      const syncMatch = getCityCoordinateSync(f.city, f.state)
+      return !syncMatch
+    })
+
+    if (unresolved.length === 0) return
+
+    let cancelled = false
+    const resolveAsync = async () => {
+      // Agrupa por cidade para não disparar consultas repetidas
+      const cityMap = new Map<string, { city: string; state?: string; clientIds: string[] }>()
+      unresolved.forEach((f) => {
+        const key = `${(f.city || '').toLowerCase()}-${(f.state || '').toLowerCase()}`
+        const group = cityMap.get(key) || { city: f.city, state: f.state, clientIds: [] }
+        group.clientIds.push(f.id)
+        cityMap.set(key, group)
+      })
+
+      for (const group of cityMap.values()) {
+        if (cancelled) break
+        const coord = await fetchCityCoordinateNominatim(group.city, group.state)
+        if (coord && !cancelled) {
+          setAsyncResolvedCoords((prev) => {
+            const next = { ...prev }
+            group.clientIds.forEach((id) => {
+              next[id] = { lat: coord.lat, lng: coord.lng }
+            })
+            return next
+          })
+        }
+      }
+    }
+
+    resolveAsync()
+    return () => {
+      cancelled = true
+    }
+  }, [factories, asyncResolvedCoords])
+
+  // 4. Persistência em lote das coordenadas resolvidas no PocketBase (sem sobrescrever clientes existentes, debounce em lote)
+  useEffect(() => {
+    // Apenas persiste se não estiver enriquecendo via backend oficial e se houver novos clientes resolvidos
+    if (isEnrichingRef.current) return
+
+    const toPersist: Array<{ id: string; lat: number; lng: number; precision: string }> = []
+
+    enrichedFactories.forEach((f) => {
+      // Apenas clientes que originalmente não tinham lat/lng no banco e agora têm aproximação de cidade ou estado
+      const original = factories.find((orig) => orig.id === f.id)
+      const origLat = original?.lat ?? original?.coordinates?.lat
+      const origLng = original?.lng ?? original?.coordinates?.lng
+      const hadNoCoords =
+        typeof origLat !== 'number' ||
+        typeof origLng !== 'number' ||
+        isNaN(origLat) ||
+        isNaN(origLng) ||
+        (origLat === 0 && origLng === 0)
+
+      if (hadNoCoords && f.lat && f.lng && (f.isApproximateCity || f.isApproximateState)) {
+        if (!persistedClientIdsRef.current.has(f.id)) {
+          toPersist.push({
+            id: f.id,
+            lat: f.lat,
+            lng: f.lng,
+            precision: f.isApproximateCity ? 'city' : 'state',
+          })
+        }
+      }
+    })
+
+    if (toPersist.length === 0) return
+
+    // Debounce de 1.5s antes de salvar em lote sequencial suave sem flood
+    const timer = setTimeout(async () => {
+      for (const item of toPersist) {
+        persistedClientIdsRef.current.add(item.id)
+        try {
+          await updateFactoryPB(item.id, {
+            lat: item.lat,
+            lng: item.lng,
+            geocode_precision: item.precision,
+          })
+        } catch (err) {
+          console.warn('[mapa] persistencia de fallback falhou para cliente', item.id, err)
+        }
+      }
+    }, 1500)
+
+    return () => clearTimeout(timer)
+  }, [enrichedFactories, factories])
+
+  // Clientes com coordenadas válidas (diretas ou cidade aproximada)
   const validFactories = useMemo(() => {
-    return factories.filter((f) => {
+    return enrichedFactories.filter((f) => {
       const lat = f.lat ?? f.coordinates?.lat
       const lng = f.lng ?? f.coordinates?.lng
       return (
@@ -204,9 +394,9 @@ export default function MapaClientes() {
         lng !== 0
       )
     })
-  }, [factories])
+  }, [enrichedFactories])
 
-  // Opções dinâmicas de membros da gestão técnica (vendedores/ativos) sincronizadas com a página Cadastro
+  // Opções dinâmicas de membros ATIVOS da gestão técnica (mesmo critério de /cadastro: m.ativo !== false)
   const dynamicVendedoresOptions = useMemo(() => {
     const vends = new Set<string>()
     gestaoTecnicaList.forEach((m) => {
@@ -222,7 +412,7 @@ export default function MapaClientes() {
     return countClientsByCategory(factories)
   }, [factories])
 
-  // Filtros aplicados sobre os clientes com coordenadas válidas
+  // Filtros aplicados sobre os clientes com coordenadas válidas (diretas ou cidade aproximada)
   const filteredFactories = useMemo(() => {
     return validFactories.filter((f) => {
       if (!f) return false
@@ -427,45 +617,62 @@ export default function MapaClientes() {
       const lat = (f.lat ?? f.coordinates?.lat)!
       const lng = (f.lng ?? f.coordinates?.lng)!
 
-      const statusColor =
-        f.address_status === 'complete'
-          ? '#10b981'
-          : f.address_status === 'enriched'
-            ? '#3b82f6'
-            : f.address_status === 'partial'
-              ? '#f59e0b'
-              : f.address_status === 'inconsistent'
-                ? '#f97316'
-                : '#ef4444'
+      const isCityApprox = f.isApproximateCity || f.geocode_precision === 'city'
+      const isStateApprox = f.isApproximateState || f.geocode_precision === 'state'
+      const isApproximate = isCityApprox || isStateApprox
+
+      const statusColor = isStateApprox
+        ? '#8b5cf6' // Roxo para centro do Estado
+        : isCityApprox
+          ? '#0284c7' // Azul céu para centróide da Cidade
+          : f.address_status === 'complete'
+            ? '#10b981' // Verde para endereço completo
+            : f.address_status === 'enriched'
+              ? '#3b82f6' // Azul royal para enriquecido
+              : f.address_status === 'partial'
+                ? '#f59e0b' // Âmbar para parcial
+                : f.address_status === 'inconsistent'
+                  ? '#f97316' // Laranja para inconsistente
+                  : '#ef4444' // Vermelho
+
+      // Ícone ou borda diferenciada quando localização for aproximada (cidade ou estado)
+      const borderStyle = isApproximate
+        ? isStateApprox
+          ? '2.5px dashed #ffffff'
+          : '2px solid #ffffff'
+        : '2px solid #ffffff'
+
+      const innerBadgeHtml = isStateApprox
+        ? `<span style="font-size: 8px; font-weight: 800; color: #ffffff; transform: rotate(45deg); line-height: 1;">UF</span>`
+        : isCityApprox
+          ? `<span style="font-size: 8px; font-weight: 800; color: #ffffff; transform: rotate(45deg); line-height: 1;">CID</span>`
+          : `<div style="width: 8px; height: 8px; background-color: #ffffff; border-radius: 50%; transform: rotate(45deg);"></div>`
+
+      const pinSize = isApproximate ? 30 : 28
 
       const customIcon = L.divIcon({
         className: 'custom-map-pin',
         html: `
           <div style="
             background-color: ${statusColor};
-            width: 28px;
-            height: 28px;
+            width: ${pinSize}px;
+            height: ${pinSize}px;
             border-radius: 50% 50% 50% 0;
             transform: rotate(-45deg);
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-            border: 2px solid #ffffff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+            border: ${borderStyle};
             cursor: pointer;
+            position: relative;
           ">
-            <div style="
-              width: 8px;
-              height: 8px;
-              background-color: #ffffff;
-              border-radius: 50%;
-              transform: rotate(45deg);
-            "></div>
+            ${innerBadgeHtml}
           </div>
         `,
-        iconSize: [28, 28],
-        iconAnchor: [14, 28],
-        popupAnchor: [0, -28],
+        iconSize: [pinSize, pinSize],
+        iconAnchor: [pinSize / 2, pinSize],
+        popupAnchor: [0, -pinSize],
       })
 
       const marker = L.marker([lat, lng], { icon: customIcon })
@@ -864,11 +1071,15 @@ export default function MapaClientes() {
                     Enriquecido
                   </span>
                   <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" /> Parcial
+                    <span className="w-2.5 h-2.5 rounded-full bg-sky-600 inline-block" /> Aprox.
+                    Cidade
                   </span>
                   <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />{' '}
-                    Inconsistente/Falha
+                    <span className="w-2.5 h-2.5 rounded-full bg-purple-500 inline-block" /> Aprox.
+                    UF
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" /> Parcial
                   </span>
                   {showBlinkLocations && (
                     <span className="flex items-center gap-1 font-semibold text-slate-900 dark:text-amber-400">
@@ -1064,6 +1275,22 @@ export default function MapaClientes() {
                           {f.address_status && (
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
                               {ADDRESS_STATUS_LABELS[f.address_status] || f.address_status}
+                            </Badge>
+                          )}
+                          {f.geocode_precision === 'city' && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] px-1.5 py-0 h-4 bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300 border-sky-300"
+                            >
+                              Cidade (Aprox.)
+                            </Badge>
+                          )}
+                          {f.geocode_precision === 'state' && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] px-1.5 py-0 h-4 bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 border-purple-300"
+                            >
+                              UF (Aprox.)
                             </Badge>
                           )}
                         </div>
