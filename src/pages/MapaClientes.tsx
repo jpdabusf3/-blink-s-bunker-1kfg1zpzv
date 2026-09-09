@@ -206,11 +206,11 @@ export default function MapaClientes() {
     })
   }, [factories])
 
-  // Opções dinâmicas de vendedores sincronizadas com gestao_tecnica
+  // Opções dinâmicas de membros da gestão técnica (vendedores/ativos) sincronizadas com a página Cadastro
   const dynamicVendedoresOptions = useMemo(() => {
     const vends = new Set<string>()
     gestaoTecnicaList.forEach((m) => {
-      if (m.funcao === 'vendedor' && m.nome && m.nome.trim()) {
+      if (m.ativo !== false && m.nome && m.nome.trim()) {
         vends.add(m.nome.trim())
       }
     })

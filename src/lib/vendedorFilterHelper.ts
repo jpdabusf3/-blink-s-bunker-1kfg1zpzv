@@ -43,6 +43,13 @@ export function getFactorySellerMatches(factory: Factory): {
     names.add(factory.vendedor_name.trim())
   }
 
+  // Se vendedor_id for um objeto populado em tempo de execução
+  const rawVendIdObj = factory.vendedor_id as any
+  if (rawVendIdObj && typeof rawVendIdObj === 'object') {
+    if (rawVendIdObj.id) ids.add(rawVendIdObj.id)
+    if (rawVendIdObj.nome) names.add(rawVendIdObj.nome)
+  }
+
   // 2. Expansões diretas do vendedor
   const expandVendId = factory.expand?.vendedor_id
   if (expandVendId) {
