@@ -80,6 +80,11 @@ export default function MapaClientes() {
   const blinkLayerRef = useRef<any>(null)
   const routeLayerRef = useRef<any>(null)
 
+  const userRef = useRef(user)
+  useEffect(() => {
+    userRef.current = user
+  }, [user])
+
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
@@ -87,7 +92,7 @@ export default function MapaClientes() {
         getAllFactories(),
         getGestaoTecnica().catch(() => [] as GestaoTecnica[]),
       ])
-      setFactories(getScopedFactories(all, user))
+      setFactories(getScopedFactories(all, userRef.current))
       setGestaoTecnicaList(gestao)
     } catch (err) {
       console.error('[mapa] erro ao carregar clientes', err)
@@ -96,13 +101,20 @@ export default function MapaClientes() {
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [])
 
+  // Carrega apenas na montagem ou se o id/escopo do usuário de fato mudar
+  const userId = user?.id
+  const userRole = user?.job_title
+  const userArea = user?.geographicArea
+  const userCountry = user?.country
   useEffect(() => {
     loadData()
-  }, [loadData])
+  }, [loadData, userId, userRole, userArea, userCountry])
 
-  useRealtime('factories', loadData)
+  useRealtime('factories', () => {
+    loadData()
+  })
   useRealtime('gestao_tecnica', () => {
     getGestaoTecnica()
       .then(setGestaoTecnicaList)
@@ -202,24 +214,30 @@ export default function MapaClientes() {
         blinkLayerRef.current = blinkLayer
 
         setTimeout(() => {
-          map.invalidateSize()
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.invalidateSize()
+          }
         }, 200)
       }
     }
 
+    let intervalId: any = null
     if (window.L) {
       initLeaflet()
     } else {
-      const timer = setInterval(() => {
+      intervalId = setInterval(() => {
         if (window.L) {
-          clearInterval(timer)
+          clearInterval(intervalId)
+          intervalId = null
           initLeaflet()
         }
       }, 100)
-      return () => clearInterval(timer)
     }
 
     return () => {
+      if (intervalId) {
+        clearInterval(intervalId)
+      }
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove()
         mapInstanceRef.current = null
@@ -297,6 +315,17 @@ export default function MapaClientes() {
       marker.addTo(blinkLayer)
     })
   }, [showBlinkLocations])
+
+  // Referência para calcular rota dentro dos popups sem recriar marcadores
+  const handleCalculateRouteRef = useRef<(f: Factory) => void>(() => {})
+
+  // Chave de identificação dos clientes filtrados para evitar recriar markers se os IDs não mudarem
+  const filteredFactoriesKey = useMemo(() => {
+    return filteredFactories.map((f) => f.id).join(',')
+  }, [filteredFactories])
+
+  // Flag para controlar o fitBounds inicial (evita resetar o zoom/pan do usuário a cada pequeno update)
+  const initialFitBoundsDone = useRef(false)
 
   // Atualização dos Marcadores de Clientes no Mapa
   useEffect(() => {
@@ -442,7 +471,7 @@ export default function MapaClientes() {
         const btn = document.getElementById(`btn-rota-${f.id}`)
         if (btn) {
           btn.onclick = () => {
-            handleCalculateRoute(f)
+            handleCalculateRouteRef.current(f)
           }
         }
       })
@@ -451,10 +480,31 @@ export default function MapaClientes() {
       bounds.extend([lat, lng])
     })
 
-    if (bounds.isValid()) {
+    if (bounds.isValid() && !initialFitBoundsDone.current) {
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 })
+      initialFitBoundsDone.current = true
     }
-  }, [filteredFactories, showBlinkLocations])
+  }, [filteredFactoriesKey, showBlinkLocations])
+
+  // Quando o usuário alterar explicitamente os filtros, reajusta a área do mapa aos resultados
+  useEffect(() => {
+    if (!mapInstanceRef.current || !window.L || filteredFactories.length === 0) return
+    const L = window.L
+    const bounds = L.latLngBounds([])
+    if (showBlinkLocations) {
+      BLINK_LOCATIONS.forEach((l) => bounds.extend([l.lat, l.lng]))
+    }
+    filteredFactories.forEach((f) => {
+      const lat = f.lat ?? f.coordinates?.lat
+      const lng = f.lng ?? f.coordinates?.lng
+      if (typeof lat === 'number' && typeof lng === 'number' && lat !== 0 && lng !== 0) {
+        bounds.extend([lat, lng])
+      }
+    })
+    if (bounds.isValid()) {
+      mapInstanceRef.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 })
+    }
+  }, [search, vendedorFilter, addressStatusFilter, profileFilter, showBlinkLocations])
 
   // Desenho da Rota no Mapa
   useEffect(() => {
@@ -485,11 +535,18 @@ export default function MapaClientes() {
     }
   }, [route])
 
-  const handleCalculateRoute = (f: Factory) => {
-    const lat = f.lat ?? f.coordinates?.lat
-    const lng = f.lng ?? f.coordinates?.lng
-    calculateRouteToCD(f.name, lat, lng)
-  }
+  const handleCalculateRoute = useCallback(
+    (f: Factory) => {
+      const lat = f.lat ?? f.coordinates?.lat
+      const lng = f.lng ?? f.coordinates?.lng
+      calculateRouteToCD(f.name, lat, lng)
+    },
+    [calculateRouteToCD],
+  )
+
+  useEffect(() => {
+    handleCalculateRouteRef.current = handleCalculateRoute
+  }, [handleCalculateRoute])
 
   const handleCenterOnClient = (f: Factory) => {
     setSelectedClient(f)
