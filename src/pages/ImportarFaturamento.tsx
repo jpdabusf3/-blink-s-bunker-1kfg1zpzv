@@ -574,8 +574,8 @@ export default function ImportarFaturamento() {
           </CardHeader>
 
           <CardContent className="space-y-6">
-            {/* Cards de Métricas */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {/* Cards de Métricas Principais */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
               <div className="bg-muted/40 rounded-xl p-3.5 border text-center">
                 <p className="text-xs text-muted-foreground">Total de Linhas</p>
                 <p className="text-2xl font-bold mt-1">{result.totalLinhas}</p>
@@ -588,7 +588,7 @@ export default function ImportarFaturamento() {
               </div>
               <div className="bg-blue-50 dark:bg-blue-950/30 rounded-xl p-3.5 border border-blue-200 dark:border-blue-900/40 text-center">
                 <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-                  <RotateCcw className="w-3.5 h-3.5 text-blue-600" /> Atualizadas (Idemp.)
+                  <RotateCcw className="w-3.5 h-3.5 text-blue-600" /> Atualizadas (Idempotência)
                 </p>
                 <p className="text-2xl font-bold text-blue-600 mt-1">{result.atualizados}</p>
               </div>
@@ -599,13 +599,7 @@ export default function ImportarFaturamento() {
                 <p className="text-2xl font-bold text-purple-600 mt-1">
                   {result.clientesVinculados}
                 </p>
-                {(result.clientesVinculadosPorCodigo !== undefined ||
-                  result.clientesVinculadosPorNome !== undefined) && (
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    {result.clientesVinculadosPorCodigo || 0} via código •{' '}
-                    {result.clientesVinculadosPorNome || 0} via nome
-                  </p>
-                )}
+                <p className="text-[10px] text-muted-foreground mt-1">casados com cadastro</p>
               </div>
               <div className="bg-indigo-50 dark:bg-indigo-950/30 rounded-xl p-3.5 border border-indigo-200 dark:border-indigo-900/40 text-center">
                 <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
@@ -622,6 +616,47 @@ export default function ImportarFaturamento() {
                   {result.clientesAtualizadosNoCRM}
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-1">cadastros sincronizados</p>
+              </div>
+            </div>
+
+            {/* Detalhamento dos Métodos de Casamento (Matching) */}
+            <div className="rounded-xl border bg-purple-50/50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-900/40 p-4">
+              <h4 className="text-xs font-semibold text-purple-950 dark:text-purple-200 uppercase tracking-wider flex items-center gap-2 mb-3">
+                <Sparkles className="w-4 h-4 text-purple-600" />
+                Métricas de Casamento e Vinculação de Clientes (Matching)
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="bg-background/80 dark:bg-background/40 rounded-lg p-3 border border-purple-100 dark:border-purple-900/30 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium">
+                      Por Código de Cliente
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">Extraído do campo ou nome</p>
+                  </div>
+                  <span className="text-xl font-bold text-purple-700 dark:text-purple-300 font-mono">
+                    {result.clientesVinculadosPorCodigo ?? 0}
+                  </span>
+                </div>
+                <div className="bg-background/80 dark:bg-background/40 rounded-lg p-3 border border-purple-100 dark:border-purple-900/30 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium">
+                      Por Razão Social / Nome
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">Normalizado sem acentos</p>
+                  </div>
+                  <span className="text-xl font-bold text-purple-700 dark:text-purple-300 font-mono">
+                    {result.clientesVinculadosPorNome ?? 0}
+                  </span>
+                </div>
+                <div className="bg-background/80 dark:bg-background/40 rounded-lg p-3 border border-purple-100 dark:border-purple-900/30 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium">Por CNPJ</p>
+                    <p className="text-[11px] text-muted-foreground">14 dígitos numéricos</p>
+                  </div>
+                  <span className="text-xl font-bold text-purple-700 dark:text-purple-300 font-mono">
+                    {result.clientesVinculadosPorCnpj ?? 0}
+                  </span>
+                </div>
               </div>
             </div>
 

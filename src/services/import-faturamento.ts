@@ -59,6 +59,9 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'competencia',
       // Termos em inglês comumente presentes em planilhas de ERP/BI
       'date',
+      'month/year',
+      'month-year',
+      'month year',
       'invoice_date',
       'order_date',
       'billing_date',
@@ -94,12 +97,16 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'cod e descricao',
       'cliente descricao',
       'cliente / razao',
+      'codigo e cliente',
+      'codigo cliente',
       // Termos em inglês
       'customer',
       'client',
       'customer_name',
       'client_name',
       'customer/client',
+      'customer name',
+      'client name',
       'account',
       'buyer',
     ],
@@ -439,11 +446,14 @@ export function autoSuggestMapping(
       }
     }
 
-    // Ex: Colunas de mês/ano, período ou data (ex: "Mes/Ano", "Mes e Ano", "Ano/Mes")
+    // Ex: Colunas de mês/ano, período ou data (ex: "Mes/Ano", "Mes e Ano", "Ano/Mes", "Month/Year")
     if (
       (norm.includes('mes') && norm.includes('ano')) ||
+      (norm.includes('month') && norm.includes('year')) ||
       norm === 'mes' ||
-      norm === 'competencia'
+      norm === 'competencia' ||
+      norm === 'period' ||
+      norm === 'periodo'
     ) {
       if (!usedCRMFields.has('data')) {
         mapping[header] = 'data'
