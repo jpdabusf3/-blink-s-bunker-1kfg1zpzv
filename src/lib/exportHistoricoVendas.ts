@@ -1,5 +1,6 @@
 import type { HistoricoVenda } from '@/services/historico-vendas'
 import { formatCurrency } from '@/lib/utils'
+import { familiaCompleta } from '@/constants/familiaProdutos'
 
 /**
  * Exporta os registros filtrados do Histórico de Vendas para planilha Excel (.csv)
@@ -35,7 +36,7 @@ export function exportHistoricoVendasToExcel(items: HistoricoVenda[]) {
     const pais = r.pais || 'Brasil'
     const codProd = r.produto_codigo || ''
     const descProd = (r.produto_descricao || '').replace(/;/g, ' ')
-    const familia = r.produto_familia || ''
+    const familia = familiaCompleta(codProd, r.produto_familia || '')
     const qtd = r.produto_quantidade != null ? String(r.produto_quantidade).replace('.', ',') : ''
     const unit =
       r.produto_valor_unitario != null

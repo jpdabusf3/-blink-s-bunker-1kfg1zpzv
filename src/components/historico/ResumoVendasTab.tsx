@@ -35,6 +35,7 @@ import {
   type ResumoVendasResponse,
   type ResumoVendasParams,
 } from '@/services/resumo-vendas'
+import { familiaCompleta } from '@/constants/familiaProdutos'
 
 type PeriodKey = 'week_current' | 'month_current' | 'month_previous'
 
@@ -461,7 +462,9 @@ export function ResumoVendasTab() {
                             <TableCell className="text-center font-mono text-xs text-muted-foreground">
                               {idx + 1}
                             </TableCell>
-                            <TableCell className="font-medium text-xs">{fam.familia}</TableCell>
+                            <TableCell className="font-medium text-xs">
+                              {familiaCompleta('', fam.familia)}
+                            </TableCell>
                             <TableCell className="text-right font-mono text-xs font-semibold text-primary whitespace-nowrap">
                               {formatCurrency(fam.valor_brl)}
                             </TableCell>

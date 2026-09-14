@@ -1,5 +1,6 @@
 import pb from '@/lib/pocketbase/client'
 import { deriveDateParts, derivePais } from './historico-vendas'
+import { familiaCompleta } from '@/constants/familiaProdutos'
 
 export type HistoricoGranularity = 'mensal' | 'anual' | 'quadrienal'
 
@@ -141,18 +142,11 @@ function normalizeCanal(canal?: string): string {
   return c
 }
 
-function normalizeFamilia(fam?: string): string {
+function normalizeFamilia(fam?: string, prodCod?: string): string {
+  const resolvida = familiaCompleta(prodCod || '', fam || '')
+  if (resolvida && resolvida !== '—') return resolvida
   if (!fam) return 'Outros'
-  const f = fam.trim().toLowerCase()
-  if (f.includes('mycotoxin binder') || f === 'mos' || f.includes('adsorv'))
-    return 'Mycotoxin Binders'
-  if (f.includes('yeast deriv') || f === 'mycotoxin') return 'Yeast Derivatives'
-  if (f.includes('organic mineral') || f === 'minerals' || f.includes('miner'))
-    return 'Organic Minerals'
-  if (f.includes('yeast cell wall') || f === 'yeast' || f.includes('suplement'))
-    return 'Yeast Cell Wall'
-  if (f.includes('blend')) return 'Blends'
-  return fam
+  return fam.trim()
 }
 
 function matchFilterValue(value: string | undefined, filter: string | undefined): boolean {
@@ -206,6 +200,8 @@ export const historicoService = {
           const gestor = r.gestor_tecnico || r.expand?.gestor_tecnico_id?.nome || ''
           const vendedor = r.vendedor || r.expand?.vendedor_id?.nome || ''
 
+          const pCod = r.produto_codigo || ''
+          const pFam = familiaCompleta(pCod, r.produto_familia || '')
           allItems.push({
             id: r.id,
             origem: r.origem || (status === 'projetado' ? 'pedido' : 'nf'),
@@ -221,9 +217,9 @@ export const historicoService = {
             canal_vendas: r.canal_vendas || 'Direto',
             gestor_tecnico: gestor,
             vendedor: vendedor,
-            produto_codigo: r.produto_codigo || '',
+            produto_codigo: pCod,
             produto_descricao: r.produto_descricao || '',
-            produto_familia: r.produto_familia || '',
+            produto_familia: pFam,
             produto_quantidade: Number(r.produto_quantidade) || 1,
             produto_valor_unitario: Number(r.produto_valor_unitario) || 0,
             produto_valor_total: Number(r.produto_valor_total) || valorNota,
@@ -283,7 +279,8 @@ export const historicoService = {
             for (const it of itemsOfThisNf) {
               const pCode = String(it.produto_codigo || '').trim()
               const pInfo = produtoMap.get(pCode.toUpperCase())
-              const familia = pInfo?.categoria || pInfo?.linha || ''
+              const rawFam = pInfo?.categoria || pInfo?.linha || ''
+              const familia = familiaCompleta(pCode, rawFam)
               allItems.push({
                 id: `${nf.id}_${it.id}`,
                 origem: 'nf',
@@ -359,7 +356,8 @@ export const historicoService = {
           const vendedor = ped.expand?.vendedor_id?.nome || ''
           const prodCode = ped.produto_codigo || ped.expand?.produto_id?.codigo || ''
           const prodInfo = produtoMap.get(String(prodCode).toUpperCase().trim())
-          const familia = ped.produto_linha || prodInfo?.categoria || prodInfo?.linha || ''
+          const rawFam = ped.produto_linha || prodInfo?.categoria || prodInfo?.linha || ''
+          const familia = familiaCompleta(prodCode, rawFam)
 
           const valTotal = Number(ped.total_geral) || Number(ped.preco_base) || 0
           allItems.push({
@@ -426,7 +424,10 @@ export const historicoService = {
 
       // Filtro Família Produto
       if (filters.familia_produto && filters.familia_produto !== 'Todos') {
-        const itemFamNorm = normalizeFamilia(item.produto_familia).toLowerCase()
+        const itemFamNorm = normalizeFamilia(
+          item.produto_familia,
+          item.produto_codigo,
+        ).toLowerCase()
         const filterFamNorm = normalizeFamilia(filters.familia_produto).toLowerCase()
         if (itemFamNorm !== filterFamNorm) return false
       }

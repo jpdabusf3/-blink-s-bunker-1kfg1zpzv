@@ -201,8 +201,15 @@ cronAdd('maestro_relatorio_semanal', '0 10 * * 1', () => {
         var cDisplay = cNome || cCod || 'Outros'
         clienteMap[cDisplay] = (clienteMap[cDisplay] || 0) + vBrl
 
-        var fam = (r.getString ? r.getString('familia_produto') : r.familia_produto) || 'Outros'
-        if (!fam.trim()) fam = 'Outros'
+        var prodCod = (r.getString ? r.getString('produto_codigo') : r.produto_codigo || '')
+          .trim()
+          .toUpperCase()
+        var famBruta = (r.getString ? r.getString('familia_produto') : r.familia_produto) || ''
+        var fam =
+          typeof familiaCompleta === 'function'
+            ? familiaCompleta(prodCod, famBruta)
+            : famBruta || '—'
+        if (!fam || fam === '—') fam = 'Outros'
         familiaMap[fam] = (familiaMap[fam] || 0) + vBrl
 
         var docKey =
