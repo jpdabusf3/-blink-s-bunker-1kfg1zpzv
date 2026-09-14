@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-14T19:05:35.023Z",
+  "generatedAt": "2026-09-14T19:31:03.398Z",
   "collections": [
     {
       "name": "users",
@@ -896,6 +896,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "nome_original",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE INDEX idx_documents_category ON documents (category)"]
@@ -2050,6 +2056,18 @@
         },
         {
           "name": "modelo_visual_relatorio",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_automation_update",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_automation_period",
           "type": "text",
           "required": false,
           "system": false
@@ -4044,6 +4062,58 @@
         "CREATE INDEX idx_faturamento_ano_mes ON faturamento (ano, mes)",
         "CREATE INDEX idx_faturamento_cliente ON faturamento (cliente_codigo)"
       ]
+    },
+    {
+      "name": "automation_cache",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "cache_key",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "data",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "periodo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "expires_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_automation_cache_key ON automation_cache (cache_key)"]
     }
   ]
 }
