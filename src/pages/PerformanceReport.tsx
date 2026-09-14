@@ -4,11 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useRealtime } from '@/hooks/use-realtime'
 import { formatCurrency } from '@/lib/utils'
-import {
-  getGestoresTecnicos,
-  getVendedoresGestao,
-  type GestaoTecnica,
-} from '@/services/gestao-tecnica'
+import { getVendedoresGestao, type GestaoTecnica } from '@/services/gestao-tecnica'
 import {
   fetchPerformanceData,
   DEFAULT_FILTERS,
@@ -23,7 +19,6 @@ export default function PerformanceReport() {
   const [data, setData] = useState<PerformanceReportData | null>(null)
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
-  const [gestores, setGestores] = useState<GestaoTecnica[]>([])
   const [vendedores, setVendedores] = useState<GestaoTecnica[]>([])
 
   const updateFilter = (key: keyof Filters, value: string) =>
@@ -45,9 +40,8 @@ export default function PerformanceReport() {
   }, [loadData])
 
   useEffect(() => {
-    Promise.all([getGestoresTecnicos(), getVendedoresGestao()])
-      .then(([g, v]) => {
-        setGestores(g)
+    getVendedoresGestao()
+      .then((v) => {
         setVendedores(v)
       })
       .catch(() => {})
@@ -76,9 +70,7 @@ export default function PerformanceReport() {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Relatório de Performance</h1>
-            <p className="text-muted-foreground text-sm">
-              Performance individual de gestores técnicos e vendedores
-            </p>
+            <p className="text-muted-foreground text-sm">Performance individual de vendedores</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -95,12 +87,7 @@ export default function PerformanceReport() {
         </div>
       </div>
 
-      <FilterBar
-        filters={filters}
-        onChange={updateFilter}
-        gestores={gestores}
-        vendedores={vendedores}
-      />
+      <FilterBar filters={filters} onChange={updateFilter} vendedores={vendedores} />
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <Card className="shadow-subtle">

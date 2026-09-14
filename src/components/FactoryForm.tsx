@@ -83,7 +83,6 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
   const [teamMembers, setTeamMembers] = useState<GestaoTecnica[]>([])
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
-  const [gestorTecnicoId, setGestorTecnicoId] = useState<string>(factory?.gestor_tecnico_id || '')
   const [vendedorId, setVendedorId] = useState<string>(factory?.vendedor_id || '')
 
   const [species, setSpecies] = useState<string[]>(() => {
@@ -149,7 +148,6 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
     const focusValue = fd.get('focusLevel') as string
     const finalFocus = isNaN(Number(focusValue)) ? focusValue : Number(focusValue)
 
-    const gestorTecnico = teamMembers.find((g) => g.id === gestorTecnicoId)
     const vendedor = teamMembers.find((v) => v.id === vendedorId)
 
     const errors: Record<string, string> = {}
@@ -193,9 +191,8 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
       lastInteraction: factory?.lastInteraction || new Date().toISOString(),
       country: (fd.get('country') as string) || 'Brasil',
       state: (fd.get('state') as string) || undefined,
-      gestor_tecnico_id:
-        gestorTecnicoId && gestorTecnicoId !== 'none' ? gestorTecnicoId : undefined,
-      gestor_tecnico_name: gestorTecnico?.nome || undefined,
+      gestor_tecnico_id: factory?.gestor_tecnico_id || undefined,
+      gestor_tecnico_name: factory?.gestor_tecnico_name || undefined,
       vendedor_id: vendedorId && vendedorId !== 'none' ? vendedorId : undefined,
       vendedor_name: vendedor?.nome || undefined,
       salesChannel: (salesChannelState as Factory['salesChannel']) || undefined,
@@ -219,7 +216,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
         updateFactory(factory.id, data)
         logActivity(
           `Fábrica atualizada: ${data.name}`,
-          `Gestor Técnico: ${gestorTecnico?.nome || 'Não atribuído'}, Vendedor: ${vendedor?.nome || 'Não atribuído'}, Espécies: ${species.join(', ')}, Carteira: ${carteira.join(', ')}`,
+          `Vendedor: ${vendedor?.nome || 'Não atribuído'}, Espécies: ${species.join(', ')}, Carteira: ${carteira.join(', ')}`,
           factory.id,
           'factories',
         ).catch(() => {})
@@ -273,7 +270,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
         addFactory({ ...data, id: created.id })
         logActivity(
           `Nova fábrica cadastrada: ${data.name}`,
-          `Gestor Técnico: ${gestorTecnico?.nome || 'Não atribuído'}, Vendedor: ${vendedor?.nome || 'Não atribuído'}, Espécies: ${species.join(', ')}, Carteira: ${carteira.join(', ')}`,
+          `Vendedor: ${vendedor?.nome || 'Não atribuído'}, Espécies: ${species.join(', ')}, Carteira: ${carteira.join(', ')}`,
           created.id,
           'factories',
         ).catch(() => {})
@@ -494,55 +491,28 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
         {/* Dedicated Responsibility Assignment UI */}
         <div className="space-y-4 md:col-span-2 p-4 border rounded-lg bg-muted/20">
           <h3 className="font-semibold text-sm flex items-center gap-2 text-foreground">
-            <UserCog className="w-4 h-4 text-primary" /> Atribuição de Responsáveis
+            <UserCog className="w-4 h-4 text-primary" /> Atribuição de Vendedor
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Gestor Técnico</Label>
-              <Select value={gestorTecnicoId || 'none'} onValueChange={setGestorTecnicoId}>
-                <SelectTrigger className="bg-background">
-                  <SelectValue placeholder="Selecione Gestor Técnico" />
-                </SelectTrigger>
-                <SelectContent className="max-h-60">
-                  <SelectItem value="none">Nenhum / Não atribuído</SelectItem>
-                  {teamMembers.map((g) => (
-                    <SelectItem key={g.id} value={g.id}>
-                      {g.nome} —{' '}
-                      <span className="text-muted-foreground">
-                        {g.funcao === 'gestor_tecnico'
-                          ? 'gestor técnico'
-                          : g.funcao === 'vendedor'
-                            ? 'vendedor'
-                            : g.funcao?.replace(/_/g, ' ') || 'membro'}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Vendedor Responsável</Label>
-              <Select value={vendedorId || 'none'} onValueChange={setVendedorId}>
-                <SelectTrigger className="bg-background">
-                  <SelectValue placeholder="Selecione Vendedor" />
-                </SelectTrigger>
-                <SelectContent className="max-h-60">
-                  <SelectItem value="none">Nenhum / Não atribuído</SelectItem>
-                  {teamMembers.map((v) => (
-                    <SelectItem key={v.id} value={v.id}>
-                      {v.nome} —{' '}
-                      <span className="text-muted-foreground">
-                        {v.funcao === 'gestor_tecnico'
-                          ? 'gestor técnico'
-                          : v.funcao === 'vendedor'
-                            ? 'vendedor'
-                            : v.funcao?.replace(/_/g, ' ') || 'membro'}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label>Vendedor Responsável</Label>
+            <Select value={vendedorId || 'none'} onValueChange={setVendedorId}>
+              <SelectTrigger className="bg-background">
+                <SelectValue placeholder="Selecione Vendedor" />
+              </SelectTrigger>
+              <SelectContent className="max-h-60">
+                <SelectItem value="none">Nenhum / Não atribuído</SelectItem>
+                {teamMembers.map((v) => (
+                  <SelectItem key={v.id} value={v.id}>
+                    {v.nome} —{' '}
+                    <span className="text-muted-foreground">
+                      {v.funcao === 'vendedor'
+                        ? 'vendedor'
+                        : v.funcao?.replace(/_/g, ' ') || 'membro'}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

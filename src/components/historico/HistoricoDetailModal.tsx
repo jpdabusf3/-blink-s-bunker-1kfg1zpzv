@@ -58,7 +58,6 @@ export function HistoricoDetailModal({ detailModal, onClose }: HistoricoDetailMo
                   <TableHead className="text-xs font-semibold">Número</TableHead>
                   <TableHead className="text-xs font-semibold">Data</TableHead>
                   <TableHead className="text-xs font-semibold">Destinatário</TableHead>
-                  <TableHead className="text-xs font-semibold">Gestor</TableHead>
                   <TableHead className="text-xs font-semibold">Vendedor</TableHead>
                   <TableHead className="text-xs font-semibold">Espécie</TableHead>
                   <TableHead className="text-xs font-semibold">Canal</TableHead>
@@ -70,7 +69,7 @@ export function HistoricoDetailModal({ detailModal, onClose }: HistoricoDetailMo
                 {items.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={9}
+                      colSpan={8}
                       className="text-center py-6 text-xs text-muted-foreground"
                     >
                       Nenhum documento encontrado.
@@ -94,9 +93,6 @@ export function HistoricoDetailModal({ detailModal, onClose }: HistoricoDetailMo
                               ({doc.destinatario_uf})
                             </span>
                           )}
-                        </TableCell>
-                        <TableCell className="text-xs max-w-[130px] truncate">
-                          {doc.gestor_tecnico || '-'}
                         </TableCell>
                         <TableCell className="text-xs max-w-[130px] truncate">
                           {doc.vendedor || '-'}

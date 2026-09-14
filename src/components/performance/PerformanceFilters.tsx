@@ -14,7 +14,7 @@ import { Card, CardContent } from '@/components/ui/card'
 interface Props {
   filters: Filters
   onChange: (key: keyof Filters, value: string) => void
-  gestores: GestaoTecnica[]
+  gestores?: GestaoTecnica[]
   vendedores: GestaoTecnica[]
 }
 
@@ -27,25 +27,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-export function PerformanceFilters({ filters, onChange, gestores, vendedores }: Props) {
+export function PerformanceFilters({ filters, onChange, vendedores }: Props) {
   return (
     <Card className="shadow-subtle">
-      <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-        <Field label="Gestor Técnico">
-          <Select value={filters.gestorId} onValueChange={(v) => onChange('gestorId', v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Todos" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {gestores.map((g) => (
-                <SelectItem key={g.id} value={g.id}>
-                  {g.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
+      <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Field label="Vendedor">
           <Select value={filters.vendedorId} onValueChange={(v) => onChange('vendedorId', v)}>
             <SelectTrigger>

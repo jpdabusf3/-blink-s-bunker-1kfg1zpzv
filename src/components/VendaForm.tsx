@@ -10,11 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  getGestoresTecnicos,
-  getVendedoresGestao,
-  type GestaoTecnica,
-} from '@/services/gestao-tecnica'
+import { getVendedoresGestao, type GestaoTecnica } from '@/services/gestao-tecnica'
 import {
   createHistoricoVenda,
   updateHistoricoVenda,
@@ -32,14 +28,12 @@ interface VendaFormProps {
 
 export function VendaForm({ onSubmit, initialData }: VendaFormProps) {
   const { toast } = useToast()
-  const [gestores, setGestores] = useState<GestaoTecnica[]>([])
   const [vendedores, setVendedores] = useState<GestaoTecnica[]>([])
   const [errors, setErrors] = useState<FieldErrors>({})
 
   useEffect(() => {
-    Promise.all([getGestoresTecnicos(), getVendedoresGestao()])
-      .then(([g, v]) => {
-        setGestores(g)
+    getVendedoresGestao()
+      .then((v) => {
         setVendedores(v)
       })
       .catch(() => {})
@@ -53,7 +47,7 @@ export function VendaForm({ onSubmit, initialData }: VendaFormProps) {
       data: fd.get('data') as string,
       cliente: fd.get('cliente') as string,
       especie: fd.get('especie') as string,
-      gestor_tecnico_id: (fd.get('gestor_tecnico_id') as string) || undefined,
+      gestor_tecnico_id: initialData?.gestor_tecnico_id || undefined,
       vendedor_id: (fd.get('vendedor_id') as string) || undefined,
       canal_vendas: (fd.get('canal_vendas') as string) || undefined,
       valor: Number(fd.get('valor')),
@@ -113,21 +107,6 @@ export function VendaForm({ onSubmit, initialData }: VendaFormProps) {
               {CANAL_VENDAS_OPTIONS.map((o) => (
                 <SelectItem key={o} value={o}>
                   {o}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Gestor Técnico</Label>
-          <Select name="gestor_tecnico_id" defaultValue={initialData?.gestor_tecnico_id || ''}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {gestores.map((g) => (
-                <SelectItem key={g.id} value={g.id}>
-                  {g.nome}
                 </SelectItem>
               ))}
             </SelectContent>

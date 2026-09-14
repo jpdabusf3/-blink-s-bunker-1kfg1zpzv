@@ -22,12 +22,11 @@ import { exportMetasBalancoPDF, logMetasBalancoExport, buildMetasMatrix } from '
 
 export default function Metas() {
   const [vendedores, setVendedores] = useState<GestaoTecnica[]>([])
-  const [gestores, setGestores] = useState<GestaoTecnica[]>([])
   const [metas, setMetas] = useState<Meta[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<'especie' | 'gestor' | 'canal'>('especie')
+  const [viewMode, setViewMode] = useState<'especie' | 'canal'>('especie')
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
   const { user } = useAuth()
@@ -49,7 +48,6 @@ export default function Metas() {
     getGestaoTecnica()
       .then((all) => {
         setVendedores(all.filter((g) => g.funcao === 'vendedor'))
-        setGestores(all.filter((g) => g.funcao === 'gestor_tecnico'))
       })
       .catch(() => {})
   }, [])
@@ -62,7 +60,6 @@ export default function Metas() {
     getGestaoTecnica()
       .then((all) => {
         setVendedores(all.filter((g) => g.funcao === 'vendedor'))
-        setGestores(all.filter((g) => g.funcao === 'gestor_tecnico'))
       })
       .catch(() => {})
   }, [])
@@ -160,10 +157,10 @@ export default function Metas() {
     setExporting(true)
     try {
       const solicitante = user?.name || user?.email || ''
-      await exportMetasBalancoPDF(metas, vendedores, gestores, { solicitante })
+      await exportMetasBalancoPDF(metas, vendedores, [], { solicitante })
       // Compute totals from the espécie view (grand total is view-independent
       // in aggregate) for the activity log.
-      const res = buildMetasMatrix(metas, vendedores, gestores, 'especie')
+      const res = buildMetasMatrix(metas, vendedores, [], 'especie')
       await logMetasBalancoExport({
         solicitante,
         totalMetas: metas.length,
@@ -189,9 +186,9 @@ export default function Metas() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Metas</h1>
             <p className="text-muted-foreground text-sm">
-              Metas por vendedor, gestor técnico e espécie com acompanhamento automático.
+              Metas por vendedor e espécie com acompanhamento automático.
             </p>
-          </div>
+          </div>{' '}
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -227,7 +224,6 @@ export default function Metas() {
                 onSubmit={onSubmit}
                 initialData={editingMeta}
                 vendedores={vendedores}
-                gestores={gestores}
                 onCancel={handleClose}
               />
             </DialogContent>
@@ -238,13 +234,9 @@ export default function Metas() {
       <Card className="shadow-subtle">
         <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <CardTitle className="text-lg">Matriz de Metas × Realizado</CardTitle>
-          <Tabs
-            value={viewMode}
-            onValueChange={(v) => setViewMode(v as 'especie' | 'gestor' | 'canal')}
-          >
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'especie' | 'canal')}>
             <TabsList>
               <TabsTrigger value="especie">Por Espécie</TabsTrigger>
-              <TabsTrigger value="gestor">Por Gestor</TabsTrigger>
               <TabsTrigger value="canal">Por Canal</TabsTrigger>
             </TabsList>
           </Tabs>
@@ -255,12 +247,7 @@ export default function Metas() {
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
           ) : (
-            <MetasMatrix
-              metas={metas}
-              vendedores={vendedores}
-              gestores={gestores}
-              viewMode={viewMode}
-            />
+            <MetasMatrix metas={metas} vendedores={vendedores} viewMode={viewMode} />
           )}
         </CardContent>
       </Card>
@@ -281,7 +268,6 @@ export default function Metas() {
               {metas.map((m) => {
                 const pct = m.meta_valor > 0 ? (m.valor_realizado / m.meta_valor) * 100 : 0
                 const vName = vendedores.find((v) => v.id === m.vendedor_id)?.nome || 'N/A'
-                const gName = gestores.find((g) => g.id === m.gestor_tecnico_id)?.nome || '—'
                 const esp = m.especie || 'Todas'
                 return (
                   <div
@@ -294,9 +280,7 @@ export default function Metas() {
                         <span className="text-xs text-muted-foreground">·</span>
                         <span className="text-sm text-muted-foreground">{m.periodo}</span>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        Gestor: {gName} · Espécie: {esp}
-                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">Espécie: {esp}</div>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-right">

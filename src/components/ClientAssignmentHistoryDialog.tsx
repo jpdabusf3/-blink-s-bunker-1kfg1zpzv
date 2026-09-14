@@ -101,13 +101,13 @@ export function ClientAssignmentHistoryDialog({
             Histórico de Atribuições — {factory?.name || 'Cliente'}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Auditoria da carteira: registro cronológico de quem alterou o vendedor ou gestor técnico
-            deste cliente e quando a alteração ocorreu.
+            Auditoria da carteira: registro cronológico de quem alterou o vendedor deste cliente e
+            quando a alteração ocorreu.
           </DialogDescription>
         </DialogHeader>
 
         {factory && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs rounded-lg border bg-muted/40 p-3">
+          <div className="grid grid-cols-2 gap-2 text-xs rounded-lg border bg-muted/40 p-3">
             <div>
               <span className="text-muted-foreground block text-[11px]">Cliente</span>
               <span className="font-semibold text-foreground truncate block">{factory.name}</span>
@@ -116,12 +116,6 @@ export function ClientAssignmentHistoryDialog({
               <span className="text-muted-foreground block text-[11px]">Vendedor Atual</span>
               <span className="font-medium text-foreground">
                 {factory.vendedor_name || 'Não atribuído'}
-              </span>
-            </div>
-            <div>
-              <span className="text-muted-foreground block text-[11px]">Gestor Técnico Atual</span>
-              <span className="font-medium text-foreground">
-                {factory.gestor_tecnico_name || 'Não atribuído'}
               </span>
             </div>
           </div>
@@ -151,7 +145,7 @@ export function ClientAssignmentHistoryDialog({
             <div className="text-center py-10 text-sm text-muted-foreground border border-dashed rounded-lg space-y-1">
               <p>Nenhuma mudança de atribuição registrada ainda para este cliente.</p>
               <p className="text-xs text-muted-foreground/75">
-                Novas alterações de vendedor ou gestor serão gravadas automaticamente aqui.
+                Novas alterações de vendedor serão gravadas automaticamente aqui.
               </p>
             </div>
           ) : (

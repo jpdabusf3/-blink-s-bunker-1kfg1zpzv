@@ -101,7 +101,7 @@ export function AssignmentAuditGlobalDialog({
           </DialogTitle>
           <DialogDescription className="text-xs">
             Acompanhe todas as transferências de clientes, rebalanceamentos em lote e alterações de
-            vendedores e gestores técnicos realizadas na equipe.
+            vendedores realizadas na equipe.
           </DialogDescription>
         </DialogHeader>
 

@@ -366,7 +366,7 @@ export function FunilReviewMode() {
 
             <Select value={batchOwner} onValueChange={setBatchOwner}>
               <SelectTrigger className="w-[160px] h-8 text-xs bg-background">
-                <SelectValue placeholder="Gestor Técnico" />
+                <SelectValue placeholder="Vendedor" />
               </SelectTrigger>
               <SelectContent>
                 {sellers.map((s) => (
@@ -410,7 +410,7 @@ export function FunilReviewMode() {
               <th className="p-3 text-left font-semibold w-32">Prioridade</th>
               <th className="p-3 text-left font-semibold w-24">Prob (%)</th>
               <th className="p-3 text-left font-semibold">Potencial (R$)</th>
-              <th className="p-3 text-left font-semibold w-48">Gestor Técnico</th>
+              <th className="p-3 text-left font-semibold w-48">Vendedor</th>
               <th className="p-3 text-left font-semibold">Próximos Passos (Abordagem)</th>
               <th className="p-3 w-12"></th>
             </tr>

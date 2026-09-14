@@ -23,11 +23,7 @@ import { Loader2, Plus, Pencil, TrendingUp } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { useRealtime } from '@/hooks/use-realtime'
 import { getMatrizVendas, type MatrizVenda } from '@/services/matriz-vendas'
-import {
-  getGestoresTecnicos,
-  getVendedoresGestao,
-  type GestaoTecnica,
-} from '@/services/gestao-tecnica'
+import { getVendedoresGestao, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { MatrizVendaForm } from '@/components/MatrizVendaForm'
 
 const PAISES = ['Brasil', 'Paraguai', 'Chile']
@@ -68,9 +64,7 @@ export function MatrizVendasReport() {
   const [paisFilter, setPaisFilter] = useState('all')
   const [carteiraFilter, setCarteiraFilter] = useState('all')
   const [mesFilter, setMesFilter] = useState('all')
-  const [gestorFilter, setGestorFilter] = useState('all')
   const [vendedorFilter, setVendedorFilter] = useState('all')
-  const [gestores, setGestores] = useState<GestaoTecnica[]>([])
   const [vendedores, setVendedores] = useState<GestaoTecnica[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editData, setEditData] = useState<MatrizVenda | undefined>()
@@ -91,9 +85,8 @@ export function MatrizVendasReport() {
   }, [])
 
   useEffect(() => {
-    Promise.all([getGestoresTecnicos(), getVendedoresGestao()])
-      .then(([g, v]) => {
-        setGestores(g)
+    getVendedoresGestao()
+      .then((v) => {
         setVendedores(v)
       })
       .catch(() => {})
@@ -107,11 +100,10 @@ export function MatrizVendasReport() {
         if (paisFilter !== 'all' && d.pais !== paisFilter) return false
         if (carteiraFilter !== 'all' && d.carteira !== carteiraFilter) return false
         if (mesFilter !== 'all' && d.mes !== mesFilter) return false
-        if (gestorFilter !== 'all' && d.gestor_tecnico_id !== gestorFilter) return false
         if (vendedorFilter !== 'all' && d.vendedor_id !== vendedorFilter) return false
         return true
       }),
-    [data, paisFilter, carteiraFilter, mesFilter, gestorFilter, vendedorFilter],
+    [data, paisFilter, carteiraFilter, mesFilter, vendedorFilter],
   )
 
   const totalValor = filtered.reduce((sum, d) => sum + (d.valor || 0), 0)
@@ -160,7 +152,7 @@ export function MatrizVendasReport() {
           </Button>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <FilterSelect
               label="País"
               value={paisFilter}
@@ -178,12 +170,6 @@ export function MatrizVendasReport() {
               value={mesFilter}
               onChange={setMesFilter}
               options={MESES.map((m) => ({ value: m, label: m }))}
-            />
-            <FilterSelect
-              label="Gestor Técnico"
-              value={gestorFilter}
-              onChange={setGestorFilter}
-              options={gestores.map((g) => ({ value: g.id, label: g.nome }))}
             />
             <FilterSelect
               label="Vendedor"
@@ -224,7 +210,6 @@ export function MatrizVendasReport() {
                   <TableHead>País</TableHead>
                   <TableHead>Carteira</TableHead>
                   <TableHead>Mês</TableHead>
-                  <TableHead>Gestor Técnico</TableHead>
                   <TableHead>Vendedor</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
                   <TableHead className="w-10"></TableHead>
@@ -233,7 +218,7 @@ export function MatrizVendasReport() {
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground h-16">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground h-16">
                       Nenhum registro encontrado.
                     </TableCell>
                   </TableRow>
@@ -243,9 +228,6 @@ export function MatrizVendasReport() {
                       <TableCell className="font-medium">{d.pais}</TableCell>
                       <TableCell>{d.carteira}</TableCell>
                       <TableCell className="capitalize">{d.mes}</TableCell>
-                      <TableCell className="text-sm">
-                        {d.expand?.gestor_tecnico_id?.nome || '-'}
-                      </TableCell>
                       <TableCell className="text-sm">
                         {d.expand?.vendedor_id?.nome || '-'}
                       </TableCell>

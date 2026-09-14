@@ -47,11 +47,7 @@ import {
   CANAL_VENDAS_OPTIONS,
   type HistoricoVenda,
 } from '@/services/historico-vendas'
-import {
-  getGestoresTecnicos,
-  getVendedoresGestao,
-  type GestaoTecnica,
-} from '@/services/gestao-tecnica'
+import { getVendedoresGestao, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { UploadPedidoDialog } from '@/components/UploadPedidoDialog'
 import { UploadNfeDialog } from '@/components/UploadNfeDialog'
 import { NfeReviewQueue } from '@/components/NfeReviewQueue'
@@ -63,7 +59,6 @@ import { getNfePedidos } from '@/services/nfe-service'
 export default function Pedidos() {
   const { toast } = useToast()
   const [pedidos, setPedidos] = useState<HistoricoVenda[]>([])
-  const [gestores, setGestores] = useState<GestaoTecnica[]>([])
   const [vendedores, setVendedores] = useState<GestaoTecnica[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -77,7 +72,6 @@ export default function Pedidos() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [fEspecie, setFEspecie] = useState('all')
-  const [fGestor, setFGestor] = useState('all')
   const [fVendedor, setFVendedor] = useState('all')
   const [fCanal, setFCanal] = useState('all')
   const [busca, setBusca] = useState('')
@@ -106,9 +100,6 @@ export default function Pedidos() {
 
   useEffect(() => {
     loadData()
-    getGestoresTecnicos()
-      .then(setGestores)
-      .catch(() => {})
     getVendedoresGestao()
       .then(setVendedores)
       .catch(() => {})
@@ -121,7 +112,6 @@ export default function Pedidos() {
   const filtered = useMemo(() => {
     let r = [...pedidos]
     if (fEspecie !== 'all') r = r.filter((p) => p.especie === fEspecie)
-    if (fGestor !== 'all') r = r.filter((p) => p.gestor_tecnico_id === fGestor)
     if (fVendedor !== 'all') r = r.filter((p) => p.vendedor_id === fVendedor)
     if (fCanal !== 'all') r = r.filter((p) => p.canal_vendas === fCanal)
     if (startDate) r = r.filter((p) => new Date(p.data) >= new Date(startDate))
@@ -137,7 +127,7 @@ export default function Pedidos() {
       )
     }
     return r.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
-  }, [pedidos, fEspecie, fGestor, fVendedor, fCanal, startDate, endDate, busca])
+  }, [pedidos, fEspecie, fVendedor, fCanal, startDate, endDate, busca])
 
   const totalValor = filtered.reduce((s, p) => s + (p.valor || 0), 0)
 
@@ -145,7 +135,6 @@ export default function Pedidos() {
     setStartDate('')
     setEndDate('')
     setFEspecie('all')
-    setFGestor('all')
     setFVendedor('all')
     setFCanal('all')
     setBusca('')
@@ -170,7 +159,6 @@ export default function Pedidos() {
       'Data',
       'Cliente',
       'Espécie',
-      'Gestor Técnico',
       'Vendedor',
       'Canal de Vendas',
       'Valor',
@@ -184,7 +172,6 @@ export default function Pedidos() {
           p.data ? new Date(p.data).toLocaleDateString('pt-BR') : '',
           `"${(p.cliente || '').replace(/"/g, '""')}"`,
           p.especie || '',
-          `"${(p.expand?.gestor_tecnico_id?.nome || '').replace(/"/g, '""')}"`,
           `"${(p.expand?.vendedor_id?.nome || '').replace(/"/g, '""')}"`,
           p.canal_vendas || '',
           (p.valor || 0).toFixed(2).replace('.', ','),
@@ -220,13 +207,13 @@ export default function Pedidos() {
     const rows = filtered
       .map(
         (p) =>
-          `<tr><td>${p.data ? new Date(p.data).toLocaleDateString('pt-BR') : '-'}</td><td>${p.cliente || '-'}</td><td>${p.especie || '-'}</td><td>${p.expand?.gestor_tecnico_id?.nome || '-'}</td><td>${p.expand?.vendedor_id?.nome || '-'}</td><td>${p.canal_vendas || '-'}</td><td class="r">${formatCurrency(p.valor || 0)}</td><td>${p.origem || '-'}</td></tr>`,
+          `<tr><td>${p.data ? new Date(p.data).toLocaleDateString('pt-BR') : '-'}</td><td>${p.cliente || '-'}</td><td>${p.especie || '-'}</td><td>${p.expand?.vendedor_id?.nome || '-'}</td><td>${p.canal_vendas || '-'}</td><td class="r">${formatCurrency(p.valor || 0)}</td><td>${p.origem || '-'}</td></tr>`,
       )
       .join('')
     const html = `<!DOCTYPE html><html><head><title>Implantação de Pedidos - Blink Biotech</title><meta charset="utf-8"><style>
     body{font-family:'Segoe UI',Arial,sans-serif;padding:40px;color:#333}h1{color:#1e3a8a}table{width:100%;border-collapse:collapse;margin-top:20px;font-size:12px}
     th,td{border-bottom:1px solid #e2e8f0;padding:8px;text-align:left}th{background:#f1f5f9}.r{text-align:right}
-    </style></head><body><h1>Implantação de Pedidos - Blink Biotech</h1><p>Gerado em: ${new Date().toLocaleString('pt-BR')} | Total: ${filtered.length} pedido(s) | Valor: ${formatCurrency(totalValor)}</p><table><thead><tr><th>Data</th><th>Cliente</th><th>Espécie</th><th>Gestor</th><th>Vendedor</th><th>Canal</th><th class="r">Valor</th><th>Origem</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=()=>{setTimeout(()=>window.print(),500)}</script></body></html>`
+    </style></head><body><h1>Implantação de Pedidos - Blink Biotech</h1><p>Gerado em: ${new Date().toLocaleString('pt-BR')} | Total: ${filtered.length} pedido(s) | Valor: ${formatCurrency(totalValor)}</p><table><thead><tr><th>Data</th><th>Cliente</th><th>Espécie</th><th>Vendedor</th><th>Canal</th><th class="r">Valor</th><th>Origem</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=()=>{setTimeout(()=>window.print(),500)}</script></body></html>`
     win.document.write(html)
     win.document.close()
     toast({ title: 'Gerando PDF', description: 'Documento preparado para impressão.' })
@@ -359,22 +346,6 @@ export default function Pedidos() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Gestor Técnico</Label>
-                <Select value={fGestor} onValueChange={setFGestor}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    {gestores.map((g) => (
-                      <SelectItem key={g.id} value={g.id}>
-                        {g.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
                 <Label>Vendedor</Label>
                 <Select value={fVendedor} onValueChange={setFVendedor}>
                   <SelectTrigger>
@@ -451,7 +422,6 @@ export default function Pedidos() {
                         <TableHead>Data</TableHead>
                         <TableHead>Cliente</TableHead>
                         <TableHead>Espécie</TableHead>
-                        <TableHead>Gestor Técnico</TableHead>
                         <TableHead>Vendedor</TableHead>
                         <TableHead>Canal</TableHead>
                         <TableHead className="text-right">Valor</TableHead>
@@ -462,7 +432,7 @@ export default function Pedidos() {
                     <TableBody>
                       {filtered.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={9} className="text-center text-muted-foreground h-32">
+                          <TableCell colSpan={8} className="text-center text-muted-foreground h-32">
                             Nenhum pedido implantado. Use “Importar PDF + Excel” para começar.
                           </TableCell>
                         </TableRow>
@@ -474,7 +444,6 @@ export default function Pedidos() {
                           </TableCell>
                           <TableCell className="font-medium">{p.cliente}</TableCell>
                           <TableCell>{p.especie || '-'}</TableCell>
-                          <TableCell>{p.expand?.gestor_tecnico_id?.nome || '-'}</TableCell>
                           <TableCell>{p.expand?.vendedor_id?.nome || '-'}</TableCell>
                           <TableCell>{p.canal_vendas || '-'}</TableCell>
                           <TableCell className="text-right font-semibold text-primary">

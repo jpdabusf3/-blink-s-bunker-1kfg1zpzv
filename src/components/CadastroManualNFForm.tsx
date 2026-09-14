@@ -289,27 +289,6 @@ export function CadastroManualNFForm({ onSuccess, onCancel }: CadastroManualNFFo
             </Select>
           </div>
 
-          {/* Gestor Técnico */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Gestor Técnico</Label>
-            <Select
-              value={form.gestorTecnicoId}
-              onValueChange={(val) => updateField('gestorTecnicoId', val)}
-              disabled={loadingEquipe}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o gestor..." />
-              </SelectTrigger>
-              <SelectContent>
-                {gestoresList.map((g) => (
-                  <SelectItem key={g.id} value={g.id}>
-                    {g.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Vendedor */}
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold">Vendedor</Label>

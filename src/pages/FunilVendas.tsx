@@ -3,11 +3,7 @@ import { getAllFactories, updateFactoryPB } from '@/services/factories'
 import { getScopedFactories } from '@/lib/user-scope'
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
-import {
-  getVendedoresGestao,
-  getGestoresGestao,
-  type GestaoTecnica,
-} from '@/services/gestao-tecnica'
+import { getVendedoresGestao, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { logActivity } from '@/services/activity-logs'
 import { exportFunilVendasToExcel } from '@/lib/exportFunilVendas'
 import { exportFullDashboardToPDF } from '@/lib/exportFullDashboard'
@@ -102,10 +98,8 @@ export default function FunilVendas() {
   const { logAction } = useFunnelActivityLog()
   const [factories, setFactories] = useState<Factory[]>([])
   const [vendedores, setVendedores] = useState<GestaoTecnica[]>([])
-  const [gestores, setGestores] = useState<GestaoTecnica[]>([])
   const [filters, setFilters] = useState({
     vendedor: 'all',
-    gestor: 'all',
     canal: 'all',
     especie: 'all',
     status: 'all',
@@ -165,9 +159,6 @@ export default function FunilVendas() {
     getVendedoresGestao()
       .then(setVendedores)
       .catch(() => {})
-    getGestoresGestao()
-      .then(setGestores)
-      .catch(() => {})
     reloadDashboardData()
   }, [loadData, reloadDashboardData])
 
@@ -199,7 +190,6 @@ export default function FunilVendas() {
       funilVendasClients.filter((f) => {
         const status = f.status_funil as FunilVendasStatus
         if (filters.vendedor !== 'all' && !factoryMatchesVendedor(f, filters.vendedor)) return false
-        if (filters.gestor !== 'all' && f.gestor_tecnico_id !== filters.gestor) return false
         if (filters.canal !== 'all' && f.profile_type !== filters.canal) return false
         if (filters.especie !== 'all') {
           const factorySpecies = Array.isArray(f.animalSpecies)
@@ -494,22 +484,6 @@ export default function FunilVendas() {
       <div className="flex flex-wrap items-center gap-2">
         <Filter className="w-4 h-4 text-muted-foreground" />
         <Select
-          value={filters.gestor}
-          onValueChange={(v) => setFilters((p) => ({ ...p, gestor: v }))}
-        >
-          <SelectTrigger className="w-[180px] h-9">
-            <SelectValue placeholder="Gestor Técnico" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos Gestores</SelectItem>
-            {gestores.map((g) => (
-              <SelectItem key={g.id} value={g.id}>
-                {g.nome}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
           value={filters.vendedor}
           onValueChange={(v) => setFilters((p) => ({ ...p, vendedor: v }))}
         >
@@ -754,12 +728,6 @@ export default function FunilVendas() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Vendedor:</span>
                     <span className="font-medium">{selectedFactory.vendedor_name}</span>
-                  </div>
-                )}
-                {selectedFactory.gestor_tecnico_name && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Gestor técnico:</span>
-                    <span className="font-medium">{selectedFactory.gestor_tecnico_name}</span>
                   </div>
                 )}
               </div>

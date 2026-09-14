@@ -40,7 +40,7 @@ const CURRENT_PERIOD = `${MONTHS_PT[new Date().getMonth()]} ${new Date().getFull
 
 const metaSchema = z.object({
   vendedor_id: z.string().min(1, 'Vendedor é obrigatório'),
-  gestor_tecnico_id: z.string(),
+  gestor_tecnico_id: z.string().optional(),
   especie: z.string(),
   canal_vendas: z.string(),
   periodo: z.string().min(1, 'Período é obrigatório'),
@@ -55,16 +55,16 @@ interface MetaFormProps {
   onSubmit: (data: MetaFormValues) => void
   initialData?: Meta | null
   vendedores: GestaoTecnica[]
-  gestores: GestaoTecnica[]
+  gestores?: GestaoTecnica[]
   onCancel: () => void
 }
 
-export function MetaForm({ onSubmit, initialData, vendedores, gestores, onCancel }: MetaFormProps) {
+export function MetaForm({ onSubmit, initialData, vendedores, onCancel }: MetaFormProps) {
   const form = useForm<MetaFormValues>({
     resolver: zodResolver(metaSchema) as any,
     defaultValues: {
       vendedor_id: initialData?.vendedor_id || '',
-      gestor_tecnico_id: initialData?.gestor_tecnico_id || 'all',
+      gestor_tecnico_id: initialData?.gestor_tecnico_id || '',
       especie: initialData?.especie || 'all',
       canal_vendas: initialData?.canal_vendas || 'all',
       periodo: initialData?.periodo || CURRENT_PERIOD,
@@ -101,32 +101,7 @@ export function MetaForm({ onSubmit, initialData, vendedores, gestores, onCancel
             </FormItem>
           )}
         />
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="gestor_tecnico_id"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Gestor Técnico</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todos" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    {gestores.map((g) => (
-                      <SelectItem key={g.id} value={g.id}>
-                        {g.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <div className="grid grid-cols-1 gap-4">
           <FormField
             control={form.control}
             name="especie"

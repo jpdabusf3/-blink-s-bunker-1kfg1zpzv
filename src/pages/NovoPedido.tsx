@@ -287,7 +287,6 @@ export default function NovoPedido() {
     if (!clienteNome.trim() || clienteNome.trim().length < 3) return false
     if (!clienteEmail.trim() || !emailValido) return false
     if (!solicitante.trim()) return false
-    if (!gestorTecnicoId) return false
     if (!vendedorId) return false
     if (!produtoId) return false
     if (quantidade < 1 || !Number.isInteger(Number(quantidade))) return false
@@ -303,7 +302,6 @@ export default function NovoPedido() {
     clienteEmail,
     emailValido,
     solicitante,
-    gestorTecnicoId,
     vendedorId,
     produtoId,
     quantidade,
@@ -531,15 +529,13 @@ export default function NovoPedido() {
       const subject = encodeURIComponent(`Pedido Blink Biotech - ${d.cliente_nome} - ${hoje}`)
 
       const corpo = `Olá, ${d.cliente_nome}!
-
+	
 Segue em anexo o documento oficial do seu Pedido de Venda da Blink Biotech.
-
+	
 RESUMO DO PEDIDO:
 ----------------------------------------
 - Solicitante: ${d.solicitante}
-- Gestor Técnico: ${d.gestor_tecnico_nome}
-- Vendedor Responsável: ${d.vendedor_nome}
-- Produto: ${d.produto_nome} (${d.produto_codigo} - ${d.produto_linha})
+- Vendedor Responsável: ${d.vendedor_nome}- Produto: ${d.produto_nome} (${d.produto_codigo} - ${d.produto_linha})
 - Quantidade: ${d.quantidade} UN
 - Preço Base: ${formatBRL(d.preco_base)}
 - Modalidade de Frete: ${d.modalidade_frete} (${formatBRL(d.frete_valor)})
@@ -608,18 +604,18 @@ Hernandarias - PY | Indaiatuba - SP`
     )
   }
 
-  if (gestoresTecnicos.length === 0 && vendedores.length === 0) {
+  if (vendedores.length === 0) {
     return (
       <div className="p-8 max-w-3xl mx-auto">
         <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20">
           <CardHeader>
             <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400">
               <AlertCircle className="w-6 h-6" />
-              <CardTitle>Nenhum membro de equipe cadastrado</CardTitle>
+              <CardTitle>Nenhum vendedor cadastrado</CardTitle>
             </div>
             <CardDescription className="text-amber-700/80 dark:text-amber-300/80">
-              Nenhum membro da equipe comercial ou técnica está ativo. Adicione gestores e
-              vendedores primeiro no painel de equipe.
+              Nenhum vendedor está ativo na equipe comercial. Adicione vendedores primeiro no painel
+              de equipe.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -803,54 +799,32 @@ Hernandarias - PY | Indaiatuba - SP`
             </CardContent>
           </Card>
 
-          {/* PASSO 2: GESTÃO TÉCNICA (ATRIBUIÇÃO DE EQUIPE) */}
+          {/* PASSO 2: ATRIBUIÇÃO DE VENDEDOR */}
           <Card className="shadow-sm border-border">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2 text-primary font-semibold text-base">
                 <Users2 className="w-5 h-5" />
-                <span>Passo 2: Gestão Técnica (Atribuição de Equipe)</span>
+                <span>Passo 2: Atribuição de Vendedor</span>
               </div>
-              <CardDescription>
-                Responsáveis técnicos e comerciais vinculados a este cliente
-              </CardDescription>
+              <CardDescription>Vendedor comercial vinculado a este cliente</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 pt-1">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">
-                    Gestor Técnico <span className="text-destructive">*</span>
-                  </Label>
-                  <Select value={gestorTecnicoId} onValueChange={setGestorTecnicoId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o gestor técnico" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {gestoresTecnicos.map((g) => (
-                        <SelectItem key={g.id} value={g.id}>
-                          {g.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">
-                    Vendedor Responsável <span className="text-destructive">*</span>
-                  </Label>
-                  <Select value={vendedorId} onValueChange={setVendedorId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o vendedor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {vendedores.map((v) => (
-                        <SelectItem key={v.id} value={v.id}>
-                          {v.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">
+                  Vendedor Responsável <span className="text-destructive">*</span>
+                </Label>
+                <Select value={vendedorId} onValueChange={setVendedorId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o vendedor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vendedores.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Status de auto atribuição / Checkbox de salvar atribuição */}
@@ -882,8 +856,7 @@ Hernandarias - PY | Indaiatuba - SP`
                     htmlFor="salvar-atribuicao"
                     className="text-xs font-normal text-muted-foreground cursor-pointer leading-tight"
                   >
-                    Salvar atribuição para este cliente (vincular Gestor e Vendedor para próximos
-                    pedidos)
+                    Salvar atribuição para este cliente (vincular Vendedor para próximos pedidos)
                   </Label>
                 </div>
               )}

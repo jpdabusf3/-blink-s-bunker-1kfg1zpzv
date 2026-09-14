@@ -30,8 +30,8 @@ interface AtribuicaoDialogProps {
     assignments: {
       vendedor_id: string | null
       vendedor_name: string | null
-      gestor_tecnico_id: string | null
-      gestor_tecnico_name: string | null
+      gestor_tecnico_id?: string | null
+      gestor_tecnico_name?: string | null
     },
   ) => Promise<void>
 }
@@ -41,8 +41,6 @@ function formatRole(funcao?: string) {
   switch (funcao) {
     case 'vendedor':
       return 'vendedor'
-    case 'gestor_tecnico':
-      return 'gestor técnico'
     case 'gestor_comercial':
       return 'gestor comercial'
     case 'gestor_especie':
@@ -64,13 +62,11 @@ export function AtribuicaoDialog({
   onSave,
 }: AtribuicaoDialogProps) {
   const [vendedorId, setVendedorId] = useState<string>('none')
-  const [gestorId, setGestorId] = useState<string>('none')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (factory) {
       setVendedorId(factory.vendedor_id || 'none')
-      setGestorId(factory.gestor_tecnico_id || 'none')
     }
   }, [factory, open])
 
@@ -80,13 +76,10 @@ export function AtribuicaoDialog({
     setSaving(true)
     try {
       const vendMember = members.find((m) => m.id === vendedorId)
-      const gestMember = members.find((m) => m.id === gestorId)
 
       await onSave(factory.id, {
         vendedor_id: vendedorId === 'none' ? null : vendedorId,
         vendedor_name: vendedorId === 'none' ? null : vendMember?.nome || null,
-        gestor_tecnico_id: gestorId === 'none' ? null : gestorId,
-        gestor_tecnico_name: gestorId === 'none' ? null : gestMember?.nome || null,
       })
       onOpenChange(false)
     } finally {
@@ -114,23 +107,6 @@ export function AtribuicaoDialog({
             <Select value={vendedorId} onValueChange={setVendedorId} disabled={saving}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecione o vendedor" />
-              </SelectTrigger>
-              <SelectContent className="max-h-60">
-                <SelectItem value="none">Nenhum / Não atribuído</SelectItem>
-                {members.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.nome} — <span className="text-muted-foreground">{formatRole(m.funcao)}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs font-semibold">Gestor Técnico</Label>
-            <Select value={gestorId} onValueChange={setGestorId} disabled={saving}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecione o gestor técnico" />
               </SelectTrigger>
               <SelectContent className="max-h-60">
                 <SelectItem value="none">Nenhum / Não atribuído</SelectItem>

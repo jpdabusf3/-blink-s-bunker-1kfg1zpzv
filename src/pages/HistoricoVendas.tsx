@@ -54,11 +54,7 @@ import {
   exportHistoricoVendasToExcel,
   exportHistoricoVendasToPDF,
 } from '@/lib/exportHistoricoVendas'
-import {
-  getGestoresTecnicos,
-  getVendedoresGestao,
-  type GestaoTecnica,
-} from '@/services/gestao-tecnica'
+import { getVendedoresGestao, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { VendaForm } from '@/components/VendaForm'
 import { UploadPedidoDialog } from '@/components/UploadPedidoDialog'
 import { UploadNfeDialog } from '@/components/UploadNfeDialog'
@@ -68,10 +64,8 @@ export default function HistoricoVendas() {
   const { toast } = useToast()
   const [data, setData] = useState<HistoricoVenda[]>([])
   const [loading, setLoading] = useState(true)
-  const [gestores, setGestores] = useState<GestaoTecnica[]>([])
   const [vendedores, setVendedores] = useState<GestaoTecnica[]>([])
   const [fEspecie, setFEspecie] = useState('all')
-  const [fGestor, setFGestor] = useState('all')
   const [fVendedor, setFVendedor] = useState('all')
   const [fCanal, setFCanal] = useState('all')
   const [isNewOpen, setIsNewOpen] = useState(false)
@@ -91,9 +85,6 @@ export default function HistoricoVendas() {
 
   useEffect(() => {
     loadData()
-    getGestoresTecnicos()
-      .then(setGestores)
-      .catch(() => {})
     getVendedoresGestao()
       .then(setVendedores)
       .catch(() => {})
@@ -106,11 +97,6 @@ export default function HistoricoVendas() {
     if (fEspecie !== 'all') {
       r = r.filter((d) => (d.especie_destino || d.especie) === fEspecie)
     }
-    if (fGestor !== 'all') {
-      const gObj = gestores.find((g) => g.id === fGestor)
-      const gNome = gObj?.nome || ''
-      r = r.filter((d) => d.gestor_tecnico_id === fGestor || (gNome && d.gestor_tecnico === gNome))
-    }
     if (fVendedor !== 'all') {
       const vObj = vendedores.find((v) => v.id === fVendedor)
       const vNome = vObj?.nome || ''
@@ -120,7 +106,7 @@ export default function HistoricoVendas() {
       r = r.filter((d) => d.canal_vendas === fCanal)
     }
     return r
-  }, [data, fEspecie, fGestor, fVendedor, fCanal, gestores, vendedores])
+  }, [data, fEspecie, fVendedor, fCanal, vendedores])
 
   const totalValor = filtered.reduce((s, d) => s + (d.produto_valor_total || d.valor || 0), 0)
 
@@ -276,7 +262,7 @@ export default function HistoricoVendas() {
                 <Filter className="w-5 h-5 text-primary" /> Filtros
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Espécie</Label>
                 <Select value={fEspecie} onValueChange={setFEspecie}>
@@ -288,22 +274,6 @@ export default function HistoricoVendas() {
                     {ESPECIE_OPTIONS.map((o) => (
                       <SelectItem key={o} value={o}>
                         {o}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Gestor Técnico</Label>
-                <Select value={fGestor} onValueChange={setFGestor}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    {gestores.map((g) => (
-                      <SelectItem key={g.id} value={g.id}>
-                        {g.nome}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -364,7 +334,6 @@ export default function HistoricoVendas() {
                         <TableHead>Cliente</TableHead>
                         <TableHead>Produto</TableHead>
                         <TableHead>Espécie</TableHead>
-                        <TableHead>Gestor</TableHead>
                         <TableHead>Vendedor</TableHead>
                         <TableHead>Canal</TableHead>
                         <TableHead className="text-right">Valor</TableHead>
@@ -377,7 +346,7 @@ export default function HistoricoVendas() {
                       {filtered.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={12}
+                            colSpan={11}
                             className="text-center text-muted-foreground h-16"
                           >
                             Nenhum registro encontrado.
@@ -387,8 +356,6 @@ export default function HistoricoVendas() {
                         filtered.map((r) => {
                           const dataExibicao = r.data_documento || r.data
                           const clienteExibicao = r.destinatario_nome || r.cliente
-                          const gestorExibicao =
-                            r.gestor_tecnico || r.expand?.gestor_tecnico_id?.nome || '-'
                           const vendedorExibicao = r.vendedor || r.expand?.vendedor_id?.nome || '-'
                           const especieExibicao = r.especie_destino || r.especie || '-'
                           const valorExibicao = r.produto_valor_total || r.valor || 0
@@ -416,7 +383,6 @@ export default function HistoricoVendas() {
                                 {r.produto_descricao || r.produto_codigo || '-'}
                               </TableCell>
                               <TableCell className="text-xs">{especieExibicao}</TableCell>
-                              <TableCell className="text-xs">{gestorExibicao}</TableCell>
                               <TableCell className="text-xs">{vendedorExibicao}</TableCell>
                               <TableCell className="text-xs">{r.canal_vendas || '-'}</TableCell>
                               <TableCell className="text-right font-semibold text-xs text-primary">

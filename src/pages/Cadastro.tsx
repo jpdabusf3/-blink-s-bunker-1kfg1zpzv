@@ -107,7 +107,6 @@ export default function Cadastro() {
 
   // Batch assignment state
   const [batchVendedorId, setBatchVendedorId] = useState<string>('keep')
-  const [batchGestorId, setBatchGestorId] = useState<string>('keep')
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false)
   const [batchAssigning, setBatchAssigning] = useState(false)
 
@@ -496,7 +495,6 @@ export default function Cadastro() {
         const matchText =
           f.name.toLowerCase().includes(q) ||
           f.city?.toLowerCase().includes(q) ||
-          f.gestor_tecnico_name?.toLowerCase().includes(q) ||
           f.vendedor_name?.toLowerCase().includes(q)
         if (!matchText) return false
       }
@@ -916,10 +914,9 @@ export default function Cadastro() {
     }
 
     const applyVendedor = batchVendedorId !== 'keep'
-    const applyGestor = batchGestorId !== 'keep'
 
-    if (!applyVendedor && !applyGestor) {
-      toast.info('Selecione uma alteração para vendedor ou gestor técnico.')
+    if (!applyVendedor) {
+      toast.info('Selecione uma alteração para vendedor.')
       return
     }
 
@@ -933,13 +930,6 @@ export default function Cadastro() {
         : batchVendedorId
       : null
     const targetVendedorName = applyVendedor ? resolvedVendedorMember?.nome || null : null
-
-    const resolvedGestorMember =
-      applyGestor && batchGestorId !== 'none'
-        ? activeGestaoTecnica.find((m) => m.id === batchGestorId)
-        : null
-    const targetGestorId = applyGestor ? (batchGestorId === 'none' ? '' : batchGestorId) : null
-    const targetGestorName = applyGestor ? resolvedGestorMember?.nome || null : null
 
     setBatchAssigning(true)
     let successCount = 0
@@ -962,22 +952,12 @@ export default function Cadastro() {
 
         let oldVend = client.vendedor_name || 'Não atribuído'
         let newVend = oldVend
-        let oldGest = client.gestor_tecnico_name || 'Não atribuído'
-        let newGest = oldGest
 
         if (applyVendedor) {
           payload.vendedor_id = targetVendedorId
           newVend = targetVendedorName || 'Não atribuído'
           if (oldVend !== newVend) {
             clientChanges.push(`Vendedor: "${oldVend}" → "${newVend}"`)
-          }
-        }
-
-        if (applyGestor) {
-          payload.gestor_tecnico_id = targetGestorId
-          newGest = targetGestorName || 'Não atribuído'
-          if (oldGest !== newGest) {
-            clientChanges.push(`Gestor: "${oldGest}" → "${newGest}"`)
           }
         }
 
@@ -993,8 +973,8 @@ export default function Cadastro() {
               recordId: client.id,
               collectionName: 'factories',
               tipo: 'atribuicao',
-              status_anterior: `${oldVend} / ${oldGest}`,
-              status_novo: `${newVend} / ${newGest}`,
+              status_anterior: oldVend,
+              status_novo: newVend,
               origem: 'manual',
             })
           }
@@ -1010,15 +990,11 @@ export default function Cadastro() {
           if (!selectedIds.has(f.id)) return f
           const nextVendedorId = applyVendedor ? targetVendedorId || undefined : f.vendedor_id
           const nextVendedorName = applyVendedor ? targetVendedorName || undefined : f.vendedor_name
-          const nextGestorId = applyGestor ? targetGestorId || undefined : f.gestor_tecnico_id
-          const nextGestorName = applyGestor ? targetGestorName || undefined : f.gestor_tecnico_name
 
           return {
             ...f,
             vendedor_id: nextVendedorId,
             vendedor_name: nextVendedorName,
-            gestor_tecnico_id: nextGestorId,
-            gestor_tecnico_name: nextGestorName,
             expand: {
               ...f.expand,
               vendedor_id: nextVendedorId
@@ -1026,12 +1002,6 @@ export default function Cadastro() {
                 : undefined,
               vendedor: nextVendedorId
                 ? { id: nextVendedorId, nome: nextVendedorName || '' }
-                : undefined,
-              gestor_tecnico_id: nextGestorId
-                ? { id: nextGestorId, nome: nextGestorName || '' }
-                : undefined,
-              gestor_tecnico: nextGestorId
-                ? { id: nextGestorId, nome: nextGestorName || '' }
                 : undefined,
             },
           }
@@ -1044,10 +1014,6 @@ export default function Cadastro() {
         if (applyVendedor) {
           patch.vendedor_id = targetVendedorId || undefined
           patch.vendedor_name = targetVendedorName || undefined
-        }
-        if (applyGestor) {
-          patch.gestor_tecnico_id = targetGestorId || undefined
-          patch.gestor_tecnico_name = targetGestorName || undefined
         }
         updateFactory(client.id, patch)
       })
@@ -1079,7 +1045,6 @@ export default function Cadastro() {
       // Limpa seleções de lote
       setSelectedIds(new Set())
       setBatchVendedorId('keep')
-      setBatchGestorId('keep')
     } finally {
       setBatchAssigning(false)
     }
@@ -1094,9 +1059,7 @@ export default function Cadastro() {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Cadastro de Clientes</h1>
-            <p className="text-muted-foreground text-sm">
-              Gerencie fábricas, gestores técnicos e vendedores.
-            </p>
+            <p className="text-muted-foreground text-sm">Gerencie fábricas e vendedores.</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -1262,32 +1225,10 @@ export default function Cadastro() {
                 </select>
               </div>
 
-              {/* Seletor Gestor Técnico */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">Gestor Técnico:</span>
-                <select
-                  value={batchGestorId}
-                  onChange={(e) => setBatchGestorId(e.target.value)}
-                  disabled={batchAssigning}
-                  aria-label="Selecionar novo gestor técnico para lote"
-                  className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                >
-                  <option value="keep">-- Manter atual --</option>
-                  <option value="none">Nenhum / Desatribuir</option>
-                  {activeGestaoTecnica.map((m) => (
-                    <option key={`g-${m.id}`} value={m.id}>
-                      {m.nome} ({m.funcao || 'Membro'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
               <Button
                 size="sm"
                 className="h-8 text-xs gap-1.5 ml-auto"
-                disabled={
-                  batchAssigning || (batchVendedorId === 'keep' && batchGestorId === 'keep')
-                }
+                disabled={batchAssigning || batchVendedorId === 'keep'}
                 onClick={() => setBatchConfirmOpen(true)}
               >
                 {batchAssigning ? (
@@ -1334,7 +1275,7 @@ export default function Cadastro() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por nome, cidade, gestor ou vendedor..."
+                placeholder="Buscar por nome, cidade ou vendedor..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9 bg-background"
@@ -1478,7 +1419,6 @@ export default function Cadastro() {
                     <TableHead>Funil</TableHead>
                     <TableHead>Contato</TableHead>
                     <TableHead>Status do Contato</TableHead>
-                    <TableHead>Gestor Técnico</TableHead>
                     <TableHead>Vendedor</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -1486,7 +1426,7 @@ export default function Cadastro() {
                 <TableBody>
                   {filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center text-muted-foreground h-16">
+                      <TableCell colSpan={10} className="text-center text-muted-foreground h-16">
                         Nenhuma fábrica encontrada.
                       </TableCell>
                     </TableRow>
@@ -1560,18 +1500,6 @@ export default function Cadastro() {
                           </TableCell>
                           <TableCell className="text-sm">
                             <EditableMemberSelect
-                              currentId={f.gestor_tecnico_id}
-                              currentName={f.gestor_tecnico_name}
-                              members={activeGestaoTecnica}
-                              onSelect={(newId, newName) =>
-                                handleUpdateGestorTecnico(f.id, newId, newName)
-                              }
-                              placeholder="Sem gestor"
-                              searchPlaceholder="Buscar gestor..."
-                            />
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            <EditableMemberSelect
                               currentId={f.vendedor_id}
                               currentName={f.vendedor_name}
                               members={activeGestaoTecnica}
@@ -1596,7 +1524,7 @@ export default function Cadastro() {
                               variant="ghost"
                               size="icon"
                               onClick={() => setAtribuicaoFactory(f)}
-                              title="Editar atribuição de vendedor e gestor"
+                              title="Editar atribuição de vendedor"
                               className="hover:text-primary"
                             >
                               <UserCheck className="w-4 h-4" />
@@ -1722,7 +1650,7 @@ export default function Cadastro() {
 
       <ImportExcelDialog open={importOpen} onOpenChange={setImportOpen} onImported={loadData} />
 
-      {/* Modal de Atribuição Rápida de Vendedor e Gestor Técnico */}
+      {/* Modal de Atribuição Rápida de Vendedor */}
       <AtribuicaoDialog
         open={!!atribuicaoFactory}
         onOpenChange={(open) => {
@@ -1757,14 +1685,6 @@ export default function Cadastro() {
             : batchVendedorId === 'none'
               ? null
               : activeGestaoTecnica.find((m) => m.id === batchVendedorId)?.nome || null
-        }
-        applyGestor={batchGestorId !== 'keep'}
-        newGestorName={
-          batchGestorId === 'keep'
-            ? null
-            : batchGestorId === 'none'
-              ? null
-              : activeGestaoTecnica.find((m) => m.id === batchGestorId)?.nome || null
         }
         onConfirm={handleApplyBatchAssign}
       />

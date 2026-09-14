@@ -405,11 +405,6 @@ export const historicoService = {
         return false
       }
 
-      // Filtro Gestor Técnico
-      if (!matchFilterValue(item.gestor_tecnico, filters.gestor_tecnico)) {
-        return false
-      }
-
       // Filtro Vendedor
       if (!matchFilterValue(item.vendedor, filters.vendedor)) {
         return false

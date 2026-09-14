@@ -175,12 +175,6 @@ export function HistoricoDataTable({
                   Espécie {renderSortIcon('especie')}
                 </TableHead>
                 <TableHead
-                  onClick={() => handleSort('gestor_tecnico')}
-                  className="cursor-pointer select-none text-xs font-semibold whitespace-nowrap"
-                >
-                  Gestor Técnico {renderSortIcon('gestor_tecnico')}
-                </TableHead>
-                <TableHead
                   onClick={() => handleSort('vendedor')}
                   className="cursor-pointer select-none text-xs font-semibold whitespace-nowrap"
                 >
@@ -313,7 +307,7 @@ export function HistoricoDataTable({
               Array.from({ length: 6 }).map((_, i) => (
                 <TableRow key={i}>
                   {Array.from({
-                    length: granularity === 'mensal' ? 10 : granularity === 'anual' ? 7 : 5,
+                    length: granularity === 'mensal' ? 9 : granularity === 'anual' ? 7 : 5,
                   }).map((_, j) => (
                     <TableCell key={j} className="py-3">
                       <Skeleton className="h-4 w-full" />
@@ -324,7 +318,7 @@ export function HistoricoDataTable({
             ) : paginatedRows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={granularity === 'mensal' ? 10 : granularity === 'anual' ? 7 : 5}
+                  colSpan={granularity === 'mensal' ? 9 : granularity === 'anual' ? 7 : 5}
                   className="py-12 text-center"
                 >
                   <div className="flex flex-col items-center justify-center gap-3">
@@ -365,9 +359,6 @@ export function HistoricoDataTable({
                         <Badge variant="outline" className="text-[11px] font-normal">
                           {m.especie}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs truncate max-w-[150px]">
-                        {m.gestor_tecnico}
                       </TableCell>
                       <TableCell className="text-xs truncate max-w-[150px]">{m.vendedor}</TableCell>
                       <TableCell className="text-xs">{m.canal}</TableCell>

@@ -19,8 +19,8 @@ interface BatchAssignConfirmDialogProps {
   selectedFactories: Factory[]
   newVendedorName: string | null
   applyVendedor: boolean
-  newGestorName: string | null
-  applyGestor: boolean
+  newGestorName?: string | null
+  applyGestor?: boolean
   onConfirm: () => Promise<void>
 }
 
@@ -30,8 +30,6 @@ export function BatchAssignConfirmDialog({
   selectedFactories,
   newVendedorName,
   applyVendedor,
-  newGestorName,
-  applyGestor,
   onConfirm,
 }: BatchAssignConfirmDialogProps) {
   const [submitting, setSubmitting] = useState(false)
@@ -75,18 +73,7 @@ export function BatchAssignConfirmDialog({
                 </Badge>
               </div>
             )}
-            {applyGestor && (
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Novo Gestor Técnico:</span>
-                <Badge
-                  variant={newGestorName ? 'default' : 'outline'}
-                  className="font-medium text-xs"
-                >
-                  {newGestorName || 'Nenhum / Desatribuído'}
-                </Badge>
-              </div>
-            )}
-            {!applyVendedor && !applyGestor && (
+            {!applyVendedor && (
               <p className="text-destructive text-xs">Nenhum campo selecionado para alteração.</p>
             )}
           </div>
@@ -142,7 +129,7 @@ export function BatchAssignConfirmDialog({
           <Button
             type="button"
             onClick={handleConfirm}
-            disabled={submitting || (!applyVendedor && !applyGestor)}
+            disabled={submitting || !applyVendedor}
             className="gap-1.5"
           >
             {submitting && <Loader2 className="w-4 h-4 animate-spin" />}

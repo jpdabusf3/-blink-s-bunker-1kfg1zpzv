@@ -73,24 +73,14 @@ function MatrixCell({ data }: { data: CellData }) {
 interface MetasMatrixProps {
   metas: Meta[]
   vendedores: GestaoTecnica[]
-  gestores: GestaoTecnica[]
-  viewMode: 'especie' | 'gestor' | 'canal'
+  gestores?: GestaoTecnica[]
+  viewMode: 'especie' | 'canal'
 }
 
-export function MetasMatrix({ metas, vendedores, gestores, viewMode }: MetasMatrixProps) {
+export function MetasMatrix({ metas, vendedores, viewMode }: MetasMatrixProps) {
   const { columns, labels, matrix, rowTotals, colTotals, grandTotal } = useMemo(() => {
-    const cols =
-      viewMode === 'especie'
-        ? ESPECIES
-        : viewMode === 'canal'
-          ? [...CANAL_VENDAS_OPTIONS]
-          : gestores.map((g) => g.id)
-    const lbls =
-      viewMode === 'especie'
-        ? ESPECIES
-        : viewMode === 'canal'
-          ? [...CANAL_VENDAS_OPTIONS]
-          : gestores.map((g) => g.nome)
+    const cols = viewMode === 'especie' ? ESPECIES : [...CANAL_VENDAS_OPTIONS]
+    const lbls = viewMode === 'especie' ? ESPECIES : [...CANAL_VENDAS_OPTIONS]
     const m: Record<string, Record<string, CellData>> = {}
     const rt: Record<string, CellData> = {}
     const ct: Record<string, CellData> = {}
@@ -107,12 +97,7 @@ export function MetasMatrix({ metas, vendedores, gestores, viewMode }: MetasMatr
 
     for (const meta of metas) {
       if (!meta.vendedor_id) continue
-      const colKey =
-        viewMode === 'especie'
-          ? meta.especie
-          : viewMode === 'canal'
-            ? meta.canal_vendas
-            : meta.gestor_tecnico_id
+      const colKey = viewMode === 'especie' ? meta.especie : meta.canal_vendas
       if (!colKey || !cols.includes(colKey)) continue
       if (!m[meta.vendedor_id]) {
         m[meta.vendedor_id] = {}
@@ -131,7 +116,7 @@ export function MetasMatrix({ metas, vendedores, gestores, viewMode }: MetasMatr
     }
 
     return { columns: cols, labels: lbls, matrix: m, rowTotals: rt, colTotals: ct, grandTotal: gt }
-  }, [metas, vendedores, gestores, viewMode])
+  }, [metas, vendedores, viewMode])
 
   if (vendedores.length === 0) {
     return <div className="text-center py-8 text-muted-foreground">Nenhum vendedor cadastrado.</div>

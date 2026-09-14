@@ -9,11 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  getGestoresTecnicos,
-  getVendedoresGestao,
-  type GestaoTecnica,
-} from '@/services/gestao-tecnica'
+import { getVendedoresGestao, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { createMatrizVenda, updateMatrizVenda, type MatrizVenda } from '@/services/matriz-vendas'
 import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
 import { useToast } from '@/hooks/use-toast'
@@ -28,14 +24,12 @@ interface MatrizVendaFormProps {
 
 export function MatrizVendaForm({ onSubmit, initialData }: MatrizVendaFormProps) {
   const { toast } = useToast()
-  const [gestores, setGestores] = useState<GestaoTecnica[]>([])
   const [vendedores, setVendedores] = useState<GestaoTecnica[]>([])
   const [errors, setErrors] = useState<FieldErrors>({})
 
   useEffect(() => {
-    Promise.all([getGestoresTecnicos(), getVendedoresGestao()])
-      .then(([g, v]) => {
-        setGestores(g)
+    getVendedoresGestao()
+      .then((v) => {
         setVendedores(v)
       })
       .catch(() => {})
@@ -52,7 +46,7 @@ export function MatrizVendaForm({ onSubmit, initialData }: MatrizVendaFormProps)
       razao_social: (fd.get('razao_social') as string) || '',
       mes: (fd.get('mes') as string) || '',
       valor: Number(fd.get('valor')) || 0,
-      gestor_tecnico_id: (fd.get('gestor_tecnico_id') as string) || undefined,
+      gestor_tecnico_id: initialData?.gestor_tecnico_id || undefined,
       vendedor_id: (fd.get('vendedor_id') as string) || undefined,
       atualizado_em: new Date().toISOString(),
     }
@@ -121,24 +115,6 @@ export function MatrizVendaForm({ onSubmit, initialData }: MatrizVendaFormProps)
           <Label>Valor (R$)</Label>
           <Input type="number" step="0.01" name="valor" defaultValue={initialData?.valor} min={0} />
           {errors.valor && <p className="text-xs text-destructive">{errors.valor}</p>}
-        </div>
-        <div className="space-y-2">
-          <Label>Gestor Técnico</Label>
-          <Select name="gestor_tecnico_id" defaultValue={initialData?.gestor_tecnico_id || ''}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {gestores.map((g) => (
-                <SelectItem key={g.id} value={g.id}>
-                  {g.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {errors.gestor_tecnico_id && (
-            <p className="text-xs text-destructive">{errors.gestor_tecnico_id}</p>
-          )}
         </div>
         <div className="space-y-2">
           <Label>Vendedor</Label>

@@ -52,7 +52,7 @@ export const FAMILIA_PRODUTO_LIST = [
 interface HistoricoFilterBarProps {
   draftFilters: HistoricoFilters
   setDraftFilters: React.Dispatch<React.SetStateAction<HistoricoFilters>>
-  gestoresOptions: string[]
+  gestoresOptions?: string[]
   vendedoresOptions: string[]
   onApply: () => void
   onReset: () => void
@@ -62,7 +62,6 @@ interface HistoricoFilterBarProps {
 export function HistoricoFilterBar({
   draftFilters,
   setDraftFilters,
-  gestoresOptions,
   vendedoresOptions,
   onApply,
   onReset,
@@ -120,7 +119,7 @@ export function HistoricoFilterBar({
         </div>
 
         {/* Filter controls row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-3 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 items-end">
           {/* Especie (Multi-select popover) */}
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground font-medium">Espécie</Label>
@@ -166,27 +165,6 @@ export function HistoricoFilterBar({
                 })}
               </PopoverContent>
             </Popover>
-          </div>
-
-          {/* Gestor Técnico */}
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground font-medium">Gestor Técnico</Label>
-            <Select
-              value={draftFilters.gestor_tecnico || 'Todos'}
-              onValueChange={(val) => setDraftFilters((prev) => ({ ...prev, gestor_tecnico: val }))}
-            >
-              <SelectTrigger className="h-9 text-xs">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Todos">Todos</SelectItem>
-                {gestoresOptions.map((g) => (
-                  <SelectItem key={g} value={g}>
-                    {g}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Vendedor */}
@@ -306,11 +284,6 @@ export function HistoricoFilterBar({
             {!isAllEspecies && (
               <Badge variant="secondary" className="text-[10px] font-normal">
                 Espécies: {selectedEspecies.join(', ')}
-              </Badge>
-            )}
-            {draftFilters.gestor_tecnico && draftFilters.gestor_tecnico !== 'Todos' && (
-              <Badge variant="secondary" className="text-[10px] font-normal">
-                Gestor: {draftFilters.gestor_tecnico}
               </Badge>
             )}
             {draftFilters.vendedor && draftFilters.vendedor !== 'Todos' && (

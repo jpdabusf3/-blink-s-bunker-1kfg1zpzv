@@ -226,7 +226,6 @@ export function useHistorico() {
           const headers = [
             'Mes/Ano',
             'Especie',
-            'Gestor Tecnico',
             'Vendedor',
             'Canal',
             'Qtd NFs',
@@ -238,7 +237,6 @@ export function useHistorico() {
           const rows = (activeData.mensal || []).map((r: HistoricoMensalRow) => [
             `"${r.mesAno}"`,
             `"${r.especie}"`,
-            `"${r.gestor_tecnico}"`,
             `"${r.vendedor}"`,
             `"${r.canal}"`,
             r.qtdNfs,
@@ -295,7 +293,6 @@ export function useHistorico() {
             'Numero',
             'Data',
             'Destinatario',
-            'Gestor',
             'Vendedor',
             'Especie',
             'Canal',
@@ -309,7 +306,6 @@ export function useHistorico() {
             `"${doc.numero_documento}"`,
             `"${formatDateBR(doc.data_documento)}"`,
             `"${doc.destinatario_nome.replace(/"/g, '""')}"`,
-            `"${(doc.gestor_tecnico || '').replace(/"/g, '""')}"`,
             `"${(doc.vendedor || '').replace(/"/g, '""')}"`,
             `"${doc.especie_destino || ''}"`,
             `"${doc.canal_vendas || ''}"`,

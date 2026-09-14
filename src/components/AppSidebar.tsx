@@ -18,7 +18,6 @@ import {
   Users,
   FileText,
   UserPlus,
-  UserCog,
   ClipboardList,
   TrendingUp,
   Award,
@@ -39,7 +38,6 @@ export function AppSidebar() {
   const { signOut, user } = useAuth()
   const { t } = useI18n()
   const showMasterOrCeo = isMasterOrCeo(user)
-  const showManager = isManager(user)
   const menu = [
     { name: t('nav.dashboard'), path: '/', icon: Home },
     { name: t('nav.cadastro'), path: '/cadastro', icon: Building2 },
@@ -48,7 +46,6 @@ export function AppSidebar() {
     { name: 'Importar Faturamento', path: '/importar-faturamento', icon: Layers },
     { name: t('nav.funil'), path: '/funil', icon: BarChart2 },
     { name: 'Funil de Vendas', path: '/funil-vendas', icon: Layers },
-    ...(showManager ? [{ name: 'Gestão Técnica', path: '/gestao-tecnica', icon: UserCog }] : []),
     { name: 'Novo Pedido', path: '/novo-pedido', icon: ShoppingCart },
     { name: 'Implantação de Novos Pedidos', path: '/pedidos', icon: ShoppingCart, badge: 'NF' },
     { name: 'Upload NF', path: '/upload-nf', icon: Upload },

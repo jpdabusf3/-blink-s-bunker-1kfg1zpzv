@@ -49,66 +49,15 @@ function MetaCell({
 }
 
 interface Props {
-  gestores: MemberPerformance[]
+  gestores?: MemberPerformance[]
   vendedores: MemberPerformance[]
-  gestorRanking: PerformanceReportData['gestorRanking']
+  gestorRanking?: PerformanceReportData['gestorRanking']
   vendedorRanking: PerformanceReportData['vendedorRanking']
 }
 
-export function PerformanceTables({ gestores, vendedores, gestorRanking, vendedorRanking }: Props) {
+export function PerformanceTables({ vendedores, vendedorRanking }: Props) {
   return (
     <>
-      <Card className="shadow-subtle">
-        <CardHeader>
-          <CardTitle>Relatório por Gestor Técnico</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Gestor</TableHead>
-                <TableHead className="text-right">Vendas</TableHead>
-                <TableHead className="text-right">Valor Total</TableHead>
-                <TableHead>Espécies</TableHead>
-                <TableHead>Equipe (Vendedores)</TableHead>
-                <TableHead>Meta</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {gestores.map((g) => (
-                <TableRow key={g.id}>
-                  <TableCell className="font-medium">{g.nome}</TableCell>
-                  <TableCell className="text-right">{g.totalVendas}</TableCell>
-                  <TableCell className="text-right font-bold text-primary">
-                    {formatCurrency(g.valorTotal)}
-                  </TableCell>
-                  <TableCell>
-                    <DistBadges dist={g.especieDist} />
-                  </TableCell>
-                  <TableCell>
-                    <DistBadges dist={g.linkedDist} />
-                  </TableCell>
-                  <TableCell>
-                    <MetaCell
-                      meta={g.metaValor}
-                      realizado={g.valorRealizado}
-                      achievement={g.metaAchievement}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-              {gestores.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground h-16">
-                    Sem dados
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
       <Card className="shadow-subtle">
         <CardHeader>
           <CardTitle>Relatório por Vendedor</CardTitle>
@@ -121,7 +70,6 @@ export function PerformanceTables({ gestores, vendedores, gestorRanking, vendedo
                 <TableHead className="text-right">Vendas</TableHead>
                 <TableHead className="text-right">Valor Total</TableHead>
                 <TableHead>Espécies</TableHead>
-                <TableHead>Gestores Vinculados</TableHead>
                 <TableHead>Meta</TableHead>
               </TableRow>
             </TableHeader>
@@ -137,9 +85,6 @@ export function PerformanceTables({ gestores, vendedores, gestorRanking, vendedo
                     <DistBadges dist={v.especieDist} />
                   </TableCell>
                   <TableCell>
-                    <DistBadges dist={v.linkedDist} />
-                  </TableCell>
-                  <TableCell>
                     <MetaCell
                       meta={v.metaValor}
                       realizado={v.valorRealizado}
@@ -150,7 +95,7 @@ export function PerformanceTables({ gestores, vendedores, gestorRanking, vendedo
               ))}
               {vendedores.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground h-16">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground h-16">
                     Sem dados
                   </TableCell>
                 </TableRow>
@@ -160,33 +105,7 @@ export function PerformanceTables({ gestores, vendedores, gestorRanking, vendedo
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="shadow-subtle">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-amber-500" /> Ranking de Gestores
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {gestorRanking.map((g, i) => (
-                <div
-                  key={g.id}
-                  className="flex items-center justify-between p-2 rounded-lg bg-muted/30"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg font-bold text-muted-foreground w-6">{i + 1}º</span>
-                    <span className="font-medium">{g.nome}</span>
-                  </div>
-                  <span className="font-bold text-primary">{formatCurrency(g.valor)}</span>
-                </div>
-              ))}
-              {gestorRanking.length === 0 && (
-                <p className="text-center text-muted-foreground py-4">Sem dados</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-6">
         <Card className="shadow-subtle">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

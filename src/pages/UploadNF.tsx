@@ -119,7 +119,6 @@ export function UploadNF() {
     return !!(
       extracted.especie_destino &&
       extracted.canal_vendas &&
-      extracted.gestor_tecnico_id &&
       extracted.vendedor_id &&
       extracted.numero_nf &&
       extracted.data_emissao &&
@@ -764,35 +763,7 @@ export function UploadNF() {
                         </Select>
                       </div>
 
-                      {/* Gestor Técnico */}
-                      <div className="space-y-2">
-                        <Label className="text-xs font-semibold flex items-center gap-1">
-                          Gestor Técnico <span className="text-destructive">*</span>
-                        </Label>
-                        <Select
-                          value={extracted.gestor_tecnico_id || ''}
-                          onValueChange={(val) =>
-                            updateExtractedData(activeFile.id, { gestor_tecnico_id: val })
-                          }
-                        >
-                          <SelectTrigger
-                            className={
-                              !extracted.gestor_tecnico_id
-                                ? 'border-amber-400 bg-amber-50/40 dark:bg-amber-950/20'
-                                : ''
-                            }
-                          >
-                            <SelectValue placeholder="Selecione o gestor..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {gestoresTecnicos.map((g) => (
-                              <SelectItem key={g.id} value={g.id}>
-                                {g.nome}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      {/* Gestor Técnico (removido da UI de obrigatoriedade) */}
 
                       {/* Vendedor */}
                       <div className="space-y-2">

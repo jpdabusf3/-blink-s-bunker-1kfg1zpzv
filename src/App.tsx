@@ -25,7 +25,6 @@ import AdminLogs from './pages/AdminLogs'
 import MapaClientes from './pages/MapaClientes'
 import UsersPage from './pages/Users'
 import TeamManagement from './pages/TeamManagement'
-import GestaoTecnica from './pages/GestaoTecnica'
 import Atividades from './pages/Atividades'
 import ImportarClientes from './pages/ImportarClientes'
 import ImportarFaturamento from './pages/ImportarFaturamento'
@@ -166,7 +165,6 @@ const App = () => (
                     <Route path="/historico-vendas" element={<HistoricoVendas />} />
                     <Route path="/metas" element={<Metas />} />
                     <Route path="/relatorios" element={<Relatorios />} />
-                    <Route path="/gestao-tecnica" element={<GestaoTecnica />} />
                     <Route path="/atividades" element={<Atividades />} />
                     <Route path="/importar-clientes" element={<ImportarClientes />} />
                     <Route path="/importar-faturamento" element={<ImportarFaturamento />} />

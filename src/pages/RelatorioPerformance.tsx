@@ -1,10 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRealtime } from '@/hooks/use-realtime'
-import {
-  getGestoresTecnicos,
-  getVendedoresGestao,
-  type GestaoTecnica,
-} from '@/services/gestao-tecnica'
+import { getVendedoresGestao, type GestaoTecnica } from '@/services/gestao-tecnica'
 import {
   fetchPerformanceData,
   DEFAULT_FILTERS,
@@ -22,7 +18,6 @@ import { formatCurrency } from '@/lib/utils'
 export default function RelatorioPerformance() {
   const [data, setData] = useState<PerformanceReportData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [gestores, setGestores] = useState<GestaoTecnica[]>([])
   const [vendedores, setVendedores] = useState<GestaoTecnica[]>([])
   const [filters, setFilters] = useState<PerformanceFilters>(DEFAULT_FILTERS)
 
@@ -41,9 +36,6 @@ export default function RelatorioPerformance() {
   }, [filters])
 
   useEffect(() => {
-    getGestoresTecnicos()
-      .then(setGestores)
-      .catch(() => {})
     getVendedoresGestao()
       .then(setVendedores)
       .catch(() => {})
@@ -94,7 +86,7 @@ export default function RelatorioPerformance() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Relatório de Performance</h1>
           <p className="text-muted-foreground text-sm">
-            Acompanhe a performance individual de gestores e vendedores
+            Acompanhe a performance individual de vendedores
           </p>
         </div>
         <div className="flex gap-2">
@@ -117,12 +109,7 @@ export default function RelatorioPerformance() {
         </div>
       </div>
 
-      <PerfFilters
-        filters={filters}
-        onChange={updateFilter}
-        gestores={gestores}
-        vendedores={vendedores}
-      />
+      <PerfFilters filters={filters} onChange={updateFilter} vendedores={vendedores} />
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {[

@@ -31,7 +31,6 @@ export function ConsolidatedDashboard({
 }: ConsolidatedDashboardProps) {
   const [data, setData] = useState<ConsolidatedData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [perfView, setPerfView] = useState<'vendedor' | 'gestor'>('vendedor')
 
   const loadData = useCallback(async () => {
     try {
@@ -59,14 +58,14 @@ export function ConsolidatedDashboard({
     )
   if (!data) return null
 
-  const { kpis, monthComparisons, quarterlyComparisons, vendorRanking, gestorRanking } = data
+  const { kpis, monthComparisons, quarterlyComparisons, vendorRanking } = data
   const isQuarterly = periodView === 'trimestral'
   const comparisonData = isQuarterly ? quarterlyComparisons : monthComparisons
   const curSales = comparisonData[1]?.sales || 0
   const prevSales = comparisonData[0]?.sales || 0
   const salesDelta = curSales - prevSales
   const salesDeltaPct = prevSales > 0 ? (salesDelta / prevSales) * 100 : 0
-  const ranking = perfView === 'vendedor' ? vendorRanking : gestorRanking
+  const ranking = vendorRanking
 
   const achievementPct = isQuarterly
     ? (comparisonData[1]?.target || 0) > 0
@@ -224,34 +223,8 @@ export function ConsolidatedDashboard({
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm flex items-center gap-2">
-                {perfView === 'vendedor' ? (
-                  <>
-                    <Trophy className="w-4 h-4 text-primary" /> Ranking de Vendedores
-                  </>
-                ) : (
-                  <>
-                    <UserCog className="w-4 h-4 text-primary" /> Ranking de Gestores
-                  </>
-                )}
+                <Trophy className="w-4 h-4 text-primary" /> Ranking de Vendedores
               </CardTitle>
-              <div className="flex gap-1 bg-muted rounded-lg p-0.5">
-                <Button
-                  size="sm"
-                  variant={perfView === 'vendedor' ? 'default' : 'ghost'}
-                  onClick={() => setPerfView('vendedor')}
-                  className="h-7 px-2 text-xs gap-1"
-                >
-                  <Users className="w-3 h-3" /> Vendedor
-                </Button>
-                <Button
-                  size="sm"
-                  variant={perfView === 'gestor' ? 'default' : 'ghost'}
-                  onClick={() => setPerfView('gestor')}
-                  className="h-7 px-2 text-xs gap-1"
-                >
-                  <UserCog className="w-3 h-3" /> Gestor
-                </Button>
-              </div>
             </div>
           </CardHeader>
           <CardContent>
