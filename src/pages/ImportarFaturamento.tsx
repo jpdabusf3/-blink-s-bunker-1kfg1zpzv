@@ -21,7 +21,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
-  Upload,
   FileSpreadsheet,
   CheckCircle2,
   AlertCircle,
@@ -37,6 +36,7 @@ import {
   Building2,
   Check,
   HelpCircle,
+  DollarSign,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -123,27 +123,39 @@ export default function ImportarFaturamento() {
     }))
   }
 
-  // Validação dos campos obrigatórios
+  // Validação dos campos obrigatórios e da regra de valor (USD ou R$)
   const mappedCrmFields = useMemo(() => {
     return new Set(Object.values(mapping).filter((v): v is FaturamentoFieldKey => !!v))
   }, [mapping])
 
-  const missingRequiredFields = useMemo(() => {
-    return FATURAMENTO_FIELDS.filter((f) => f.required && !mappedCrmFields.has(f.key))
+  const hasMappedValue = useMemo(() => {
+    return mappedCrmFields.has('valor_usd') || mappedCrmFields.has('valor')
   }, [mappedCrmFields])
 
+  const missingRequiredFields = useMemo(() => {
+    const missing = FATURAMENTO_FIELDS.filter((f) => f.required && !mappedCrmFields.has(f.key))
+    return missing
+  }, [mappedCrmFields])
+
+  const validationErrors = useMemo(() => {
+    const list: string[] = []
+    if (missingRequiredFields.length > 0) {
+      list.push(...missingRequiredFields.map((f) => f.label))
+    }
+    if (!hasMappedValue) {
+      list.push('Ao menos um campo de valor: "Valor Total (USD $)" ou "Valor Total (R$)"')
+    }
+    return list
+  }, [missingRequiredFields, hasMappedValue])
+
   const isValidToImport = useMemo(() => {
-    return file && missingRequiredFields.length === 0 && !importing
-  }, [file, missingRequiredFields, importing])
+    return file && validationErrors.length === 0 && !importing
+  }, [file, validationErrors, importing])
 
   const handleConfirmImport = async () => {
     if (!file) return
-    if (missingRequiredFields.length > 0) {
-      toast.error(
-        `Os seguintes campos obrigatórios não foram mapeados: ${missingRequiredFields
-          .map((f) => f.label)
-          .join(', ')}`,
-      )
+    if (validationErrors.length > 0) {
+      toast.error(`Campos pendentes para importação: ${validationErrors.join(', ')}`)
       return
     }
 
@@ -380,14 +392,19 @@ export default function ImportarFaturamento() {
             </div>
 
             {/* Alertas de validação de mapeamento */}
-            {missingRequiredFields.length > 0 ? (
+            {validationErrors.length > 0 ? (
               <div className="flex items-start gap-2.5 text-xs bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 p-3.5 rounded-lg border border-amber-200 dark:border-amber-900/50">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
                 <div>
-                  <p className="font-semibold">Mapeamento pendente de campos obrigatórios:</p>
+                  <p className="font-semibold">Mapeamento pendente:</p>
                   <p className="mt-0.5">
                     Para garantir a consistência das vendas e do CRM, associe colunas para:{' '}
-                    <strong>{missingRequiredFields.map((f) => f.label).join(', ')}</strong>.
+                    <strong>{validationErrors.join(' • ')}</strong>.
+                  </p>
+                  <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">
+                    Dica: Você pode mapear tanto <strong>Valor Total (USD $)</strong> quanto{' '}
+                    <strong>Valor Total (R$)</strong> juntos, ou apenas um deles conforme a
+                    estrutura de sua planilha. O faturamento base do Blink é feito em Dólar.
                   </p>
                 </div>
               </div>
@@ -395,7 +412,12 @@ export default function ImportarFaturamento() {
               <div className="flex items-center gap-2 text-xs bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 p-3 rounded-lg border border-emerald-200 dark:border-emerald-900/50">
                 <Check className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                 <span>
-                  Todos os campos essenciais foram mapeados! Pronto para pré-visualizar e confirmar.
+                  Campos essenciais mapeados com sucesso!{' '}
+                  {mappedCrmFields.has('valor_usd') && mappedCrmFields.has('valor')
+                    ? 'Ambas as moedas (USD e R$) configuradas.'
+                    : mappedCrmFields.has('valor_usd')
+                      ? 'Base em Dólar (USD $) configurada.'
+                      : 'Valor em Real (R$) configurado.'}
                 </span>
               </div>
             )}
@@ -469,7 +491,17 @@ export default function ImportarFaturamento() {
                     <TableHead className="text-xs">CNPJ</TableHead>
                     <TableHead className="text-xs">Produto</TableHead>
                     <TableHead className="text-xs">Espécie</TableHead>
-                    <TableHead className="text-xs text-right">Valor</TableHead>
+                    {mappedCrmFields.has('valor_usd') && (
+                      <TableHead className="text-xs text-right text-emerald-700 dark:text-emerald-400">
+                        Valor USD ($)
+                      </TableHead>
+                    )}
+                    {mappedCrmFields.has('valor') && (
+                      <TableHead className="text-xs text-right text-primary">Valor R$</TableHead>
+                    )}
+                    {!mappedCrmFields.has('valor_usd') && !mappedCrmFields.has('valor') && (
+                      <TableHead className="text-xs text-right">Valor</TableHead>
+                    )}
                     <TableHead className="text-xs">Vendedor</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -510,9 +542,23 @@ export default function ImportarFaturamento() {
                         <TableCell className="text-xs">
                           {String(getValue('especie') ?? '-')}
                         </TableCell>
-                        <TableCell className="text-xs text-right font-semibold font-mono text-primary">
-                          {String(getValue('valor') ?? '-')}
-                        </TableCell>
+                        {mappedCrmFields.has('valor_usd') && (
+                          <TableCell className="text-xs text-right font-semibold font-mono text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                            {getValue('valor_usd') !== undefined
+                              ? String(getValue('valor_usd'))
+                              : '-'}
+                          </TableCell>
+                        )}
+                        {mappedCrmFields.has('valor') && (
+                          <TableCell className="text-xs text-right font-semibold font-mono text-primary whitespace-nowrap">
+                            {getValue('valor') !== undefined ? String(getValue('valor')) : '-'}
+                          </TableCell>
+                        )}
+                        {!mappedCrmFields.has('valor_usd') && !mappedCrmFields.has('valor') && (
+                          <TableCell className="text-xs text-right font-mono text-muted-foreground">
+                            -
+                          </TableCell>
+                        )}
                         <TableCell className="text-xs">
                           {String(getValue('vendedor') ?? '-')}
                         </TableCell>
@@ -619,6 +665,21 @@ export default function ImportarFaturamento() {
               </div>
             </div>
 
+            {/* Informações sobre as Moedas Processadas */}
+            <div className="rounded-xl border bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <DollarSign className="w-4 h-4 text-emerald-600" />
+                <h4 className="text-xs font-semibold text-emerald-950 dark:text-emerald-200 uppercase tracking-wider">
+                  Moedas e Base de Faturamento
+                </h4>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                A importação salvou os registros de faturamento mantendo colunas distintas de{' '}
+                <strong>USD ($)</strong> e <strong>Real (R$)</strong>. Para o cálculo do perfil do
+                cliente (<code>valor_atual</code> e <code>valor_medio</code> no CRM), o valor em
+                Dólar foi priorizado como base oficial de faturamento do Blink.
+              </p>
+            </div>
             {/* Detalhamento dos Métodos de Casamento (Matching) */}
             <div className="rounded-xl border bg-purple-50/50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-900/40 p-4">
               <h4 className="text-xs font-semibold text-purple-950 dark:text-purple-200 uppercase tracking-wider flex items-center gap-2 mb-3">
@@ -684,6 +745,11 @@ export default function ImportarFaturamento() {
                 <li>
                   <strong>Avanço de Estágio do Funil:</strong> Clientes com pedidos avançaram para{' '}
                   <code>Fechamento</code> e status <strong>Ativo</strong>.
+                </li>
+                <li>
+                  <strong>Valores nas Moedas USD e R$:</strong> Gravação independente de{' '}
+                  <code>valor_usd</code> (base de faturamento em Dólar) e <code>valor</code> (R$),{' '}
+                  assegurando integridade das métricas do cliente e comparativos comerciais.
                 </li>
                 <li>
                   <strong>Reflexo em Relatórios e Dashboards:</strong> Os pedidos alimentam o

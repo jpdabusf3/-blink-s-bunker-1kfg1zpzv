@@ -23,6 +23,9 @@ export interface HistoricoVenda {
   produto_valor_unitario?: number
   produto_valor_total?: number
   valor_total_nota?: number
+  valor_usd?: number
+  valor_unitario_usd?: number
+  valor_total_nota_usd?: number
   frete_modalidade?: string
   status: 'realizado' | 'projetado' | string
   user_id?: string

@@ -10,6 +10,9 @@ export type FaturamentoFieldKey =
   | 'produto_codigo'
   | 'especie'
   | 'quantidade'
+  | 'valor_usd'
+  | 'valor_unitario_usd'
+  | 'valor_total_nota_usd'
   | 'valor'
   | 'valor_unitario'
   | 'valor_total_nota'
@@ -169,18 +172,82 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
     ],
   },
   {
+    key: 'valor_usd',
+    label: 'Valor Total (USD $)',
+    required: false,
+    description: 'Valor total faturado em Dólar americano (base de faturamento principal)',
+    aliases: [
+      'amount',
+      'amount_usd',
+      'amount usd',
+      'value_usd',
+      'value usd',
+      'valor_usd',
+      'valor usd',
+      'usd',
+      'us$',
+      'u$',
+      'total_usd',
+      'total usd',
+      'faturamento_usd',
+      'faturamento usd',
+      'valor_total_usd',
+      'valor total usd',
+      'faturado_usd',
+      'faturado usd',
+      'faturamento_dolar',
+      'faturamento dolar',
+      'valor_dolar',
+      'valor dolar',
+      'total_dolar',
+      'total dolar',
+      'sales_usd',
+      'revenue_usd',
+      'total_amount_usd',
+      'price_usd',
+      'usd_amount',
+      'usd_total',
+      'usd_value',
+      'dolar',
+      'dollar',
+      'vlr_usd',
+      'vl_usd',
+    ],
+  },
+  {
     key: 'valor',
-    label: 'Valor Total do Pedido / Item (R$)',
-    required: true,
-    description: 'Valor total faturado (ex: 15420.50 ou 15.420,50)',
+    label: 'Valor Total (R$)',
+    required: false,
+    description: 'Valor total faturado em Real brasileiro (R$)',
     aliases: [
       'valor',
+      'valor_brl',
+      'valor brl',
+      'valor_r$',
+      'valor r$',
+      'valor_rs',
+      'valor rs',
+      'r$',
+      'rs',
+      'brl',
       'total',
+      'total_r$',
+      'total r$',
+      'total_rs',
+      'total rs',
+      'total_brl',
+      'total brl',
       'valor_total',
       'valor total',
       'vl_total',
       'vlr_total',
       'faturamento',
+      'faturamento_r$',
+      'faturamento r$',
+      'faturamento_rs',
+      'faturamento rs',
+      'faturamento_brl',
+      'faturamento brl',
       'faturado',
       'valor_faturado',
       'valor faturado',
@@ -189,14 +256,33 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'produto_valor_total',
       'valor_liquido',
       'liquido',
-      // Termos em inglês
-      'amount',
+      // Termos em inglês comumente associados a valor quando não indicado usd
       'value',
       'total_amount',
       'total_value',
       'revenue',
       'sales_value',
       'price_total',
+    ],
+  },
+  {
+    key: 'valor_unitario_usd',
+    label: 'Valor Unitário (USD $)',
+    required: false,
+    description: 'Preço unitário em Dólar por kg, saca ou unidade',
+    aliases: [
+      'unit_price_usd',
+      'unit price usd',
+      'unit_value_usd',
+      'price_usd_unit',
+      'valor_unitario_usd',
+      'valor unitario usd',
+      'preco_unitario_usd',
+      'preco unitario usd',
+      'vl_unit_usd',
+      'vlr_unit_usd',
+      'unitario_usd',
+      'unitario usd',
     ],
   },
   {
@@ -303,12 +389,31 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
     ],
   },
   {
-    key: 'valor_total_nota',
-    label: 'Valor Total da Nota (se agrupada)',
+    key: 'valor_total_nota_usd',
+    label: 'Valor Total da Nota (USD $)',
     required: false,
-    description: 'Valor total consolidado da Nota Fiscal mãe',
+    description: 'Valor total consolidado da Nota Fiscal ou Pedido mãe em Dólar',
+    aliases: [
+      'total_nota_usd',
+      'total nota usd',
+      'valor_total_nota_usd',
+      'valor total nota usd',
+      'valor_nota_usd',
+      'total_nf_usd',
+      'valor_nf_usd',
+      'invoice_total_usd',
+      'invoice total usd',
+    ],
+  },
+  {
+    key: 'valor_total_nota',
+    label: 'Valor Total da Nota (R$)',
+    required: false,
+    description: 'Valor total consolidado da Nota Fiscal mãe em Real',
     aliases: [
       'total_nota',
+      'total_nota_brl',
+      'total_nota_r$',
       'valor_total_nota',
       'valor_nota',
       'vl_nota',
@@ -458,6 +563,31 @@ export function autoSuggestMapping(
       if (!usedCRMFields.has('data')) {
         mapping[header] = 'data'
         usedCRMFields.add('data')
+        return
+      }
+    }
+
+    // Regras prioritárias para Valor em Dólar (USD) vs Real (R$)
+    // Se o cabeçalho tem 'usd', 'dolar', 'dollar', 'us$' etc. prioriza campo em USD
+    const isUsdHeader =
+      norm.includes('usd') ||
+      norm.includes('dolar') ||
+      norm.includes('dollar') ||
+      norm.includes('amount') ||
+      norm === 'u' ||
+      norm === 'us'
+    const isUnitHeader = norm.includes('unit') || norm.includes('preco')
+
+    if (isUsdHeader && isUnitHeader) {
+      if (!usedCRMFields.has('valor_unitario_usd')) {
+        mapping[header] = 'valor_unitario_usd'
+        usedCRMFields.add('valor_unitario_usd')
+        return
+      }
+    } else if (isUsdHeader) {
+      if (!usedCRMFields.has('valor_usd')) {
+        mapping[header] = 'valor_usd'
+        usedCRMFields.add('valor_usd')
         return
       }
     }
@@ -631,8 +761,9 @@ export function downloadFaturamentoTemplate(): void {
       Produto: 'Blink Zinc 22 - SC',
       Espécie: 'Ruminantes',
       Quantidade: 2000,
-      'Valor Unitário': 16.5,
-      'Valor Total': 33000.0,
+      'Valor Unitário USD': 3.3,
+      'Valor Total (USD)': 6600.0,
+      'Valor Total (R$)': 36300.0,
       Vendedor: 'Felipe Leão',
       'Gestor Técnico': 'Rodrigo Gardinal',
       Unidade: 'Maringá CD',
@@ -648,8 +779,9 @@ export function downloadFaturamentoTemplate(): void {
       Produto: 'Blink Copper 22 - SC',
       Espécie: 'Aves',
       Quantidade: 1500,
-      'Valor Unitário': 28.5,
-      'Valor Total': 42750.0,
+      'Valor Unitário USD': 5.7,
+      'Valor Total (USD)': 8550.0,
+      'Valor Total (R$)': 47025.0,
       Vendedor: 'Felipe Leão',
       'Gestor Técnico': 'Jéssica Dilkin',
       Unidade: 'Maringá CD',

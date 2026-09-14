@@ -187,15 +187,59 @@ routerAdd(
       }
 
       function parseNumber(val) {
-        if (typeof val === 'number') return val
+        if (typeof val === 'number') return isNaN(val) ? 0 : val
         if (!val) return 0
         var s = String(val).trim()
-        if (s.indexOf('.') !== -1 && s.indexOf(',') !== -1) {
-          s = s.replace(/\./g, '').replace(',', '.')
-        } else if (s.indexOf(',') !== -1) {
+        if (!s) return 0
+
+        // Remover símbolos de moeda e espaços: R$, US$, U$, $, etc.
+        s = s.replace(/(?:R\$|US\$|U\$|\$|BRL|USD)/gi, '').trim()
+        s = s.replace(/\s+/g, '')
+        if (!s) return 0
+
+        var hasDot = s.indexOf('.') !== -1
+        var hasComma = s.indexOf(',') !== -1
+
+        if (hasDot && hasComma) {
+          // Ex: 1.234,56 ou 1,234.56
+          // Descobre qual separador aparece por último
+          var lastDot = s.lastIndexOf('.')
+          var lastComma = s.lastIndexOf(',')
+          if (lastComma > lastDot) {
+            // Formato brasileiro: 1.234,56
+            s = s.replace(/\./g, '').replace(',', '.')
+          } else {
+            // Formato americano: 1,234.56
+            s = s.replace(/,/g, '')
+          }
+        } else if (hasComma) {
+          // Só vírgula: se tiver 3 dígitos após a vírgula e nada mais (ex: 1,000) pode ser milhar americano,
+          // porém no contexto brasileiro vírgula é decimal (ex: 15,50 ou 1500,00)
           s = s.replace(',', '.')
+        } else if (hasDot) {
+          // Só ponto: verificar se é milhar brasileiro (ex: 1.000 ou 15.420 ou 100.000)
+          // Se tiver 3 dígitos decimais exatos após o último ponto e o número for grande (ex: 15.420)
+          var lastDotIdx = s.lastIndexOf('.')
+          var decimals = s.substring(lastDotIdx + 1)
+          var intPart = s.substring(0, lastDotIdx)
+          if (
+            decimals.length === 3 &&
+            /^\d{3}$/.test(decimals) &&
+            intPart.length >= 1 &&
+            intPart.indexOf('.') === -1 &&
+            parseFloat(intPart) > 0 &&
+            s.indexOf('-') === -1
+          ) {
+            // Se tiver múltiplos pontos (ex: 1.234.567) é milhar com certeza
+            if ((s.match(/\./g) || []).length > 1) {
+              s = s.replace(/\./g, '')
+            }
+          }
         }
-        return parseFloat(s.replace(/[^\d.-]/g, '')) || 0
+        var cleanNumeric = s.replace(/[^\d.-]/g, '')
+        if (!cleanNumeric || cleanNumeric === '-' || cleanNumeric === '.') return 0
+        var n = parseFloat(cleanNumeric)
+        return isNaN(n) ? 0 : n
       }
 
       function normalizeName(s) {
@@ -446,11 +490,37 @@ routerAdd(
           item.especie || item.especie_destino || item.animalSpecies || '',
         ).trim()
         var quantidade = parseNumber(item.quantidade || item.produto_quantidade || 1)
+
+        // Capturar valores em Dólar (USD) e Real (R$)
+        var valorUsd = parseNumber(
+          item.valor_usd ||
+            item.faturamento_usd ||
+            item.amount_usd ||
+            item.amount ||
+            item.total_usd,
+        )
+        var valorUnitarioUsd = parseNumber(
+          item.valor_unitario_usd || item.preco_unitario_usd || item.unit_price_usd,
+        )
+        var valorTotalNotaUsd =
+          parseNumber(item.valor_total_nota_usd || item.total_nota_usd || item.invoice_total_usd) ||
+          valorUsd
+
         var valorItem = parseNumber(
-          item.valor || item.produto_valor_total || item.valor_total || item.total,
+          item.valor ||
+            item.produto_valor_total ||
+            item.valor_total ||
+            item.total ||
+            item.valor_r$ ||
+            item.faturamento_r$ ||
+            item.total_r$,
         )
         var valorUnitario = parseNumber(item.produto_valor_unitario || item.valor_unitario)
         var valorTotalNota = parseNumber(item.valor_total_nota) || valorItem
+
+        if (valorUsd > 0 && valorUnitarioUsd <= 0 && quantidade > 0) {
+          valorUnitarioUsd = Math.round((valorUsd / quantidade) * 100) / 100
+        }
         var vendedorNome = String(item.vendedor || item.vendedor_nome || '').trim()
         var gestorNome = String(item.gestor || item.gestor_tecnico || '').trim()
         var unidadeFilial = String(item.unidade || item.filial || item.unidade_filial || '').trim()
@@ -465,8 +535,11 @@ routerAdd(
           continue
         }
 
-        if (valorItem <= 0 && valorTotalNota <= 0) {
-          erros.push({ linha: rowNum, erro: 'Valor do pedido/item deve ser maior que zero' })
+        if (valorItem <= 0 && valorTotalNota <= 0 && valorUsd <= 0 && valorTotalNotaUsd <= 0) {
+          erros.push({
+            linha: rowNum,
+            erro: 'Valor do pedido/item deve ser maior que zero (em USD ou R$)',
+          })
           continue
         }
 
@@ -564,8 +637,14 @@ routerAdd(
               newFact.set('funnelStage', 'Fechamento')
               newFact.set('status_funil', 'Ativo')
               newFact.set('ultimo_pedido', dataFaturamento)
-              newFact.set('valor_atual', valorTotalNota || valorItem)
-              newFact.set('valor_medio', valorTotalNota || valorItem)
+              // No CRM Blink, a base de faturamento é em Dólar.
+              // Usar valor em USD quando existir, caindo para Real caso não haja dólar.
+              var valBaseCrmNovo =
+                (valorTotalNotaUsd || valorUsd) > 0
+                  ? valorTotalNotaUsd || valorUsd
+                  : valorTotalNota || valorItem
+              newFact.set('valor_atual', valBaseCrmNovo)
+              newFact.set('valor_medio', valBaseCrmNovo)
               newFact.set('animalSpecies', canonicalAnimalSpeciesFactory(especieRaw))
               newFact.set('ultima_edicao_origem', 'excel')
 
@@ -671,11 +750,23 @@ routerAdd(
                   : especieCanon,
           )
           hvRecord.set('canal_vendas', canalVendas)
+          // Gravação dos valores em Real e Dólar (se informados)
           hvRecord.set('valor', valorItem)
           hvRecord.set('produto_quantidade', quantidade)
           hvRecord.set('produto_valor_unitario', valorUnitario)
           hvRecord.set('produto_valor_total', valorItem)
           hvRecord.set('valor_total_nota', valorTotalNota || valorItem)
+
+          if (valorUsd > 0) {
+            hvRecord.set('valor_usd', valorUsd)
+          }
+          if (valorUnitarioUsd > 0) {
+            hvRecord.set('valor_unitario_usd', valorUnitarioUsd)
+          }
+          if (valorTotalNotaUsd > 0) {
+            hvRecord.set('valor_total_nota_usd', valorTotalNotaUsd)
+          }
+
           if (produtoCod) hvRecord.set('produto_codigo', produtoCod)
           if (produtoDesc) hvRecord.set('produto_descricao', produtoDesc)
           hvRecord.set('status', statusPedido)
@@ -707,6 +798,12 @@ routerAdd(
           }
 
           // Se vinculado a cliente, computar efeito nos dados do CRM
+          // Prioridade da moeda: usar USD quando informado (base de faturamento Blink), senão Real
+          var valEfetivoLinha =
+            (valorTotalNotaUsd || valorUsd) > 0
+              ? valorTotalNotaUsd || valorUsd
+              : valorTotalNota || valorItem
+
           if (matchedFactory) {
             var fId = matchedFactory.id
             if (!factoriesAfetadas[fId]) {
@@ -717,18 +814,20 @@ routerAdd(
                   : matchedFactory.name,
                 factoryRecord: matchedFactory,
                 maxData: dataFaturamento,
-                ultimoValor: valorTotalNota || valorItem,
+                ultimoValor: valEfetivoLinha,
                 itens: [],
               }
             }
             var fa = factoriesAfetadas[fId]
             if (dataFaturamento >= fa.maxData) {
               fa.maxData = dataFaturamento
-              fa.ultimoValor = valorTotalNota || valorItem
+              fa.ultimoValor = valEfetivoLinha
             }
             fa.itens.push({
-              valor: valorItem,
-              totalNota: valorTotalNota || valorItem,
+              valor: valEfetivoLinha,
+              totalNota: valEfetivoLinha,
+              valor_usd: valorUsd,
+              valor_brl: valorItem,
               data: dataFaturamento,
               doc: numeroDoc,
             })

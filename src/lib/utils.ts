@@ -88,6 +88,15 @@ export function formatCurrency(value: number) {
   }).format(value)
 }
 
+export function formatCurrencyUSD(value: number) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)
+}
+
 export function formatDateTime(value: string | number | Date) {
   const d = typeof value === 'string' || typeof value === 'number' ? new Date(value) : value
   if (isNaN(d.getTime())) return '—'

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-14T17:57:40.960Z",
+  "generatedAt": "2026-09-14T18:09:18.822Z",
   "collections": [
     {
       "name": "users",
@@ -1964,6 +1964,24 @@
           "required": false,
           "system": false,
           "collectionRef": "factories"
+        },
+        {
+          "name": "valor_usd",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_unitario_usd",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_total_nota_usd",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
