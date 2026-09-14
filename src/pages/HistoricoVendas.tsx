@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
   Table,
@@ -216,6 +217,11 @@ export default function HistoricoVendas() {
           </Button>
           <Button variant="outline" className="gap-2" onClick={downloadPedidoModel}>
             <Download className="w-4 h-4" /> Baixar Modelo
+          </Button>
+          <Button variant="outline" className="gap-2" asChild>
+            <Link to="/importar-faturamento">
+              <Upload className="w-4 h-4 text-primary" /> Importar Faturamento
+            </Link>
           </Button>
           <Button variant="outline" className="gap-2" onClick={() => setUploadOpen(true)}>
             <Upload className="w-4 h-4" /> Upload de Pedido

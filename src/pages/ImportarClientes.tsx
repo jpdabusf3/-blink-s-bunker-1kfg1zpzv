@@ -143,6 +143,11 @@ export default function ImportarClientes() {
               <ArrowLeft className="w-4 h-4" /> Voltar
             </Link>
           </Button>
+          <Button variant="secondary" size="sm" className="gap-2" asChild>
+            <Link to="/importar-faturamento">
+              <FileSpreadsheet className="w-4 h-4 text-primary" /> Importar Faturamento
+            </Link>
+          </Button>
           <Button variant="outline" className="gap-2" onClick={downloadImportTemplate}>
             <Download className="w-4 h-4" /> Baixar Modelo
           </Button>

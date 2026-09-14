@@ -45,6 +45,7 @@ export function AppSidebar() {
     { name: t('nav.cadastro'), path: '/cadastro', icon: Building2 },
     { name: 'Mapa de Clientes', path: '/mapa', icon: MapPin },
     { name: 'Importar Clientes', path: '/importar-clientes', icon: Upload },
+    { name: 'Importar Faturamento', path: '/importar-faturamento', icon: Layers },
     { name: t('nav.funil'), path: '/funil', icon: BarChart2 },
     { name: 'Funil de Vendas', path: '/funil-vendas', icon: Layers },
     ...(showManager ? [{ name: 'Gestão Técnica', path: '/gestao-tecnica', icon: UserCog }] : []),

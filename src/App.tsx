@@ -28,6 +28,7 @@ import TeamManagement from './pages/TeamManagement'
 import GestaoTecnica from './pages/GestaoTecnica'
 import Atividades from './pages/Atividades'
 import ImportarClientes from './pages/ImportarClientes'
+import ImportarFaturamento from './pages/ImportarFaturamento'
 import RelatorioAtividades from './pages/RelatorioAtividades'
 import PerformanceReport from './pages/PerformanceReport'
 import { SuperAdminRoute } from './components/SuperAdminRoute'
@@ -168,6 +169,7 @@ const App = () => (
                     <Route path="/gestao-tecnica" element={<GestaoTecnica />} />
                     <Route path="/atividades" element={<Atividades />} />
                     <Route path="/importar-clientes" element={<ImportarClientes />} />
+                    <Route path="/importar-faturamento" element={<ImportarFaturamento />} />
                     <Route path="/relatorio-atividades" element={<RelatorioAtividades />} />
                     <Route path="/relatorio-performance" element={<PerformanceReport />} />
                     <Route path="/usuarios" element={<UsersPage />} />
