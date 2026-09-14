@@ -25,31 +25,164 @@ routerAdd(
         return n < 10 ? '0' + n : '' + n
       }
 
+      var MESES_MAP = {
+        janeiro: 1,
+        jan: 1,
+        fevereiro: 2,
+        fev: 2,
+        marco: 3,
+        mar: 3,
+        abril: 4,
+        abr: 4,
+        maio: 5,
+        mai: 5,
+        junho: 6,
+        jun: 6,
+        julho: 7,
+        jul: 7,
+        agosto: 8,
+        ago: 8,
+        setembro: 9,
+        set: 9,
+        outubro: 10,
+        out: 10,
+        novembro: 11,
+        nov: 11,
+        dezembro: 12,
+        dez: 12,
+      }
+
+      var MESES_EXTENSO = [
+        'janeiro',
+        'fevereiro',
+        'março',
+        'abril',
+        'maio',
+        'junho',
+        'julho',
+        'agosto',
+        'setembro',
+        'outubro',
+        'novembro',
+        'dezembro',
+      ]
+
+      function normalizeMonthStr(s) {
+        return String(s || '')
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z]/g, '')
+          .trim()
+      }
+
+      /**
+       * Parser de data dinâmico e tolerante:
+       * - Serial numérico do Excel
+       * - YYYY-MM-DD
+       * - DD/MM/YYYY ou DD-MM-YYYY
+       * - MM/YYYY ou MM-YYYY
+       * - Mês por extenso/abreviado em PT: "Janeiro/2025", "jan/2025", "Janeiro 2025", "jan 2025", "2025/01", "2025-01"
+       * Usa o 1º dia do mês quando não houver dia.
+       */
       function parseDate(val) {
-        if (!val) return ''
+        if (val === undefined || val === null || val === '') return ''
+
+        // 1. Número serial do Excel
         if (typeof val === 'number') {
-          // Excel serial date (days since 1899-12-30)
-          var d = new Date(Math.round((val - 25569) * 86400 * 1000))
-          if (isNaN(d.getTime())) return ''
-          return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate())
+          if (val > 10000 && val < 90000) {
+            var dExcel = new Date(Math.round((val - 25569) * 86400 * 1000))
+            if (!isNaN(dExcel.getTime())) {
+              return (
+                dExcel.getUTCFullYear() +
+                '-' +
+                pad(dExcel.getUTCMonth() + 1) +
+                '-' +
+                pad(dExcel.getUTCDate())
+              )
+            }
+          }
         }
+
         var s = String(val).trim()
-        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
-        var parts = s.split('/')
-        if (parts.length === 3) {
-          // assume DD/MM/YYYY
-          var day = parseInt(parts[0], 10)
-          var month = parseInt(parts[1], 10)
-          var year = parseInt(parts[2], 10)
-          if (year < 100) year += 2000
-          return year + '-' + pad(month) + '-' + pad(day)
+        if (!s) return ''
+
+        // 2. YYYY-MM-DD ou YYYY-MM-DDTHH:mm:ss
+        var isoMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)
+        if (isoMatch) {
+          return (
+            isoMatch[1] +
+            '-' +
+            pad(parseInt(isoMatch[2], 10)) +
+            '-' +
+            pad(parseInt(isoMatch[3], 10))
+          )
         }
+
+        // 3. DD/MM/YYYY ou DD.MM.YYYY ou DD-MM-YYYY
+        var ddmmyyyyMatch = s.match(/^(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{2,4})$/)
+        if (ddmmyyyyMatch) {
+          var day = parseInt(ddmmyyyyMatch[1], 10)
+          var month = parseInt(ddmmyyyyMatch[2], 10)
+          var year = parseInt(ddmmyyyyMatch[3], 10)
+          if (year < 100) year += 2000
+          if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+            return year + '-' + pad(month) + '-' + pad(day)
+          }
+        }
+
+        // 4. MM/YYYY ou MM-YYYY
+        var mmyyyyMatch = s.match(/^(\d{1,2})[\/\.\-](\d{4})$/)
+        if (mmyyyyMatch) {
+          var m = parseInt(mmyyyyMatch[1], 10)
+          var y = parseInt(mmyyyyMatch[2], 10)
+          if (m >= 1 && m <= 12) {
+            return y + '-' + pad(m) + '-01'
+          }
+        }
+
+        // 5. YYYY/MM ou YYYY-MM
+        var yyyymmMatch = s.match(/^(\d{4})[\/\.\-](\d{1,2})$/)
+        if (yyyymmMatch) {
+          var y2 = parseInt(yyyymmMatch[1], 10)
+          var m2 = parseInt(yyyymmMatch[2], 10)
+          if (m2 >= 1 && m2 <= 12) {
+            return y2 + '-' + pad(m2) + '-01'
+          }
+        }
+
+        // 6. Mês por extenso/abreviado com/sem barra/espaço/hífen:
+        // ex.: "Janeiro/2025", "jan/2025", "Janeiro 2025", "jan 2025", "Janeiro - 2025", "2025/Janeiro"
+        var textMonthMatch = s.match(/([a-zA-ZçÇáÁéÉíÍóÓúÚãÃõÕâÂêÊôÔ]+)[\s\/\-_]+(\d{2,4})/)
+        if (textMonthMatch) {
+          var mName = normalizeMonthStr(textMonthMatch[1])
+          var mNum = MESES_MAP[mName]
+          var yNum = parseInt(textMonthMatch[2], 10)
+          if (yNum < 100) yNum += 2000
+          if (mNum && yNum >= 1990 && yNum <= 2100) {
+            return yNum + '-' + pad(mNum) + '-01'
+          }
+        }
+
+        // Invertido: "2025 - Janeiro"
+        var textYearMatch = s.match(/(\d{4})[\s\/\-_]+([a-zA-ZçÇáÁéÉíÍóÓúÚãÃõÕâÂêÊôÔ]+)/)
+        if (textYearMatch) {
+          var yNum2 = parseInt(textYearMatch[1], 10)
+          var mName2 = normalizeMonthStr(textYearMatch[2])
+          var mNum2 = MESES_MAP[mName2]
+          if (mNum2 && yNum2 >= 1990 && yNum2 <= 2100) {
+            return yNum2 + '-' + pad(mNum2) + '-01'
+          }
+        }
+
+        // 7. Fallback: Date() nativo
         var parsed = new Date(s)
         if (!isNaN(parsed.getTime())) {
           return (
             parsed.getFullYear() + '-' + pad(parsed.getMonth() + 1) + '-' + pad(parsed.getDate())
           )
         }
+
         return ''
       }
 
@@ -75,23 +208,57 @@ routerAdd(
           .trim()
       }
 
-      var MESES_EXTENSO = [
-        'janeiro',
-        'fevereiro',
-        'março',
-        'abril',
-        'maio',
-        'junho',
-        'julho',
-        'agosto',
-        'setembro',
-        'outubro',
-        'novembro',
-        'dezembro',
-      ]
+      /**
+       * Parser dinâmico de cliente:
+       * Separa código do cliente do nome (ex: "1234 - MASTER PREMIX NUTRIÇÃO LTDA" -> codigo="1234", nome="MASTER PREMIX NUTRIÇÃO LTDA")
+       * Suporta múltiplos hífens (-, –, —, -), " - ", " : ", " / "
+       * Preserva nomes legítimos com hífen quando não há código na frente.
+       */
+      function parseClientField(raw) {
+        if (!raw) return { codigo: '', nome: '' }
+        var s = String(raw).trim()
+        if (!s) return { codigo: '', nome: '' }
+
+        // Padrão 1: Código numérico ou alfanumérico curto (ex: 1 a 10 dígitos) no início
+        // seguido por separador (-, –, —, :, |) e o nome do cliente
+        var codePrefixMatch = s.match(
+          /^([0-9]{1,10}|[A-Za-z]{1,4}[0-9]{1,8})\s*[\-\–\—\:\|]\s*(.+)$/,
+        )
+        if (codePrefixMatch) {
+          var candCode = codePrefixMatch[1].trim()
+          var candName = codePrefixMatch[2].trim()
+          if (candName.length >= 2) {
+            return { codigo: candCode, nome: candName }
+          }
+        }
+
+        // Padrão 2: Formato com parênteses ou colchetes: "[1234] MASTER PREMIX" ou "(1234) MASTER PREMIX"
+        var bracketMatch = s.match(/^[\(\[]([0-9A-Za-z]+)[\)\]]\s*[\-\–\—\:\s]?\s*(.+)$/)
+        if (bracketMatch) {
+          var bCode = bracketMatch[1].trim()
+          var bName = bracketMatch[2].trim()
+          if (bName.length >= 2) {
+            return { codigo: bCode, nome: bName }
+          }
+        }
+
+        // Padrão 3: Nome do cliente seguido pelo código no final: "MASTER PREMIX - COD 1234" ou "MASTER PREMIX (1234)"
+        var suffixCodeMatch = s.match(
+          /^(.+?)\s*[\-\–\—\:\/]\s*(?:c[oó]d\.?|c[oó]digo)?\s*([0-9]{1,10})$/i,
+        )
+        if (suffixCodeMatch) {
+          var sName = suffixCodeMatch[1].trim()
+          var sCode = suffixCodeMatch[2].trim()
+          if (sName.length >= 2) {
+            return { codigo: sCode, nome: sName }
+          }
+        }
+
+        return { codigo: '', nome: s }
+      }
 
       function deriveDateParts(dataStr) {
-        var d = new Date(dataStr)
+        var d = new Date(dataStr + 'T00:00:00Z')
         if (isNaN(d.getTime())) {
           d = new Date()
         }
@@ -156,6 +323,8 @@ routerAdd(
       // Mapas de indexação de factories
       var factoryByCnpj = {}
       var factoryByNameNorm = {}
+      var factoryByCodigo = {}
+
       for (var f = 0; f < allFactories.length; f++) {
         var fact = allFactories[f]
         var fCnpj = cleanCnpj(fact.getString ? fact.getString('cnpj') : fact.cnpj)
@@ -166,6 +335,13 @@ routerAdd(
         var fn = normalizeName(fName)
         if (fn && !factoryByNameNorm[fn]) {
           factoryByNameNorm[fn] = fact
+        }
+        var fCodigo = fact.getString ? fact.getString('codigo_cliente') : fact.codigo_cliente
+        if (fCodigo) {
+          var fcClean = String(fCodigo).trim().toLowerCase()
+          if (fcClean && !factoryByCodigo[fcClean]) {
+            factoryByCodigo[fcClean] = fact
+          }
         }
       }
 
@@ -220,27 +396,44 @@ routerAdd(
       var duplicatasIgnoradas = 0
       var clientesCriados = 0
       var clientesVinculados = 0
+      var clientesVinculadosPorCodigo = 0
+      var clientesVinculadosPorNome = 0
+      var clientesVinculadosPorCnpj = 0
       var clientesNaoIdentificados = 0
       var erros = []
 
       // Rastrear pedidos importados por factory para atualização cirúrgica posterior
-      // factoryId -> { maxData: string, somaValor: number, qtdNotas: number, ultimoValor: number, factoryRecord: Record }
       var factoriesAfetadas = {}
 
       for (var i = 0; i < rows.length; i++) {
         var rowNum = i + 2
         var item = rows[i] || {}
 
-        var dataRaw = item.data || item.data_documento || item.data_pedido || item.data_faturamento
+        var dataRaw =
+          item.data ||
+          item.data_documento ||
+          item.data_pedido ||
+          item.data_faturamento ||
+          item.mes_ano ||
+          item.periodo
         var dataFaturamento = parseDate(dataRaw)
         if (!dataFaturamento) {
-          erros.push({ linha: rowNum, erro: 'Data inválida ou ausente: ' + String(dataRaw || '') })
+          erros.push({
+            linha: rowNum,
+            erro: 'Data inválida ou não reconhecida: ' + String(dataRaw || ''),
+          })
           continue
         }
 
-        var clienteNome = String(
+        var clienteRaw = String(
           item.cliente || item.cliente_nome || item.destinatario_nome || '',
         ).trim()
+
+        // Executar parsing inteligente de código e nome do cliente
+        var parsedCli = parseClientField(clienteRaw)
+        var clienteNome = parsedCli.nome || clienteRaw
+        var clienteCodigoExtraido = parsedCli.codigo || String(item.codigo_cliente || '').trim()
+
         var clienteCnpj = cleanCnpj(item.cnpj || item.cliente_cnpj || item.destinatario_cnpj)
         var numeroDoc = String(
           item.numero_documento || item.numero_nf || item.numero_pedido || item.nf || '',
@@ -267,8 +460,8 @@ routerAdd(
           .toLowerCase()
         if (statusPedido !== 'projetado') statusPedido = 'realizado'
 
-        if (!clienteNome && !clienteCnpj) {
-          erros.push({ linha: rowNum, erro: 'Cliente (nome ou CNPJ) é obrigatório' })
+        if (!clienteNome && !clienteCnpj && !clienteCodigoExtraido) {
+          erros.push({ linha: rowNum, erro: 'Cliente (nome, código ou CNPJ) é obrigatório' })
           continue
         }
 
@@ -282,22 +475,39 @@ routerAdd(
         }
 
         // 2. VINCULAÇÃO INTELIGENTE DO CLIENTE (factories)
+        // Prioridade de matching:
+        // (a) CNPJ prioritário se disponível (14 dígitos)
+        // (b) Código de cliente se disponível e já cadastrado
+        // (c) Razão Social / Nome normalizado exato
+        // (d) Razão Social / Nome normalizado substring/tolerante
         var matchedFactory = null
+        var matchMethod = ''
+
         if (clienteCnpj && clienteCnpj.length === 14) {
           matchedFactory = factoryByCnpj[clienteCnpj] || null
+          if (matchedFactory) matchMethod = 'cnpj'
         }
+
+        if (!matchedFactory && clienteCodigoExtraido) {
+          var cKey = clienteCodigoExtraido.toLowerCase()
+          matchedFactory = factoryByCodigo[cKey] || null
+          if (matchedFactory) matchMethod = 'codigo'
+        }
+
         if (!matchedFactory && clienteNome) {
           var cNorm = normalizeName(clienteNome)
           if (factoryByNameNorm[cNorm]) {
             matchedFactory = factoryByNameNorm[cNorm]
+            matchMethod = 'nome'
           } else {
-            // Tentativa de correspondência parcial tolerante
+            // Tentativa de correspondência parcial tolerante (ex: "Master Premix" casa com "Master Premix Nutrição")
             for (var fnKey in factoryByNameNorm) {
               if (
-                (fnKey.length >= 8 && cNorm.indexOf(fnKey) !== -1) ||
-                (cNorm.length >= 8 && fnKey.indexOf(cNorm) !== -1)
+                (fnKey.length >= 6 && cNorm.indexOf(fnKey) !== -1) ||
+                (cNorm.length >= 6 && fnKey.indexOf(cNorm) !== -1)
               ) {
                 matchedFactory = factoryByNameNorm[fnKey]
+                matchMethod = 'nome'
                 break
               }
             }
@@ -306,6 +516,32 @@ routerAdd(
 
         if (matchedFactory) {
           clientesVinculados++
+          if (matchMethod === 'codigo') {
+            clientesVinculadosPorCodigo++
+          } else if (matchMethod === 'cnpj') {
+            clientesVinculadosPorCnpj++
+          } else {
+            clientesVinculadosPorNome++
+          }
+
+          // Se a factory ainda não tinha o código e agora encontramos o código na planilha, registrar na factory
+          if (clienteCodigoExtraido) {
+            var curFacCod = matchedFactory.getString
+              ? matchedFactory.getString('codigo_cliente')
+              : matchedFactory.codigo_cliente
+            if (!curFacCod) {
+              try {
+                $app
+                  .db()
+                  .newQuery('UPDATE factories SET codigo_cliente = {:cod} WHERE id = {:id}')
+                  .bind({ cod: clienteCodigoExtraido, id: matchedFactory.id })
+                  .execute()
+                factoryByCodigo[clienteCodigoExtraido.toLowerCase()] = matchedFactory
+              } catch (_) {}
+            }
+          }
+
+          // Usar o nome canônico limpo
           if (!clienteNome) {
             clienteNome = matchedFactory.getString
               ? matchedFactory.getString('name')
@@ -316,7 +552,11 @@ routerAdd(
           if (autoCreateClient && clienteNome) {
             try {
               var newFact = new Record(factCol)
+              // NUNCA salvar com código embutido no nome: salva o NOME limpo
               newFact.set('name', clienteNome)
+              if (clienteCodigoExtraido) {
+                newFact.set('codigo_cliente', clienteCodigoExtraido)
+              }
               if (clienteCnpj && clienteCnpj.length === 14) {
                 newFact.set('cnpj', clienteCnpj)
               }
@@ -341,6 +581,9 @@ routerAdd(
               // Atualizar caches em memória
               var nNorm = normalizeName(clienteNome)
               factoryByNameNorm[nNorm] = newFact
+              if (clienteCodigoExtraido) {
+                factoryByCodigo[clienteCodigoExtraido.toLowerCase()] = newFact
+              }
               if (clienteCnpj && clienteCnpj.length === 14) {
                 factoryByCnpj[clienteCnpj] = newFact
               }
@@ -599,7 +842,13 @@ routerAdd(
             atualizados +
             ' atualizados, ' +
             clientesVinculados +
-            ' clientes vinculados, ' +
+            ' clientes vinculados (' +
+            clientesVinculadosPorCodigo +
+            ' por código, ' +
+            clientesVinculadosPorNome +
+            ' por nome, ' +
+            clientesVinculadosPorCnpj +
+            ' por CNPJ), ' +
             clientesCriados +
             ' clientes novos cadastrados e ' +
             totalClientesAtualizados +
@@ -638,6 +887,9 @@ routerAdd(
         atualizados: atualizados,
         duplicatasIgnoradas: duplicatasIgnoradas,
         clientesVinculados: clientesVinculados,
+        clientesVinculadosPorCodigo: clientesVinculadosPorCodigo,
+        clientesVinculadosPorNome: clientesVinculadosPorNome,
+        clientesVinculadosPorCnpj: clientesVinculadosPorCnpj,
         clientesCriados: clientesCriados,
         clientesNaoIdentificados: clientesNaoIdentificados,
         clientesAtualizadosNoCRM: totalClientesAtualizados,

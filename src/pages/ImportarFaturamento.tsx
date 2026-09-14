@@ -599,12 +599,20 @@ export default function ImportarFaturamento() {
                 <p className="text-2xl font-bold text-purple-600 mt-1">
                   {result.clientesVinculados}
                 </p>
+                {(result.clientesVinculadosPorCodigo !== undefined ||
+                  result.clientesVinculadosPorNome !== undefined) && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    {result.clientesVinculadosPorCodigo || 0} via código •{' '}
+                    {result.clientesVinculadosPorNome || 0} via nome
+                  </p>
+                )}
               </div>
               <div className="bg-indigo-50 dark:bg-indigo-950/30 rounded-xl p-3.5 border border-indigo-200 dark:border-indigo-900/40 text-center">
                 <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-                  <UserPlus className="w-3.5 h-3.5 text-indigo-600" /> Clientes Cadastrados
+                  <UserPlus className="w-3.5 h-3.5 text-indigo-600" /> Clientes Novos
                 </p>
                 <p className="text-2xl font-bold text-indigo-600 mt-1">{result.clientesCriados}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">com nome limpo</p>
               </div>
               <div className="bg-amber-50 dark:bg-amber-950/30 rounded-xl p-3.5 border border-amber-200 dark:border-amber-900/40 text-center">
                 <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
@@ -613,6 +621,7 @@ export default function ImportarFaturamento() {
                 <p className="text-2xl font-bold text-amber-600 mt-1">
                   {result.clientesAtualizadosNoCRM}
                 </p>
+                <p className="text-[10px] text-muted-foreground mt-1">cadastros sincronizados</p>
               </div>
             </div>
 
@@ -623,22 +632,32 @@ export default function ImportarFaturamento() {
               </h4>
               <ul className="text-xs text-muted-foreground space-y-1.5 list-disc pl-4">
                 <li>
+                  <strong>Reconhecimento Inteligente de Clientes:</strong> Separou o código
+                  cadastral do nome da empresa (ex: <code>1234 - Master Premix Nutrição Ltda</code>
+                  ). Vinculou{' '}
+                  <strong>{result.clientesVinculadosPorCodigo ?? 0} clientes por código</strong>,{' '}
+                  <strong>
+                    {result.clientesVinculadosPorNome ?? 0} clientes por nome normalizado
+                  </strong>{' '}
+                  e <strong>{result.clientesVinculadosPorCnpj ?? 0} por CNPJ</strong>.
+                </li>
+                <li>
                   <strong>Atualização do Último Pedido:</strong> O campo <code>ultimo_pedido</code>{' '}
-                  dos clientes foi atualizado com a data mais recente faturada na planilha.
+                  dos clientes foi atualizado com a data calculada (incluindo meses anteriores de
+                  2025).
                 </li>
                 <li>
-                  <strong>Avanço de Estágio do Funil:</strong> Clientes com estágios anteriores
-                  avançaram para <code>Fechamento</code> (classificados como <strong>Ativos</strong>{' '}
-                  pelas regras de <code>funnel-status.ts</code>).
+                  <strong>Avanço de Estágio do Funil:</strong> Clientes com pedidos avançaram para{' '}
+                  <code>Fechamento</code> e status <strong>Ativo</strong>.
                 </li>
                 <li>
-                  <strong>Valor Médio e Valor Atual:</strong> Recalculados a partir do histórico de
-                  notas fiscais/faturamentos vinculados ao cliente.
+                  <strong>Reflexo em Relatórios e Dashboards:</strong> Os pedidos alimentam o
+                  Histórico de Vendas, agrupados pelos meses/anos correspondentes (ex:
+                  Janeiro/2025), refletindo nas análises de faturamento e comparativos anuais.
                 </li>
                 <li>
                   <strong>Log de Auditoria Consolidado:</strong> 1 único evento de auditoria
-                  consolidado foi gravado, preservando a performance do serviço de tempo real sem
-                  disparar múltiplos alertas.
+                  consolidado foi gravado, preservando a performance do sistema.
                 </li>
               </ul>
             </div>

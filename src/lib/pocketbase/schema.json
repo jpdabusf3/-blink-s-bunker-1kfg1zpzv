@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-14T17:53:05.154Z",
+  "generatedAt": "2026-09-14T17:57:40.960Z",
   "collections": [
     {
       "name": "users",
@@ -496,6 +496,12 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "codigo_cliente",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -508,7 +514,8 @@
         "CREATE INDEX `idx_factories_status_funil` ON `factories` (status_funil)",
         "CREATE INDEX `idx_factories_animalSpecies` ON `factories` (animalSpecies)",
         "CREATE INDEX `idx_factories_geocode_precision` ON `factories` (geocode_precision)",
-        "CREATE INDEX `idx_factories_address_status` ON `factories` (address_status)"
+        "CREATE INDEX `idx_factories_address_status` ON `factories` (address_status)",
+        "CREATE INDEX `idx_factories_codigo_cliente` ON `factories` (codigo_cliente)"
       ]
     },
     {

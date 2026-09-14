@@ -30,9 +30,9 @@ export interface FieldDefinition {
 export const FATURAMENTO_FIELDS: FieldDefinition[] = [
   {
     key: 'data',
-    label: 'Data (Faturamento / Pedido)',
+    label: 'Data (Mês/Ano ou Faturamento)',
     required: true,
-    description: 'Data do faturamento ou emissão (ex: 2026-08-10, 10/08/2026)',
+    description: 'Mês/Ano ou data de faturamento (ex: Jan/2025, 01/2025, 10/01/2025)',
     aliases: [
       'data',
       'dt',
@@ -49,13 +49,29 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'faturado em',
       'emissao',
       'periodo',
+      'mes',
+      'mes_ano',
+      'mes ano',
+      'mes/ano',
+      'mes_referencia',
+      'ano_mes',
+      'ano',
+      'competencia',
+      // Termos em inglês comumente presentes em planilhas de ERP/BI
+      'date',
+      'invoice_date',
+      'order_date',
+      'billing_date',
+      'month',
+      'month_year',
+      'period',
     ],
   },
   {
     key: 'cliente',
-    label: 'Cliente (Razão Social / Nome Fantasia)',
+    label: 'Cliente (Código & Razão Social)',
     required: true,
-    description: 'Nome do cliente ou destinatário da nota',
+    description: 'Nome e/ou código cadastral do cliente (ex: 1234 - Master Premix Nutrição Ltda)',
     aliases: [
       'cliente',
       'nome',
@@ -69,13 +85,30 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'comprador',
       'parceiro',
       'conta',
+      'cliente_cod_descricao',
+      'cliente cod descricao',
+      'cliente - cod. & descricao',
+      'cliente - cod & descricao',
+      'cliente cod & descricao',
+      'cod & descricao',
+      'cod e descricao',
+      'cliente descricao',
+      'cliente / razao',
+      // Termos em inglês
+      'customer',
+      'client',
+      'customer_name',
+      'client_name',
+      'customer/client',
+      'account',
+      'buyer',
     ],
   },
   {
     key: 'cnpj',
     label: 'CNPJ do Cliente',
     required: false,
-    description: 'CNPJ para vinculação unívoca de alta precisão com o cadastro de Clientes',
+    description: 'CNPJ para vinculação prioritária e unívoca com o cadastro de Clientes',
     aliases: [
       'cnpj',
       'cpf_cnpj',
@@ -86,11 +119,16 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'doc_cliente',
       'c.g.c.',
       'cgc',
+      // Termos em inglês
+      'tax_id',
+      'vat',
+      'tax_number',
+      'registration_number',
     ],
   },
   {
     key: 'numero_documento',
-    label: 'Número NF / Pedido',
+    label: 'NF / Número do Documento',
     required: false,
     description: 'Número da nota fiscal ou pedido (usado para idempotência/evitar duplicatas)',
     aliases: [
@@ -111,11 +149,21 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'n doc',
       'n nf',
       'chave',
+      'numero_doc',
+      'n_documento',
+      // Termos em inglês
+      'invoice',
+      'invoice_number',
+      'invoice_no',
+      'document',
+      'doc_number',
+      'order_number',
+      'order_no',
     ],
   },
   {
     key: 'valor',
-    label: 'Valor Total do Item / Pedido (R$)',
+    label: 'Valor Total do Pedido / Item (R$)',
     required: true,
     description: 'Valor total faturado (ex: 15420.50 ou 15.420,50)',
     aliases: [
@@ -132,6 +180,16 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'total_item',
       'valor_item',
       'produto_valor_total',
+      'valor_liquido',
+      'liquido',
+      // Termos em inglês
+      'amount',
+      'value',
+      'total_amount',
+      'total_value',
+      'revenue',
+      'sales_value',
+      'price_total',
     ],
   },
   {
@@ -149,13 +207,19 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'material',
       'nome_produto',
       'produto_nome',
+      // Termos em inglês
+      'product',
+      'product_name',
+      'description',
+      'product_description',
+      'item_description',
     ],
   },
   {
     key: 'produto_codigo',
     label: 'Código do Produto / SKU',
     required: false,
-    description: 'Código de catálogo (ex: BPMI.OR035)',
+    description: 'Código de catálogo ou ERP (ex: BPMI.OR035)',
     aliases: [
       'codigo',
       'cod_produto',
@@ -164,6 +228,11 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'referencia',
       'cod_item',
       'produto_codigo',
+      'part_number',
+      // Termos em inglês
+      'product_code',
+      'item_code',
+      'code',
     ],
   },
   {
@@ -180,6 +249,10 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'animal',
       'animaispecies',
       'setor',
+      // Termos em inglês
+      'species',
+      'animal_species',
+      'segment',
     ],
   },
   {
@@ -197,6 +270,10 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'kg',
       'unidades',
       'produto_quantidade',
+      // Termos em inglês
+      'quantity',
+      'qty',
+      'amount_qty',
     ],
   },
   {
@@ -212,6 +289,10 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'preco_unitario',
       'preco_unit',
       'preco',
+      // Termos em inglês
+      'unit_price',
+      'price',
+      'unit_value',
     ],
   },
   {
@@ -219,7 +300,15 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
     label: 'Valor Total da Nota (se agrupada)',
     required: false,
     description: 'Valor total consolidado da Nota Fiscal mãe',
-    aliases: ['total_nota', 'valor_total_nota', 'valor_nota', 'vl_nota', 'total_nf', 'valor_nf'],
+    aliases: [
+      'total_nota',
+      'valor_total_nota',
+      'valor_nota',
+      'vl_nota',
+      'total_nf',
+      'valor_nf',
+      'invoice_total',
+    ],
   },
   {
     key: 'vendedor',
@@ -234,6 +323,11 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'vendedor_nome',
       'nome_vendedor',
       'rca',
+      // Termos em inglês
+      'seller',
+      'salesperson',
+      'sales_rep',
+      'rep',
     ],
   },
   {
@@ -248,28 +342,61 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'gerente',
       'responsavel_tecnico',
       'gestor_comercial',
+      // Termos em inglês
+      'manager',
+      'technical_manager',
     ],
   },
   {
     key: 'unidade',
-    label: 'Unidade / Filial',
+    label: 'Filial / Unidade',
     required: false,
     description: 'Filial ou planta de expedição/faturamento (ex: Maringá, CD)',
-    aliases: ['unidade', 'filial', 'planta', 'fabrica', 'origem_faturamento', 'cd', 'armazem'],
+    aliases: [
+      'unidade',
+      'filial',
+      'planta',
+      'fabrica',
+      'origem_faturamento',
+      'cd',
+      'armazem',
+      // Termos em inglês
+      'branch',
+      'unit',
+      'plant',
+      'warehouse',
+    ],
   },
   {
     key: 'canal_vendas',
     label: 'Canal de Vendas',
     required: false,
     description: 'Direto, Distribuidor, Indústria, Premixera, Cooperativa, Online',
-    aliases: ['canal', 'canal_vendas', 'canal_de_vendas', 'tipo_venda', 'modalidade'],
+    aliases: [
+      'canal',
+      'canal_vendas',
+      'canal_de_vendas',
+      'tipo_venda',
+      'modalidade',
+      // Termos em inglês
+      'channel',
+      'sales_channel',
+    ],
   },
   {
     key: 'status',
     label: 'Status do Pedido',
     required: false,
     description: 'Realizado (faturado) ou Projetado (em carteira)',
-    aliases: ['status', 'situacao', 'estado_pedido', 'fase'],
+    aliases: [
+      'status',
+      'situacao',
+      'estado_pedido',
+      'fase',
+      // Termos em inglês
+      'order_status',
+      'state',
+    ],
   },
 ]
 
@@ -299,6 +426,32 @@ export function autoSuggestMapping(
       return
     }
 
+    // Regras prioritárias para padrões específicos conhecidos
+    // Ex: "Cliente - Cod. & Descrição" ou variações de código e descrição
+    if (
+      (norm.includes('cliente') && (norm.includes('cod') || norm.includes('descri'))) ||
+      norm.includes('clientecod')
+    ) {
+      if (!usedCRMFields.has('cliente')) {
+        mapping[header] = 'cliente'
+        usedCRMFields.add('cliente')
+        return
+      }
+    }
+
+    // Ex: Colunas de mês/ano, período ou data (ex: "Mes/Ano", "Mes e Ano", "Ano/Mes")
+    if (
+      (norm.includes('mes') && norm.includes('ano')) ||
+      norm === 'mes' ||
+      norm === 'competencia'
+    ) {
+      if (!usedCRMFields.has('data')) {
+        mapping[header] = 'data'
+        usedCRMFields.add('data')
+        return
+      }
+    }
+
     // Procura exato ou alias
     let matchedField: FaturamentoFieldKey | '' = ''
 
@@ -310,7 +463,7 @@ export function autoSuggestMapping(
       }
     }
 
-    // 2. Match com aliases
+    // 2. Match com aliases exato
     if (!matchedField) {
       for (const def of FATURAMENTO_FIELDS) {
         if (usedCRMFields.has(def.key)) continue
@@ -369,6 +522,9 @@ export interface FaturamentoImportResult {
   atualizados: number
   duplicatasIgnoradas: number
   clientesVinculados: number
+  clientesVinculadosPorCodigo?: number
+  clientesVinculadosPorNome?: number
+  clientesVinculadosPorCnpj?: number
   clientesCriados: number
   clientesNaoIdentificados: number
   clientesAtualizadosNoCRM: number
