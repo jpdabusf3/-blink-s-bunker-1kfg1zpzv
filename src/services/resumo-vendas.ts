@@ -42,6 +42,9 @@ export interface ResumoVendasResponse {
   faturado_total_brl: number
   faturado_total_usd: number
   carteira_total_brl: number | null
+  cobertura_percent?: number | null
+  meta_brl?: number
+  meta_atingida_percent?: number | null
   por_cliente: ResumoClienteItem[]
   por_familia: ResumoFamiliaItem[]
   por_especie: ResumoEspecieItem[]

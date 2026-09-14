@@ -203,9 +203,16 @@ routerAdd(
           especieMap[matchedEsp] = (especieMap[matchedEsp] || 0) + vBrl
         }
 
-        // Chave de agrupamento de documento / nota para contagem
-        var docKey =
-          (r.getString ? r.getString('data_documento') : r.data_documento || '') + '_' + cCod
+        // Chave de agrupamento de documento / nota para contagem:
+        // Use nf_ano + cliente_codigo + data_documento quando nf_ano > 0, fallback para data + cliente
+        var nfAnoVal = (r.getInt ? r.getInt('nf_ano') : r.nf_ano) || 0
+        var docData = r.getString ? r.getString('data_documento') : r.data_documento || ''
+        var docKey = ''
+        if (nfAnoVal > 0) {
+          docKey = nfAnoVal + '_' + cCod + '_' + docData
+        } else {
+          docKey = docData + '_' + cCod
+        }
         notasSet[docKey] = true
       }
 
@@ -249,11 +256,81 @@ routerAdd(
 
       var qtdNotas = Object.keys(notasSet).length || currentRecords.length
 
+      // 1. Meta do período: query da collection metas
+      var metaBrl = 0
+      var metaAtingidaPercent = null
+      try {
+        var mesExtenso = MESES_NOMES[targetMonth] || ''
+        var mesCapitalized = mesExtenso
+          ? mesExtenso.charAt(0).toUpperCase() + mesExtenso.slice(1)
+          : ''
+        var mesExtensoAno = mesCapitalized ? mesCapitalized + ' ' + targetYear : ''
+        var yyyyMm = targetYear + '-' + pad(targetMonth)
+        var yyyyMmDd = yyyyMm + '-01'
+        var yyyyMm00 = yyyyMm + '-00'
+
+        var metasRows = []
+        if (mode === 'week') {
+          metasRows = $app.findRecordsByFilter(
+            'metas',
+            'periodo = {:pLabel} || periodo ~ {:pWeek}',
+            '',
+            500,
+            0,
+            { pLabel: periodoLabel, pWeek: 'W' + pad(targetWeek) },
+          )
+        } else {
+          metasRows = $app.findRecordsByFilter(
+            'metas',
+            'periodo = {:pLabel} || periodo = {:pExt} || periodo = {:pYm} || periodo = {:pYmd} || periodo = {:pYm00}',
+            '',
+            500,
+            0,
+            {
+              pLabel: periodoLabel,
+              pExt: mesExtensoAno,
+              pYm: yyyyMm,
+              pYmd: yyyyMmDd,
+              pYm00: yyyyMm00,
+            },
+          )
+        }
+
+        if (metasRows && metasRows.length > 0) {
+          var sumMeta = 0
+          for (var mIdx = 0; mIdx < metasRows.length; mIdx++) {
+            var mRow = metasRows[mIdx]
+            var mVal = (mRow.getInt ? mRow.getInt('meta_valor') : mRow.meta_valor) || 0
+            sumMeta += mVal
+          }
+          metaBrl = Math.round(sumMeta * 100) / 100
+        }
+      } catch (errMeta) {
+        $app.logger().warn('Erro ao consultar metas', 'error', String(errMeta))
+        metaBrl = 0
+      }
+
+      if (metaBrl > 0) {
+        metaAtingidaPercent = Math.round((totalBrl / metaBrl) * 10000) / 100
+      }
+
+      // 2. Cobertura: faturado_total_brl / carteira_total_brl * 100 ou null
+      var coberturaPercent = null
+      if (carteiraTotalBrl !== null && carteiraTotalBrl !== undefined && carteiraTotalBrl > 0) {
+        coberturaPercent = Math.round((totalBrl / carteiraTotalBrl) * 10000) / 100
+      }
+
+      var faturadoTotalBrl = Math.round(totalBrl * 100) / 100
+      var faturadoTotalUsd = Math.round(totalUsd * 100) / 100
+
       return e.json(200, {
         periodo: periodoLabel,
-        faturado_total_brl: Math.round(totalBrl * 100) / 100,
-        faturado_total_usd: Math.round(totalUsd * 100) / 100,
+        faturado_total_brl: faturadoTotalBrl,
+        faturado_total_usd: faturadoTotalUsd,
         carteira_total_brl: carteiraTotalBrl,
+        cobertura_percent: coberturaPercent,
+        meta_brl: metaBrl,
+        meta_atingida_percent: metaAtingidaPercent,
         por_cliente: porCliente,
         por_familia: porFamilia,
         por_especie: porEspecie,

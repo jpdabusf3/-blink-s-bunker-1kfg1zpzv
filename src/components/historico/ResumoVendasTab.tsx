@@ -27,6 +27,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Minus,
+  Target,
 } from 'lucide-react'
 import { formatCurrency, formatCurrencyUSD } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -121,14 +122,21 @@ export function ResumoVendasTab() {
   const faturadoBrl = data?.faturado_total_brl ?? 0
   const faturadoUsd = data?.faturado_total_usd ?? 0
   const carteiraBrl = data?.carteira_total_brl
+  const metaBrl = data?.meta_brl ?? 0
+  const metaAtingidaPercent = data?.meta_atingida_percent
   const qtdNotas = data?.quantidade_notas ?? 0
   const variacao = data?.variacao_semana_anterior ?? 0
 
-  // Cobertura (faturado/carteira %)
+  // Cobertura (faturado/carteira %): usa o valor do backend se disponível, senão fallback client-side
+  const coberturaVal =
+    data?.cobertura_percent !== undefined
+      ? data.cobertura_percent
+      : carteiraBrl !== null && carteiraBrl !== undefined && carteiraBrl > 0
+        ? Math.round((faturadoBrl / carteiraBrl) * 100 * 10) / 10
+        : null
+
   const coberturaStr =
-    carteiraBrl !== null && carteiraBrl !== undefined && carteiraBrl > 0
-      ? `${((faturadoBrl / carteiraBrl) * 100).toFixed(1)}%`
-      : '—'
+    coberturaVal !== null && coberturaVal !== undefined ? `${coberturaVal.toFixed(1)}%` : '—'
 
   return (
     <div className="space-y-6">
@@ -231,8 +239,8 @@ export function ResumoVendasTab() {
       {/* Skeletons ou Cards */}
       {loading ? (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {Array.from({ length: 5 }).map((_, i) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
               <Card key={i} className="shadow-subtle">
                 <CardContent className="p-5 space-y-2">
                   <Skeleton className="h-4 w-24" />
@@ -260,7 +268,7 @@ export function ResumoVendasTab() {
       ) : (
         <div className="space-y-6 animate-fade-in">
           {/* Métricas Principais */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
             {/* Card Faturado BRL */}
             <Card className="shadow-subtle border-l-4 border-l-primary">
               <CardContent className="p-5">
@@ -276,6 +284,34 @@ export function ResumoVendasTab() {
                     {formatCurrencyUSD(faturadoUsd)}
                   </p>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Card Meta e % Atingido */}
+            <Card className="shadow-subtle border-l-4 border-l-purple-500">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-muted-foreground">Meta do Período</p>
+                  <Target className="w-4 h-4 text-purple-500" />
+                </div>
+                <p className="text-2xl font-bold text-foreground mt-2">
+                  {metaBrl > 0 ? formatCurrency(metaBrl) : '—'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {metaAtingidaPercent !== null && metaAtingidaPercent !== undefined ? (
+                    <span
+                      className={
+                        metaAtingidaPercent >= 100
+                          ? 'font-semibold text-emerald-600 dark:text-emerald-400'
+                          : 'font-semibold text-purple-600 dark:text-purple-400'
+                      }
+                    >
+                      {metaAtingidaPercent.toFixed(1)}% da meta atingida
+                    </span>
+                  ) : (
+                    'Sem meta cadastrada'
+                  )}
+                </p>
               </CardContent>
             </Card>
 
