@@ -255,34 +255,36 @@ export default function Index() {
         return <GestorTecnicoComparisonCard />
       case 'metrics':
         return (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 print:grid-cols-4 print:gap-4 print:mb-8">
-            <Card className="shadow-subtle text-center flex flex-col justify-center items-center p-4 print:border-none print:shadow-none print:bg-muted/10">
-              <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-4 print:gap-4 print:mb-8">
+            <Card className="glass-card hover-lift text-center flex flex-col justify-center items-center p-5 print:border-none print:shadow-none print:bg-muted/10">
+              <h3 className="uppercase tracking-[0.08em] font-semibold text-[12px] text-muted-foreground mb-1 leading-tight">
                 Fábricas Mapeadas
               </h3>
-              <div className="text-xl sm:text-3xl font-bold">{filteredFactories.length}</div>
+              <div className="text-[28px] font-extrabold tabular-nums tracking-tight">
+                {filteredFactories.length}
+              </div>
             </Card>
-            <Card className="shadow-subtle text-center flex flex-col justify-center items-center p-4 print:border-none print:shadow-none print:bg-muted/10">
-              <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight">
+            <Card className="glass-card hover-lift text-center flex flex-col justify-center items-center p-5 print:border-none print:shadow-none print:bg-muted/10">
+              <h3 className="uppercase tracking-[0.08em] font-semibold text-[12px] text-muted-foreground mb-1 leading-tight">
                 Ativas / Prospecção
               </h3>
-              <div className="text-xl sm:text-3xl font-bold">
+              <div className="text-[28px] font-extrabold tabular-nums tracking-tight">
                 {metrics.active} / {metrics.prospect}
               </div>
             </Card>
-            <Card className="shadow-subtle text-center flex flex-col justify-center items-center p-4 print:border-none print:shadow-none print:bg-primary/5">
-              <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight">
+            <Card className="glass-card hover-lift text-center flex flex-col justify-center items-center p-5 print:border-none print:shadow-none print:bg-primary/5">
+              <h3 className="uppercase tracking-[0.08em] font-semibold text-[12px] text-muted-foreground mb-1 leading-tight">
                 Receita Potencial
               </h3>
-              <div className="text-[12px] font-bold text-primary print:text-xl">
+              <div className="text-[28px] font-extrabold tabular-nums text-primary print:text-xl tracking-tight">
                 {formatCompactCurrency(metrics.revenue)}
               </div>
             </Card>
-            <Card className="shadow-subtle text-center flex flex-col justify-center items-center p-4 print:border-none print:shadow-none print:bg-accent/5">
-              <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground mb-1 leading-tight">
+            <Card className="glass-card hover-lift text-center flex flex-col justify-center items-center p-5 print:border-none print:shadow-none print:bg-accent/5">
+              <h3 className="uppercase tracking-[0.08em] font-semibold text-[12px] text-muted-foreground mb-1 leading-tight">
                 Forecast Ponderado
               </h3>
-              <div className="text-[12px] font-bold text-accent print:text-xl">
+              <div className="text-[28px] font-extrabold tabular-nums text-accent print:text-xl tracking-tight">
                 {formatCompactCurrency(metrics.weighted)}
               </div>
             </Card>

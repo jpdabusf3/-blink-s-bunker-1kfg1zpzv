@@ -29,13 +29,13 @@ export function HistoricoSummaryCards({ summary, loading }: HistoricoSummaryCard
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       {/* Card 1: Total Realizado */}
-      <Card className="border border-emerald-500/20 bg-card shadow-sm hover:border-emerald-500/40 transition-all">
-        <CardContent className="p-4 flex items-center justify-between">
+      <Card className="glass-card hover-lift border-emerald-500/20">
+        <CardContent className="p-5 flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <p className="text-[12px] font-semibold text-muted-foreground uppercase tracking-[0.08em]">
               Total Realizado
             </p>
-            <h4 className="text-xl font-bold text-foreground mt-1">
+            <h4 className="text-[28px] font-extrabold tabular-nums text-foreground mt-1">
               {formatCurrency(summary.totalRealizado)}
             </h4>
             <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-0.5">
@@ -49,13 +49,13 @@ export function HistoricoSummaryCards({ summary, loading }: HistoricoSummaryCard
       </Card>
 
       {/* Card 2: Total Projetado */}
-      <Card className="border border-blue-500/20 bg-card shadow-sm hover:border-blue-500/40 transition-all">
-        <CardContent className="p-4 flex items-center justify-between">
+      <Card className="glass-card hover-lift border-blue-500/20">
+        <CardContent className="p-5 flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <p className="text-[12px] font-semibold text-muted-foreground uppercase tracking-[0.08em]">
               Total Projetado
             </p>
-            <h4 className="text-xl font-bold text-foreground mt-1">
+            <h4 className="text-[28px] font-extrabold tabular-nums text-foreground mt-1">
               {formatCurrency(summary.totalProjetado)}
             </h4>
             <p className="text-[11px] text-blue-600 dark:text-blue-400 font-medium mt-0.5">
@@ -69,13 +69,13 @@ export function HistoricoSummaryCards({ summary, loading }: HistoricoSummaryCard
       </Card>
 
       {/* Card 3: Ticket Médio */}
-      <Card className="border border-amber-500/20 bg-card shadow-sm hover:border-amber-500/40 transition-all">
-        <CardContent className="p-4 flex items-center justify-between">
+      <Card className="glass-card hover-lift border-amber-500/20">
+        <CardContent className="p-5 flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <p className="text-[12px] font-semibold text-muted-foreground uppercase tracking-[0.08em]">
               Ticket Médio
             </p>
-            <h4 className="text-xl font-bold text-foreground mt-1">
+            <h4 className="text-[28px] font-extrabold tabular-nums text-foreground mt-1">
               {formatCurrency(summary.ticketMedio)}
             </h4>
             <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium mt-0.5">
@@ -89,13 +89,13 @@ export function HistoricoSummaryCards({ summary, loading }: HistoricoSummaryCard
       </Card>
 
       {/* Card 4: Qtd Documentos */}
-      <Card className="border border-purple-500/20 bg-card shadow-sm hover:border-purple-500/40 transition-all">
-        <CardContent className="p-4 flex items-center justify-between">
+      <Card className="glass-card hover-lift border-purple-500/20">
+        <CardContent className="p-5 flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <p className="text-[12px] font-semibold text-muted-foreground uppercase tracking-[0.08em]">
               Qtd Documentos
             </p>
-            <h4 className="text-xl font-bold text-foreground mt-1">
+            <h4 className="text-[28px] font-extrabold tabular-nums text-foreground mt-1">
               {summary.qtdDocumentos.toLocaleString('pt-BR')}
             </h4>
             <p className="text-[11px] text-purple-600 dark:text-purple-400 font-medium mt-0.5">

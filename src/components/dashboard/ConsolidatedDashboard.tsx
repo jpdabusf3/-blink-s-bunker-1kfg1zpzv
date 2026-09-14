@@ -112,26 +112,26 @@ export function ConsolidatedDashboard({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="shadow-subtle p-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="glass-card hover-lift p-5">
           <div className="flex items-center gap-2 mb-1">
             <Layers className="w-4 h-4 text-primary" />
-            <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground">
+            <h3 className="uppercase tracking-[0.08em] font-semibold text-[12px] text-muted-foreground">
               Valor Total Funil
             </h3>
           </div>
-          <div className="text-lg sm:text-2xl font-bold text-primary">
+          <div className="text-[28px] font-extrabold tabular-nums text-primary">
             {formatCompactCurrency(kpis.totalFunnelValue)}
           </div>
         </Card>
-        <Card className="shadow-subtle p-4">
+        <Card className="glass-card hover-lift p-5">
           <div className="flex items-center gap-2 mb-1">
-            <Target className="w-4 h-4 text-accent-foreground" />
-            <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground">
+            <Target className="w-4 h-4 text-accent" />
+            <h3 className="uppercase tracking-[0.08em] font-semibold text-[12px] text-muted-foreground">
               Distribuição Funil
             </h3>
           </div>
-          <div className="text-lg sm:text-2xl font-bold">
+          <div className="text-[28px] font-extrabold tabular-nums">
             <span className="text-green-500">{kpis.ativoCount}</span>
             <span className="text-muted-foreground text-sm"> / </span>
             <span className="text-red-500">{kpis.inativoCount}</span>
@@ -142,27 +142,29 @@ export function ConsolidatedDashboard({
             Ativo / Inativo / Negociações Encerradas
           </div>
         </Card>
-        <Card className="shadow-subtle p-4">
+        <Card className="glass-card hover-lift p-5">
           <div className="flex items-center gap-2 mb-1">
             <TrendingUp className="w-4 h-4 text-primary" />
-            <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground">
+            <h3 className="uppercase tracking-[0.08em] font-semibold text-[12px] text-muted-foreground">
               Atingimento Meta{isQuarterly ? ' (Trim.)' : ''}
             </h3>
           </div>
-          <div className="text-lg sm:text-2xl font-bold">{achievementPct.toFixed(1)}%</div>
-          <div className="text-[10px] text-muted-foreground">
+          <div className="text-[28px] font-extrabold tabular-nums">
+            {achievementPct.toFixed(1)}%
+          </div>
+          <div className="text-[10px] text-muted-foreground tabular-nums">
             {formatCompactCurrency(achievementAchieved)} /{' '}
             {formatCompactCurrency(achievementTarget)}
           </div>
         </Card>
-        <Card className="shadow-subtle p-4">
+        <Card className="glass-card hover-lift p-5">
           <div className="flex items-center gap-2 mb-1">
             <DollarSign className="w-4 h-4 text-primary" />
-            <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground">
+            <h3 className="uppercase tracking-[0.08em] font-semibold text-[12px] text-muted-foreground">
               Total Vendas{isQuarterly ? ' (Trim. Atual)' : ''}
             </h3>
           </div>
-          <div className="text-lg sm:text-2xl font-bold text-primary">
+          <div className="text-[28px] font-extrabold tabular-nums text-primary">
             {formatCompactCurrency(curSales)}
           </div>
           <div className="flex items-center gap-1 text-[10px]">

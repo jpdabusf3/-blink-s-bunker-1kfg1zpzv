@@ -34,7 +34,12 @@
     --input: 240 15.4% 5.1%;
     --ring: 40.9 75.8% 59.4%;
 
-    --radius: 0.8rem;
+    --radius: 1rem;
+
+    --glass-bg: 0 0% 100% / 0.04;
+    --glass-border: 0 0% 100% / 0.08;
+    --shadow-card: 0 8px 30px rgba(0, 0, 0, 0.12);
+    --shadow-elevated: 0 16px 48px rgba(0, 0, 0, 0.22);
 
     --sidebar-background: 0 0% 8%;
     --sidebar-foreground: 0 0% 98%;
@@ -81,7 +86,12 @@
     --input: 0 0% 16%;
     --ring: 48 100% 55%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
+
+    --glass-bg: 0 0% 100% / 0.04;
+    --glass-border: 0 0% 100% / 0.08;
+    --shadow-card: 0 8px 30px rgba(0, 0, 0, 0.35);
+    --shadow-elevated: 0 16px 48px rgba(0, 0, 0, 0.45);
 
     --sidebar-background: 0 0% 8%;
     --sidebar-foreground: 0 0% 98%;
@@ -104,18 +114,30 @@
     @apply bg-background text-foreground antialiased transition-colors duration-200;
   }
 
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.01em;
+  }
+
   ::-webkit-scrollbar {
     width: 8px;
+    height: 8px;
   }
   ::-webkit-scrollbar-track {
     background: hsl(var(--background));
   }
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--border));
-    border-radius: 4px;
+    background: hsl(var(--primary) / 0.3);
+    border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground));
+    background: hsl(var(--primary) / 0.5);
+  }
+
+  td.text-right,
+  th.text-right {
+    font-variant-numeric: tabular-nums;
   }
 
   ::selection {
@@ -143,11 +165,54 @@
       opacity: 1;
     }
   }
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
   .animate-fade-in {
-    animation: fade-in 0.4s ease-out;
+    animation: fade-in 0.3s ease-out forwards;
   }
   .animate-slide-up {
-    animation: slide-up 0.5s ease-out forwards;
+    animation: slide-up 0.3s ease-out forwards;
+  }
+  .animate-shimmer {
+    background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.08), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  .bg-brand-gradient {
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--accent) / 0.08));
+  }
+
+  .glass-card {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border) / 0.35);
+    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .hover-lift {
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-elevated);
+  }
+
+  .text-gradient-brand {
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
   .custom-scrollbar::-webkit-scrollbar {
@@ -158,9 +223,10 @@
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-muted-foreground/30 rounded-full;
+    background: hsl(var(--primary) / 0.3);
+    border-radius: 9999px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground/50;
+    background: hsl(var(--primary) / 0.5);
   }
 }

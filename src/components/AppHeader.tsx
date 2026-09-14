@@ -158,7 +158,7 @@ export function AppHeader() {
   const notifCount = allNotifications.length
 
   return (
-    <header className="h-16 border-b border-border flex items-center justify-between px-4 lg:px-6 bg-card text-card-foreground shrink-0 backdrop-blur-sm z-50 sticky top-0 print:hidden">
+    <header className="h-16 border-b border-border/40 flex items-center justify-between px-4 lg:px-6 bg-background/80 text-foreground shrink-0 backdrop-blur-md z-50 sticky top-0 print:hidden transition-colors">
       <div className="flex items-center gap-3">
         <SidebarTrigger className="md:hidden" />
         {isLoading ? (
@@ -167,7 +167,7 @@ export function AppHeader() {
           <button
             type="button"
             onClick={goHome}
-            className="text-primary font-bold text-lg"
+            className="text-gradient-brand font-extrabold text-xl tracking-tight"
             aria-label="Blink Biotech"
           >
             Blink
