@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-14T19:31:03.398Z",
+  "generatedAt": "2026-09-14T19:57:11.808Z",
   "collections": [
     {
       "name": "users",
@@ -4060,7 +4060,9 @@
         "CREATE INDEX idx_faturamento_data ON faturamento (data_documento)",
         "CREATE INDEX idx_faturamento_semana ON faturamento (semana_iso)",
         "CREATE INDEX idx_faturamento_ano_mes ON faturamento (ano, mes)",
-        "CREATE INDEX idx_faturamento_cliente ON faturamento (cliente_codigo)"
+        "CREATE INDEX idx_faturamento_cliente ON faturamento (cliente_codigo)",
+        "CREATE INDEX `idx_faturamento_produto` ON `faturamento` (produto_codigo)",
+        "CREATE UNIQUE INDEX `idx_faturamento_dedupe` ON `faturamento` (data_documento, cliente_codigo, produto_codigo, valor_brl)"
       ]
     },
     {
