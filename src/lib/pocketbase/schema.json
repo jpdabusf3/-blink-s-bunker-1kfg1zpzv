@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-14T18:09:18.822Z",
+  "generatedAt": "2026-09-14T19:00:34.501Z",
   "collections": [
     {
       "name": "users",
@@ -3913,6 +3913,136 @@
       "indexes": [
         "CREATE INDEX idx_notas_fiscais_files_user ON notas_fiscais_files (user_id)",
         "CREATE INDEX idx_notas_fiscais_files_created ON notas_fiscais_files (created DESC)"
+      ]
+    },
+    {
+      "name": "faturamento",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "country",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "nf_ano",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "nf_ano_mes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cliente_codigo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cliente_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "familia_produto",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_documento",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "produto_codigo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "produto_descricao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_usd",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_brl",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "semana_iso",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "mes",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ano",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "semestre",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "user_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_faturamento_data ON faturamento (data_documento)",
+        "CREATE INDEX idx_faturamento_semana ON faturamento (semana_iso)",
+        "CREATE INDEX idx_faturamento_ano_mes ON faturamento (ano, mes)",
+        "CREATE INDEX idx_faturamento_cliente ON faturamento (cliente_codigo)"
       ]
     }
   ]
