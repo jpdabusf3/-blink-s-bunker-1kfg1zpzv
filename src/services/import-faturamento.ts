@@ -65,7 +65,6 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'docdate',
       'doc_date',
       'doc date',
-      'nf_ano_mes',
       // Termos em inglês comumente presentes em planilhas de ERP/BI
       'date',
       'month/year',
@@ -167,6 +166,10 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'chave',
       'numero_doc',
       'n_documento',
+      'nf_ano',
+      'nf ano',
+      'nf_ano_mes',
+      'nf ano mes',
       // Termos em inglês
       'invoice',
       'invoice_number',
@@ -365,6 +368,11 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'animal',
       'animaispecies',
       'setor',
+      'familia_de_produtos',
+      'familia de produtos',
+      'familia_produto',
+      'familia produtos',
+      'familia',
       // Termos em inglês
       'species',
       'animal_species',
@@ -572,6 +580,111 @@ function normalizeKey(str: string): string {
 }
 
 /**
+ * Converte qualquer representação de data (serial Excel, ISO YYYY-MM-DD, DD/MM/AAAA, etc.)
+ * para o formato legível DD/MM/AAAA conforme critério de aceite.
+ */
+export function parseDateBR(val: unknown): string {
+  if (val === undefined || val === null || val === '') return '—'
+
+  // Serial numérico do Excel
+  if (typeof val === 'number') {
+    if (val > 10000 && val < 90000) {
+      const dExcel = new Date(Math.round((val - 25569) * 86400 * 1000))
+      if (!isNaN(dExcel.getTime())) {
+        const d = String(dExcel.getUTCDate()).padStart(2, '0')
+        const m = String(dExcel.getUTCMonth() + 1).padStart(2, '0')
+        const y = dExcel.getUTCFullYear()
+        return `${d}/${m}/${y}`
+      }
+    }
+  }
+
+  const s = String(val).trim()
+  if (!s) return '—'
+
+  // ISO: YYYY-MM-DD ou YYYY-MM-DDTHH:mm:ss
+  const isoMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)
+  if (isoMatch) {
+    const y = isoMatch[1]
+    const m = isoMatch[2].padStart(2, '0')
+    const d = isoMatch[3].padStart(2, '0')
+    return `${d}/${m}/${y}`
+  }
+
+  // DD/MM/AAAA ou DD-MM-AAAA ou DD.MM.AAAA
+  const brMatch = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})$/)
+  if (brMatch) {
+    const d = brMatch[1].padStart(2, '0')
+    const m = brMatch[2].padStart(2, '0')
+    let y = parseInt(brMatch[3], 10)
+    if (y < 100) y += 2000
+    return `${d}/${m}/${y}`
+  }
+
+  // MM/AAAA ou MM-AAAA
+  const mmyyyyMatch = s.match(/^(\d{1,2})[/.-](\d{4})$/)
+  if (mmyyyyMatch) {
+    const m = mmyyyyMatch[1].padStart(2, '0')
+    const y = mmyyyyMatch[2]
+    return `01/${m}/${y}`
+  }
+
+  // Date nativo fallback
+  const parsed = new Date(s)
+  if (!isNaN(parsed.getTime())) {
+    const d = String(parsed.getDate()).padStart(2, '0')
+    const m = String(parsed.getMonth() + 1).padStart(2, '0')
+    const y = parsed.getFullYear()
+    return `${d}/${m}/${y}`
+  }
+
+  return s
+}
+
+/**
+ * Extrai o nome limpo do cliente: faz o split no primeiro " - " de cliente_cod_descricao
+ * (ex: "CBR00024 - Scarpim Alimentos Ltda" -> "Scarpim Alimentos Ltda")
+ */
+export function parseClientName(val: unknown): string {
+  if (val === undefined || val === null || val === '') return '—'
+  const s = String(val).trim()
+  if (!s) return '—'
+
+  // Split no primeiro " - "
+  const dashIdx = s.indexOf(' - ')
+  if (dashIdx !== -1) {
+    const candidate = s.substring(dashIdx + 3).trim()
+    if (candidate) return candidate
+  }
+
+  // Suporte a outros hífens: " – " ou " — "
+  const altDashMatch = s.match(/^[^–—-]+[–—-]\s*(.+)$/)
+  if (altDashMatch && altDashMatch[1].trim()) {
+    return altDashMatch[1].trim()
+  }
+
+  return s
+}
+
+/**
+ * Extrai a descrição limpa do produto: faz o split no primeiro " - " de item_codigo_descricao
+ * (ex: "BPMI.OR033 - Blink Zinc 17 - SC" -> "Blink Zinc 17 - SC")
+ */
+export function parseProductDesc(val: unknown): string {
+  if (val === undefined || val === null || val === '') return '—'
+  const s = String(val).trim()
+  if (!s) return '—'
+
+  const dashIdx = s.indexOf(' - ')
+  if (dashIdx !== -1) {
+    const candidate = s.substring(dashIdx + 3).trim()
+    if (candidate) return candidate
+  }
+
+  return s
+}
+
+/**
  * Sugere automaticamente o mapeamento de colunas da planilha para os campos do CRM
  * de forma resiliente a acentos, maiúsculas/minúsculas, espaços e pontuações.
  */
@@ -687,11 +800,35 @@ export function autoSuggestMapping(
       }
     }
 
-    // Ex: "docdate", "doc date", "Mes/Ano", "Mes e Ano", "Ano/Mes", "Month/Year"
+    // Ex: "docdate", "doc date", "data_documento", "data_faturamento", etc.
+    // Prioridade máxima para docdate como data real do faturamento/pedido
     if (
       norm === 'docdate' ||
-      norm === 'docdate' ||
-      norm === 'doc' ||
+      norm === 'data' ||
+      norm === 'datafaturamento' ||
+      norm === 'datadocumento' ||
+      norm === 'dataemissao' ||
+      norm === 'datapedido'
+    ) {
+      if (!usedCRMFields.has('data')) {
+        mapping[header] = 'data'
+        usedCRMFields.add('data')
+        return
+      }
+    }
+
+    // NF / Documento / Ano de NF
+    // Colunas nf_ano ou nf_ano_mes devem ser mapeadas para numero_documento caso este ainda não exista
+    if (norm === 'nfano' || norm === 'nfanomes') {
+      if (!usedCRMFields.has('numero_documento')) {
+        mapping[header] = 'numero_documento'
+        usedCRMFields.add('numero_documento')
+        return
+      }
+    }
+
+    // Fallbacks secundários de data: apenas se 'data' ainda não tiver sido associada
+    if (
       (norm.includes('mes') && norm.includes('ano')) ||
       (norm.includes('month') && norm.includes('year')) ||
       norm === 'mes' ||
@@ -707,12 +844,18 @@ export function autoSuggestMapping(
     }
 
     // Ex: "familia de produtos", "familia_de_produtos"
+    // No passo 3 / visualização e CRM, a coluna família deve ser mapeada para o campo 'especie'
+    // (ou 'familia_produto', garantindo que alimente a coluna ESPÉCIE)
     if (
       norm.includes('familiadeproduto') ||
       norm.includes('familiadeprodutos') ||
       norm === 'familia'
     ) {
-      if (!usedCRMFields.has('familia_produto')) {
+      if (!usedCRMFields.has('especie')) {
+        mapping[header] = 'especie'
+        usedCRMFields.add('especie')
+        return
+      } else if (!usedCRMFields.has('familia_produto')) {
         mapping[header] = 'familia_produto'
         usedCRMFields.add('familia_produto')
         return
@@ -1142,11 +1285,19 @@ export async function importFaturamento(
   // Mapear cada linha bruta limpa para o schema canônico esperado pelo backend
   const mappedRows = cleanRows.map((rawRow) => {
     const canonRow: Record<string, unknown> = {}
+    // Preservar também as chaves brutas normalizadas da linha para que hooks do backend
+    // (ex.: faturamento collection que lê item.familia_de_produtos, item.country, etc.)
+    // continuem tendo acesso completo às colunas de origem do Excel.
     Object.entries(rawRow).forEach(([header, value]) => {
       const targetField = mapping[header]
       if (targetField) {
         canonRow[targetField] = value
       }
+      const rawKey = header
+        .toLowerCase()
+        .replace(/[\r\n\t]+/g, ' ')
+        .trim()
+      canonRow[rawKey] = value
     })
     return canonRow
   })

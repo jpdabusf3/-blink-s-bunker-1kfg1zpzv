@@ -42,6 +42,9 @@ import { toast } from 'sonner'
 import {
   FATURAMENTO_FIELDS,
   autoSuggestMapping,
+  parseDateBR,
+  parseClientName,
+  parseProductDesc,
   parseFaturamentoPreview,
   importFaturamento,
   downloadFaturamentoTemplate,
@@ -513,54 +516,94 @@ export default function ImportarFaturamento() {
                       return header ? row[header] : undefined
                     }
 
+                    // Formatação estrita conforme critérios de aceite do Passo 3:
+                    // 1. DATA: docdate formatada DD/MM/AAAA (ou mes/ano se apenas mês)
+                    const rawData = getValue('data')
+                    const formattedData = parseDateBR(rawData)
+
+                    // 2. NF/DOC: nf_ano (ou nf_ano_mes ou número doc)
+                    const rawDoc = getValue('numero_documento')
+                    const formattedDoc =
+                      rawDoc !== undefined && rawDoc !== null && String(rawDoc).trim() !== ''
+                        ? String(rawDoc).trim()
+                        : '—'
+
+                    // 3. CLIENTE: nome real do cliente (split no primeiro " - " de cliente_cod_descricao)
+                    const rawCliente = getValue('cliente')
+                    const formattedCliente = parseClientName(rawCliente)
+
+                    // 4. CNPJ: cnpj ou '—'
+                    const rawCnpj = getValue('cnpj')
+                    const formattedCnpj =
+                      rawCnpj !== undefined && rawCnpj !== null && String(rawCnpj).trim() !== ''
+                        ? String(rawCnpj).trim()
+                        : '—'
+
+                    // 5. PRODUTO: descrição real do produto (split no primeiro " - " de item_codigo_descricao)
+                    const rawProduto = getValue('produto')
+                    const formattedProduto = parseProductDesc(rawProduto)
+
+                    // 6. ESPÉCIE: família de produtos (vindo de familia_de_produtos / especie / familia_produto)
+                    const rawEspecie = getValue('especie') ?? getValue('familia_produto')
+                    const formattedEspecie =
+                      rawEspecie !== undefined &&
+                      rawEspecie !== null &&
+                      String(rawEspecie).trim() !== ''
+                        ? String(rawEspecie).trim()
+                        : '—'
+
+                    // 7. VALOR USD ($) e VALOR R$: preservar exibição exata
+                    const rawUsd = getValue('valor_usd')
+                    const rawBrl = getValue('valor')
+
                     return (
                       <TableRow key={idx}>
                         <TableCell className="text-xs text-muted-foreground text-center font-mono">
                           {idx + 1}
                         </TableCell>
-                        <TableCell className="text-xs font-mono whitespace-nowrap">
-                          {String(getValue('data') ?? '-')}
+                        <TableCell className="text-xs font-mono whitespace-nowrap font-medium text-foreground">
+                          {formattedData}
                         </TableCell>
                         <TableCell className="text-xs font-mono text-muted-foreground">
-                          {String(getValue('numero_documento') ?? '-')}
+                          {formattedDoc}
                         </TableCell>
                         <TableCell
                           className="text-xs font-medium max-w-[200px] truncate"
-                          title={String(getValue('cliente') ?? '')}
+                          title={formattedCliente}
                         >
-                          {String(getValue('cliente') ?? '-')}
+                          {formattedCliente}
                         </TableCell>
                         <TableCell className="text-xs font-mono text-muted-foreground">
-                          {String(getValue('cnpj') ?? '-')}
+                          {formattedCnpj}
                         </TableCell>
                         <TableCell
                           className="text-xs max-w-[180px] truncate"
-                          title={String(getValue('produto') ?? '')}
+                          title={formattedProduto}
                         >
-                          {String(getValue('produto') ?? '-')}
+                          {formattedProduto}
                         </TableCell>
-                        <TableCell className="text-xs">
-                          {String(getValue('especie') ?? '-')}
-                        </TableCell>
+                        <TableCell className="text-xs">{formattedEspecie}</TableCell>
                         {mappedCrmFields.has('valor_usd') && (
                           <TableCell className="text-xs text-right font-semibold font-mono text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                            {getValue('valor_usd') !== undefined
-                              ? String(getValue('valor_usd'))
-                              : '-'}
+                            {rawUsd !== undefined && rawUsd !== null && String(rawUsd).trim() !== ''
+                              ? String(rawUsd)
+                              : '—'}
                           </TableCell>
                         )}
                         {mappedCrmFields.has('valor') && (
                           <TableCell className="text-xs text-right font-semibold font-mono text-primary whitespace-nowrap">
-                            {getValue('valor') !== undefined ? String(getValue('valor')) : '-'}
+                            {rawBrl !== undefined && rawBrl !== null && String(rawBrl).trim() !== ''
+                              ? String(rawBrl)
+                              : '—'}
                           </TableCell>
                         )}
                         {!mappedCrmFields.has('valor_usd') && !mappedCrmFields.has('valor') && (
                           <TableCell className="text-xs text-right font-mono text-muted-foreground">
-                            -
+                            —
                           </TableCell>
                         )}
-                        <TableCell className="text-xs">
-                          {String(getValue('vendedor') ?? '-')}
+                        <TableCell className="text-xs text-muted-foreground">
+                          {String(getValue('vendedor') ?? '—')}
                         </TableCell>
                       </TableRow>
                     )
