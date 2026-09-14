@@ -35,7 +35,7 @@ cronAdd('maestro_relatorio_semanal', '0 10 * * 1', () => {
       intPart = intPart.replace(rgx, '$1.$2')
     }
     var sign = num < 0 ? '-' : ''
-    return sign + 'R$ ' + intPart + ',' + decPart
+    return (sign ? '-' : '') + 'R$ ' + intPart + ',' + decPart
   }
 
   function fmtUSD(val) {
@@ -147,6 +147,14 @@ cronAdd('maestro_relatorio_semanal', '0 10 * * 1', () => {
   var title = 'Relatório Semanal Blink Biotech — ' + periodoLabel
   var emissaoDataStr =
     pad(now.getDate(), 2) + '/' + pad(now.getMonth() + 1, 2) + '/' + now.getFullYear()
+
+  function sleep(ms) {
+    if (!ms || ms <= 0) return
+    var start = new Date().getTime()
+    while (new Date().getTime() - start < ms) {
+      // wait
+    }
+  }
 
   while (attempt <= maxRetries) {
     try {
@@ -521,6 +529,11 @@ cronAdd('maestro_relatorio_semanal', '0 10 * * 1', () => {
     } catch (err) {
       lastError = err
       $app.logger().error('maestro_weekly: attempt ' + attempt + ' failed', 'error', String(err))
+      if (attempt <= maxRetries) {
+        $app.logger().info('maestro_weekly: aguardando retry em 5 minutos...', 'attempt', attempt)
+        // 5 minutos de atraso (300.000 ms)
+        sleep(5 * 60 * 1000)
+      }
     }
   }
 

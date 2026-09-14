@@ -5,6 +5,8 @@ export interface DashboardPreferences {
   userId: string
   blocks: string[]
   period_view?: string
+  last_automation_update?: string
+  last_automation_period?: string
   created: string
   updated: string
 }

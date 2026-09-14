@@ -11,6 +11,8 @@ export function useDashboardPreferences() {
   const { user } = useAuth()
   const [blocks, setBlocksState] = useState<string[]>(DEFAULT_DASHBOARD_BLOCKS)
   const [periodView, setPeriodViewState] = useState<'mensal' | 'trimestral'>('mensal')
+  const [lastAutomationUpdate, setLastAutomationUpdate] = useState<string | undefined>(undefined)
+  const [lastAutomationPeriod, setLastAutomationPeriod] = useState<string | undefined>(undefined)
   const [loading, setLoading] = useState(true)
   const periodViewRef = useRef(periodView)
   periodViewRef.current = periodView
@@ -27,6 +29,8 @@ export function useDashboardPreferences() {
     if (prefs?.period_view) {
       setPeriodViewState(prefs.period_view as 'mensal' | 'trimestral')
     }
+    setLastAutomationUpdate(prefs?.last_automation_update)
+    setLastAutomationPeriod(prefs?.last_automation_period)
     setLoading(false)
   }, [user])
 
@@ -57,5 +61,16 @@ export function useDashboardPreferences() {
     savePeriodView(view).catch(() => {})
   }, [])
 
-  return { blocks, setBlocks, toggleBlock, reset, loading, periodView, setPeriodView }
+  return {
+    blocks,
+    setBlocks,
+    toggleBlock,
+    reset,
+    loading,
+    periodView,
+    setPeriodView,
+    lastAutomationUpdate,
+    lastAutomationPeriod,
+    refreshPreferences: load,
+  }
 }

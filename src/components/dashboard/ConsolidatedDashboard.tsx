@@ -49,6 +49,7 @@ export function ConsolidatedDashboard({
   useRealtime('historico_vendas', loadData)
   useRealtime('factories', loadData)
   useRealtime('notifications', loadData)
+  useRealtime('dashboard_preferences', loadData)
 
   if (loading)
     return (
@@ -77,8 +78,21 @@ export function ConsolidatedDashboard({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end gap-2">
-        <div className="flex gap-1 bg-muted rounded-lg p-0.5">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        {data.lastAutomationPeriod ? (
+          <div className="text-xs text-muted-foreground flex items-center gap-1">
+            <span>Última automação:</span>
+            <span className="font-medium text-foreground">{data.lastAutomationPeriod}</span>
+            {data.lastAutomationUpdate && (
+              <span className="text-[11px] opacity-75">
+                ({new Date(data.lastAutomationUpdate).toLocaleDateString('pt-BR')})
+              </span>
+            )}
+          </div>
+        ) : (
+          <div />
+        )}
+        <div className="flex gap-1 bg-muted rounded-lg p-0.5 ml-auto">
           <Button
             size="sm"
             variant={!isQuarterly ? 'default' : 'ghost'}

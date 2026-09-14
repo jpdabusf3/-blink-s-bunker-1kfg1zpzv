@@ -54,6 +54,8 @@ export interface ConsolidatedData {
   quarterlyComparisons: QuarterlyComparison[]
   vendorRanking: VendorRanking[]
   gestorRanking: GestorRanking[]
+  lastAutomationUpdate?: string
+  lastAutomationPeriod?: string
 }
 
 const MONTH_LABELS = [
@@ -143,11 +145,14 @@ function getQuarterFromDate(dateStr: string): { year: number; quarter: number } 
 }
 
 export async function fetchConsolidatedData(): Promise<ConsolidatedData> {
-  const [metas, vendas, gestores, factories] = await Promise.all([
+  const [metas, vendas, gestores, factories, prefs] = await Promise.all([
     getMetas(),
     getHistoricoVendas(),
     getGestoresTecnicos(),
     getAllFactories(),
+    import('@/services/dashboard-preferences')
+      .then((m) => m.getDashboardPreferences())
+      .catch(() => null),
   ])
 
   const funnelFactories = factories.filter((f) => FUNNEL_STAGES_PERMITIDOS.has(f.funnelStage))
@@ -322,7 +327,15 @@ export async function fetchConsolidatedData(): Promise<ConsolidatedData> {
     }))
     .sort((a, b) => b.achievementPct - a.achievementPct)
 
-  return { kpis, monthComparisons, quarterlyComparisons, vendorRanking, gestorRanking }
+  return {
+    kpis,
+    monthComparisons,
+    quarterlyComparisons,
+    vendorRanking,
+    gestorRanking,
+    lastAutomationUpdate: prefs?.last_automation_update,
+    lastAutomationPeriod: prefs?.last_automation_period,
+  }
 }
 
 export async function fetchGestorComparison(): Promise<GestorRanking[]> {

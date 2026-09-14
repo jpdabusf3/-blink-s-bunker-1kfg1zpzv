@@ -33,6 +33,7 @@ import { ConsolidatedDashboard } from '@/components/dashboard/ConsolidatedDashbo
 import { GestorTecnicoComparisonCard } from '@/components/dashboard/GestorTecnicoComparisonCard'
 import { DashboardCustomizer } from '@/components/dashboard/DashboardCustomizer'
 import { useDashboardPreferences } from '@/hooks/use-dashboard-preferences'
+import { useRealtime } from '@/hooks/use-realtime'
 import { UserFilter } from '@/components/UserFilter'
 import { testIntegration } from '@/services/integration-test'
 import { toast } from 'sonner'
@@ -124,8 +125,18 @@ export default function Index() {
   const [speciesFilter, setSpeciesFilter] = useState('all')
   const [integrationLoading, setIntegrationLoading] = useState(false)
 
-  const { blocks, setBlocks, toggleBlock, reset, periodView, setPeriodView } =
-    useDashboardPreferences()
+  const {
+    blocks,
+    setBlocks,
+    toggleBlock,
+    reset,
+    periodView,
+    setPeriodView,
+    lastAutomationPeriod,
+    refreshPreferences,
+  } = useDashboardPreferences()
+
+  useRealtime('dashboard_preferences', refreshPreferences)
 
   const moveBlock = useCallback(
     (fromIndex: number, toIndex: number) => {
@@ -368,6 +379,11 @@ export default function Index() {
               : isLeader && viewMode === 'global'
                 ? 'Visão Global MT'
                 : `Visão Regional - ${effectiveRegionFilter}`}
+            {lastAutomationPeriod && (
+              <span className="text-xs font-normal text-muted-foreground ml-2">
+                • Período: {lastAutomationPeriod}
+              </span>
+            )}
           </h1>
           {isLeader && (
             <div className="flex gap-1 bg-muted rounded-lg p-1">
