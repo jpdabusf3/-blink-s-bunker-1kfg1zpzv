@@ -76,6 +76,26 @@ routerAdd(
           .trim()
       }
 
+      function getIsoWeek(dateObj) {
+        var d = new Date(
+          Date.UTC(dateObj.getUTCFullYear(), dateObj.getUTCMonth(), dateObj.getUTCDate()),
+        )
+        var dayNum = d.getUTCDay() || 7
+        d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+        var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+        return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
+      }
+
+      function splitFirst(str, sep) {
+        if (!str) return ['', '']
+        var s = String(str).trim()
+        var idx = s.indexOf(sep)
+        if (idx === -1) {
+          return [s, '']
+        }
+        return [s.substring(0, idx).trim(), s.substring(idx + sep.length).trim()]
+      }
+
       /**
        * Parser de data dinâmico e tolerante:
        * - Serial numérico do Excel
@@ -434,6 +454,12 @@ routerAdd(
 
       var hvCol = $app.findCollectionByNameOrId('historico_vendas')
       var factCol = $app.findCollectionByNameOrId('factories')
+      var fatCol = null
+      try {
+        fatCol = $app.findCollectionByNameOrId('faturamento')
+      } catch (colFatErr) {
+        $app.logger().warn('Colecao faturamento nao encontrada: ' + String(colFatErr))
+      }
 
       var criados = 0
       var atualizados = 0
@@ -445,6 +471,12 @@ routerAdd(
       var clientesVinculadosPorCnpj = 0
       var clientesNaoIdentificados = 0
       var erros = []
+
+      // Contadores específicos da coleção faturamento
+      var faturamentoImportados = 0
+      var faturamentoDuplicatas = 0
+      var faturamentoErrosCount = 0
+      var faturamentoBatchDedupeKeys = {}
 
       // Rastrear pedidos importados por factory para atualização cirúrgica posterior
       var factoriesAfetadas = {}
@@ -797,6 +829,153 @@ routerAdd(
             criados++
           }
 
+          // 3.1. GRAVAÇÃO NA COLEÇÃO `faturamento` COM REGRAS ESPECÍFICAS
+          if (fatCol) {
+            try {
+              var fatDateObj = new Date(dataFaturamento + 'T00:00:00Z')
+              var fatAno = fatDateObj.getUTCFullYear()
+              var fatMes = fatDateObj.getUTCMonth() + 1
+              var fatSemanaIso = getIsoWeek(fatDateObj)
+              var fatSemestre = fatAno + '-' + (fatMes <= 6 ? 'S1' : 'S2')
+
+              var fatNfAno = parseInt(item.nf_ano, 10) || fatAno
+              var fatNfAnoMes = String(item.nf_ano_mes || '').trim()
+              if (!fatNfAnoMes) {
+                fatNfAnoMes = fatAno + '.' + pad(fatMes)
+              }
+
+              var rawCountry = String(
+                item.country || item.pais || item.destinatario_pais || '',
+              ).trim()
+              if (!rawCountry && matchedFactory) {
+                rawCountry = String(
+                  matchedFactory.getString
+                    ? matchedFactory.getString('country')
+                    : matchedFactory.country || '',
+                ).trim()
+              }
+              if (!rawCountry) rawCountry = 'Brasil'
+
+              // Split no primeiro " - " para cliente e produto caso venham concatenados
+              var fatCliParts = splitFirst(
+                item.cliente_cod_descricao || item.cliente || clienteRaw || '',
+                ' - ',
+              )
+              var fatClienteCodigo =
+                fatCliParts[0] ||
+                clienteCodigoExtraido ||
+                String(item.cliente_codigo || item.codigo_cliente || '').trim()
+              var fatClienteNome =
+                fatCliParts[1] || clienteNome || String(item.cliente_nome || '').trim()
+              if (!fatClienteNome && fatCliParts[0]) {
+                fatClienteNome = fatCliParts[0]
+              }
+
+              var fatFamilia = String(
+                item.familia_de_produtos ||
+                  item.familia_produto ||
+                  item.familia ||
+                  item.produto_familia ||
+                  '',
+              ).trim()
+
+              var fatItemParts = splitFirst(
+                item.item_codigo_descricao || item.produto || produtoDesc || '',
+                ' - ',
+              )
+              var fatProdutoCodigo =
+                fatItemParts[0] ||
+                produtoCod ||
+                String(item.produto_codigo || item.codigo || '').trim()
+              var fatProdutoDesc =
+                fatItemParts[1] ||
+                produtoDesc ||
+                String(item.produto_descricao || item.descricao || '').trim()
+              if (!fatProdutoDesc && fatItemParts[0]) {
+                fatProdutoDesc = fatItemParts[0]
+              }
+
+              var fatValorUsd = parseNumber(
+                item.soma_de_vlr_total_usd !== undefined
+                  ? item.soma_de_vlr_total_usd
+                  : item.valor_usd !== undefined
+                    ? item.valor_usd
+                    : valorUsd,
+              )
+              var fatValorBrl = parseNumber(
+                item.soma_de_vlr_total_brl !== undefined
+                  ? item.soma_de_vlr_total_brl
+                  : item.valor_brl !== undefined
+                    ? item.valor_brl
+                    : item.valor !== undefined
+                      ? item.valor
+                      : valorItem,
+              )
+
+              // Dedupe por chave única: data_documento + cliente_codigo + produto_codigo + valor_brl
+              var fatDedupeKey =
+                dataFaturamento +
+                '__' +
+                fatClienteCodigo +
+                '__' +
+                fatProdutoCodigo +
+                '__' +
+                fatValorBrl
+
+              if (faturamentoBatchDedupeKeys[fatDedupeKey]) {
+                faturamentoDuplicatas++
+                duplicatasIgnoradas++
+              } else {
+                faturamentoBatchDedupeKeys[fatDedupeKey] = true
+
+                // Dedupe no banco: pular se já existir registro com a mesma chave (idempotente)
+                var filterFatDedupe =
+                  "data_documento ~ '" +
+                  dataFaturamento +
+                  "' && cliente_codigo = '" +
+                  fatClienteCodigo.replace(/'/g, "\\'") +
+                  "' && produto_codigo = '" +
+                  fatProdutoCodigo.replace(/'/g, "\\'") +
+                  "' && valor_brl = " +
+                  fatValorBrl
+
+                var alreadyFat = null
+                try {
+                  alreadyFat = $app.findFirstRecordByFilter('faturamento', filterFatDedupe)
+                } catch (_) {}
+
+                if (alreadyFat) {
+                  faturamentoDuplicatas++
+                  duplicatasIgnoradas++
+                } else {
+                  var recFat = new Record(fatCol)
+                  recFat.set('country', rawCountry)
+                  recFat.set('nf_ano', fatNfAno)
+                  recFat.set('nf_ano_mes', fatNfAnoMes)
+                  recFat.set('cliente_codigo', fatClienteCodigo)
+                  recFat.set('cliente_nome', fatClienteNome)
+                  recFat.set('familia_produto', fatFamilia)
+                  recFat.set('data_documento', dataFaturamento + ' 00:00:00.000Z')
+                  recFat.set('produto_codigo', fatProdutoCodigo)
+                  recFat.set('produto_descricao', fatProdutoDesc)
+                  recFat.set('valor_usd', fatValorUsd)
+                  recFat.set('valor_brl', fatValorBrl)
+                  recFat.set('semana_iso', fatSemanaIso)
+                  recFat.set('mes', fatMes)
+                  recFat.set('ano', fatAno)
+                  recFat.set('semestre', fatSemestre)
+                  recFat.set('user_id', userId)
+
+                  $app.save(recFat)
+                  faturamentoImportados++
+                }
+              }
+            } catch (errFatSave) {
+              faturamentoErrosCount++
+              $app.logger().warn('Erro ao salvar em faturamento: ' + String(errFatSave))
+            }
+          }
+
           // Se vinculado a cliente, computar efeito nos dados do CRM
           // Prioridade da moeda: usar USD quando informado (base de faturamento Blink), senão Real
           var valEfetivoLinha =
@@ -937,7 +1116,11 @@ routerAdd(
           'details',
           'Importação consolidada de faturamento: ' +
             criados +
-            ' pedidos criados, ' +
+            ' pedidos criados em histórico, ' +
+            faturamentoImportados +
+            ' registros gravados em faturamento (' +
+            faturamentoDuplicatas +
+            ' duplicatas ignoradas), ' +
             atualizados +
             ' atualizados, ' +
             clientesVinculados +
@@ -953,7 +1136,7 @@ routerAdd(
             totalClientesAtualizados +
             ' clientes atualizados no CRM.',
         )
-        actRec.set('target_collection', 'historico_vendas')
+        actRec.set('target_collection', 'faturamento')
         actRec.set('origem', 'painel')
         actRec.set('tipo', 'outro')
         $app.save(actRec)
@@ -973,7 +1156,9 @@ routerAdd(
           'description',
           'Importou faturamento com ' +
             criados +
-            ' pedidos criados e atualizou ' +
+            ' pedidos criados, ' +
+            faturamentoImportados +
+            ' registros em faturamento e atualizou ' +
             totalClientesAtualizados +
             ' clientes.',
         )
@@ -992,6 +1177,11 @@ routerAdd(
         clientesCriados: clientesCriados,
         clientesNaoIdentificados: clientesNaoIdentificados,
         clientesAtualizadosNoCRM: totalClientesAtualizados,
+        // Métricas da coleção faturamento
+        faturamentoImportados: faturamentoImportados,
+        faturamentoDuplicatas: faturamentoDuplicatas,
+        faturamentoErrosCount: faturamentoErrosCount,
+        total: rows.length,
         totalLinhas: rows.length,
         erros: erros,
       })

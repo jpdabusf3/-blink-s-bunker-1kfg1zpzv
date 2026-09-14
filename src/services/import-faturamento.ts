@@ -21,6 +21,8 @@ export type FaturamentoFieldKey =
   | 'unidade'
   | 'canal_vendas'
   | 'status'
+  | 'familia_produto'
+  | 'country'
 
 export interface FieldDefinition {
   key: FaturamentoFieldKey
@@ -60,6 +62,10 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'ano_mes',
       'ano',
       'competencia',
+      'docdate',
+      'doc_date',
+      'doc date',
+      'nf_ano_mes',
       // Termos em inglês comumente presentes em planilhas de ERP/BI
       'date',
       'month/year',
@@ -212,6 +218,11 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'dollar',
       'vlr_usd',
       'vl_usd',
+      'soma_de_vlr_total_usd',
+      'soma de vlr total usd',
+      'soma vlr total usd',
+      'vlr_total_usd',
+      'vlr total usd',
     ],
   },
   {
@@ -263,6 +274,13 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'revenue',
       'sales_value',
       'price_total',
+      'soma_de_vlr_total_brl',
+      'soma de vlr total brl',
+      'soma vlr total brl',
+      'vlr_total_brl',
+      'vlr total brl',
+      'soma_de_vlr_total',
+      'soma de vlr total',
     ],
   },
   {
@@ -306,6 +324,11 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'description',
       'product_description',
       'item_description',
+      'item_codigo_descricao',
+      'item cod descricao',
+      'item - cod. & descricao',
+      'item - cod & descricao',
+      'item cod & descricao',
     ],
   },
   {
@@ -510,6 +533,33 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
       'state',
     ],
   },
+  {
+    key: 'familia_produto',
+    label: 'Família de Produtos',
+    required: false,
+    description: 'Família ou linha do produto (ex: Minerais Orgânicos, Adsorventes, Blends)',
+    aliases: [
+      'familia',
+      'familia_produto',
+      'familia_produtos',
+      'familia_de_produtos',
+      'familia de produtos',
+      'linha_produto',
+      'linha de produtos',
+      'grupo_produto',
+      'categoria_produto',
+      // Termos em inglês
+      'product_family',
+      'family',
+    ],
+  },
+  {
+    key: 'country',
+    label: 'País / Destino',
+    required: false,
+    description: 'País da operação ou faturamento (ex: Brasil, Paraguai, etc.)',
+    aliases: ['country', 'pais', 'país', 'pais_destino', 'pais_operacao', 'nacao'],
+  },
 ]
 
 function normalizeKey(str: string): string {
@@ -538,8 +588,20 @@ export function autoSuggestMapping(
       return
     }
 
-    // Regras prioritárias para padrões específicos conhecidos
-    // Ex: "Cliente - Cod. & Descrição" ou variações de código e descrição
+    // Regras prioritárias para padrões específicos conhecidos do export CRM_Faturamento
+    // Ex: "Item - Cod. & Descrição" ou item_codigo_descricao
+    if (
+      (norm.includes('item') && (norm.includes('cod') || norm.includes('descri'))) ||
+      norm.includes('itemcodigo')
+    ) {
+      if (!usedCRMFields.has('produto')) {
+        mapping[header] = 'produto'
+        usedCRMFields.add('produto')
+        return
+      }
+    }
+
+    // Ex: "Cliente - Cod. & Descrição" ou cliente_cod_descricao
     if (
       (norm.includes('cliente') && (norm.includes('cod') || norm.includes('descri'))) ||
       norm.includes('clientecod')
@@ -551,8 +613,11 @@ export function autoSuggestMapping(
       }
     }
 
-    // Ex: Colunas de mês/ano, período ou data (ex: "Mes/Ano", "Mes e Ano", "Ano/Mes", "Month/Year")
+    // Ex: "docdate", "doc date", "Mes/Ano", "Mes e Ano", "Ano/Mes", "Month/Year"
     if (
+      norm === 'docdate' ||
+      norm === 'docdate' ||
+      norm === 'doc' ||
       (norm.includes('mes') && norm.includes('ano')) ||
       (norm.includes('month') && norm.includes('year')) ||
       norm === 'mes' ||
@@ -563,6 +628,28 @@ export function autoSuggestMapping(
       if (!usedCRMFields.has('data')) {
         mapping[header] = 'data'
         usedCRMFields.add('data')
+        return
+      }
+    }
+
+    // Ex: "familia de produtos", "familia_de_produtos"
+    if (
+      norm.includes('familiadeproduto') ||
+      norm.includes('familiadeprodutos') ||
+      norm === 'familia'
+    ) {
+      if (!usedCRMFields.has('familia_produto')) {
+        mapping[header] = 'familia_produto'
+        usedCRMFields.add('familia_produto')
+        return
+      }
+    }
+
+    // Ex: "country", "pais"
+    if (norm === 'country' || norm === 'pais') {
+      if (!usedCRMFields.has('country')) {
+        mapping[header] = 'country'
+        usedCRMFields.add('country')
         return
       }
     }
@@ -669,6 +756,10 @@ export interface FaturamentoImportResult {
   clientesNaoIdentificados: number
   clientesAtualizadosNoCRM: number
   totalLinhas: number
+  total?: number
+  faturamentoImportados?: number
+  faturamentoDuplicatas?: number
+  faturamentoErrosCount?: number
   erros: FaturamentoImportError[]
 }
 
@@ -755,17 +846,18 @@ export function downloadFaturamentoTemplate(): void {
     {
       'Data Faturamento': '2026-08-15',
       'Número NF': '10452',
-      Cliente: 'Cooperativa Agroindustrial Exemplo Ltda',
+      Cliente: '1001 - Cooperativa Agroindustrial Exemplo Ltda',
       CNPJ: '00.000.000/0001-91',
       'Código Produto': 'BPMI.OR035',
-      Produto: 'Blink Zinc 22 - SC',
+      Produto: 'BPMI.OR035 - Blink Zinc 22 - SC',
+      'Família de Produtos': 'Minerais Orgânicos',
+      País: 'Brasil',
       Espécie: 'Ruminantes',
       Quantidade: 2000,
       'Valor Unitário USD': 3.3,
       'Valor Total (USD)': 6600.0,
       'Valor Total (R$)': 36300.0,
       Vendedor: 'Felipe Leão',
-      'Gestor Técnico': 'Rodrigo Gardinal',
       Unidade: 'Maringá CD',
       'Canal de Vendas': 'Direto',
       Status: 'realizado',
@@ -773,17 +865,18 @@ export function downloadFaturamentoTemplate(): void {
     {
       'Data Faturamento': '2026-08-20',
       'Número NF': '10453',
-      Cliente: 'Nutrição Animal do Brasil S/A',
+      Cliente: '1002 - Nutrição Animal do Brasil S/A',
       CNPJ: '11.222.333/0001-44',
       'Código Produto': 'BPMI.OR015',
-      Produto: 'Blink Copper 22 - SC',
+      Produto: 'BPMI.OR015 - Blink Copper 22 - SC',
+      'Família de Produtos': 'Minerais Orgânicos',
+      País: 'Brasil',
       Espécie: 'Aves',
       Quantidade: 1500,
       'Valor Unitário USD': 5.7,
       'Valor Total (USD)': 8550.0,
       'Valor Total (R$)': 47025.0,
       Vendedor: 'Felipe Leão',
-      'Gestor Técnico': 'Jéssica Dilkin',
       Unidade: 'Maringá CD',
       'Canal de Vendas': 'Indústria',
       Status: 'realizado',

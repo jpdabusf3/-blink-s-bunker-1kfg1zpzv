@@ -628,15 +628,21 @@ export default function ImportarFaturamento() {
               </div>
               <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-xl p-3.5 border border-emerald-200 dark:border-emerald-900/40 text-center">
                 <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-                  <TrendingUp className="w-3.5 h-3.5 text-emerald-600" /> Vendas Inseridas
+                  <TrendingUp className="w-3.5 h-3.5 text-emerald-600" /> Faturamento Gravado
                 </p>
-                <p className="text-2xl font-bold text-emerald-600 mt-1">{result.criados}</p>
+                <p className="text-2xl font-bold text-emerald-600 mt-1">
+                  {result.faturamentoImportados ?? result.criados}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-1">coleção faturamento</p>
               </div>
               <div className="bg-blue-50 dark:bg-blue-950/30 rounded-xl p-3.5 border border-blue-200 dark:border-blue-900/40 text-center">
                 <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-                  <RotateCcw className="w-3.5 h-3.5 text-blue-600" /> Atualizadas (Idempotência)
+                  <RotateCcw className="w-3.5 h-3.5 text-blue-600" /> Duplicatas Ignoradas
                 </p>
-                <p className="text-2xl font-bold text-blue-600 mt-1">{result.atualizados}</p>
+                <p className="text-2xl font-bold text-blue-600 mt-1">
+                  {result.faturamentoDuplicatas ?? result.duplicatasIgnoradas ?? 0}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-1">idempotência ativa</p>
               </div>
               <div className="bg-purple-50 dark:bg-purple-950/30 rounded-xl p-3.5 border border-purple-200 dark:border-purple-900/40 text-center">
                 <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
@@ -750,6 +756,14 @@ export default function ImportarFaturamento() {
                   <strong>Valores nas Moedas USD e R$:</strong> Gravação independente de{' '}
                   <code>valor_usd</code> (base de faturamento em Dólar) e <code>valor</code> (R$),{' '}
                   assegurando integridade das métricas do cliente e comparativos comerciais.
+                </li>
+                <li>
+                  <strong>População da Coleção de Faturamento:</strong> Os registros foram gravados
+                  diretamente na coleção <code>faturamento</code> (
+                  <strong>{result.faturamentoImportados ?? result.criados} importados</strong> e{' '}
+                  <strong>{result.faturamentoDuplicatas ?? 0} duplicatas ignoradas</strong>),
+                  alimentando os painéis executivos, Resumo de Vendas, Maestro Semanal e Maestro
+                  Mensal.
                 </li>
                 <li>
                   <strong>Reflexo em Relatórios e Dashboards:</strong> Os pedidos alimentam o
