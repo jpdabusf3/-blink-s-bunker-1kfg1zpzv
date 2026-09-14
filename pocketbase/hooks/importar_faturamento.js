@@ -870,14 +870,6 @@ routerAdd(
                 fatClienteNome = fatCliParts[0]
               }
 
-              var fatFamilia = String(
-                item.familia_de_produtos ||
-                  item.familia_produto ||
-                  item.familia ||
-                  item.produto_familia ||
-                  '',
-              ).trim()
-
               var fatItemParts = splitFirst(
                 item.item_codigo_descricao || item.produto || produtoDesc || '',
                 ' - ',
@@ -893,6 +885,18 @@ routerAdd(
               if (!fatProdutoDesc && fatItemParts[0]) {
                 fatProdutoDesc = fatItemParts[0]
               }
+
+              var fatFamiliaRaw = String(
+                item.familia_de_produtos ||
+                  item.familia_produto ||
+                  item.familia ||
+                  item.produto_familia ||
+                  '',
+              ).trim()
+              var fatFamilia =
+                typeof familiaCompleta === 'function'
+                  ? familiaCompleta(fatProdutoCodigo, fatFamiliaRaw)
+                  : fatFamiliaRaw || '—'
 
               var fatValorUsd = parseNumber(
                 item.soma_de_vlr_total_usd !== undefined

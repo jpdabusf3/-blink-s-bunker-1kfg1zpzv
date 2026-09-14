@@ -185,19 +185,26 @@ routerAdd(
         var cDisplay = cNome || cCod || 'Outros'
         clienteMap[cDisplay] = (clienteMap[cDisplay] || 0) + vBrl
 
-        var fam = (r.getString ? r.getString('familia_produto') : r.familia_produto) || 'Outros'
-        if (!fam.trim()) fam = 'Outros'
-        familiaMap[fam] = (familiaMap[fam] || 0) + vBrl
-
-        // Mapeamento espécie
         var prodCod = (r.getString ? r.getString('produto_codigo') : r.produto_codigo || '')
           .trim()
           .toUpperCase()
+        var famBruta = (r.getString ? r.getString('familia_produto') : r.familia_produto) || ''
+        var fam =
+          typeof familiaCompleta === 'function'
+            ? familiaCompleta(prodCod, famBruta)
+            : famBruta || '—'
+        if (!fam || fam === '—') fam = 'Outros'
+        familiaMap[fam] = (familiaMap[fam] || 0) + vBrl
+
+        // Mapeamento espécie
         var famNorm = fam.toUpperCase().trim()
+        var famBrutaNorm = famBruta.toUpperCase().trim()
         var matchedEsp =
           produtosMap['COD_' + prodCod] ||
           produtosMap['FAM_' + famNorm] ||
+          produtosMap['FAM_' + famBrutaNorm] ||
           FAMILIA_ESPECIE_HEURISTIC[famNorm] ||
+          FAMILIA_ESPECIE_HEURISTIC[famBrutaNorm] ||
           ''
         if (matchedEsp) {
           especieMap[matchedEsp] = (especieMap[matchedEsp] || 0) + vBrl

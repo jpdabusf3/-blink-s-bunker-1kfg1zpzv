@@ -181,14 +181,18 @@ routerAdd(
             clienteNome = cliParts[0]
           }
 
-          var familiaProduto = String(row.familia_de_produtos || row.familia_produto || '').trim()
-
           var itemParts = splitFirst(row.item_codigo_descricao || row.produto || '', ' - ')
           var produtoCodigo = itemParts[0] || String(row.produto_codigo || '').trim()
           var produtoDescricao = itemParts[1] || String(row.produto_descricao || '').trim()
           if (!produtoDescricao && itemParts[0]) {
             produtoDescricao = itemParts[0]
           }
+
+          var rawFamilia = String(row.familia_de_produtos || row.familia_produto || '').trim()
+          var familiaProduto =
+            typeof familiaCompleta === 'function'
+              ? familiaCompleta(produtoCodigo, rawFamilia)
+              : rawFamilia || '—'
 
           var valorUsd = parseNumber(
             row.soma_de_vlr_total_usd !== undefined ? row.soma_de_vlr_total_usd : row.valor_usd,
