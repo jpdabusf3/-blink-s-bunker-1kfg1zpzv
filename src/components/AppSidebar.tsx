@@ -56,6 +56,7 @@ export function AppSidebar() {
     { name: t('nav.prioridade'), path: '/matriz', icon: Grid },
     { name: t('nav.metas'), path: '/metas', icon: Target },
     { name: t('nav.relatorios'), path: '/relatorios', icon: BarChart2 },
+    { name: 'Relatórios Automáticos', path: '/relatorios-automaticos', icon: FileText },
     { name: 'Rel. Atividades', path: '/relatorio-atividades', icon: ClipboardList },
     { name: 'Rel. Performance', path: '/relatorio-performance', icon: Award },
     { name: t('nav.usuarios'), path: '/usuarios', icon: Users },

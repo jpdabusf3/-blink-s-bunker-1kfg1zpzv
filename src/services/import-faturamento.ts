@@ -755,6 +755,12 @@ export interface FaturamentoImportResult {
   clientesCriados: number
   clientesNaoIdentificados: number
   clientesAtualizadosNoCRM: number
+  total_rows?: number
+  imported?: number
+  skipped_duplicates?: number
+  skipped_zero?: number
+  errors?: number
+  error_details?: FaturamentoImportError[]
   totalLinhas: number
   total?: number
   faturamentoImportados?: number

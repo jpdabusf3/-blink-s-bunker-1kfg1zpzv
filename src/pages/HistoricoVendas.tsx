@@ -59,6 +59,7 @@ import { VendaForm } from '@/components/VendaForm'
 import { UploadPedidoDialog } from '@/components/UploadPedidoDialog'
 import { UploadNfeDialog } from '@/components/UploadNfeDialog'
 import { ResumoVendasTab } from '@/components/historico/ResumoVendasTab'
+import { ImportarFaturamentoDialog } from '@/components/ImportarFaturamentoDialog'
 
 export default function HistoricoVendas() {
   const { toast } = useToast()
@@ -72,6 +73,7 @@ export default function HistoricoVendas() {
   const [editing, setEditing] = useState<HistoricoVenda | null>(null)
   const [uploadOpen, setUploadOpen] = useState(false)
   const [nfeUploadOpen, setNfeUploadOpen] = useState(false)
+  const [importarFatOpen, setImportarFatOpen] = useState(false)
 
   const loadData = async () => {
     try {
@@ -218,10 +220,8 @@ export default function HistoricoVendas() {
             <Button variant="outline" className="gap-2" onClick={downloadPedidoModel}>
               <Download className="w-4 h-4" /> Baixar Modelo
             </Button>
-            <Button variant="outline" className="gap-2" asChild>
-              <Link to="/importar-faturamento">
-                <Upload className="w-4 h-4 text-primary" /> Importar Faturamento
-              </Link>
+            <Button variant="outline" className="gap-2" onClick={() => setImportarFatOpen(true)}>
+              <Upload className="w-4 h-4 text-primary" /> Importar Faturamento
             </Button>
             <Button variant="outline" className="gap-2" onClick={() => setUploadOpen(true)}>
               <Upload className="w-4 h-4" /> Upload de Pedido
@@ -447,6 +447,12 @@ export default function HistoricoVendas() {
           <UploadNfeDialog
             open={nfeUploadOpen}
             onOpenChange={setNfeUploadOpen}
+            onSuccess={loadData}
+          />
+
+          <ImportarFaturamentoDialog
+            open={importarFatOpen}
+            onOpenChange={setImportarFatOpen}
             onSuccess={loadData}
           />
         </TabsContent>

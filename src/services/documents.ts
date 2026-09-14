@@ -8,6 +8,7 @@ export interface DocumentItem {
   file: string
   category: string
   min_access_level: string
+  nome_original?: string
   created: string
   updated: string
 }
@@ -22,17 +23,19 @@ export const deleteDocument = (id: string) => pb.collection('documents').delete(
 export const getFileUrl = (doc: DocumentItem): string =>
   `${import.meta.env.VITE_POCKETBASE_URL}/api/files/documents/${doc.id}/${doc.file}`
 
-export const downloadDocument = async (doc: DocumentItem) => {
+export const downloadDocument = async (doc: DocumentItem, fileNameOverride?: string) => {
   const url = getFileUrl(doc)
-  const res = await fetch(url, {
-    headers: { Authorization: pb.authStore.token },
-  })
+  const headers: Record<string, string> = {}
+  if (pb.authStore.token) {
+    headers.Authorization = pb.authStore.token
+  }
+  const res = await fetch(url, { headers })
   if (!res.ok) throw new Error('Download failed')
   const blob = await res.blob()
   const downloadUrl = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = downloadUrl
-  a.download = doc.file
+  a.download = fileNameOverride || doc.nome_original || doc.file
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)

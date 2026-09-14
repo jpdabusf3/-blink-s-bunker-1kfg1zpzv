@@ -5,7 +5,9 @@ routerAdd(
   (e) => {
     try {
       var userId = e.auth && e.auth.id
-      if (!userId) return e.unauthorizedError('auth required')
+      if (!userId) {
+        return e.json(401, { error: 'Nao autorizado' })
+      }
 
       var body = e.requestInfo().body || {}
       var rows = body.rows
@@ -16,7 +18,6 @@ routerAdd(
       if (!rows || !Array.isArray(rows) || rows.length === 0) {
         return e.badRequestError('rows array is required')
       }
-
       function cleanCnpj(c) {
         return String(c || '').replace(/\D/g, '')
       }
@@ -464,6 +465,7 @@ routerAdd(
       var criados = 0
       var atualizados = 0
       var duplicatasIgnoradas = 0
+      var skippedZero = 0
       var clientesCriados = 0
       var clientesVinculados = 0
       var clientesVinculadosPorCodigo = 0
@@ -568,10 +570,7 @@ routerAdd(
         }
 
         if (valorItem <= 0 && valorTotalNota <= 0 && valorUsd <= 0 && valorTotalNotaUsd <= 0) {
-          erros.push({
-            linha: rowNum,
-            erro: 'Valor do pedido/item deve ser maior que zero (em USD ou R$)',
-          })
+          skippedZero++
           continue
         }
 
@@ -966,8 +965,18 @@ routerAdd(
                   recFat.set('semestre', fatSemestre)
                   recFat.set('user_id', userId)
 
-                  $app.save(recFat)
-                  faturamentoImportados++
+                  try {
+                    $app.save(recFat)
+                    faturamentoImportados++
+                  } catch (uniqueConstraintErr) {
+                    var strErr = String(uniqueConstraintErr || '').toLowerCase()
+                    if (strErr.indexOf('unique') !== -1 || strErr.indexOf('constraint') !== -1) {
+                      faturamentoDuplicatas++
+                      duplicatasIgnoradas++
+                    } else {
+                      throw uniqueConstraintErr
+                    }
+                  }
                 }
               }
             } catch (errFatSave) {
@@ -1114,27 +1123,17 @@ routerAdd(
         actRec.set('action', 'Importação de Faturamento')
         actRec.set(
           'details',
-          'Importação consolidada de faturamento: ' +
+          'Importacao de faturamento: ' +
+            totalImportedOverall +
+            ' registros importados, ' +
+            totalDuplicatesOverall +
+            ' duplicados ignorados (' +
             criados +
             ' pedidos criados em histórico, ' +
-            faturamentoImportados +
-            ' registros gravados em faturamento (' +
-            faturamentoDuplicatas +
-            ' duplicatas ignoradas), ' +
-            atualizados +
-            ' atualizados, ' +
-            clientesVinculados +
-            ' clientes vinculados (' +
-            clientesVinculadosPorCodigo +
-            ' por código, ' +
-            clientesVinculadosPorNome +
-            ' por nome, ' +
-            clientesVinculadosPorCnpj +
-            ' por CNPJ), ' +
             clientesCriados +
-            ' clientes novos cadastrados e ' +
+            ' novos clientes cadastrados, ' +
             totalClientesAtualizados +
-            ' clientes atualizados no CRM.',
+            ' atualizados no CRM).',
         )
         actRec.set('target_collection', 'faturamento')
         actRec.set('origem', 'painel')
@@ -1165,8 +1164,18 @@ routerAdd(
         $app.save(falRec)
       } catch (_) {}
 
+      var totalImportedOverall = faturamentoImportados > 0 ? faturamentoImportados : criados
+      var totalDuplicatesOverall =
+        faturamentoDuplicatas > 0 ? faturamentoDuplicatas : duplicatasIgnoradas
+
       return e.json(200, {
         success: true,
+        total_rows: rows.length,
+        imported: totalImportedOverall,
+        skipped_duplicates: totalDuplicatesOverall,
+        skipped_zero: skippedZero,
+        errors: erros.length + faturamentoErrosCount,
+        error_details: erros.slice(0, 20),
         criados: criados,
         atualizados: atualizados,
         duplicatasIgnoradas: duplicatasIgnoradas,
@@ -1187,7 +1196,7 @@ routerAdd(
       })
     } catch (err) {
       $app.logger().error('importar-faturamento: error', 'error', String(err))
-      return e.json(500, { error: 'Erro inesperado: ' + String(err) })
+      return e.json(500, { error: 'Erro inesperado ao processar importação.' })
     }
   },
   $apis.requireAuth(),

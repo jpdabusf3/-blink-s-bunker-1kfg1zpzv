@@ -7,6 +7,8 @@ routerAdd(
 
     var userEmail = (e.auth && e.auth.getString('email')) || ''
     var userTitle = (e.auth && e.auth.getString('job_title')) || ''
+    var userEmail = (e.auth && e.auth.getString('email')) || ''
+    var userTitle = (e.auth && e.auth.getString('job_title')) || ''
     var isSuperAdmin = userEmail === 'joaopedro_zoo@hotmail.com'
 
     function getLevel(title) {
@@ -35,6 +37,7 @@ routerAdd(
           file: doc.getString('file'),
           category: doc.getString('category'),
           min_access_level: doc.getString('min_access_level'),
+          nome_original: doc.getString('nome_original') || '',
           created: doc.getString('created'),
           updated: doc.getString('updated'),
         })

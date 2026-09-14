@@ -5,8 +5,9 @@ import { HistoricoSummaryCards } from '@/components/historico/HistoricoSummaryCa
 import { HistoricoDataTable } from '@/components/historico/HistoricoDataTable'
 import { HistoricoDetailModal } from '@/components/historico/HistoricoDetailModal'
 import { HistoricoChart } from '@/components/historico/HistoricoChart'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { AlertCircle, RotateCcw, History } from 'lucide-react'
+import { AlertCircle, RotateCcw, History, Upload } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 export default function Historico() {
@@ -67,6 +68,13 @@ export default function Historico() {
               níveis de granularidade.
             </p>
           </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-2" asChild>
+            <Link to="/importar-faturamento">
+              <Upload className="w-4 h-4 text-primary" /> Importar Faturamento
+            </Link>
+          </Button>
         </div>
       </div>
 
