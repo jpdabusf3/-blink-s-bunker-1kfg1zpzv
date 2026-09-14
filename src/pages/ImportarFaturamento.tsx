@@ -493,7 +493,7 @@ export default function ImportarFaturamento() {
                     <TableHead className="text-xs">Cliente</TableHead>
                     <TableHead className="text-xs">CNPJ</TableHead>
                     <TableHead className="text-xs">Produto</TableHead>
-                    <TableHead className="text-xs">Espécie</TableHead>
+                    <TableHead className="text-xs">Produto</TableHead>
                     {mappedCrmFields.has('valor_usd') && (
                       <TableHead className="text-xs text-right text-emerald-700 dark:text-emerald-400">
                         Valor USD ($)
