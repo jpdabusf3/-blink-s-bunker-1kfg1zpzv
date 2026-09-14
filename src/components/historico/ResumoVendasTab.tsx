@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
   Table,
@@ -8,17 +8,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   TrendingUp,
-  TrendingDown,
   FileText,
   DollarSign,
   PieChart,
@@ -28,6 +22,11 @@ import {
   ArrowDownRight,
   Minus,
   Target,
+  RefreshCw,
+  ChevronDown,
+  Inbox,
+  AlertCircle,
+  FileX,
 } from 'lucide-react'
 import { formatCurrency, formatCurrencyUSD } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -37,110 +36,129 @@ import {
   type ResumoVendasParams,
 } from '@/services/resumo-vendas'
 
-function getIsoWeek(dateObj: Date): number {
-  const d = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()))
-  const dayNum = d.getUTCDay() || 7
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
-  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
+type PeriodKey = 'week_current' | 'month_current' | 'month_previous'
+
+interface PeriodOption {
+  key: PeriodKey
+  label: string
 }
 
-const MESES = [
-  { value: 1, label: 'Janeiro' },
-  { value: 2, label: 'Fevereiro' },
-  { value: 3, label: 'Março' },
-  { value: 4, label: 'Abril' },
-  { value: 5, label: 'Maio' },
-  { value: 6, label: 'Junho' },
-  { value: 7, label: 'Julho' },
-  { value: 8, label: 'Agosto' },
-  { value: 9, label: 'Setembro' },
-  { value: 10, label: 'Outubro' },
-  { value: 11, label: 'Novembro' },
-  { value: 12, label: 'Dezembro' },
+const PERIOD_OPTIONS: PeriodOption[] = [
+  { key: 'week_current', label: 'Semana atual' },
+  { key: 'month_current', label: 'Mês atual' },
+  { key: 'month_previous', label: 'Mês anterior' },
 ]
 
 export function ResumoVendasTab() {
-  const now = new Date()
-  const currentYear = now.getFullYear()
-  const currentMonth = now.getMonth() + 1
-  const currentWeek = getIsoWeek(now)
-
-  // Opções de seletor rápido: 'current_week' | 'current_month' | 'custom_month' | 'custom_week'
-  const [periodoTipo, setPeriodoTipo] = useState<
-    'current_week' | 'current_month' | 'custom_month' | 'custom_week'
-  >('current_month')
-  const [ano, setAno] = useState<number>(currentYear)
-  const [mes, setMes] = useState<number>(currentMonth)
-  const [semana, setSemana] = useState<number>(currentWeek)
-
-  const [loading, setLoading] = useState(true)
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodKey>('month_current')
+  const [loading, setLoading] = useState<boolean>(true)
   const [data, setData] = useState<ResumoVendasResponse | null>(null)
+  const [is404, setIs404] = useState<boolean>(false)
+  const [isEspecieOpen, setIsEspecieOpen] = useState<boolean>(false)
 
-  // Lista de anos para seleção
-  const anosDisponiveis = [currentYear + 1, currentYear, currentYear - 1, currentYear - 2, 2025]
-  const uniqueAnos = Array.from(new Set(anosDisponiveis)).sort((a, b) => b - a)
-
-  // Lista de 1 a 53 para semanas
-  const semanasDisponiveis = Array.from({ length: 53 }, (_, i) => i + 1)
-
-  useEffect(() => {
-    let active = true
+  const loadData = useCallback(async (period: PeriodKey) => {
     setLoading(true)
+    setIs404(false)
 
     let params: ResumoVendasParams
-    if (periodoTipo === 'current_week') {
-      params = { mode: 'week', ano: currentYear, semana: currentWeek }
-    } else if (periodoTipo === 'current_month') {
-      params = { mode: 'month', ano: currentYear, mes: currentMonth }
-    } else if (periodoTipo === 'custom_week') {
-      params = { mode: 'week', ano, semana }
+    if (period === 'week_current') {
+      params = { mode: 'week' }
+    } else if (period === 'month_current') {
+      params = { mode: 'month' }
     } else {
-      params = { mode: 'month', ano, mes }
+      const now = new Date()
+      const currentYear = now.getFullYear()
+      const currentMonth = now.getMonth() + 1 // 1-12
+      let targetYear = currentYear
+      let targetMonth = currentMonth - 1
+      if (targetMonth < 1) {
+        targetMonth = 12
+        targetYear = currentYear - 1
+      }
+      params = { mode: 'month', ano: targetYear, mes: targetMonth }
     }
 
-    fetchResumoVendas(params)
-      .then((res) => {
-        if (active) {
-          setData(res)
-          setLoading(false)
-        }
-      })
-      .catch((err) => {
-        if (active) {
-          setLoading(false)
-          toast.error('Erro ao carregar resumo.')
-          console.error(err)
-        }
-      })
+    try {
+      const res = await fetchResumoVendas(params)
+      setData(res)
+    } catch (err: unknown) {
+      const status =
+        err && typeof err === 'object' && 'status' in err
+          ? Number((err as { status?: unknown }).status)
+          : undefined
 
-    return () => {
-      active = false
+      if (status === 404) {
+        setIs404(true)
+      } else {
+        toast.error('Erro ao carregar resumo.')
+      }
+    } finally {
+      setLoading(false)
     }
-  }, [periodoTipo, ano, mes, semana, currentYear, currentMonth, currentWeek])
+  }, [])
+
+  useEffect(() => {
+    loadData(selectedPeriod)
+  }, [selectedPeriod, loadData])
+
+  const handleRetry = () => {
+    loadData(selectedPeriod)
+  }
+
+  // 1. Caso de endpoint 404 (não publicado)
+  if (!loading && is404) {
+    return (
+      <div className="space-y-6">
+        <PeriodSelector
+          selectedPeriod={selectedPeriod}
+          onSelect={setSelectedPeriod}
+          periodoLabel={data?.periodo}
+          disabled={loading}
+        />
+        <Card className="shadow-subtle border-dashed">
+          <CardContent className="p-10 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-950 flex items-center justify-center text-amber-600 dark:text-amber-400">
+              <AlertCircle className="w-6 h-6" />
+            </div>
+            <div className="space-y-1 max-w-md">
+              <h3 className="font-semibold text-base text-foreground">Resumo indisponível</h3>
+              <p className="text-sm text-muted-foreground">
+                Verifique se o hook resumo_vendas está publicado.
+              </p>
+            </div>
+            <Button onClick={handleRetry} variant="outline" className="gap-2">
+              <RefreshCw className="w-4 h-4" /> Tentar novamente
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   const faturadoBrl = data?.faturado_total_brl ?? 0
   const faturadoUsd = data?.faturado_total_usd ?? 0
-  const carteiraBrl = data?.carteira_total_brl
+  const carteiraBrl = data?.carteira_total_brl ?? null
+  const coberturaPercent = data?.cobertura_percent
+  const variacaoPercent =
+    data?.variacao_vs_anterior_percent ?? data?.variacao_semana_anterior ?? null
+  const qtdNotas = data?.quantidade_notas ?? 0
   const metaBrl = data?.meta_brl ?? 0
   const metaAtingidaPercent = data?.meta_atingida_percent
-  const qtdNotas = data?.quantidade_notas ?? 0
-  const variacao = data?.variacao_semana_anterior ?? 0
 
-  // Cobertura (faturado/carteira %): usa o valor do backend se disponível, senão fallback client-side
-  const coberturaVal =
-    data?.cobertura_percent !== undefined
-      ? data.cobertura_percent
-      : carteiraBrl !== null && carteiraBrl !== undefined && carteiraBrl > 0
-        ? Math.round((faturadoBrl / carteiraBrl) * 100 * 10) / 10
-        : null
+  const topClientes = (data?.por_cliente ?? []).slice(0, 10)
+  const porFamilia = data?.por_familia ?? []
+  const porEspecie = data?.por_especie ?? []
 
-  const coberturaStr =
-    coberturaVal !== null && coberturaVal !== undefined ? `${coberturaVal.toFixed(1)}%` : '—'
+  const isTotalEmpty =
+    !loading &&
+    data !== null &&
+    faturadoBrl === 0 &&
+    topClientes.length === 0 &&
+    porFamilia.length === 0
 
   return (
     <div className="space-y-6">
-      {/* Seletor de Período */}
+      {/* Seletor de Período via Chips */}
       <Card className="shadow-subtle">
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -149,7 +167,7 @@ export function ResumoVendasTab() {
                 <Calendar className="w-5 h-5 text-primary" /> Seletor de Período
               </CardTitle>
               <CardDescription>
-                Resumo analítico extraído da base de faturamento 2025+ e carteira de pedidos
+                Resumo analítico de vendas e faturamento consolidado
               </CardDescription>
             </div>
             {data?.periodo && (
@@ -159,121 +177,71 @@ export function ResumoVendasTab() {
             )}
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="w-full sm:w-auto min-w-[200px]">
-              <Select
-                value={periodoTipo}
-                onValueChange={(val: any) => {
-                  setPeriodoTipo(val)
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o período" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="current_month">
-                    Mês Atual ({MESES.find((m) => m.value === currentMonth)?.label} {currentYear})
-                  </SelectItem>
-                  <SelectItem value="current_week">Semana Atual (Semana {currentWeek})</SelectItem>
-                  <SelectItem value="custom_month">Mês Específico (Ano + Mês)</SelectItem>
-                  <SelectItem value="custom_week">Semana Específica (Ano + Semana)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {PERIOD_OPTIONS.map((opt) => {
+              const active = selectedPeriod === opt.key
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setSelectedPeriod(opt.key)}
+                  className={`px-3.5 py-1.5 text-xs font-medium rounded-full transition-all border ${
+                    active
+                      ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                      : 'bg-background hover:bg-muted text-muted-foreground hover:text-foreground border-border'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              )
+            })}
+          </div>
 
-            {(periodoTipo === 'custom_month' || periodoTipo === 'custom_week') && (
-              <div className="flex items-center gap-2">
-                <Select value={String(ano)} onValueChange={(v) => setAno(parseInt(v, 10))}>
-                  <SelectTrigger className="w-[110px]">
-                    <SelectValue placeholder="Ano" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {uniqueAnos.map((a) => (
-                      <SelectItem key={a} value={String(a)}>
-                        {a}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {periodoTipo === 'custom_month' && (
-              <div className="flex items-center gap-2">
-                <Select value={String(mes)} onValueChange={(v) => setMes(parseInt(v, 10))}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Mês" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MESES.map((m) => (
-                      <SelectItem key={m.value} value={String(m.value)}>
-                        {m.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {periodoTipo === 'custom_week' && (
-              <div className="flex items-center gap-2">
-                <Select value={String(semana)} onValueChange={(v) => setSemana(parseInt(v, 10))}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Semana" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {semanasDisponiveis.map((s) => (
-                      <SelectItem key={s} value={String(s)}>
-                        Semana {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+          <div className="text-xs text-muted-foreground flex items-center gap-1.5 pt-1">
+            <span>Período resolvido retornado pela API:</span>
+            <span className="font-mono font-medium text-foreground">
+              {data?.periodo ? data.periodo : loading ? 'Carregando...' : '—'}
+            </span>
           </div>
         </CardContent>
       </Card>
 
-      {/* Skeletons ou Cards */}
+      {/* Loading Skeleton */}
       {loading ? (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i} className="shadow-subtle">
-                <CardContent className="p-5 space-y-2">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-8 w-32" />
-                  <Skeleton className="h-3 w-16" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="shadow-subtle">
-              <CardContent className="p-6 space-y-3">
-                <Skeleton className="h-6 w-48" />
-                <Skeleton className="h-40 w-full" />
-              </CardContent>
-            </Card>
-            <Card className="shadow-subtle">
-              <CardContent className="p-6 space-y-3">
-                <Skeleton className="h-6 w-48" />
-                <Skeleton className="h-40 w-full" />
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+        <LoadingSkeleton />
+      ) : isTotalEmpty ? (
+        /* Empty State Global */
+        <Card className="shadow-subtle border-dashed">
+          <CardContent className="p-12 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+              <FileX className="w-7 h-7" />
+            </div>
+            <div className="space-y-1 max-w-md">
+              <h3 className="font-semibold text-lg text-foreground">
+                Nenhum faturamento no período selecionado.
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Não há registros de notas fiscais ou vendas computadas para este intervalo.
+              </p>
+            </div>
+            <Button onClick={handleRetry} variant="outline" className="gap-2">
+              <RefreshCw className="w-4 h-4" /> Recarregar
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
+        /* Success Content */
         <div className="space-y-6 animate-fade-in">
-          {/* Métricas Principais */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
-            {/* Card Faturado BRL */}
+          {/* Summary Cards: 5 cards principais + Meta do Período (preservado) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+            {/* 1. Faturado (BRL) */}
             <Card className="shadow-subtle border-l-4 border-l-primary">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-muted-foreground">Faturado BRL</p>
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Faturado (BRL)
+                  </p>
                   <DollarSign className="w-4 h-4 text-primary" />
                 </div>
                 <p className="text-2xl font-bold text-foreground mt-2">
@@ -287,11 +255,105 @@ export function ResumoVendasTab() {
               </CardContent>
             </Card>
 
-            {/* Card Meta e % Atingido */}
+            {/* 2. Carteira (BRL) */}
+            <Card className="shadow-subtle border-l-4 border-l-amber-500">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Carteira (BRL)
+                  </p>
+                  <PieChart className="w-4 h-4 text-amber-500" />
+                </div>
+                <p className="text-2xl font-bold text-foreground mt-2">
+                  {carteiraBrl !== null && carteiraBrl !== undefined
+                    ? formatCurrency(carteiraBrl)
+                    : '—'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">Pedidos em carteira</p>
+              </CardContent>
+            </Card>
+
+            {/* 3. Cobertura */}
+            <Card className="shadow-subtle border-l-4 border-l-emerald-500">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Cobertura
+                  </p>
+                  <TrendingUp className="w-4 h-4 text-emerald-500" />
+                </div>
+                <p className="text-2xl font-bold text-foreground mt-2">
+                  {coberturaPercent !== null && coberturaPercent !== undefined
+                    ? `${coberturaPercent.toFixed(1).replace('.', ',')}%`
+                    : '—'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">Faturado vs Carteira</p>
+              </CardContent>
+            </Card>
+
+            {/* 4. Variação vs anterior */}
+            <Card className="shadow-subtle border-l-4 border-l-indigo-500">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Variação vs anterior
+                  </p>
+                  {variacaoPercent !== null && variacaoPercent !== undefined ? (
+                    variacaoPercent > 0 ? (
+                      <ArrowUpRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    ) : variacaoPercent < 0 ? (
+                      <ArrowDownRight className="w-4 h-4 text-destructive" />
+                    ) : (
+                      <Minus className="w-4 h-4 text-muted-foreground" />
+                    )
+                  ) : (
+                    <Minus className="w-4 h-4 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="mt-2">
+                  {variacaoPercent !== null && variacaoPercent !== undefined ? (
+                    <p
+                      className={`text-2xl font-bold ${
+                        variacaoPercent > 0
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : variacaoPercent < 0
+                            ? 'text-destructive'
+                            : 'text-foreground'
+                      }`}
+                    >
+                      {variacaoPercent > 0
+                        ? `+${variacaoPercent.toFixed(1).replace('.', ',')}%`
+                        : `${variacaoPercent.toFixed(1).replace('.', ',')}%`}
+                    </p>
+                  ) : (
+                    <p className="text-2xl font-bold text-foreground">—</p>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Comparado ao período anterior</p>
+              </CardContent>
+            </Card>
+
+            {/* 5. Qtd notas */}
+            <Card className="shadow-subtle border-l-4 border-l-blue-500">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Qtd notas
+                  </p>
+                  <FileText className="w-4 h-4 text-blue-500" />
+                </div>
+                <p className="text-2xl font-bold text-foreground mt-2">{qtdNotas}</p>
+                <p className="text-xs text-muted-foreground mt-1">Documentos emitidos</p>
+              </CardContent>
+            </Card>
+
+            {/* Card Preservado: Meta do Período */}
             <Card className="shadow-subtle border-l-4 border-l-purple-500">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-muted-foreground">Meta do Período</p>
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Meta do Período
+                  </p>
                   <Target className="w-4 h-4 text-purple-500" />
                 </div>
                 <p className="text-2xl font-bold text-foreground mt-2">
@@ -306,7 +368,7 @@ export function ResumoVendasTab() {
                           : 'font-semibold text-purple-600 dark:text-purple-400'
                       }
                     >
-                      {metaAtingidaPercent.toFixed(1)}% da meta atingida
+                      {metaAtingidaPercent.toFixed(1).replace('.', ',')}% da meta atingida
                     </span>
                   ) : (
                     'Sem meta cadastrada'
@@ -314,81 +376,11 @@ export function ResumoVendasTab() {
                 </p>
               </CardContent>
             </Card>
-
-            {/* Card Carteira BRL */}
-            <Card className="shadow-subtle border-l-4 border-l-amber-500">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-muted-foreground">Carteira BRL</p>
-                  <PieChart className="w-4 h-4 text-amber-500" />
-                </div>
-                <p className="text-2xl font-bold text-foreground mt-2">
-                  {carteiraBrl !== null && carteiraBrl !== undefined
-                    ? formatCurrency(carteiraBrl)
-                    : '—'}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">Pedidos em carteira</p>
-              </CardContent>
-            </Card>
-
-            {/* Card Cobertura */}
-            <Card className="shadow-subtle border-l-4 border-l-emerald-500">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-muted-foreground">Cobertura</p>
-                  <TrendingUp className="w-4 h-4 text-emerald-500" />
-                </div>
-                <p className="text-2xl font-bold text-foreground mt-2">{coberturaStr}</p>
-                <p className="text-xs text-muted-foreground mt-1">Faturado vs Carteira</p>
-              </CardContent>
-            </Card>
-
-            {/* Card Quantidade Notas */}
-            <Card className="shadow-subtle border-l-4 border-l-blue-500">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-muted-foreground">Qtd Notas / Docs</p>
-                  <FileText className="w-4 h-4 text-blue-500" />
-                </div>
-                <p className="text-2xl font-bold text-foreground mt-2">{qtdNotas}</p>
-                <p className="text-xs text-muted-foreground mt-1">Documentos emitidos</p>
-              </CardContent>
-            </Card>
-
-            {/* Card Variação */}
-            <Card className="shadow-subtle border-l-4 border-l-indigo-500">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-muted-foreground">Variação vs Anterior</p>
-                  {variacao > 0 ? (
-                    <ArrowUpRight className="w-4 h-4 text-emerald-500" />
-                  ) : variacao < 0 ? (
-                    <ArrowDownRight className="w-4 h-4 text-destructive" />
-                  ) : (
-                    <Minus className="w-4 h-4 text-muted-foreground" />
-                  )}
-                </div>
-                <div className="flex items-baseline gap-2 mt-2">
-                  <p
-                    className={`text-2xl font-bold ${
-                      variacao > 0
-                        ? 'text-emerald-600 dark:text-emerald-400'
-                        : variacao < 0
-                          ? 'text-destructive'
-                          : 'text-foreground'
-                    }`}
-                  >
-                    {variacao > 0 ? `+${variacao.toFixed(1)}%` : `${variacao.toFixed(1)}%`}
-                  </p>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">Comparado ao período anterior</p>
-              </CardContent>
-            </Card>
           </div>
 
           {/* Tabelas de Detalhamento */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Top 10 Clientes */}
+            {/* Tabela Faturado por Cliente (Top 10) */}
             <Card className="shadow-subtle">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -403,38 +395,31 @@ export function ResumoVendasTab() {
                       <TableRow>
                         <TableHead className="w-12 text-center">#</TableHead>
                         <TableHead>Cliente</TableHead>
-                        <TableHead className="text-right">Faturado (BRL)</TableHead>
-                        <TableHead className="text-right w-20">% do Total</TableHead>
+                        <TableHead className="text-right whitespace-nowrap">Valor (R$)</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {!data?.por_cliente || data.por_cliente.length === 0 ? (
+                      {topClientes.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center text-muted-foreground h-20">
-                            Nenhum faturamento registrado no período.
+                          <TableCell colSpan={3} className="text-center text-muted-foreground h-24">
+                            <div className="flex flex-col items-center justify-center gap-1.5 py-2">
+                              <Inbox className="w-5 h-5 text-muted-foreground/60" />
+                              <span className="text-xs">Nenhum registro no período.</span>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ) : (
-                        data.por_cliente.map((cli, idx) => {
-                          const pct =
-                            faturadoBrl > 0
-                              ? ((cli.valor_brl / faturadoBrl) * 100).toFixed(1)
-                              : '0.0'
-                          return (
-                            <TableRow key={idx}>
-                              <TableCell className="text-center font-mono text-xs text-muted-foreground">
-                                {idx + 1}
-                              </TableCell>
-                              <TableCell className="font-medium text-xs">{cli.cliente}</TableCell>
-                              <TableCell className="text-right font-mono text-xs font-semibold text-primary">
-                                {formatCurrency(cli.valor_brl)}
-                              </TableCell>
-                              <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                                {pct}%
-                              </TableCell>
-                            </TableRow>
-                          )
-                        })
+                        topClientes.map((cli, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell className="text-center font-mono text-xs text-muted-foreground">
+                              {idx + 1}
+                            </TableCell>
+                            <TableCell className="font-medium text-xs">{cli.cliente}</TableCell>
+                            <TableCell className="text-right font-mono text-xs font-semibold text-primary whitespace-nowrap">
+                              {formatCurrency(cli.valor_brl)}
+                            </TableCell>
+                          </TableRow>
+                        ))
                       )}
                     </TableBody>
                   </Table>
@@ -442,11 +427,11 @@ export function ResumoVendasTab() {
               </CardContent>
             </Card>
 
-            {/* Faturado por Família */}
+            {/* Tabela Faturado por Família */}
             <Card className="shadow-subtle">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <PieChart className="w-4 h-4 text-primary" /> Faturado por Família de Produtos
+                  <PieChart className="w-4 h-4 text-primary" /> Faturado por Família
                 </CardTitle>
                 <CardDescription>Distribuição de vendas por família de produtos</CardDescription>
               </CardHeader>
@@ -457,38 +442,31 @@ export function ResumoVendasTab() {
                       <TableRow>
                         <TableHead className="w-12 text-center">#</TableHead>
                         <TableHead>Família</TableHead>
-                        <TableHead className="text-right">Faturado (BRL)</TableHead>
-                        <TableHead className="text-right w-20">% do Total</TableHead>
+                        <TableHead className="text-right whitespace-nowrap">Valor (R$)</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {!data?.por_familia || data.por_familia.length === 0 ? (
+                      {porFamilia.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center text-muted-foreground h-20">
-                            Nenhum registro por família no período.
+                          <TableCell colSpan={3} className="text-center text-muted-foreground h-24">
+                            <div className="flex flex-col items-center justify-center gap-1.5 py-2">
+                              <Inbox className="w-5 h-5 text-muted-foreground/60" />
+                              <span className="text-xs">Nenhum registro no período.</span>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ) : (
-                        data.por_familia.map((fam, idx) => {
-                          const pct =
-                            faturadoBrl > 0
-                              ? ((fam.valor_brl / faturadoBrl) * 100).toFixed(1)
-                              : '0.0'
-                          return (
-                            <TableRow key={idx}>
-                              <TableCell className="text-center font-mono text-xs text-muted-foreground">
-                                {idx + 1}
-                              </TableCell>
-                              <TableCell className="font-medium text-xs">{fam.familia}</TableCell>
-                              <TableCell className="text-right font-mono text-xs font-semibold text-primary">
-                                {formatCurrency(fam.valor_brl)}
-                              </TableCell>
-                              <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                                {pct}%
-                              </TableCell>
-                            </TableRow>
-                          )
-                        })
+                        porFamilia.map((fam, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell className="text-center font-mono text-xs text-muted-foreground">
+                              {idx + 1}
+                            </TableCell>
+                            <TableCell className="font-medium text-xs">{fam.familia}</TableCell>
+                            <TableCell className="text-right font-mono text-xs font-semibold text-primary whitespace-nowrap">
+                              {formatCurrency(fam.valor_brl)}
+                            </TableCell>
+                          </TableRow>
+                        ))
                       )}
                     </TableBody>
                   </Table>
@@ -497,36 +475,180 @@ export function ResumoVendasTab() {
             </Card>
           </div>
 
-          {/* Opcional: Detalhamento por Espécie (se houver dados) */}
-          {data?.por_especie && data.por_especie.length > 0 && (
+          {/* Seção Opcional Colapsável: Faturado por Espécie */}
+          <Collapsible open={isEspecieOpen} onOpenChange={setIsEspecieOpen}>
             <Card className="shadow-subtle">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-primary" /> Faturado por Espécie
-                </CardTitle>
-                <CardDescription>Distribuição inferida por espécie animal</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {data.por_especie.map((esp, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3 bg-muted/40 rounded-lg border border-border/50 flex flex-col justify-between"
-                    >
-                      <p className="text-xs font-medium text-muted-foreground truncate">
-                        {esp.especie}
-                      </p>
-                      <p className="text-base font-bold text-primary mt-1">
-                        {formatCurrency(esp.valor_brl)}
-                      </p>
-                    </div>
-                  ))}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-primary" /> Faturado por Espécie
+                    </CardTitle>
+                    <CardDescription>Distribuição de vendas por espécie animal</CardDescription>
+                  </div>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="gap-2 text-xs">
+                      <span>{isEspecieOpen ? 'Recolher' : 'Expandir'}</span>
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform duration-200 ${
+                          isEspecieOpen ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </Button>
+                  </CollapsibleTrigger>
                 </div>
-              </CardContent>
+              </CardHeader>
+              <CollapsibleContent>
+                <CardContent className="pt-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12 text-center">#</TableHead>
+                          <TableHead>Espécie</TableHead>
+                          <TableHead className="text-right whitespace-nowrap">Valor (R$)</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {porEspecie.length === 0 ? (
+                          <TableRow>
+                            <TableCell
+                              colSpan={3}
+                              className="text-center text-muted-foreground h-24"
+                            >
+                              <div className="flex flex-col items-center justify-center gap-1.5 py-2">
+                                <Inbox className="w-5 h-5 text-muted-foreground/60" />
+                                <span className="text-xs">Nenhum registro no período.</span>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          porEspecie.map((esp, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell className="text-center font-mono text-xs text-muted-foreground">
+                                {idx + 1}
+                              </TableCell>
+                              <TableCell className="font-medium text-xs">{esp.especie}</TableCell>
+                              <TableCell className="text-right font-mono text-xs font-semibold text-primary whitespace-nowrap">
+                                {formatCurrency(esp.valor_brl)}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
             </Card>
-          )}
+          </Collapsible>
         </div>
       )}
+    </div>
+  )
+}
+
+interface PeriodSelectorProps {
+  selectedPeriod: PeriodKey
+  onSelect: (p: PeriodKey) => void
+  periodoLabel?: string
+  disabled?: boolean
+}
+
+function PeriodSelector({ selectedPeriod, onSelect, periodoLabel, disabled }: PeriodSelectorProps) {
+  return (
+    <Card className="shadow-subtle">
+      <CardHeader className="pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-primary" /> Seletor de Período
+            </CardTitle>
+            <CardDescription>Resumo analítico de vendas e faturamento consolidado</CardDescription>
+          </div>
+          {periodoLabel && (
+            <div className="text-xs font-mono bg-primary/10 text-primary px-3 py-1.5 rounded-full font-semibold self-start sm:self-auto">
+              Período: {periodoLabel}
+            </div>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {PERIOD_OPTIONS.map((opt) => {
+            const active = selectedPeriod === opt.key
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                disabled={disabled}
+                onClick={() => onSelect(opt.key)}
+                className={`px-3.5 py-1.5 text-xs font-medium rounded-full transition-all border ${
+                  active
+                    ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                    : 'bg-background hover:bg-muted text-muted-foreground hover:text-foreground border-border'
+                }`}
+              >
+                {opt.label}
+              </button>
+            )
+          })}
+        </div>
+        <div className="text-xs text-muted-foreground flex items-center gap-1.5 pt-1">
+          <span>Período resolvido retornado pela API:</span>
+          <span className="font-mono font-medium text-foreground">{periodoLabel || '—'}</span>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* 5 Cards + Meta Skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Card key={i} className="shadow-subtle">
+            <CardContent className="p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-4 w-4 rounded-full" />
+              </div>
+              <Skeleton className="h-7 w-28" />
+              <Skeleton className="h-3 w-24" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Duas Tabelas Skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="shadow-subtle">
+          <CardHeader className="pb-3">
+            <Skeleton className="h-5 w-44" />
+            <Skeleton className="h-3 w-56 mt-1" />
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-7 w-full" />
+            <Skeleton className="h-7 w-full" />
+            <Skeleton className="h-7 w-full" />
+          </CardContent>
+        </Card>
+        <Card className="shadow-subtle">
+          <CardHeader className="pb-3">
+            <Skeleton className="h-5 w-44" />
+            <Skeleton className="h-3 w-56 mt-1" />
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-7 w-full" />
+            <Skeleton className="h-7 w-full" />
+            <Skeleton className="h-7 w-full" />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

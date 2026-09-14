@@ -49,7 +49,8 @@ export interface ResumoVendasResponse {
   por_familia: ResumoFamiliaItem[]
   por_especie: ResumoEspecieItem[]
   quantidade_notas: number
-  variacao_semana_anterior: number
+  variacao_semana_anterior?: number | null
+  variacao_vs_anterior_percent?: number | null
 }
 
 export interface ResumoVendasParams {
@@ -60,14 +61,14 @@ export interface ResumoVendasParams {
 }
 
 export async function fetchResumoVendas(params: ResumoVendasParams): Promise<ResumoVendasResponse> {
-  const query = new URLSearchParams()
-  query.set('mode', params.mode)
-  if (params.ano) query.set('ano', String(params.ano))
-  if (params.mes) query.set('mes', String(params.mes))
-  if (params.semana) query.set('semana', String(params.semana))
+  const query: Record<string, string> = { mode: params.mode }
+  if (params.ano !== undefined) query.ano = String(params.ano)
+  if (params.mes !== undefined) query.mes = String(params.mes)
+  if (params.semana !== undefined) query.semana = String(params.semana)
 
-  return pb.send<ResumoVendasResponse>(`/backend/v1/resumo_vendas?${query.toString()}`, {
+  return pb.send<ResumoVendasResponse>('/backend/v1/resumo_vendas', {
     method: 'GET',
+    query,
   })
 }
 
