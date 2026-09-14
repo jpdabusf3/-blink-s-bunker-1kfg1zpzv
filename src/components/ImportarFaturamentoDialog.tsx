@@ -103,6 +103,9 @@ export function ImportarFaturamentoDialog({
     try {
       // 1. Ler cabeçalhos da planilha e auto-mapear
       const { headers } = await parseFaturamentoPreview(file, 5)
+      if (headers.length === 0) {
+        throw new Error('Não foi possível identificar colunas válidas na planilha.')
+      }
       const mapping = autoSuggestMapping(headers)
 
       setProgressValue(45)

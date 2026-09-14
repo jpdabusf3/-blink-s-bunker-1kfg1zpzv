@@ -683,6 +683,7 @@ routerAdd(
               if (vdMatch) newFact.set('vendedor_id', vdMatch.id)
               var gtMatch = findGestaoTecnica(gestorNome, 'gestor_tecnico')
               if (gtMatch) newFact.set('gestor_tecnico_id', gtMatch.id)
+              if (userId) newFact.set('user_id', userId)
 
               $app.save(newFact)
               matchedFactory = newFact
