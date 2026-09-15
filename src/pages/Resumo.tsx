@@ -12,6 +12,24 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
+import { toast } from 'sonner'
+import {
   DollarSign,
   ShoppingCart,
   Receipt,
@@ -27,6 +45,9 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
+  FileDown,
+  Printer,
+  CalendarDays,
 } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import {
@@ -36,6 +57,11 @@ import {
   type ResumoFamiliaItem,
 } from '@/services/resumo-vendas'
 import { familiaCompleta } from '@/constants/familiaProdutos'
+import {
+  exportResumoVendasToPDF,
+  type MonthCoverageExportItem,
+  type ResumoPdfExportOptions,
+} from '@/lib/exportResumoVendas'
 
 interface MonthCoverageItem {
   ano: number
@@ -65,7 +91,27 @@ const MONTH_NAMES = [
 
 const ROWS_PER_PAGE = 10
 
+function getIsoWeek(dateObj: Date): number {
+  const d = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()))
+  const dayNum = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
+}
+
 export default function Resumo() {
+  const currentDate = useMemo(() => new Date(), [])
+  const currentYear = currentDate.getFullYear()
+  const currentMonth = currentDate.getMonth() + 1
+  const currentIsoWeek = useMemo(() => getIsoWeek(new Date()), [])
+
+  // Estados dos filtros de período
+  const [mode, setMode] = useState<'month' | 'week'>('month')
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear)
+  const [selectedMonth, setSelectedMonth] = useState<number>(currentMonth)
+  const [selectedWeek, setSelectedWeek] = useState<number>(currentIsoWeek)
+
+  // Estados dos dados e UI
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<boolean>(false)
   const [data, setData] = useState<ResumoVendasResponse | null>(null)
@@ -73,27 +119,65 @@ export default function Resumo() {
   const [clientsPage, setClientsPage] = useState<number>(1)
   const [familiesPage, setFamiliesPage] = useState<number>(1)
 
+  // Estados do Modal de Exportação PDF
+  const [pdfDialogOpen, setPdfDialogOpen] = useState<boolean>(false)
+  const [pdfOptions, setPdfOptions] = useState<ResumoPdfExportOptions>({
+    includeCards: true,
+    includeTopClientes: true,
+    includeTopFamilias: true,
+    includeCobertura: true,
+  })
+  const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false)
+
+  // Lista de anos para os seletores (2 anos no passado até 1 ano no futuro)
+  const availableYears = useMemo(() => {
+    const list: number[] = []
+    for (let y = currentYear - 3; y <= currentYear + 2; y++) {
+      list.push(y)
+    }
+    return list
+  }, [currentYear])
+
+  // Lista de semanas (1 a 53)
+  const availableWeeks = useMemo(() => {
+    const list: number[] = []
+    for (let w = 1; w <= 53; w++) {
+      list.push(w)
+    }
+    return list
+  }, [])
+
   const loadData = useCallback(async () => {
     setLoading(true)
     setError(false)
 
     try {
-      // 1. Fetch do período padrão (mode='month' sem ano/mes -> mês corrente no servidor)
-      const currentRes = await fetchResumoVendas({ mode: 'month' })
+      // 1. Fetch do período selecionado
+      const params =
+        mode === 'month'
+          ? { mode: 'month' as const, ano: selectedYear, mes: selectedMonth }
+          : { mode: 'week' as const, ano: selectedYear, semana: selectedWeek }
+
+      const currentRes = await fetchResumoVendas(params)
       setData(currentRes)
 
-      // 2. Extrair ano e mês do período resolvido (ex: "2026-09") para buscar os últimos 6 meses
-      let refYear = new Date().getFullYear()
-      let refMonth = new Date().getMonth() + 1
+      // 2. Extrair ano e mês de referência para a cobertura dos últimos 6 meses
+      let refYear = selectedYear
+      let refMonth = mode === 'month' ? selectedMonth : currentMonth
+
       if (currentRes.periodo && currentRes.periodo.includes('-')) {
         const parts = currentRes.periodo.split('-')
         const py = parseInt(parts[0], 10)
-        const pm = parseInt(parts[1], 10)
         if (!isNaN(py) && py > 0) refYear = py
-        if (!isNaN(pm) && pm >= 1 && pm <= 12) refMonth = pm
+
+        // Se for YYYY-MM
+        if (mode === 'month' && parts.length >= 2) {
+          const pm = parseInt(parts[1], 10)
+          if (!isNaN(pm) && pm >= 1 && pm <= 12) refMonth = pm
+        }
       }
 
-      // Gerar os últimos 6 meses em ordem cronológica
+      // Gerar os últimos 6 meses em ordem cronológica a partir do mês de referência
       const monthTargets: { ano: number; mes: number }[] = []
       for (let i = 5; i >= 0; i--) {
         let m = refMonth - i
@@ -147,7 +231,7 @@ export default function Resumo() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [mode, selectedYear, selectedMonth, selectedWeek, currentMonth])
 
   useEffect(() => {
     loadData()
@@ -164,7 +248,7 @@ export default function Resumo() {
     return data.por_cliente.length
   }, [data])
 
-  // Variação vs período anterior (tolerar múltiplos nomes retornados pela API)
+  // Variação vs período anterior
   const variacaoPercent: number | null = useMemo(() => {
     if (!data) return null
     const raw =
@@ -219,10 +303,61 @@ export default function Resumo() {
     top10Clientes.length === 0 &&
     topFamilias.length === 0
 
+  // Disparo da geração de PDF
+  const handleGeneratePdf = () => {
+    if (!data) return
+
+    // Pelo menos uma seção deve estar marcada
+    if (
+      !pdfOptions.includeCards &&
+      !pdfOptions.includeTopClientes &&
+      !pdfOptions.includeTopFamilias &&
+      !pdfOptions.includeCobertura
+    ) {
+      toast.error('Selecione ao menos uma seção para incluir no relatório.')
+      return
+    }
+
+    try {
+      setIsExportingPdf(true)
+      const exportCoverage: MonthCoverageExportItem[] = coverageData.map((c) => ({
+        ano: c.ano,
+        mes: c.mes,
+        label: c.label,
+        faturadoBrl: c.faturadoBrl,
+        carteiraBrl: c.carteiraBrl,
+        coberturaPercent: c.coberturaPercent,
+      }))
+
+      exportResumoVendasToPDF(
+        {
+          periodo: data.periodo || `${selectedYear}-${selectedMonth}`,
+          faturadoBrl,
+          qtdNotas,
+          ticketMedio,
+          clientesAtivos,
+          top10Clientes,
+          topFamilias,
+          coverageData: exportCoverage,
+        },
+        pdfOptions,
+      )
+
+      toast.success('PDF gerado.')
+      setPdfDialogOpen(false)
+    } catch (err: unknown) {
+      console.error('Erro ao gerar PDF do resumo:', err)
+      const msg = err instanceof Error ? err.message : 'Falha ao gerar o documento PDF.'
+      toast.error(msg)
+    } finally {
+      setIsExportingPdf(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Cabeçalho da Página */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
             <TrendingUp className="w-6 h-6 text-primary" /> Resumo de Vendas
@@ -232,24 +367,148 @@ export default function Resumo() {
           </p>
         </div>
 
-        {data?.periodo && !loading && !error && (
-          <div className="flex items-center gap-3">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-primary/15 text-primary border border-primary/30">
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Período: {data.periodo}</span>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={loadData}
-              className="gap-2 text-xs border-border/60 hover:border-primary/40"
-              title="Atualizar dados"
+        {/* Barra de Ações: Filtro de Período e Botões */}
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+          {/* Seletor de Modo (Mês ou Semana) */}
+          <div className="flex items-center rounded-lg border border-border/70 bg-card/60 p-0.5 shadow-xs">
+            <button
+              type="button"
+              onClick={() => setMode('month')}
+              className={cn(
+                'px-3 py-1 text-xs font-semibold rounded-md transition-all',
+                mode === 'month'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
             >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Atualizar</span>
-            </Button>
+              Mês
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('week')}
+              className={cn(
+                'px-3 py-1 text-xs font-semibold rounded-md transition-all',
+                mode === 'week'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              Semana
+            </button>
           </div>
-        )}
+
+          {/* Seletores dinâmicos conforme o modo */}
+          {mode === 'month' ? (
+            <div className="flex items-center gap-1.5">
+              {/* Select Mês */}
+              <Select
+                value={String(selectedMonth)}
+                onValueChange={(val) => setSelectedMonth(parseInt(val, 10))}
+              >
+                <SelectTrigger className="h-8 w-[125px] text-xs bg-card/60 border-border/70">
+                  <SelectValue placeholder="Mês" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MONTH_NAMES.slice(1).map((nome, idx) => (
+                    <SelectItem key={idx + 1} value={String(idx + 1)} className="text-xs">
+                      {nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Select Ano */}
+              <Select
+                value={String(selectedYear)}
+                onValueChange={(val) => setSelectedYear(parseInt(val, 10))}
+              >
+                <SelectTrigger className="h-8 w-[88px] text-xs bg-card/60 border-border/70">
+                  <SelectValue placeholder="Ano" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableYears.map((ano) => (
+                    <SelectItem key={ano} value={String(ano)} className="text-xs">
+                      {ano}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              {/* Select Semana */}
+              <Select
+                value={String(selectedWeek)}
+                onValueChange={(val) => setSelectedWeek(parseInt(val, 10))}
+              >
+                <SelectTrigger className="h-8 w-[115px] text-xs bg-card/60 border-border/70">
+                  <SelectValue placeholder="Semana" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableWeeks.map((sem) => (
+                    <SelectItem key={sem} value={String(sem)} className="text-xs">
+                      Semana {sem}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Select Ano */}
+              <Select
+                value={String(selectedYear)}
+                onValueChange={(val) => setSelectedYear(parseInt(val, 10))}
+              >
+                <SelectTrigger className="h-8 w-[88px] text-xs bg-card/60 border-border/70">
+                  <SelectValue placeholder="Ano" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableYears.map((ano) => (
+                    <SelectItem key={ano} value={String(ano)} className="text-xs">
+                      {ano}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Período resolvido pela API */}
+          {data?.periodo && !loading && !error && (
+            <div
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-primary/15 text-primary border border-primary/30"
+              title="Período retornado pela API"
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>{data.periodo}</span>
+            </div>
+          )}
+
+          {/* Botão Gerar PDF */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPdfDialogOpen(true)}
+            disabled={loading || error || isEmpty}
+            className="h-8 gap-1.5 text-xs border-border/70 hover:border-primary/40 bg-card/60"
+            title="Opções de relatório e impressão em PDF"
+          >
+            <FileDown className="w-3.5 h-3.5 text-primary" />
+            <span>Gerar PDF</span>
+          </Button>
+
+          {/* Botão Atualizar */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadData}
+            disabled={loading}
+            className="h-8 gap-1.5 text-xs border-border/70 hover:border-primary/40 bg-card/60"
+            title="Atualizar dados"
+          >
+            <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
+            <span className="hidden sm:inline">Atualizar</span>
+          </Button>
+        </div>
       </div>
 
       {/* 1. ESTADO DE LOADING */}
@@ -264,7 +523,7 @@ export default function Resumo() {
             </div>
             <div className="space-y-1.5 max-w-md">
               <h3 className="font-semibold text-lg text-foreground">
-                Nao foi possivel carregar o resumo.
+                Não foi possível carregar o resumo.
               </h3>
               <p className="text-sm text-muted-foreground">
                 Ocorreu uma falha na comunicação com o servidor ao consultar as informações de
@@ -288,7 +547,8 @@ export default function Resumo() {
             <div className="space-y-1.5 max-w-md">
               <h3 className="font-semibold text-lg text-foreground">Sem dados no momento</h3>
               <p className="text-sm text-muted-foreground">
-                Nao ha informacoes de vendas para exibir ainda.
+                Não há informações de vendas para exibir no período selecionado (
+                {data?.periodo || `${selectedYear}-${selectedMonth}`}).
               </p>
             </div>
             <Button onClick={loadData} variant="default" className="gap-2">
@@ -802,6 +1062,137 @@ export default function Resumo() {
           </Card>
         </div>
       )}
+
+      {/* Modal de Opções para Gerar PDF */}
+      <Dialog open={pdfDialogOpen} onOpenChange={setPdfDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-foreground">
+              <Printer className="w-5 h-5 text-primary" /> Gerar Relatório em PDF
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Selecione quais seções deseja incluir no relatório de Resumo de Vendas para o período{' '}
+              <strong className="text-foreground">
+                {data?.periodo || `${selectedYear}-${selectedMonth}`}
+              </strong>
+              .
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-3">
+              <div className="flex items-start space-x-3">
+                <Checkbox
+                  id="includeCards"
+                  checked={pdfOptions.includeCards}
+                  onCheckedChange={(checked) =>
+                    setPdfOptions((prev) => ({ ...prev, includeCards: checked === true }))
+                  }
+                />
+                <div className="grid gap-1 leading-none">
+                  <Label htmlFor="includeCards" className="text-sm font-semibold cursor-pointer">
+                    Cards de resumo
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Faturamento total, pedidos faturados, ticket médio e clientes ativos.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <Checkbox
+                  id="includeTopClientes"
+                  checked={pdfOptions.includeTopClientes}
+                  onCheckedChange={(checked) =>
+                    setPdfOptions((prev) => ({ ...prev, includeTopClientes: checked === true }))
+                  }
+                />
+                <div className="grid gap-1 leading-none">
+                  <Label
+                    htmlFor="includeTopClientes"
+                    className="text-sm font-semibold cursor-pointer"
+                  >
+                    Top 10 Clientes
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Lista dos clientes com maior receita no período.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <Checkbox
+                  id="includeTopFamilias"
+                  checked={pdfOptions.includeTopFamilias}
+                  onCheckedChange={(checked) =>
+                    setPdfOptions((prev) => ({ ...prev, includeTopFamilias: checked === true }))
+                  }
+                />
+                <div className="grid gap-1 leading-none">
+                  <Label
+                    htmlFor="includeTopFamilias"
+                    className="text-sm font-semibold cursor-pointer"
+                  >
+                    Top Famílias de Produtos
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Faturamento distribuído por família de produto.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <Checkbox
+                  id="includeCobertura"
+                  checked={pdfOptions.includeCobertura}
+                  onCheckedChange={(checked) =>
+                    setPdfOptions((prev) => ({ ...prev, includeCobertura: checked === true }))
+                  }
+                />
+                <div className="grid gap-1 leading-none">
+                  <Label
+                    htmlFor="includeCobertura"
+                    className="text-sm font-semibold cursor-pointer"
+                  >
+                    Cobertura de Carteira
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Histórico de 6 meses de backlog vs faturamento realizado com badges.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 p-2.5 rounded-md">
+              <CalendarDays className="w-4 h-4 text-primary shrink-0" />
+              <span>
+                O documento será gerado com cabeçalho formal, data e valores no padrão brasileiro
+                (R$).
+              </span>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPdfDialogOpen(false)}
+              disabled={isExportingPdf}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleGeneratePdf}
+              disabled={isExportingPdf}
+              className="gap-2"
+            >
+              <FileDown className="w-4 h-4" />
+              <span>{isExportingPdf ? 'Gerando...' : 'Gerar PDF'}</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
