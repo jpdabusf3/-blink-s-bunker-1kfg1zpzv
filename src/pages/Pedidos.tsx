@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import pb from '@/lib/pocketbase/client'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
@@ -36,9 +36,9 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loader2, Filter, Download, Upload, Trash2, FileText } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Filter, Download, Upload, Trash2, FileText } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { useRealtime } from '@/hooks/use-realtime'
 import { formatCurrency } from '@/lib/utils'
 import {
   getHistoricoVendas,
@@ -55,17 +55,16 @@ import { VendaForm } from '@/components/VendaForm'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Sparkles, Layers } from 'lucide-react'
 import { getNfePedidos } from '@/services/nfe-service'
+import { useDataSync } from '@/hooks/useDataSync'
+import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 
 export default function Pedidos() {
   const { toast } = useToast()
-  const [pedidos, setPedidos] = useState<HistoricoVenda[]>([])
   const [vendedores, setVendedores] = useState<GestaoTecnica[]>([])
-  const [loading, setLoading] = useState(true)
 
   const [uploadOpen, setUploadOpen] = useState(false)
   const [nfeUploadOpen, setNfeUploadOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'implantados' | 'revisao'>('implantados')
-  const [pendentesCount, setPendentesCount] = useState(0)
   const [editing, setEditing] = useState<HistoricoVenda | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
@@ -76,8 +75,17 @@ export default function Pedidos() {
   const [fCanal, setFCanal] = useState('all')
   const [busca, setBusca] = useState('')
 
-  const loadData = useCallback(async () => {
-    try {
+  const {
+    data: syncData,
+    isLoading: loading,
+    isError,
+    refetch: loadData,
+  } = useDataSync<{
+    pedidos: HistoricoVenda[]
+    pendentesCount: number
+  }>({
+    entities: ['historico_vendas', 'nfe_pedidos', 'notas_fiscais', 'pedidos'],
+    fetcher: async () => {
       const [vendas, nfes, nfRecords] = await Promise.all([
         getHistoricoVendas(),
         getNfePedidos('all').catch(() => []),
@@ -86,28 +94,24 @@ export default function Pedidos() {
           .getFullList({ filter: 'status="importada" || status="pendente"' })
           .catch(() => []),
       ])
-      setPedidos(vendas)
       const pCount =
         nfes.filter((n) => n.status === 'pendente' || n.status === 'pendencia_produto').length +
         nfRecords.length
-      setPendentesCount(pCount)
-    } catch {
-      setPedidos([])
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+      return {
+        pedidos: vendas,
+        pendentesCount: pCount,
+      }
+    },
+  })
 
   useEffect(() => {
-    loadData()
     getVendedoresGestao()
       .then(setVendedores)
       .catch(() => {})
-  }, [loadData])
+  }, [])
 
-  useRealtime('historico_vendas', () => loadData())
-  useRealtime('nfe_pedidos', () => loadData())
-  useRealtime('notas_fiscais', () => loadData())
+  const pedidos = syncData?.pedidos || []
+  const pendentesCount = syncData?.pendentesCount || 0
 
   const filtered = useMemo(() => {
     let r = [...pedidos]
@@ -221,6 +225,9 @@ export default function Pedidos() {
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
+      {/* Banner de erro padronizado para refreshes */}
+      {isError && <SyncErrorBanner message="Falha ao atualizar os dados." onRetry={loadData} />}
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Implantação de Novos Pedidos</h1>
@@ -410,9 +417,13 @@ export default function Pedidos() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {loading ? (
-                <div className="flex justify-center p-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              {/* Skeleton SOMENTE na primeira carga sem dados */}
+              {loading && !syncData ? (
+                <div className="space-y-3 p-4">
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
                 </div>
               ) : (
                 <div className="overflow-x-auto">

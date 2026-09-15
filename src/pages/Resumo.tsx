@@ -64,6 +64,8 @@ import {
   type MonthCoverageExportItem,
   type ResumoPdfExportOptions,
 } from '@/lib/exportResumoVendas'
+import { useDataSync } from '@/hooks/useDataSync'
+import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 
 interface MonthCoverageItem {
   ano: number

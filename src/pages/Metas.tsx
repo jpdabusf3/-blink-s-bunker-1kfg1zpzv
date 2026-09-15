@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -9,9 +9,9 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import { Loader2, Plus, Edit, Trash2, Target, FileText } from 'lucide-react'
-import { useRealtime } from '@/hooks/use-realtime'
 import { useAuth } from '@/hooks/use-auth'
 import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
 import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
@@ -19,11 +19,10 @@ import { getMetas, createMeta, updateMeta, deleteMeta, type Meta } from '@/servi
 import { MetaForm, type MetaFormValues } from '@/components/MetaForm'
 import { MetasMatrix } from '@/components/MetasMatrix'
 import { exportMetasBalancoPDF, logMetasBalancoExport, buildMetasMatrix } from '@/lib/exportMetas'
+import { useDataSync } from '@/hooks/useDataSync'
+import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 
 export default function Metas() {
-  const [vendedores, setVendedores] = useState<GestaoTecnica[]>([])
-  const [metas, setMetas] = useState<Meta[]>([])
-  const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'especie' | 'canal'>('especie')
@@ -32,40 +31,30 @@ export default function Metas() {
   const { user } = useAuth()
   const { logAction } = useFunnelActivityLog()
 
-  const loadData = async () => {
-    try {
-      const records = await getMetas()
-      setMetas(records)
-    } catch {
-      toast.error('Erro ao carregar metas')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const {
+    data: syncData,
+    isLoading: loading,
+    isError,
+    refetch: loadData,
+  } = useDataSync<{
+    metas: Meta[]
+    vendedores: GestaoTecnica[]
+  }>({
+    entities: ['metas', 'gestao_tecnica', 'historico_vendas'],
+    fetcher: async () => {
+      const [metasList, gestaoList] = await Promise.all([
+        getMetas(),
+        getGestaoTecnica().catch(() => [] as GestaoTecnica[]),
+      ])
+      return {
+        metas: metasList,
+        vendedores: gestaoList.filter((g) => g.funcao === 'vendedor'),
+      }
+    },
+  })
 
-  useEffect(() => {
-    loadData()
-    getGestaoTecnica()
-      .then((all) => {
-        setVendedores(all.filter((g) => g.funcao === 'vendedor'))
-      })
-      .catch(() => {})
-  }, [])
-
-  const handleMetasRealtime = useCallback(() => {
-    loadData()
-  }, [])
-
-  const handleGestaoRealtime = useCallback(() => {
-    getGestaoTecnica()
-      .then((all) => {
-        setVendedores(all.filter((g) => g.funcao === 'vendedor'))
-      })
-      .catch(() => {})
-  }, [])
-
-  useRealtime('metas', handleMetasRealtime)
-  useRealtime('gestao_tecnica', handleGestaoRealtime)
+  const metas = syncData?.metas || []
+  const vendedores = syncData?.vendedores || []
 
   const editingMeta = useMemo(
     () => (editingId ? (metas.find((m) => m.id === editingId) ?? null) : null),
@@ -123,6 +112,7 @@ export default function Metas() {
         })
       }
       handleClose()
+      void loadData()
     } catch {
       toast.error('Erro ao salvar meta')
     }
@@ -142,6 +132,7 @@ export default function Metas() {
         entity_name: meta?.periodo || '',
         description: `Excluiu meta ${meta?.periodo || deleteId}`,
       })
+      void loadData()
     } catch {
       toast.error('Erro ao excluir')
     } finally {
@@ -178,6 +169,9 @@ export default function Metas() {
 
   return (
     <div className="space-y-6 pb-10 animate-fade-in">
+      {/* Banner de erro com retry padronizado preservando dados em tela */}
+      {isError && <SyncErrorBanner message="Falha ao atualizar os dados." onRetry={loadData} />}
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3">
           <div className="bg-primary p-2 rounded-lg">
@@ -242,9 +236,12 @@ export default function Metas() {
           </Tabs>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="flex justify-center p-8">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          {/* Skeleton SOMENTE na primeira carga sem dados */}
+          {loading && !syncData ? (
+            <div className="space-y-3 p-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
             </div>
           ) : (
             <MetasMatrix metas={metas} vendedores={vendedores} viewMode={viewMode} />
@@ -257,9 +254,12 @@ export default function Metas() {
           <CardTitle className="text-lg">Todas as Metas</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {loading ? (
-            <div className="flex justify-center p-8">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          {/* Skeleton SOMENTE na primeira carga sem dados */}
+          {loading && !syncData ? (
+            <div className="space-y-3 p-4">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
             </div>
           ) : metas.length === 0 ? (
             <div className="text-center p-8 text-muted-foreground">Nenhuma meta cadastrada.</div>

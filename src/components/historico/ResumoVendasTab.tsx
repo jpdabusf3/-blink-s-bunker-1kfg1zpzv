@@ -29,13 +29,14 @@ import {
   FileX,
 } from 'lucide-react'
 import { formatCurrency, formatCurrencyUSD } from '@/lib/utils'
-import { toast } from 'sonner'
 import {
   fetchResumoVendas,
   type ResumoVendasResponse,
   type ResumoVendasParams,
 } from '@/services/resumo-vendas'
 import { familiaCompleta } from '@/constants/familiaProdutos'
+import { useDataSync } from '@/hooks/useDataSync'
+import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 
 type PeriodKey = 'week_current' | 'month_current' | 'month_previous'
 
@@ -52,19 +53,16 @@ const PERIOD_OPTIONS: PeriodOption[] = [
 
 export function ResumoVendasTab() {
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodKey>('month_current')
-  const [loading, setLoading] = useState<boolean>(true)
-  const [data, setData] = useState<ResumoVendasResponse | null>(null)
   const [is404, setIs404] = useState<boolean>(false)
   const [isEspecieOpen, setIsEspecieOpen] = useState<boolean>(false)
 
-  const loadData = useCallback(async (period: PeriodKey) => {
-    setLoading(true)
+  const fetchResumo = useCallback(async () => {
     setIs404(false)
 
     let params: ResumoVendasParams
-    if (period === 'week_current') {
+    if (selectedPeriod === 'week_current') {
       params = { mode: 'week' }
-    } else if (period === 'month_current') {
+    } else if (selectedPeriod === 'month_current') {
       params = { mode: 'month' }
     } else {
       const now = new Date()
@@ -80,8 +78,7 @@ export function ResumoVendasTab() {
     }
 
     try {
-      const res = await fetchResumoVendas(params)
-      setData(res)
+      return await fetchResumoVendas(params)
     } catch (err: unknown) {
       const status =
         err && typeof err === 'object' && 'status' in err
@@ -90,31 +87,40 @@ export function ResumoVendasTab() {
 
       if (status === 404) {
         setIs404(true)
-      } else {
-        toast.error('Erro ao carregar resumo.')
       }
-    } finally {
-      setLoading(false)
+      throw err
     }
-  }, [])
+  }, [selectedPeriod])
 
+  const {
+    data,
+    isLoading: loading,
+    isRefreshing,
+    isError,
+    refetch,
+  } = useDataSync<ResumoVendasResponse>({
+    entities: ['faturamento', 'historico_vendas', 'pedidos_carteira', 'factories'],
+    fetcher: fetchResumo,
+  })
+
+  // Refetch quando trocar o período selecionado
   useEffect(() => {
-    loadData(selectedPeriod)
-  }, [selectedPeriod, loadData])
+    void refetch()
+  }, [selectedPeriod, refetch])
 
   const handleRetry = () => {
-    loadData(selectedPeriod)
+    void refetch()
   }
 
   // 1. Caso de endpoint 404 (não publicado)
-  if (!loading && is404) {
+  if (!loading && is404 && !data) {
     return (
       <div className="space-y-6">
         <PeriodSelector
           selectedPeriod={selectedPeriod}
           onSelect={setSelectedPeriod}
           periodoLabel={data?.periodo}
-          disabled={loading}
+          disabled={loading || isRefreshing}
         />
         <Card className="shadow-subtle border-dashed">
           <CardContent className="p-10 flex flex-col items-center justify-center text-center space-y-4">
@@ -159,6 +165,9 @@ export function ResumoVendasTab() {
 
   return (
     <div className="space-y-6">
+      {/* Banner de erro em refresh preservando dados válidos */}
+      {isError && <SyncErrorBanner message="Falha ao atualizar os dados." onRetry={handleRetry} />}
+
       {/* Seletor de Período via Chips */}
       <Card className="shadow-subtle">
         <CardHeader className="pb-3">
@@ -202,14 +211,14 @@ export function ResumoVendasTab() {
           <div className="text-xs text-muted-foreground flex items-center gap-1.5 pt-1">
             <span>Período resolvido retornado pela API:</span>
             <span className="font-mono font-medium text-foreground">
-              {data?.periodo ? data.periodo : loading ? 'Carregando...' : '—'}
+              {data?.periodo ? data.periodo : loading && !data ? 'Carregando...' : '—'}
             </span>
           </div>
         </CardContent>
       </Card>
 
-      {/* Loading Skeleton */}
-      {loading ? (
+      {/* Loading Skeleton: SOMENTE na primeira carga sem dados */}
+      {loading && !data ? (
         <LoadingSkeleton />
       ) : isTotalEmpty ? (
         /* Empty State Global */

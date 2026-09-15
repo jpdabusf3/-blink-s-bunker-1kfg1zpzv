@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -26,8 +26,8 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
-  Loader2,
   TrendingUp,
   Plus,
   Upload,
@@ -40,7 +40,6 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
 import {
   getHistoricoVendas,
@@ -60,12 +59,11 @@ import { UploadPedidoDialog } from '@/components/UploadPedidoDialog'
 import { UploadNfeDialog } from '@/components/UploadNfeDialog'
 import { ResumoVendasTab } from '@/components/historico/ResumoVendasTab'
 import { ImportarFaturamentoDialog } from '@/components/ImportarFaturamentoDialog'
+import { useDataSync } from '@/hooks/useDataSync'
+import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 
 export default function HistoricoVendas() {
   const { toast } = useToast()
-  const [data, setData] = useState<HistoricoVenda[]>([])
-  const [loading, setLoading] = useState(true)
-  const [vendedores, setVendedores] = useState<GestaoTecnica[]>([])
   const [fEspecie, setFEspecie] = useState('all')
   const [fVendedor, setFVendedor] = useState('all')
   const [fCanal, setFCanal] = useState('all')
@@ -75,24 +73,30 @@ export default function HistoricoVendas() {
   const [nfeUploadOpen, setNfeUploadOpen] = useState(false)
   const [importarFatOpen, setImportarFatOpen] = useState(false)
 
-  const loadData = async () => {
-    try {
-      setData(await getHistoricoVendas())
-    } catch {
-      setData([])
-    } finally {
-      setLoading(false)
-    }
-  }
+  const {
+    data: syncData,
+    isLoading: loading,
+    isError,
+    refetch: loadData,
+  } = useDataSync<{
+    vendas: HistoricoVenda[]
+    vendedores: GestaoTecnica[]
+  }>({
+    entities: ['historico_vendas', 'faturamento', 'gestao_tecnica'],
+    fetcher: async () => {
+      const [vendasList, vendedoresList] = await Promise.all([
+        getHistoricoVendas(),
+        getVendedoresGestao().catch(() => [] as GestaoTecnica[]),
+      ])
+      return {
+        vendas: vendasList,
+        vendedores: vendedoresList,
+      }
+    },
+  })
 
-  useEffect(() => {
-    loadData()
-    getVendedoresGestao()
-      .then(setVendedores)
-      .catch(() => {})
-  }, [])
-
-  useRealtime('historico_vendas', () => loadData())
+  const data = syncData?.vendas || []
+  const vendedores = syncData?.vendedores || []
 
   const filtered = useMemo(() => {
     let r = [...data]
@@ -175,6 +179,9 @@ export default function HistoricoVendas() {
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
+      {/* Banner de erro com retry padronizado mantendo dados em tela */}
+      {isError && <SyncErrorBanner message="Falha ao atualizar os dados." onRetry={loadData} />}
+
       <Tabs defaultValue="vendas" className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -320,9 +327,13 @@ export default function HistoricoVendas() {
               <CardDescription>{filtered.length} registro(s)</CardDescription>
             </CardHeader>
             <CardContent>
-              {loading ? (
-                <div className="flex justify-center p-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              {/* Skeleton SOMENTE na primeira carga sem dados */}
+              {loading && !syncData ? (
+                <div className="space-y-3 p-4">
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
                 </div>
               ) : (
                 <div className="overflow-x-auto">

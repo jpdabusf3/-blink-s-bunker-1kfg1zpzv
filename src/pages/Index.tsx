@@ -37,6 +37,8 @@ import { useRealtime } from '@/hooks/use-realtime'
 import { UserFilter } from '@/components/UserFilter'
 import { testIntegration } from '@/services/integration-test'
 import { toast } from 'sonner'
+import { useDataSync } from '@/hooks/useDataSync'
+import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={className} fill="currentColor">
@@ -114,6 +116,15 @@ function DraggableBlock({
 export default function Index() {
   const { tasks } = useAppContext()
   const factories = useScopedFactories()
+  const {
+    isLoading: isSyncLoading,
+    isError: isSyncError,
+    refetch: refetchSync,
+  } = useDataSync<{ loaded: boolean }>({
+    entities: ['factories', 'metas', 'historico_vendas', 'pedidos_carteira', 'faturamento'],
+    fetcher: async () => ({ loaded: true }),
+    initialData: { loaded: true },
+  })
   const { user } = useAuth()
   const isLeader = useMemo(() => isManager(user), [user])
   const userRegion = user?.geographicArea || ''
@@ -343,6 +354,11 @@ export default function Index() {
 
   return (
     <div className="space-y-6 animate-fade-in pb-10 print:m-0 print:p-0 print:space-y-8">
+      {/* Banner de erro padronizado para refreshes */}
+      {isSyncError && (
+        <SyncErrorBanner message="Falha ao atualizar os dados." onRetry={refetchSync} />
+      )}
+
       <div className="hidden print:block mb-8 border-b-2 border-primary pb-4">
         <div className="flex justify-between items-end">
           <div>

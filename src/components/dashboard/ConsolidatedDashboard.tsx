@@ -1,8 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts'
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'
-import { useRealtime } from '@/hooks/use-realtime'
 import { fetchConsolidatedData, type ConsolidatedData } from '@/services/consolidated-dashboard'
 import { formatCompactCurrency, formatCurrency } from '@/lib/utils'
 import {
@@ -13,12 +11,13 @@ import {
   Target,
   DollarSign,
   Layers,
-  Users,
-  UserCog,
   Calendar,
   CalendarDays,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useDataSync } from '@/hooks/useDataSync'
+import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 
 interface ConsolidatedDashboardProps {
   periodView?: 'mensal' | 'trimestral'
@@ -29,32 +28,29 @@ export function ConsolidatedDashboard({
   periodView = 'mensal',
   onPeriodViewChange,
 }: ConsolidatedDashboardProps) {
-  const [data, setData] = useState<ConsolidatedData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const {
+    data,
+    isLoading: loading,
+    isError,
+    refetch: loadData,
+  } = useDataSync<ConsolidatedData>({
+    entities: ['metas', 'historico_vendas', 'factories', 'faturamento'],
+    fetcher: async () => await fetchConsolidatedData(),
+  })
 
-  const loadData = useCallback(async () => {
-    try {
-      setData(await fetchConsolidatedData())
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    loadData()
-  }, [loadData])
-  useRealtime('metas', loadData)
-  useRealtime('historico_vendas', loadData)
-  useRealtime('factories', loadData)
-  useRealtime('notifications', loadData)
-  useRealtime('dashboard_preferences', loadData)
-
-  if (loading)
+  if (loading && !data)
     return (
-      <div className="flex justify-center p-8">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Skeleton className="h-28 w-full rounded-xl" />
+          <Skeleton className="h-28 w-full rounded-xl" />
+          <Skeleton className="h-28 w-full rounded-xl" />
+          <Skeleton className="h-28 w-full rounded-xl" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Skeleton className="h-[280px] w-full rounded-xl" />
+          <Skeleton className="h-[280px] w-full rounded-xl" />
+        </div>
       </div>
     )
   if (!data) return null
@@ -78,6 +74,8 @@ export function ConsolidatedDashboard({
 
   return (
     <div className="space-y-4">
+      {isError && <SyncErrorBanner message="Falha ao atualizar os dados." onRetry={loadData} />}
+
       <div className="flex items-center justify-between gap-2 flex-wrap">
         {data.lastAutomationPeriod ? (
           <div className="text-xs text-muted-foreground flex items-center gap-1">
