@@ -35,6 +35,7 @@ export function Maestro() {
     isSending,
     isAnalyzing,
     isExecuting,
+    isLoadingHistory,
     lastFailedFile,
     setInputText,
     handleAttachFile,
@@ -44,6 +45,7 @@ export function Maestro() {
     handleCancelAction,
     handleRetryAnalysis,
     handleSelectQuickAction,
+    startNewChat,
   } = useMaestroChat()
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -110,12 +112,36 @@ export function Maestro() {
             </p>
           </div>
         </div>
+
+        {messages.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={startNewChat}
+            disabled={isSending || isAnalyzing || isExecuting}
+            className="h-8 text-xs gap-1.5 border-border/70 hover:border-amber-500/50 hover:text-amber-500 bg-card/60"
+            title="Iniciar nova conversa limpa"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Nova conversa</span>
+          </Button>
+        )}
       </div>
 
       {/* Messages Scroll Area */}
       <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
+        {/* Loading state ao restaurar histórico */}
+        {isLoadingHistory && messages.length === 0 && (
+          <div className="h-full flex flex-col items-center justify-center text-center px-4 max-w-lg mx-auto py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-amber-500 mb-3" />
+            <p className="text-sm text-muted-foreground animate-pulse">
+              Carregando conversa do Maestro...
+            </p>
+          </div>
+        )}
+
         {/* STATE 2: EMPTY STATE */}
-        {messages.length === 0 && (
+        {!isLoadingHistory && messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center text-center px-4 max-w-lg mx-auto py-12">
             <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/30 flex items-center justify-center text-amber-500 mb-6 shadow-xl shadow-amber-500/5">
               <Sparkles className="h-10 w-10" />

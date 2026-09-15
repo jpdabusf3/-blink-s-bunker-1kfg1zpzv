@@ -54,6 +54,15 @@ export interface ChatMessage {
   error?: string
 }
 
+import { useEffect } from 'react'
+import { useAuth } from '@/hooks/use-auth'
+import {
+  getLatestMaestroConversation,
+  saveMaestroConversation,
+  deserializeMessagesFromStorage,
+  clearMaestroConversationRecord,
+} from '@/services/maestro-conversations'
+
 export interface UseMaestroChatReturn {
   messages: ChatMessage[]
   attachedFile: AttachedFile | null
@@ -61,6 +70,7 @@ export interface UseMaestroChatReturn {
   isSending: boolean
   isAnalyzing: boolean
   isExecuting: boolean
+  isLoadingHistory: boolean
   conversationId: string | null
   lastFailedFile: AttachedFile | null
   setInputText: (text: string) => void
@@ -73,19 +83,27 @@ export interface UseMaestroChatReturn {
   handleRetryAnalysis: () => Promise<void>
   handleSelectQuickAction: (actionType: DocumentType) => Promise<void>
   clearChat: () => void
+  startNewChat: () => Promise<void>
 }
 
 export function useMaestroChat(): UseMaestroChatReturn {
+  const { user } = useAuth()
+  const userId = user?.id || ''
+
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [attachedFile, setAttachedFile] = useState<AttachedFile | null>(null)
   const [inputText, setInputText] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isExecuting, setIsExecuting] = useState(false)
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true)
   const [conversationId, setConversationId] = useState<string | null>(null)
+  const [savedRecordId, setSavedRecordId] = useState<string | null>(null)
   const [lastFailedFile, setLastFailedFile] = useState<AttachedFile | null>(null)
 
   const abortControllerRef = useRef<AbortController | null>(null)
+  const isHydratedRef = useRef(false)
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleAttachFile = useCallback((file: File) => {
     // Validação de tipo de arquivo: PDF, XLSX, XLS, CSV
@@ -112,6 +130,84 @@ export function useMaestroChat(): UseMaestroChatReturn {
     setAttachedFile(null)
   }, [])
 
+  // Carregar conversa mais recente ao inicializar ou mudar usuário
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadConversation() {
+      if (!userId) {
+        setIsLoadingHistory(false)
+        isHydratedRef.current = true
+        return
+      }
+
+      setIsLoadingHistory(true)
+      try {
+        const record = await getLatestMaestroConversation(userId)
+        if (!isMounted) return
+
+        if (record && Array.isArray(record.messages) && record.messages.length > 0) {
+          const restored = deserializeMessagesFromStorage(record.messages)
+          setMessages(restored)
+          setSavedRecordId(record.id)
+          if (record.conversation_id) {
+            setConversationId(record.conversation_id)
+          }
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar histórico da conversa Maestro:', err)
+      } finally {
+        if (isMounted) {
+          setIsLoadingHistory(false)
+          isHydratedRef.current = true
+        }
+      }
+    }
+
+    loadConversation()
+
+    return () => {
+      isMounted = false
+    }
+  }, [userId])
+
+  // Debounce de persistência: salva alterações quando as mensagens mudarem (apenas após a hidratação inicial)
+  useEffect(() => {
+    if (!isHydratedRef.current || !userId) return
+
+    // Limpa timeout anterior se houver
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+    }
+
+    // Se não há mensagens e não há registro existente, não cria nada
+    if (messages.length === 0 && !savedRecordId) {
+      return
+    }
+
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        const result = await saveMaestroConversation({
+          recordId: savedRecordId,
+          userId,
+          conversationId,
+          messages,
+        })
+        if (result && !savedRecordId) {
+          setSavedRecordId(result.id)
+        }
+      } catch (err) {
+        console.warn('Falha silenciosa ao salvar conversa Maestro:', err)
+      }
+    }, 600)
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+    }
+  }, [messages, userId, conversationId, savedRecordId])
+
   const clearChat = useCallback(() => {
     setMessages([])
     setAttachedFile(null)
@@ -123,6 +219,33 @@ export function useMaestroChat(): UseMaestroChatReturn {
       abortControllerRef.current = null
     }
   }, [])
+
+  const startNewChat = useCallback(async () => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+      saveTimeoutRef.current = null
+    }
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
+
+    const currentRecId = savedRecordId
+    setMessages([])
+    setAttachedFile(null)
+    setInputText('')
+    setConversationId(null)
+    setSavedRecordId(null)
+    setLastFailedFile(null)
+
+    if (currentRecId) {
+      try {
+        await clearMaestroConversationRecord(currentRecId)
+      } catch (err) {
+        console.warn('Erro ao limpar registro de conversa do Maestro:', err)
+      }
+    }
+  }, [savedRecordId])
 
   /**
    * Processamento e análise de arquivo anexado
@@ -603,5 +726,7 @@ export function useMaestroChat(): UseMaestroChatReturn {
     handleRetryAnalysis,
     handleSelectQuickAction,
     clearChat,
+    startNewChat,
+    isLoadingHistory,
   }
 }

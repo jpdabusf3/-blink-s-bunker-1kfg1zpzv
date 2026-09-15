@@ -79,7 +79,7 @@ export default function HistoricoVendas() {
     isError,
     refetch: loadData,
   } = useRealtimeData<{
-    items: HistoricoVenda[]
+    vendas: HistoricoVenda[]
     vendedores: GestaoTecnica[]
   }>({
     entities: ['historico_vendas', 'faturamento', 'gestao_tecnica'],

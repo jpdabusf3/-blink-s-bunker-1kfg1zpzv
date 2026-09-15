@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-15T15:07:11.505Z",
+  "generatedAt": "2026-09-15T15:36:10.767Z",
   "collections": [
     {
       "name": "users",
@@ -4177,6 +4177,62 @@
       "indexes": [
         "CREATE INDEX idx_maestro_uploads_user ON maestro_uploads (user_id)",
         "CREATE INDEX idx_maestro_uploads_created ON maestro_uploads (created DESC)"
+      ]
+    },
+    {
+      "name": "maestro_conversations",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && user_id = @request.auth.id",
+        "view": "@request.auth.id != '' && user_id = @request.auth.id",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != '' && user_id = @request.auth.id",
+        "delete": "@request.auth.id != '' && user_id = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "user_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "titulo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "conversation_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "messages",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_maestro_conversations_user ON maestro_conversations (user_id)",
+        "CREATE INDEX idx_maestro_conversations_updated ON maestro_conversations (updated DESC)"
       ]
     }
   ]
