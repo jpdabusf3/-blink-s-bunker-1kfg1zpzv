@@ -26,6 +26,7 @@ import {
   Settings2,
   Package,
   MapPin,
+  Sparkles,
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
@@ -41,6 +42,7 @@ export function AppSidebar() {
   const showMasterOrCeo = isMasterOrCeo(user)
   const menu = [
     { name: t('nav.dashboard'), path: '/', icon: Home },
+    { name: 'Maestro', path: '/maestro', icon: Sparkles, badge: 'IA' },
     { name: t('nav.cadastro'), path: '/cadastro', icon: Building2 },
     { name: 'Mapa de Clientes', path: '/mapa', icon: MapPin },
     { name: 'Importar Clientes', path: '/importar-clientes', icon: Upload },

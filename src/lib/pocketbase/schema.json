@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-15T14:37:50.646Z",
+  "generatedAt": "2026-09-15T15:00:56.181Z",
   "collections": [
     {
       "name": "users",
@@ -4116,6 +4116,68 @@
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX idx_automation_cache_key ON automation_cache (cache_key)"]
+    },
+    {
+      "name": "maestro_uploads",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && user_id = @request.auth.id",
+        "view": "@request.auth.id != '' && user_id = @request.auth.id",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != '' && user_id = @request.auth.id",
+        "delete": "@request.auth.id != '' && user_id = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "arquivo",
+          "type": "file",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "nome_original",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tamanho",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "mime_type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "user_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_maestro_uploads_user ON maestro_uploads (user_id)",
+        "CREATE INDEX idx_maestro_uploads_created ON maestro_uploads (created DESC)"
+      ]
     }
   ]
 }

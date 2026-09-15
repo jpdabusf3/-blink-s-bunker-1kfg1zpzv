@@ -45,6 +45,7 @@ const HistoricoFunil = lazy(() => import('./pages/HistoricoFunil'))
 
 const Produtos = lazy(() => import('./pages/Produtos'))
 const Resumo = lazy(() => import('./pages/Resumo'))
+const Maestro = lazy(() => import('./pages/Maestro'))
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -134,6 +135,14 @@ const App = () => (
                       />
 
                       <Route path="/" element={<Index />} />
+                      <Route
+                        path="/maestro"
+                        element={
+                          <Suspense fallback={<PageSkeleton />}>
+                            <Maestro />
+                          </Suspense>
+                        }
+                      />
                       <Route path="/cadastro" element={<Cadastro />} />
                       <Route path="/mapa" element={<MapaClientes />} />
                       <Route path="/funil" element={<Funil />} />
