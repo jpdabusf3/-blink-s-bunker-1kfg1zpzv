@@ -17,7 +17,7 @@ import Login from './pages/Login'
 import { AppProvider } from './store/AppContext'
 import { AuthProvider } from './hooks/use-auth'
 import { I18nProvider } from './hooks/use-i18n'
-import { DataSyncProvider } from './hooks/useDataSync'
+import { RealtimeDataProvider } from './hooks/useRealtimeData'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import HistoricoVendas from './pages/HistoricoVendas'
 import Relatorios from './pages/Relatorios'
@@ -116,7 +116,7 @@ const App = () => (
       <AuthProvider>
         <I18nProvider>
           <AppProvider>
-            <DataSyncProvider>
+            <RealtimeDataProvider>
               <TooltipProvider>
                 <Toaster />
                 <Sonner />
@@ -204,7 +204,7 @@ const App = () => (
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </TooltipProvider>
-            </DataSyncProvider>
+            </RealtimeDataProvider>
           </AppProvider>
         </I18nProvider>
       </AuthProvider>
