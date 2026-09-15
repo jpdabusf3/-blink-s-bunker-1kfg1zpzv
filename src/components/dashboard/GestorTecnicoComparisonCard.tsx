@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
-import { useRealtime } from '@/hooks/use-realtime'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { fetchGestorComparison, type GestorRanking } from '@/services/consolidated-dashboard'
 import { formatCompactCurrency } from '@/lib/utils'
 import { Loader2, TrendingUp, TrendingDown, UserCog } from 'lucide-react'
@@ -22,8 +22,8 @@ export function GestorTecnicoComparisonCard() {
   useEffect(() => {
     loadData()
   }, [loadData])
-  useRealtime('metas', loadData)
-  useRealtime('historico_vendas', loadData)
+  useRealtimeData('metas', loadData)
+  useRealtimeData('historico_vendas', loadData)
 
   if (loading)
     return (

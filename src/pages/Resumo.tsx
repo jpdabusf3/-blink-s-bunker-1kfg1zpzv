@@ -64,7 +64,7 @@ import {
   type MonthCoverageExportItem,
   type ResumoPdfExportOptions,
 } from '@/lib/exportResumoVendas'
-import { useDataSync } from '@/hooks/useDataSync'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 
 interface MonthCoverageItem {
@@ -156,7 +156,7 @@ export default function Resumo() {
     isRefreshing,
     isError: error,
     refetch: loadData,
-  } = useDataSync<{
+  } = useRealtimeData<{
     resumo: ResumoVendasResponse
     coverage: MonthCoverageItem[]
   }>({

@@ -25,7 +25,7 @@ import {
   downloadFaturamentoTemplate,
   type FaturamentoImportResult,
 } from '@/services/import-faturamento'
-import { useDataSyncContext } from '@/hooks/useDataSync'
+import { useRealtimeDataContext } from '@/hooks/useRealtimeData'
 
 interface ImportarFaturamentoDialogProps {
   open: boolean
@@ -38,7 +38,7 @@ export function ImportarFaturamentoDialog({
   onOpenChange,
   onSuccess,
 }: ImportarFaturamentoDialogProps) {
-  const { notifyDataChanged } = useDataSyncContext()
+  const { notifyDataChanged } = useRealtimeDataContext()
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [progressText, setProgressText] = useState('')

@@ -17,7 +17,7 @@ import {
   getTeamPerformance,
   type TeamPerformance as TeamPerfData,
 } from '@/services/team-performance'
-import { useRealtime } from '@/hooks/use-realtime'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { Loader2, BarChart3, PieChart as PieChartIcon, Activity, Layers } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -53,7 +53,7 @@ export function TeamPerformanceDashboard() {
     loadData()
   }, [startDate, endDate])
 
-  useRealtime('activity_logs', loadData)
+  useRealtimeData('activity_logs', loadData)
 
   // Total de ações registradas na distribuição
   const totalActionsCount = useMemo(() => {

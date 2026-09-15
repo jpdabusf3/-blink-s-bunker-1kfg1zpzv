@@ -29,12 +29,14 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { useTheme } from 'next-themes'
 import { getNotifications, evaluateTargets, markNotificationAsRead } from '@/services/notifications'
 import { AppNotification } from '@/types'
-import { useRealtime } from '@/hooks/use-realtime'
+import { useRealtimeData, useRealtimeDataContext } from '@/hooks/useRealtimeData'
 import { useLogoUrl } from '@/hooks/use-logo-url'
 import { useNavigate } from 'react-router-dom'
+import { RefreshCw } from 'lucide-react'
 
 export function AppHeader() {
   const { factories, tasks, isOnline } = useAppContext()
+  const { isReconnecting } = useRealtimeDataContext()
   const { t: tr } = useI18n()
   const [open, setOpen] = useState(false)
   const [dbNotifications, setDbNotifications] = useState<AppNotification[]>([])
@@ -60,10 +62,10 @@ export function AppHeader() {
     loadNotifications()
   }, [])
 
-  useRealtime('orders', () => {
+  useRealtimeData('orders', () => {
     loadNotifications()
   })
-  useRealtime('notifications', () => {
+  useRealtimeData('notifications', () => {
     loadNotifications()
   })
 
@@ -196,6 +198,15 @@ export function AppHeader() {
             <WifiOff className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{tr('hdr.offline')}</span>
             <span className="sm:hidden">{tr('hdr.offlineS')}</span>
+          </div>
+        )}
+        {isReconnecting && (
+          <div
+            className="flex items-center gap-1.5 text-[11px] font-medium text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-md ml-2 animate-pulse"
+            title="Reconexão com o servidor em andamento"
+          >
+            <RefreshCw className="w-3 h-3 animate-spin text-amber-600 dark:text-amber-400" />
+            <span>Reconectando...</span>
           </div>
         )}
       </div>

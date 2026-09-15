@@ -6,7 +6,7 @@ import { useAppContext } from '@/store/AppContext'
 import { getOrders } from '@/services/orders'
 import { getTargets } from '@/services/targets'
 import { Order, Target } from '@/types'
-import { useRealtime } from '@/hooks/use-realtime'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 
 const REGIONS = ['Norte', 'Sul', 'Leste', 'Oeste', 'Médio-Norte']
 
@@ -29,8 +29,8 @@ export function GlobalRankingCard() {
     loadData()
   }, [])
 
-  useRealtime('orders', loadData)
-  useRealtime('targets', loadData)
+  useRealtimeData('orders', loadData)
+  useRealtimeData('targets', loadData)
 
   const chartData = useMemo(() => {
     return REGIONS.map((region) => {

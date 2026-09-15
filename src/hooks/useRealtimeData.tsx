@@ -195,6 +195,19 @@ export function RealtimeDataProvider({ children }: { children: ReactNode }) {
         details,
       }
       emitRealtimeEvent(event)
+
+      // Também emite o CustomEvent na window para garantir que instâncias/listeners fora da árvore React recebam imediatamente
+      if (typeof window !== 'undefined') {
+        try {
+          window.dispatchEvent(
+            new CustomEvent('blink:datasync', {
+              detail: { collection: norm, entity: norm, ...details },
+            }),
+          )
+        } catch {
+          // ignore
+        }
+      }
     },
     [emitRealtimeEvent],
   )

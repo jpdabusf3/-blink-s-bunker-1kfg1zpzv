@@ -35,7 +35,7 @@ import {
   type ResumoVendasParams,
 } from '@/services/resumo-vendas'
 import { familiaCompleta } from '@/constants/familiaProdutos'
-import { useDataSync } from '@/hooks/useDataSync'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 
 type PeriodKey = 'week_current' | 'month_current' | 'month_previous'
@@ -98,7 +98,7 @@ export function ResumoVendasTab() {
     isRefreshing,
     isError,
     refetch,
-  } = useDataSync<ResumoVendasResponse>({
+  } = useRealtimeData<ResumoVendasResponse>({
     entities: ['faturamento', 'historico_vendas', 'pedidos_carteira', 'factories'],
     fetcher: fetchResumo,
   })

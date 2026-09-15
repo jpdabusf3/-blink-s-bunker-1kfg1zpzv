@@ -55,7 +55,7 @@ import { VendaForm } from '@/components/VendaForm'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Sparkles, Layers } from 'lucide-react'
 import { getNfePedidos } from '@/services/nfe-service'
-import { useDataSync } from '@/hooks/useDataSync'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 
 export default function Pedidos() {
@@ -80,7 +80,7 @@ export default function Pedidos() {
     isLoading: loading,
     isError,
     refetch: loadData,
-  } = useDataSync<{
+  } = useRealtimeData<{
     pedidos: HistoricoVenda[]
     pendentesCount: number
   }>({

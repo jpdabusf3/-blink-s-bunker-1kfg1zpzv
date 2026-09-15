@@ -17,7 +17,7 @@ import { useAppContext } from '@/store/AppContext'
 import { getOrders } from '@/services/orders'
 import { getTargets } from '@/services/targets'
 import { Order, Target } from '@/types'
-import { useRealtime } from '@/hooks/use-realtime'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { normalizeArray } from '@/lib/utils'
 
 const COLORS = [
@@ -47,8 +47,8 @@ export function DashboardCharts({ regionFilter = 'Todas as Regiões' }: { region
     loadData()
   }, [])
 
-  useRealtime('orders', loadData)
-  useRealtime('targets', loadData)
+  useRealtimeData('orders', loadData)
+  useRealtimeData('targets', loadData)
 
   const filteredFactories =
     regionFilter === 'Todas as Regiões'

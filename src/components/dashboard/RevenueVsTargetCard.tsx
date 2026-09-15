@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { getOrders } from '@/services/orders'
 import { getTargets } from '@/services/targets'
 import { Order, Target } from '@/types'
-import { useRealtime } from '@/hooks/use-realtime'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { formatCompactCurrency } from '@/lib/utils'
 
 export function RevenueVsTargetCard() {
@@ -24,8 +24,8 @@ export function RevenueVsTargetCard() {
     loadData()
   }, [])
 
-  useRealtime('orders', loadData)
-  useRealtime('targets', loadData)
+  useRealtimeData('orders', loadData)
+  useRealtimeData('targets', loadData)
 
   const { totalRevenue, totalTarget, percentage } = useMemo(() => {
     const revenue = orders.reduce((s, o) => s + o.totalValue, 0)

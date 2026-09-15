@@ -67,7 +67,7 @@ import {
 } from '@/lib/funnel-status'
 import { factoryMatchesVendedor } from '@/lib/vendedorFilterHelper'
 import { CANONICAL_SPECIES } from '@/components/FactoryForm'
-import { useDataSync } from '@/hooks/useDataSync'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 
 export type { FunilVendasStatus }
@@ -146,7 +146,7 @@ export default function FunilVendas() {
     isError,
     refetch,
     setData: setSyncData,
-  } = useDataSync<{
+  } = useRealtimeData<{
     factories: Factory[]
     vendedores: GestaoTecnica[]
     dashboardData: ConsolidatedData | null

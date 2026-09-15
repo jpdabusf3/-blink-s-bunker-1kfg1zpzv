@@ -317,6 +317,21 @@ export async function executeImportInvoices(
     console.warn('Erro ao registrar log de importação:', logErr)
   }
 
+  if (typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(
+        new CustomEvent('blink:datasync', { detail: { entity: 'notas_fiscais' } }),
+      )
+      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'faturamento' } }))
+      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'factories' } }))
+      window.dispatchEvent(
+        new CustomEvent('blink:datasync', { detail: { entity: 'activity_logs' } }),
+      )
+    } catch {
+      // ignore
+    }
+  }
+
   return {
     success: inserted > 0 || invoices.length === skippedDuplicates,
     inserted,
@@ -376,6 +391,17 @@ export async function executeRegisterClients(
     }
   } catch (logErr) {
     console.warn('Erro ao registrar log de clientes:', logErr)
+  }
+
+  if (typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'factories' } }))
+      window.dispatchEvent(
+        new CustomEvent('blink:datasync', { detail: { entity: 'activity_logs' } }),
+      )
+    } catch {
+      // ignore
+    }
   }
 
   return {
@@ -442,6 +468,21 @@ export async function executeImportSales(
     }
   } catch (logErr) {
     console.warn('Erro ao registrar log de vendas:', logErr)
+  }
+
+  if (typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'faturamento' } }))
+      window.dispatchEvent(
+        new CustomEvent('blink:datasync', { detail: { entity: 'historico_vendas' } }),
+      )
+      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'factories' } }))
+      window.dispatchEvent(
+        new CustomEvent('blink:datasync', { detail: { entity: 'activity_logs' } }),
+      )
+    } catch {
+      // ignore
+    }
   }
 
   return {

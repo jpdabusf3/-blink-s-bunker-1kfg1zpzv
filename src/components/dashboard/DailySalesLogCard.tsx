@@ -11,7 +11,7 @@ import {
 import { useAppContext } from '@/store/AppContext'
 import { getOrders } from '@/services/orders'
 import { Order } from '@/types'
-import { useRealtime } from '@/hooks/use-realtime'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { formatCurrency } from '@/lib/utils'
 
 export function DailySalesLogCard({
@@ -34,7 +34,7 @@ export function DailySalesLogCard({
     loadData()
   }, [])
 
-  useRealtime('orders', loadData)
+  useRealtimeData('orders', loadData)
 
   const filteredOrders = useMemo(() => {
     let res = [...orders]

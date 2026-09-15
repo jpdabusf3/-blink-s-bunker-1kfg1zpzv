@@ -131,11 +131,29 @@ export async function uploadPedidoPdf(
   pdfText: string,
   rows: Record<string, unknown>[],
 ): Promise<UploadPedidoResult & { campos_ausentes?: string[] }> {
-  return pb.send('/backend/v1/processar-pedido-pdf', {
-    method: 'POST',
-    body: JSON.stringify({ pdfText, rows }),
-    headers: { 'Content-Type': 'application/json' },
-  })
+  const res = await pb.send<UploadPedidoResult & { campos_ausentes?: string[] }>(
+    '/backend/v1/processar-pedido-pdf',
+    {
+      method: 'POST',
+      body: JSON.stringify({ pdfText, rows }),
+      headers: { 'Content-Type': 'application/json' },
+    },
+  )
+  if (typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(
+        new CustomEvent('blink:datasync', { detail: { entity: 'historico_vendas' } }),
+      )
+      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'faturamento' } }))
+      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'pedidos' } }))
+      window.dispatchEvent(
+        new CustomEvent('blink:datasync', { detail: { entity: 'activity_logs' } }),
+      )
+    } catch {
+      // ignore
+    }
+  }
+  return res
 }
 
 export async function uploadPedido(file: File): Promise<UploadPedidoResult> {
@@ -146,11 +164,26 @@ export async function uploadPedido(file: File): Promise<UploadPedidoResult> {
   const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[sheetName], {
     defval: '',
   })
-  return pb.send('/backend/v1/upload-pedido', {
+  const res = await pb.send<UploadPedidoResult>('/backend/v1/upload-pedido', {
     method: 'POST',
     body: JSON.stringify({ rows }),
     headers: { 'Content-Type': 'application/json' },
   })
+  if (typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(
+        new CustomEvent('blink:datasync', { detail: { entity: 'historico_vendas' } }),
+      )
+      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'faturamento' } }))
+      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'pedidos' } }))
+      window.dispatchEvent(
+        new CustomEvent('blink:datasync', { detail: { entity: 'activity_logs' } }),
+      )
+    } catch {
+      // ignore
+    }
+  }
+  return res
 }
 
 export function downloadPedidoModel(): void {

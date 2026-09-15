@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useAppContext } from '@/store/AppContext'
-import { useRealtime } from '@/hooks/use-realtime'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -70,7 +70,7 @@ export function GeographicOverview() {
     status: 'all',
   })
 
-  useRealtime('factories', () => setTick((t) => t + 1))
+  useRealtimeData('factories', () => setTick((t) => t + 1))
 
   const countries = useMemo(
     () => Array.from(new Set(factories.map((f) => f.country).filter(Boolean))),

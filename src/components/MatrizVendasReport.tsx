@@ -21,7 +21,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { ChartContainer } from '@/components/ui/chart'
 import { Loader2, Plus, Pencil, TrendingUp } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-import { useRealtime } from '@/hooks/use-realtime'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { getMatrizVendas, type MatrizVenda } from '@/services/matriz-vendas'
 import { getVendedoresGestao, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { MatrizVendaForm } from '@/components/MatrizVendaForm'
@@ -92,7 +92,7 @@ export function MatrizVendasReport() {
       .catch(() => {})
   }, [])
 
-  useRealtime('matriz_vendas', () => loadData())
+  useRealtimeData('matriz_vendas', () => loadData())
 
   const filtered = useMemo(
     () =>

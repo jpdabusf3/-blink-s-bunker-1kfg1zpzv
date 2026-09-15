@@ -59,7 +59,7 @@ import { UploadPedidoDialog } from '@/components/UploadPedidoDialog'
 import { UploadNfeDialog } from '@/components/UploadNfeDialog'
 import { ResumoVendasTab } from '@/components/historico/ResumoVendasTab'
 import { ImportarFaturamentoDialog } from '@/components/ImportarFaturamentoDialog'
-import { useDataSync } from '@/hooks/useDataSync'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 
 export default function HistoricoVendas() {
@@ -78,8 +78,8 @@ export default function HistoricoVendas() {
     isLoading: loading,
     isError,
     refetch: loadData,
-  } = useDataSync<{
-    vendas: HistoricoVenda[]
+  } = useRealtimeData<{
+    items: HistoricoVenda[]
     vendedores: GestaoTecnica[]
   }>({
     entities: ['historico_vendas', 'faturamento', 'gestao_tecnica'],

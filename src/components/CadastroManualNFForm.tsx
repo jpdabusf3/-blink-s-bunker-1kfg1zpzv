@@ -28,7 +28,7 @@ import {
   BLINK_CANAL_MANUAL_OPTIONS,
 } from '@/constants/blinkProducts'
 import { formatCurrency } from '@/lib/utils'
-import { useDataSyncContext } from '@/hooks/useDataSync'
+import { useRealtimeDataContext } from '@/hooks/useRealtimeData'
 
 interface CadastroManualNFFormProps {
   onSuccess?: () => void
@@ -36,7 +36,7 @@ interface CadastroManualNFFormProps {
 }
 
 export function CadastroManualNFForm({ onSuccess, onCancel }: CadastroManualNFFormProps) {
-  const { notifyDataChanged } = useDataSyncContext()
+  const { notifyDataChanged } = useRealtimeDataContext()
   const {
     form,
     errors,

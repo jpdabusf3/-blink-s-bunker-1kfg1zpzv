@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useDataSync } from '@/hooks/useDataSync'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 
 interface ConsolidatedDashboardProps {
@@ -33,7 +33,7 @@ export function ConsolidatedDashboard({
     isLoading: loading,
     isError,
     refetch: loadData,
-  } = useDataSync<ConsolidatedData>({
+  } = useRealtimeData<ConsolidatedData>({
     entities: ['metas', 'historico_vendas', 'factories', 'faturamento'],
     fetcher: async () => await fetchConsolidatedData(),
   })

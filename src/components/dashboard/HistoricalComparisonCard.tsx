@@ -13,7 +13,7 @@ import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { useAppContext } from '@/store/AppContext'
 import { getOrders } from '@/services/orders'
 import { getTargets } from '@/services/targets'
-import { useRealtime } from '@/hooks/use-realtime'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { formatCompactCurrency } from '@/lib/utils'
 import type { Order, Target } from '@/types'
 import { computeComparisons, computeYoYDelta, getMonthName } from '@/lib/historical-comparison'
@@ -45,8 +45,8 @@ export function HistoricalComparisonCard({
   useEffect(() => {
     loadData()
   }, [])
-  useRealtime('orders', loadData)
-  useRealtime('targets', loadData)
+  useRealtimeData('orders', loadData)
+  useRealtimeData('targets', loadData)
 
   const comparisons = useMemo(
     () =>

@@ -33,11 +33,10 @@ import { ConsolidatedDashboard } from '@/components/dashboard/ConsolidatedDashbo
 import { GestorTecnicoComparisonCard } from '@/components/dashboard/GestorTecnicoComparisonCard'
 import { DashboardCustomizer } from '@/components/dashboard/DashboardCustomizer'
 import { useDashboardPreferences } from '@/hooks/use-dashboard-preferences'
-import { useRealtime } from '@/hooks/use-realtime'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { UserFilter } from '@/components/UserFilter'
 import { testIntegration } from '@/services/integration-test'
 import { toast } from 'sonner'
-import { useDataSync } from '@/hooks/useDataSync'
 import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
@@ -120,7 +119,7 @@ export default function Index() {
     isLoading: isSyncLoading,
     isError: isSyncError,
     refetch: refetchSync,
-  } = useDataSync<{ loaded: boolean }>({
+  } = useRealtimeData<{ loaded: boolean }>({
     entities: ['factories', 'metas', 'historico_vendas', 'pedidos_carteira', 'faturamento'],
     fetcher: async () => ({ loaded: true }),
     initialData: { loaded: true },
@@ -147,7 +146,7 @@ export default function Index() {
     refreshPreferences,
   } = useDashboardPreferences()
 
-  useRealtime('dashboard_preferences', refreshPreferences)
+  useRealtimeData('dashboard_preferences', refreshPreferences)
 
   const moveBlock = useCallback(
     (fromIndex: number, toIndex: number) => {

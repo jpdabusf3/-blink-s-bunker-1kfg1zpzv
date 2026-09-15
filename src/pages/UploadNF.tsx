@@ -44,7 +44,7 @@ import {
 } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
 import { useUploadNF, type UploadFileItem } from '@/hooks/useUploadNF'
-import { useDataSyncContext } from '@/hooks/useDataSync'
+import { useRealtimeDataContext } from '@/hooks/useRealtimeData'
 import {
   ESPECIE_DESTINO_OPTIONS,
   CANAL_VENDAS_OPTIONS,
@@ -55,7 +55,7 @@ import { formatCurrency, normalizeNumberBR } from '@/lib/utils'
 
 export function UploadNF() {
   const { toast } = useToast()
-  const { notifyDataChanged } = useDataSyncContext()
+  const { notifyDataChanged } = useRealtimeDataContext()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [mode, setMode] = useState<'upload' | 'manual'>('upload')
   const [isDragging, setIsDragging] = useState(false)

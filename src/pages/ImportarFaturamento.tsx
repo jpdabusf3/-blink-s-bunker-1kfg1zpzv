@@ -51,10 +51,10 @@ import {
   type FaturamentoFieldKey,
   type FaturamentoImportResult,
 } from '@/services/import-faturamento'
-import { useDataSyncContext } from '@/hooks/useDataSync'
+import { useRealtimeDataContext } from '@/hooks/useRealtimeData'
 
 export default function ImportarFaturamento() {
-  const { notifyDataChanged } = useDataSyncContext()
+  const { notifyDataChanged } = useRealtimeDataContext()
   const [file, setFile] = useState<File | null>(null)
   const [sheetHeaders, setSheetHeaders] = useState<string[]>([])
   const [previewRows, setPreviewRows] = useState<Record<string, unknown>[]>([])

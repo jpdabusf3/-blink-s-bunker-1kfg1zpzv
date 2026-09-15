@@ -77,7 +77,7 @@ import {
 } from '@/services/gestao-tecnica'
 import { formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
-import { useRealtime } from '@/hooks/use-realtime'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 
 interface NfeReviewQueueProps {
   onPedidoAprovado?: () => void
@@ -128,7 +128,7 @@ export function NfeReviewQueue({ onPedidoAprovado, onOpenUpload }: NfeReviewQueu
     loadData()
   }, [loadData])
 
-  useRealtime('nfe_pedidos', loadData)
+  useRealtimeData('nfe_pedidos', loadData)
 
   const filteredPedidos = useMemo(() => {
     return pedidos.filter((p) => {

@@ -19,7 +19,7 @@ import { getMetas, createMeta, updateMeta, deleteMeta, type Meta } from '@/servi
 import { MetaForm, type MetaFormValues } from '@/components/MetaForm'
 import { MetasMatrix } from '@/components/MetasMatrix'
 import { exportMetasBalancoPDF, logMetasBalancoExport, buildMetasMatrix } from '@/lib/exportMetas'
-import { useDataSync } from '@/hooks/useDataSync'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 
 export default function Metas() {
@@ -36,7 +36,7 @@ export default function Metas() {
     isLoading: loading,
     isError,
     refetch: loadData,
-  } = useDataSync<{
+  } = useRealtimeData<{
     metas: Meta[]
     vendedores: GestaoTecnica[]
   }>({

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getActivityLogsByRecord } from '@/services/activity-logs'
-import { useRealtime } from '@/hooks/use-realtime'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { ActivityLog } from '@/types'
 import {
   Table,
@@ -44,7 +44,7 @@ export function FactoryChangeLog({ factoryId }: { factoryId: string }) {
     loadLogs()
   }, [factoryId])
 
-  useRealtime('activity_logs', loadLogs)
+  useRealtimeData('activity_logs', loadLogs)
 
   if (loading) {
     return (

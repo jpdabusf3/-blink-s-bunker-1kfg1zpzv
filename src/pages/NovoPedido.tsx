@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { usePedidoVenda } from '@/hooks/usePedidoVenda'
 import type { PedidoFormData } from '@/services/pedidoService'
 import { toast } from '@/hooks/use-toast'
-import { useDataSyncContext } from '@/hooks/useDataSync'
+import { useRealtimeDataContext } from '@/hooks/useRealtimeData'
 import {
   FilePlus,
   Download,
@@ -61,7 +61,7 @@ function formatBRL(value: number): string {
 
 export default function NovoPedido() {
   const { user } = useAuth()
-  const { notifyDataChanged } = useDataSyncContext()
+  const { notifyDataChanged } = useRealtimeDataContext()
   const {
     produtos,
     gestoresTecnicos,

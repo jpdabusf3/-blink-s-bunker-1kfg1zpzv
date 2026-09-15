@@ -6,7 +6,7 @@ import { useAppContext } from '@/store/AppContext'
 import { getMetas, type Meta } from '@/services/metas'
 import { getHistoricoVendas, type HistoricoVenda } from '@/services/historico-vendas'
 import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
-import { useRealtime } from '@/hooks/use-realtime'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { formatCompactCurrency, formatCurrency } from '@/lib/utils'
 import { deriveFunilVendasStatus, FUNNEL_STAGES_PERMITIDOS } from '@/lib/funnel-status'
 
@@ -33,13 +33,13 @@ export function ExecutiveDashboardCard() {
   useEffect(() => {
     loadData()
   }, [])
-  useRealtime('metas', () => {
+  useRealtimeData('metas', () => {
     loadData()
   })
-  useRealtime('historico_vendas', () => {
+  useRealtimeData('historico_vendas', () => {
     loadData()
   })
-  useRealtime('factories', () => {
+  useRealtimeData('factories', () => {
     loadData()
   })
 
