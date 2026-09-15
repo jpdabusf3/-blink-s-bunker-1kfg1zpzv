@@ -43,6 +43,7 @@ const Historico = lazy(() => import('./pages/Historico'))
 const HistoricoFunil = lazy(() => import('./pages/HistoricoFunil'))
 
 const Produtos = lazy(() => import('./pages/Produtos'))
+const Resumo = lazy(() => import('./pages/Resumo'))
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -160,6 +161,14 @@ const App = () => (
                       element={
                         <Suspense fallback={<PageSkeleton />}>
                           <Produtos />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/resumo"
+                      element={
+                        <Suspense fallback={<PageSkeleton />}>
+                          <Resumo />
                         </Suspense>
                       }
                     />

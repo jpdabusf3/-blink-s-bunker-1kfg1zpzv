@@ -51,6 +51,7 @@ export function AppSidebar() {
     { name: 'Implantação de Novos Pedidos', path: '/pedidos', icon: ShoppingCart, badge: 'NF' },
     { name: 'Upload NF', path: '/upload-nf', icon: Upload },
     { name: 'Produtos', path: '/produtos', icon: Package },
+    { name: 'Resumo', path: '/resumo', icon: BarChart2 },
     { name: 'Histórico', path: '/historico', icon: TrendingUp },
     { name: 'Histórico de Vendas', path: '/historico-vendas', icon: TrendingUp },
     { name: t('nav.swot'), path: '/swot', icon: Target },
