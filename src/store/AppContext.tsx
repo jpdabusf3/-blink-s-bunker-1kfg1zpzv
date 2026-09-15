@@ -111,6 +111,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   useRealtime('factories', refreshFactories, isAuthenticated && !authLoading)
 
   const addFactory = (data: Partial<Factory>) => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'factories' } }))
+    }
     const newFactory: Factory = {
       id: Math.random().toString(36).substr(2, 9),
       name: data.name || '',
@@ -160,10 +163,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const updateFactory = (id: string, data: Partial<Factory>) => {
     setFactories((prev) => prev.map((f) => (f.id === id ? { ...f, ...data } : f)))
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'factories' } }))
+    }
   }
 
   const deleteFactory = (id: string) => {
     setFactories((prev) => prev.filter((f) => f.id !== id))
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'factories' } }))
+    }
   }
 
   const addTask = (data: Omit<Task, 'id' | 'createdAt'>) => {
@@ -202,6 +211,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       orderDate: new Date().toISOString(),
     }
     setOrders((prev) => [newOrder, ...prev])
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'pedidos' } }))
+    }
   }
 
   const updateOrder = (id: string, data: Partial<Order>) => {
@@ -215,10 +227,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return o
       }),
     )
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'pedidos' } }))
+    }
   }
 
   const deleteOrder = (id: string) => {
     setOrders((prev) => prev.filter((o) => o.id !== id))
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'pedidos' } }))
+    }
   }
 
   return (

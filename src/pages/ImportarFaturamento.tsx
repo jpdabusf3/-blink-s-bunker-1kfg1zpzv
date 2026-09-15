@@ -51,8 +51,10 @@ import {
   type FaturamentoFieldKey,
   type FaturamentoImportResult,
 } from '@/services/import-faturamento'
+import { useDataSyncContext } from '@/hooks/useDataSync'
 
 export default function ImportarFaturamento() {
+  const { notifyDataChanged } = useDataSyncContext()
   const [file, setFile] = useState<File | null>(null)
   const [sheetHeaders, setSheetHeaders] = useState<string[]>([])
   const [previewRows, setPreviewRows] = useState<Record<string, unknown>[]>([])
@@ -175,6 +177,10 @@ export default function ImportarFaturamento() {
         toast.success(
           `Importação concluída com sucesso! ${res.criados} pedidos gravados e ${res.clientesAtualizadosNoCRM} clientes atualizados.`,
         )
+        // Notifica central de sincronização
+        notifyDataChanged('faturamento')
+        notifyDataChanged('historico_vendas')
+        notifyDataChanged('factories')
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao processar importação no servidor'

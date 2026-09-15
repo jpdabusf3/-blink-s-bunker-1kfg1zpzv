@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { usePedidoVenda } from '@/hooks/usePedidoVenda'
 import type { PedidoFormData } from '@/services/pedidoService'
 import { toast } from '@/hooks/use-toast'
+import { useDataSyncContext } from '@/hooks/useDataSync'
 import {
   FilePlus,
   Download,
@@ -60,6 +61,7 @@ function formatBRL(value: number): string {
 
 export default function NovoPedido() {
   const { user } = useAuth()
+  const { notifyDataChanged } = useDataSyncContext()
   const {
     produtos,
     gestoresTecnicos,
@@ -453,6 +455,12 @@ export default function NovoPedido() {
         title: 'Pedido gerado com sucesso!',
         description: 'O documento .docx foi gerado e baixado automaticamente.',
       })
+
+      // Notifica todo o sistema sobre novo pedido e atualização de clientes
+      notifyDataChanged('pedidos')
+      notifyDataChanged('pedidos_carteira')
+      notifyDataChanged('faturamento')
+      notifyDataChanged('factories')
     } catch (err: any) {
       console.error('Erro completo na geração do documento Word:', err)
       toast({

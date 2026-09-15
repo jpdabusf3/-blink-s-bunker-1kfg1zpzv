@@ -17,6 +17,7 @@ import Login from './pages/Login'
 import { AppProvider } from './store/AppContext'
 import { AuthProvider } from './hooks/use-auth'
 import { I18nProvider } from './hooks/use-i18n'
+import { DataSyncProvider } from './hooks/useDataSync'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import HistoricoVendas from './pages/HistoricoVendas'
 import Relatorios from './pages/Relatorios'
@@ -114,85 +115,87 @@ const App = () => (
       <AuthProvider>
         <I18nProvider>
           <AppProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <Routes>
-                <Route path="/login" element={<Login />} />
+            <DataSyncProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <Routes>
+                  <Route path="/login" element={<Login />} />
 
-                <Route element={<ProtectedRoute />}>
-                  <Route element={<Layout />}>
-                    <Route
-                      path="/historico-funil"
-                      element={
-                        <Suspense fallback={<PageSkeleton />}>
-                          <HistoricoFunil />
-                        </Suspense>
-                      }
-                    />
+                  <Route element={<ProtectedRoute />}>
+                    <Route element={<Layout />}>
+                      <Route
+                        path="/historico-funil"
+                        element={
+                          <Suspense fallback={<PageSkeleton />}>
+                            <HistoricoFunil />
+                          </Suspense>
+                        }
+                      />
 
-                    <Route path="/" element={<Index />} />
-                    <Route path="/cadastro" element={<Cadastro />} />
-                    <Route path="/mapa" element={<MapaClientes />} />
-                    <Route path="/funil" element={<Funil />} />
-                    <Route path="/funil-vendas" element={<FunilVendas />} />
-                    <Route path="/swot" element={<SWOT />} />
-                    <Route path="/matriz" element={<Matriz />} />
-                    <Route
-                      path="/upload-nf"
-                      element={
-                        <RouteErrorBoundary>
-                          <UploadNF />
-                        </RouteErrorBoundary>
-                      }
-                    />
-                    <Route
-                      path="/historico"
-                      element={
-                        <Suspense fallback={<PageSkeleton />}>
-                          <Historico />
-                        </Suspense>
-                      }
-                    />
-                    <Route path="/pedidos" element={<Pedidos />} />
-                    <Route path="/novo-pedido" element={<NovoPedido />} />
-                    <Route
-                      path="/produtos"
-                      element={
-                        <Suspense fallback={<PageSkeleton />}>
-                          <Produtos />
-                        </Suspense>
-                      }
-                    />
-                    <Route
-                      path="/resumo"
-                      element={
-                        <Suspense fallback={<PageSkeleton />}>
-                          <Resumo />
-                        </Suspense>
-                      }
-                    />
-                    <Route path="/historico-vendas" element={<HistoricoVendas />} />
-                    <Route path="/metas" element={<Metas />} />
-                    <Route path="/relatorios" element={<Relatorios />} />
-                    <Route path="/relatorios-automaticos" element={<RelatoriosAutomaticos />} />
-                    <Route path="/atividades" element={<Atividades />} />
-                    <Route path="/importar-clientes" element={<ImportarClientes />} />
-                    <Route path="/importar-faturamento" element={<ImportarFaturamento />} />
-                    <Route path="/relatorio-atividades" element={<RelatorioAtividades />} />
-                    <Route path="/relatorio-performance" element={<PerformanceReport />} />
-                    <Route path="/usuarios" element={<UsersPage />} />
-                    <Route path="/documentos" element={<Documents />} />
-                    <Route element={<SuperAdminRoute />}>
-                      <Route path="/equipe" element={<TeamManagement />} />
-                      <Route path="/admin/logs" element={<AdminLogs />} />
+                      <Route path="/" element={<Index />} />
+                      <Route path="/cadastro" element={<Cadastro />} />
+                      <Route path="/mapa" element={<MapaClientes />} />
+                      <Route path="/funil" element={<Funil />} />
+                      <Route path="/funil-vendas" element={<FunilVendas />} />
+                      <Route path="/swot" element={<SWOT />} />
+                      <Route path="/matriz" element={<Matriz />} />
+                      <Route
+                        path="/upload-nf"
+                        element={
+                          <RouteErrorBoundary>
+                            <UploadNF />
+                          </RouteErrorBoundary>
+                        }
+                      />
+                      <Route
+                        path="/historico"
+                        element={
+                          <Suspense fallback={<PageSkeleton />}>
+                            <Historico />
+                          </Suspense>
+                        }
+                      />
+                      <Route path="/pedidos" element={<Pedidos />} />
+                      <Route path="/novo-pedido" element={<NovoPedido />} />
+                      <Route
+                        path="/produtos"
+                        element={
+                          <Suspense fallback={<PageSkeleton />}>
+                            <Produtos />
+                          </Suspense>
+                        }
+                      />
+                      <Route
+                        path="/resumo"
+                        element={
+                          <Suspense fallback={<PageSkeleton />}>
+                            <Resumo />
+                          </Suspense>
+                        }
+                      />
+                      <Route path="/historico-vendas" element={<HistoricoVendas />} />
+                      <Route path="/metas" element={<Metas />} />
+                      <Route path="/relatorios" element={<Relatorios />} />
+                      <Route path="/relatorios-automaticos" element={<RelatoriosAutomaticos />} />
+                      <Route path="/atividades" element={<Atividades />} />
+                      <Route path="/importar-clientes" element={<ImportarClientes />} />
+                      <Route path="/importar-faturamento" element={<ImportarFaturamento />} />
+                      <Route path="/relatorio-atividades" element={<RelatorioAtividades />} />
+                      <Route path="/relatorio-performance" element={<PerformanceReport />} />
+                      <Route path="/usuarios" element={<UsersPage />} />
+                      <Route path="/documentos" element={<Documents />} />
+                      <Route element={<SuperAdminRoute />}>
+                        <Route path="/equipe" element={<TeamManagement />} />
+                        <Route path="/admin/logs" element={<AdminLogs />} />
+                      </Route>
                     </Route>
                   </Route>
-                </Route>
 
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </TooltipProvider>
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </TooltipProvider>
+            </DataSyncProvider>
           </AppProvider>
         </I18nProvider>
       </AuthProvider>

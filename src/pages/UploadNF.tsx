@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
 import { useUploadNF, type UploadFileItem } from '@/hooks/useUploadNF'
+import { useDataSyncContext } from '@/hooks/useDataSync'
 import {
   ESPECIE_DESTINO_OPTIONS,
   CANAL_VENDAS_OPTIONS,
@@ -54,6 +55,7 @@ import { formatCurrency, normalizeNumberBR } from '@/lib/utils'
 
 export function UploadNF() {
   const { toast } = useToast()
+  const { notifyDataChanged } = useDataSyncContext()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [mode, setMode] = useState<'upload' | 'manual'>('upload')
   const [isDragging, setIsDragging] = useState(false)
@@ -147,6 +149,10 @@ export function UploadNF() {
         title: 'Sucesso!',
         description: `Nota fiscal ${fileItem.extractedData?.numero_nf || ''} importada com sucesso!`,
       })
+      notifyDataChanged('notas_fiscais')
+      notifyDataChanged('nfe_pedidos')
+      notifyDataChanged('faturamento')
+      notifyDataChanged('factories')
       // If there are other ready files, jump to next or summary
       const nextIndex = files.findIndex((f) => f.id !== fileItem.id && f.status === 'ready')
       if (nextIndex !== -1) {
@@ -168,6 +174,7 @@ export function UploadNF() {
         title: 'Rascunho salvo',
         description: `Nota fiscal ${fileItem.extractedData?.numero_nf || ''} salva como rascunho.`,
       })
+      notifyDataChanged('notas_fiscais')
       const nextIndex = files.findIndex((f) => f.id !== fileItem.id && f.status === 'ready')
       if (nextIndex !== -1) {
         setCurrentFileIndex(nextIndex)

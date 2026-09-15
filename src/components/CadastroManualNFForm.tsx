@@ -28,6 +28,7 @@ import {
   BLINK_CANAL_MANUAL_OPTIONS,
 } from '@/constants/blinkProducts'
 import { formatCurrency } from '@/lib/utils'
+import { useDataSyncContext } from '@/hooks/useDataSync'
 
 interface CadastroManualNFFormProps {
   onSuccess?: () => void
@@ -35,6 +36,7 @@ interface CadastroManualNFFormProps {
 }
 
 export function CadastroManualNFForm({ onSuccess, onCancel }: CadastroManualNFFormProps) {
+  const { notifyDataChanged } = useDataSyncContext()
   const {
     form,
     errors,
@@ -52,7 +54,12 @@ export function CadastroManualNFForm({ onSuccess, onCancel }: CadastroManualNFFo
     removeItem,
     updateItem,
     handleSubmit,
-  } = useNFManualForm(onSuccess)
+  } = useNFManualForm(() => {
+    notifyDataChanged('notas_fiscais')
+    notifyDataChanged('faturamento')
+    notifyDataChanged('factories')
+    if (onSuccess) onSuccess()
+  })
 
   const formatMoneyInput = (val: string): string => {
     if (!val) return ''

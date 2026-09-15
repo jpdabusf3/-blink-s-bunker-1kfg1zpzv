@@ -25,6 +25,7 @@ import {
   downloadFaturamentoTemplate,
   type FaturamentoImportResult,
 } from '@/services/import-faturamento'
+import { useDataSyncContext } from '@/hooks/useDataSync'
 
 interface ImportarFaturamentoDialogProps {
   open: boolean
@@ -37,6 +38,7 @@ export function ImportarFaturamentoDialog({
   onOpenChange,
   onSuccess,
 }: ImportarFaturamentoDialogProps) {
+  const { notifyDataChanged } = useDataSyncContext()
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [progressText, setProgressText] = useState('')
@@ -137,6 +139,11 @@ export function ImportarFaturamentoDialog({
         title: 'Importação concluída',
         description: `Importação concluída: ${totalImportados} registros, ${totalDuplicados} duplicados ignorados.`,
       })
+
+      // Notifica todos os componentes para atualizar em tempo real
+      notifyDataChanged('faturamento')
+      notifyDataChanged('historico_vendas')
+      notifyDataChanged('factories')
 
       if (onSuccess) {
         onSuccess()

@@ -113,11 +113,6 @@ export default function Resumo() {
   const [selectedMonth, setSelectedMonth] = useState<number>(currentMonth)
   const [selectedWeek, setSelectedWeek] = useState<number>(currentIsoWeek)
 
-  // Estados dos dados e UI
-  const [loading, setLoading] = useState<boolean>(true)
-  const [error, setError] = useState<boolean>(false)
-  const [data, setData] = useState<ResumoVendasResponse | null>(null)
-  const [coverageData, setCoverageData] = useState<MonthCoverageItem[]>([])
   const [clientsPage, setClientsPage] = useState<number>(1)
   const [familiesPage, setFamiliesPage] = useState<number>(1)
 
@@ -152,11 +147,19 @@ export default function Resumo() {
     return list
   }, [])
 
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    setError(false)
-
-    try {
+  // Hook central de sincronização de dados
+  const {
+    data: fetchedData,
+    isLoading: loading,
+    isRefreshing,
+    isError: error,
+    refetch: loadData,
+  } = useDataSync<{
+    resumo: ResumoVendasResponse
+    coverage: MonthCoverageItem[]
+  }>({
+    entities: ['faturamento', 'historico_vendas', 'pedidos_carteira', 'factories'],
+    fetcher: async () => {
       // 1. Fetch do período selecionado
       const params =
         mode === 'month'
@@ -164,7 +167,6 @@ export default function Resumo() {
           : { mode: 'week' as const, ano: selectedYear, semana: selectedWeek }
 
       const currentRes = await fetchResumoVendas(params)
-      setData(currentRes)
 
       // 2. Extrair ano e mês de referência para a cobertura dos últimos 6 meses
       let refYear = selectedYear
@@ -175,14 +177,12 @@ export default function Resumo() {
         const py = parseInt(parts[0], 10)
         if (!isNaN(py) && py > 0) refYear = py
 
-        // Se for YYYY-MM
         if (mode === 'month' && parts.length >= 2) {
           const pm = parseInt(parts[1], 10)
           if (!isNaN(pm) && pm >= 1 && pm <= 12) refMonth = pm
         }
       }
 
-      // Gerar os últimos 6 meses em ordem cronológica a partir do mês de referência
       const monthTargets: { ano: number; mes: number }[] = []
       for (let i = 5; i >= 0; i--) {
         let m = refMonth - i
@@ -194,7 +194,6 @@ export default function Resumo() {
         monthTargets.push({ ano: y, mes: m })
       }
 
-      // Chamadas paralelas para obter a cobertura de cada mês
       const coverageResults = await Promise.all(
         monthTargets.map(async (t) => {
           try {
@@ -227,20 +226,22 @@ export default function Resumo() {
         }),
       )
 
-      setCoverageData(coverageResults)
-      setClientsPage(1)
-      setFamiliesPage(1)
-    } catch (err: unknown) {
-      console.error('Erro ao carregar resumo de vendas:', err)
-      setError(true)
-    } finally {
-      setLoading(false)
-    }
-  }, [mode, selectedYear, selectedMonth, selectedWeek, currentMonth])
+      return {
+        resumo: currentRes,
+        coverage: coverageResults,
+      }
+    },
+  })
 
+  // Disparar refetch se os filtros de mês/semana mudarem
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    void loadData()
+    setClientsPage(1)
+    setFamiliesPage(1)
+  }, [mode, selectedYear, selectedMonth, selectedWeek, loadData])
+
+  const data = fetchedData?.resumo || null
+  const coverageData = fetchedData?.coverage || []
 
   // KPIs
   const faturadoBrl = data?.faturado_total_brl ?? 0
@@ -517,22 +518,25 @@ export default function Resumo() {
           <Button
             variant="outline"
             size="sm"
-            onClick={loadData}
-            disabled={loading}
+            onClick={() => void loadData()}
+            disabled={loading || isRefreshing}
             className="h-8 gap-1.5 text-xs border-border/70 hover:border-primary/40 bg-card/60"
             title="Atualizar dados"
           >
-            <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
+            <RefreshCw className={cn('w-3.5 h-3.5', (loading || isRefreshing) && 'animate-spin')} />
             <span className="hidden sm:inline">Atualizar</span>
           </Button>
         </div>
       </div>
 
-      {/* 1. ESTADO DE LOADING */}
-      {loading && <LoadingState />}
+      {/* Banner de Erro caso falhe a atualização mantendo dados anteriores */}
+      {error && <SyncErrorBanner message="Falha ao atualizar os dados." onRetry={loadData} />}
 
-      {/* 2. ESTADO DE ERRO */}
-      {!loading && error && (
+      {/* 1. ESTADO DE LOADING (Primeira carga sem dados) */}
+      {loading && !data && <LoadingState />}
+
+      {/* 2. ESTADO DE ERRO TOTAL (quando nem há dados anteriores) */}
+      {!loading && error && !data && (
         <Card className="glass-card border-destructive/30 shadow-card">
           <CardContent className="p-12 flex flex-col items-center justify-center text-center space-y-4">
             <div className="w-14 h-14 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
@@ -547,7 +551,7 @@ export default function Resumo() {
                 vendas.
               </p>
             </div>
-            <Button onClick={loadData} variant="default" className="gap-2">
+            <Button onClick={() => void loadData()} variant="default" className="gap-2">
               <RefreshCw className="w-4 h-4" /> Tentar novamente
             </Button>
           </CardContent>
@@ -576,7 +580,7 @@ export default function Resumo() {
       )}
 
       {/* 4. ESTADO DE SUCESSO */}
-      {!loading && !error && !isEmpty && data && (
+      {!isEmpty && data && (
         <div className="space-y-8 animate-fade-in">
           {/* 1. Summary Cards no topo: total revenue, number of orders, average ticket e number of active clients */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
