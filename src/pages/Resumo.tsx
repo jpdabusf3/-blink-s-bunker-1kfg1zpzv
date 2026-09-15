@@ -48,7 +48,9 @@ import {
   FileDown,
   Printer,
   CalendarDays,
+  Sparkles,
 } from 'lucide-react'
+import { MaestroChatPanel } from '@/components/MaestroChatPanel'
 import { formatCurrency, cn } from '@/lib/utils'
 import {
   fetchResumoVendas,
@@ -118,6 +120,9 @@ export default function Resumo() {
   const [coverageData, setCoverageData] = useState<MonthCoverageItem[]>([])
   const [clientsPage, setClientsPage] = useState<number>(1)
   const [familiesPage, setFamiliesPage] = useState<number>(1)
+
+  // Estado do painel MAESTRO
+  const [maestroPanelOpen, setMaestroPanelOpen] = useState<boolean>(false)
 
   // Estados do Modal de Exportação PDF
   const [pdfDialogOpen, setPdfDialogOpen] = useState<boolean>(false)
@@ -482,6 +487,18 @@ export default function Resumo() {
               <span>{data.periodo}</span>
             </div>
           )}
+
+          {/* Botão Gerar Relatório com MAESTRO */}
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => setMaestroPanelOpen(true)}
+            className="h-8 gap-1.5 text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98]"
+            title="Abrir assistente MAESTRO para montar relatório de vendas customizado"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Gerar Relatório com MAESTRO</span>
+          </Button>
 
           {/* Botão Gerar PDF */}
           <Button
@@ -1062,6 +1079,18 @@ export default function Resumo() {
           </Card>
         </div>
       )}
+
+      {/* Painel Estilo Chat do Assistente MAESTRO */}
+      <MaestroChatPanel
+        open={maestroPanelOpen}
+        onOpenChange={setMaestroPanelOpen}
+        initialPeriodInfo={{
+          mode,
+          ano: selectedYear,
+          mes: mode === 'month' ? selectedMonth : undefined,
+          semana: mode === 'week' ? selectedWeek : undefined,
+        }}
+      />
 
       {/* Modal de Opções para Gerar PDF */}
       <Dialog open={pdfDialogOpen} onOpenChange={setPdfDialogOpen}>
