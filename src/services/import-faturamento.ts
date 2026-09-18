@@ -928,6 +928,7 @@ export function autoSuggestMapping(
 
 export interface FaturamentoImportOptions {
   criarClienteNaoEncontrado: boolean
+  fileName?: string
 }
 
 export interface FaturamentoImportError {
@@ -1305,8 +1306,12 @@ export async function importFaturamento(
   return pb.send<FaturamentoImportResult>('/backend/v1/importar-faturamento', {
     method: 'POST',
     body: JSON.stringify({
+      fileName: file.name,
       rows: mappedRows,
-      options,
+      options: {
+        ...options,
+        fileName: file.name,
+      },
     }),
     headers: { 'Content-Type': 'application/json' },
   })

@@ -12,6 +12,7 @@ routerAdd(
       var body = e.requestInfo().body || {}
       var rows = body.rows
       var options = body.options || {}
+      var fileName = String(body.fileName || options.fileName || 'Planilha_Faturamento.xlsx')
       // options: { criarClienteNaoEncontrado: boolean }
       var autoCreateClient = !!options.criarClienteNaoEncontrado
 
@@ -1120,6 +1121,12 @@ routerAdd(
         }
       }
 
+      var totalImportedOverall = faturamentoImportados > 0 ? faturamentoImportados : criados
+      var totalDuplicatesOverall =
+        faturamentoDuplicatas > 0 ? faturamentoDuplicatas : duplicatasIgnoradas
+      var importStatus =
+        erros.length === 0 ? 'concluido' : totalImportedOverall > 0 ? 'parcial' : 'erro'
+
       // 5. REGISTRAR LOG DE ATIVIDADE CONSOLIDADO (1 SÓ LOG para toda a importação)
       try {
         var actCol = $app.findCollectionByNameOrId('activity_logs')
@@ -1128,7 +1135,9 @@ routerAdd(
         actRec.set('action', 'Importação de Faturamento')
         actRec.set(
           'details',
-          'Importacao de faturamento: ' +
+          'Importação de faturamento [' +
+            fileName +
+            ']: ' +
             totalImportedOverall +
             ' registros importados, ' +
             totalDuplicatesOverall +
@@ -1138,11 +1147,14 @@ routerAdd(
             clientesCriados +
             ' novos clientes cadastrados, ' +
             totalClientesAtualizados +
-            ' atualizados no CRM).',
+            ' atualizados no CRM). Status: ' +
+            importStatus +
+            '.',
         )
         actRec.set('target_collection', 'faturamento')
         actRec.set('origem', 'painel')
         actRec.set('tipo', 'outro')
+        actRec.set('proximo_passo', importStatus) // Status semântico do upload (concluido | parcial | erro)
         $app.save(actRec)
       } catch (logErr) {
         $app.logger().warn('Erro ao gravar log consolidado: ' + String(logErr))
@@ -1168,10 +1180,6 @@ routerAdd(
         )
         $app.save(falRec)
       } catch (_) {}
-
-      var totalImportedOverall = faturamentoImportados > 0 ? faturamentoImportados : criados
-      var totalDuplicatesOverall =
-        faturamentoDuplicatas > 0 ? faturamentoDuplicatas : duplicatasIgnoradas
 
       return e.json(200, {
         success: true,
