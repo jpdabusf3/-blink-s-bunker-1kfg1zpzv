@@ -750,8 +750,13 @@ export function useMaestroChat(): UseMaestroChatReturn {
         const finalContent = result.content || streamedText
         const config = extractReportConfigFromText(finalContent)
 
+        if (import.meta.env.DEV) {
+          console.log('[MAESTRO stream] Resposta final recebida. Configuração detectada:', config)
+        }
+
         if (config) {
           // Se o agente devolveu a configuração de relatório, dispara AUTOMATICAMENTE a geração
+          // e vincula a chamada ao ID da própria mensagem do assistente
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantMsgId
@@ -763,7 +768,7 @@ export function useMaestroChat(): UseMaestroChatReturn {
                 : m,
             ),
           )
-          handleGenerateReportFromConfig(config)
+          handleGenerateReportFromConfig(config, assistantMsgId)
         } else {
           setMessages((prev) =>
             prev.map((m) =>
@@ -788,6 +793,10 @@ export function useMaestroChat(): UseMaestroChatReturn {
           const finalContent = syncResult.content
           const config = extractReportConfigFromText(finalContent)
 
+          if (import.meta.env.DEV) {
+            console.log('[MAESTRO sync] Resposta final recebida. Configuração detectada:', config)
+          }
+
           if (config) {
             setMessages((prev) =>
               prev.map((m) =>
@@ -800,7 +809,7 @@ export function useMaestroChat(): UseMaestroChatReturn {
                   : m,
               ),
             )
-            handleGenerateReportFromConfig(config)
+            handleGenerateReportFromConfig(config, assistantMsgId)
           } else {
             setMessages((prev) =>
               prev.map((m) =>

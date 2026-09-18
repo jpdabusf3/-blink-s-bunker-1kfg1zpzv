@@ -326,7 +326,9 @@ export default function RelatoriosAutomaticos() {
                       {item.tipo}
                     </Badge>
 
-                    <span className="text-[11px] font-mono text-muted-foreground">.DOCX</span>
+                    <span className="text-[11px] font-mono text-muted-foreground">
+                      {item.nomeArquivo.endsWith('.pdf') ? '.PDF' : '.DOCX'}
+                    </span>
                   </div>
 
                   <CardTitle className="text-base font-bold text-foreground leading-snug">
@@ -349,7 +351,12 @@ export default function RelatoriosAutomaticos() {
                     </div>
                     <div className="flex items-center gap-2">
                       <HardDrive className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                      <span>Formato: Microsoft Word (.docx)</span>
+                      <span>
+                        Formato:{' '}
+                        {item.nomeArquivo.endsWith('.pdf')
+                          ? 'Adobe PDF (.pdf)'
+                          : 'Microsoft Word (.docx)'}
+                      </span>
                     </div>
                   </div>
 
@@ -360,7 +367,11 @@ export default function RelatoriosAutomaticos() {
                     variant="default"
                   >
                     <Download className={`w-4 h-4 ${isDownloading ? 'animate-bounce' : ''}`} />
-                    {isDownloading ? 'Baixando...' : 'Baixar Relatório .docx'}
+                    {isDownloading
+                      ? 'Baixando...'
+                      : item.nomeArquivo.endsWith('.pdf')
+                        ? 'Baixar Relatório .pdf'
+                        : 'Baixar Relatório .docx'}
                   </Button>
                 </CardContent>
               </Card>

@@ -299,6 +299,10 @@ export function Maestro() {
                     {/* Falha na geração do relatório MAESTRO com botão "Tentar novamente" */}
                     {message.reportStatus === 'failed' && message.reportConfig && (
                       <div className="mt-2 pt-2 border-t border-border/40 flex flex-col gap-2">
+                        <div className="flex items-center gap-2 text-destructive text-xs">
+                          <AlertTriangle className="h-4 w-4 shrink-0" />
+                          <span>Não foi possível gerar o relatório. Tente novamente.</span>
+                        </div>
                         <Button
                           size="sm"
                           variant="outline"
@@ -307,7 +311,7 @@ export function Maestro() {
                               handleGenerateReportFromConfig(message.reportConfig, message.id)
                             }
                           }}
-                          className="w-fit text-xs h-8 gap-1.5 border-red-500/40 text-red-400 hover:bg-red-500/10"
+                          className="w-fit text-xs h-8 gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10"
                         >
                           <RotateCcw className="h-3 w-3" />
                           Tentar novamente
