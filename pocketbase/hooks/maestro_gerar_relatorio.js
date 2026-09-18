@@ -15,17 +15,71 @@ routerAdd(
       return s
     }
 
+    // Resolução de Família de Produtos baseada no código do produto e família bruta
+    var PREFIXO_FAMILIA_LOCAL = [
+      { prefixo: '1100', familia: 'Adsorventes de Micotoxinas' },
+      { prefixo: '1200', familia: 'Adsorventes de Micotoxinas' },
+      { prefixo: '1300', familia: 'Adsorventes de Micotoxinas' },
+      { prefixo: '1400', familia: 'Adsorventes de Micotoxinas' },
+      { prefixo: '2100', familia: 'Antioxidantes' },
+      { prefixo: '2200', familia: 'Antioxidantes' },
+      { prefixo: '3100', familia: 'Moduladores de Microbiota' },
+      { prefixo: '3200', familia: 'Moduladores de Microbiota' },
+      { prefixo: '3300', familia: 'Moduladores de Microbiota' },
+      { prefixo: '4100', familia: 'Nutracêuticos' },
+      { prefixo: '4200', familia: 'Nutracêuticos' },
+      { prefixo: '4300', familia: 'Nutracêuticos' },
+      { prefixo: '4400', familia: 'Nutracêuticos' },
+      { prefixo: '4500', familia: 'Nutracêuticos' },
+      { prefixo: '5100', familia: 'Minerais Orgânicos' },
+      { prefixo: '5200', familia: 'Minerais Orgânicos' },
+      { prefixo: '5300', familia: 'Minerais Orgânicos' },
+      { prefixo: '6100', familia: 'Saúde Hepática' },
+      { prefixo: '6200', familia: 'Saúde Hepática' },
+      { prefixo: '7100', familia: 'Pigmentantes Naturais' },
+      { prefixo: '8100', familia: 'Palatabilizantes' },
+      { prefixo: '8200', familia: 'Palatabilizantes' },
+      { prefixo: '9100', familia: 'Blend e Customizados' },
+      { prefixo: '9200', familia: 'Blend e Customizados' },
+    ]
+
+    function resolverFamiliaLocal(produtoCodigo, familiaBruta) {
+      var prodStr = String(produtoCodigo || '').trim()
+      for (var p = 0; p < PREFIXO_FAMILIA_LOCAL.length; p++) {
+        var item = PREFIXO_FAMILIA_LOCAL[p]
+        if (prodStr.indexOf(item.prefixo) === 0) {
+          return item.familia
+        }
+      }
+      var fb = String(familiaBruta || '').trim()
+      if (!fb || fb === '\u2014' || fb === '-' || fb === '?') {
+        return 'Não identificado'
+      }
+      return fb
+    }
+
+    function sanitizeForPdf(s) {
+      if (s == null) return ''
+      return String(s)
+        .replace(/[\u2014\u2013]/g, '-')
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/\u2022/g, '.')
+        .replace(/\u00B7/g, '.')
+        .replace(/\u2026/g, '...')
+    }
+
     function escPdf(s) {
-      return String(s == null ? '' : s)
+      var sanitized = sanitizeForPdf(s)
+      return sanitized
         .replace(/\\/g, '\\\\')
         .replace(/\(/g, '\\(')
         .replace(/\)/g, '\\)')
         .replace(/\r/g, ' ')
         .replace(/\n/g, ' ')
     }
-
     function fmtDateOnly(iso) {
-      if (!iso) return '—'
+      if (!iso) return '-'
       try {
         var d = new Date(iso)
         if (isNaN(d.getTime())) return String(iso)
@@ -36,7 +90,7 @@ routerAdd(
     }
 
     function fmtDateTime(iso) {
-      if (!iso) return '—'
+      if (!iso) return '-'
       try {
         var d = new Date(iso)
         if (isNaN(d.getTime())) return String(iso)
@@ -114,9 +168,9 @@ routerAdd(
 
     function latin1Bytes(s) {
       var out = []
-      s = String(s == null ? '' : s)
-      for (var i = 0; i < s.length; i++) {
-        var c = s.charCodeAt(i)
+      var cleaned = sanitizeForPdf(s)
+      for (var i = 0; i < cleaned.length; i++) {
+        var c = cleaned.charCodeAt(i)
         if (c > 255) out.push(63)
         else out.push(c)
       }
@@ -342,8 +396,8 @@ routerAdd(
           .trim()
           .toUpperCase()
         var famBruta = (r.getString ? r.getString('familia_produto') : r.familia_produto) || ''
-        var fam = famBruta || 'Outros'
-        familiaMap[fam] = (familiaMap[fam] || 0) + vBrl
+        var famClean = resolverFamiliaLocal(prodCod, famBruta)
+        familiaMap[famClean] = (familiaMap[famClean] || 0) + vBrl
 
         var docData = r.getString ? r.getString('data_documento') : r.data_documento || ''
         var nfAnoVal = (r.getInt ? r.getInt('nf_ano') : r.nf_ano) || 0
@@ -379,18 +433,68 @@ routerAdd(
         }
       } catch (_) {}
 
-      var coberturaPercent =
-        carteiraTotalBrl > 0 ? Math.round((totalBrl / carteiraTotalBrl) * 10000) / 100 : 0
-
-      // Metas do período se houver
+      // Metas do período
+      var MESES_NOMES = [
+        '',
+        'janeiro',
+        'fevereiro',
+        'março',
+        'abril',
+        'maio',
+        'junho',
+        'julho',
+        'agosto',
+        'setembro',
+        'outubro',
+        'novembro',
+        'dezembro',
+      ]
+      var MESES_CAP = [
+        '',
+        'Janeiro',
+        'Fevereiro',
+        'Março',
+        'Abril',
+        'Maio',
+        'Junho',
+        'Julho',
+        'Agosto',
+        'Setembro',
+        'Outubro',
+        'Novembro',
+        'Dezembro',
+      ]
       var metaMesTotal = 0
       try {
-        var metaRows = $app.findRecordsByFilter('metas', '1=1', '', 500, 0)
+        var metaFilterParts = []
+        if (periodoEtiqueta) {
+          metaFilterParts.push("periodo = '" + periodoEtiqueta.replace(/'/g, "\\'") + "'")
+          metaFilterParts.push("periodo ~ '" + periodoEtiqueta.replace(/'/g, "\\'") + "'")
+        }
+        if (anoCfg && mesCfg) {
+          var mCap = MESES_CAP[mesCfg] || ''
+          if (mCap) {
+            metaFilterParts.push("periodo = '" + mCap + ' ' + anoCfg + "'")
+            metaFilterParts.push("periodo ~ '" + mCap + "'")
+          }
+          var ymStr = anoCfg + '-' + pad(mesCfg, 2)
+          metaFilterParts.push("periodo = '" + ymStr + "'")
+          metaFilterParts.push("periodo = '" + ymStr + "-01'")
+        } else if (anoCfg && !mesCfg) {
+          metaFilterParts.push("periodo ~ '" + anoCfg + "'")
+        }
+
+        var metaQuery = metaFilterParts.length > 0 ? metaFilterParts.join(' || ') : '1=1'
+        var metaRows = $app.findRecordsByFilter('metas', metaQuery, '', 500, 0)
         for (var mi = 0; mi < metaRows.length; mi++) {
           metaMesTotal +=
             (metaRows[mi].getInt ? metaRows[mi].getInt('meta_valor') : metaRows[mi].meta_valor) || 0
         }
       } catch (_) {}
+
+      // Cobertura Comercial = Carteira de Pedidos ÷ Meta do período × 100
+      var coberturaPercent =
+        metaMesTotal > 0 ? Math.round((carteiraTotalBrl / metaMesTotal) * 10000) / 100 : null
 
       var metaAtingidaPercent =
         metaMesTotal > 0 ? Math.round((totalBrl / metaMesTotal) * 10000) / 100 : 0
@@ -485,11 +589,11 @@ routerAdd(
       line('0.06 0.09 0.16 rg')
       y = PAGE_H - 138
 
-      var tituloRelatorio = 'Blink Biotech — Relatório de Vendas MAESTRO'
+      var tituloRelatorio = 'Blink Biotech - Relatório de Vendas MAESTRO'
       txt(tituloRelatorio, 15, 'F2', MARGIN, y)
       y -= 18
       txt(
-        'Demonstrativo Comercial Estruturado · Emissão Automática MAESTRO AI',
+        'Demonstrativo Comercial Estruturado . Emissão Automática MAESTRO AI',
         10,
         'F1',
         MARGIN,
@@ -549,7 +653,7 @@ routerAdd(
       txt('SUMÁRIO EXECUTIVO DO DOCUMENTO', 8, 'F2', MARGIN + 10, y - 12)
       line('0.25 0.3 0.4 rg')
       txt(
-        '1. Indicadores Gerais de Desempenho    ·    2. Top 10 Clientes    ·    3. Faturamento por Família    ·    4. Cobertura & Parecer',
+        '1. Indicadores Gerais de Desempenho    .    2. Top 10 Clientes    .    3. Faturamento por Família    .    4. Cobertura & Parecer',
         8.5,
         'F1',
         MARGIN + 10,
@@ -576,11 +680,14 @@ routerAdd(
           kpis.push({ label: 'Ticket Médio', value: fmtBRL(ticketMedio) })
         }
       }
-      if (inclCobertura && carteiraTotalBrl > 0) {
+      if (inclCobertura) {
         kpis.push({ label: 'Carteira de Pedidos', value: fmtBRL(carteiraTotalBrl) })
         kpis.push({
           label: 'Cobertura de Carteira',
-          value: coberturaPercent.toFixed(1).replace('.', ',') + '%',
+          value:
+            coberturaPercent !== null && coberturaPercent !== undefined
+              ? coberturaPercent.toFixed(1).replace('.', ',') + '%'
+              : 'Meta não cadastrada',
         })
       }
       if (metaMesTotal > 0) {
@@ -608,13 +715,24 @@ routerAdd(
           line('0.97 0.98 0.99 rg ' + bx + ' ' + by + ' ' + boxW + ' ' + boxH + ' re f')
           line('0.85 0.88 0.92 RG ' + bx + ' ' + by + ' ' + boxW + ' ' + boxH + ' re S')
           line('0.1 0.1 0.1 rg')
+          var valStr = String(kpis[ki].value || '')
+          var valFontSize = 12
+          if (valStr.length > 18) {
+            valFontSize = 8.5
+          } else if (valStr.length > 13) {
+            valFontSize = 9.5
+          } else if (valStr.length > 10) {
+            valFontSize = 10.5
+          }
           line(
-            'BT /F2 12 Tf ' +
+            'BT /F2 ' +
+              valFontSize +
+              ' Tf ' +
               (bx + 8) +
               ' ' +
-              (by + 20) +
+              (by + 21) +
               ' Td (' +
-              escPdf(kpis[ki].value) +
+              escPdf(valStr) +
               ') Tj ET',
           )
           line(
@@ -715,16 +833,24 @@ routerAdd(
           '4. Parecer Estratégico & Observações Operacionais',
           'Recomendações gerenciais e diretrizes para arquivamento executivo.',
         )
-        if (inclCobertura && carteiraTotalBrl > 0) {
+        if (inclCobertura) {
           ensure(18)
-          var cobDesc =
-            'Cobertura Comercial de Carteira calculada em ' +
-            coberturaPercent.toFixed(1).replace('.', ',') +
-            '% (R$ ' +
-            fmtBRL(totalBrl) +
-            ' faturados frente a R$ ' +
-            fmtBRL(carteiraTotalBrl) +
-            ' em carteira de pedidos).'
+          var cobDesc = ''
+          if (coberturaPercent !== null && coberturaPercent !== undefined) {
+            cobDesc =
+              'Cobertura Comercial de Carteira calculada em ' +
+              coberturaPercent.toFixed(1).replace('.', ',') +
+              '% (' +
+              fmtBRL(carteiraTotalBrl) +
+              ' em carteira de pedidos frente a ' +
+              fmtBRL(metaMesTotal) +
+              ' de meta do período).'
+          } else {
+            cobDesc =
+              'Carteira de pedidos em ' +
+              fmtBRL(carteiraTotalBrl) +
+              ' (meta do período não cadastrada para apuração de cobertura comercial).'
+          }
           txt(cobDesc, 8.5, 'F2', MARGIN, y - 8)
           y -= 16
         }
@@ -752,7 +878,9 @@ routerAdd(
         pg.push(
           'BT /F1 8 Tf ' +
             MARGIN +
-            ' 32 Td (Blink Biotech - Documento confidencial para Diretoria Executiva  .  MAESTRO AI) Tj ET',
+            ' 32 Td (' +
+            escPdf('Blink Biotech - Documento confidencial para Diretoria Executiva . MAESTRO AI') +
+            ') Tj ET',
         )
         pg.push(
           'BT /F2 8 Tf ' +
@@ -853,7 +981,7 @@ routerAdd(
       var docFile = $filesystem.fileFromBytes(pdfBytes, nomeOriginalDoc)
       var docCollection = $app.findCollectionByNameOrId('documents')
       var docRecord = new Record(docCollection)
-      docRecord.set('title', 'Relatório de Vendas MAESTRO — ' + periodoEtiqueta)
+      docRecord.set('title', 'Relatório de Vendas MAESTRO - ' + periodoEtiqueta)
       docRecord.set('nome_original', nomeOriginalDoc)
       docRecord.set('category', 'Relatórios Automáticos')
       docRecord.set('min_access_level', 'Comum')
@@ -896,7 +1024,7 @@ routerAdd(
 
         crRecord.set('generated_by', userId)
         crRecord.set('generated_by_name', userName || 'Maestro AI')
-        crRecord.set('title', 'Relatório de Vendas MAESTRO — ' + periodoEtiqueta)
+        crRecord.set('title', 'Relatório de Vendas MAESTRO - ' + periodoEtiqueta)
         var crFile = $filesystem.fileFromBytes(pdfBytes, nomeOriginalDoc)
         crRecord.set('file', crFile)
         if (startDateStr) crRecord.set('periodo_inicio', startDateStr)
@@ -933,7 +1061,7 @@ routerAdd(
         document_id: docRecord.id,
         client_report_id: crRecordId,
         nome_arquivo: nomeOriginalDoc,
-        titulo: 'Relatório de Vendas MAESTRO — ' + periodoEtiqueta,
+        titulo: 'Relatório de Vendas MAESTRO - ' + periodoEtiqueta,
         periodo: periodoEtiqueta,
         faturado_total_brl: Math.round(totalBrl * 100) / 100,
         faturado_total_usd: Math.round(totalUsd * 100) / 100,

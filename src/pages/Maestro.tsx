@@ -444,7 +444,7 @@ export function Maestro() {
                             {message.reportResult.cobertura_percent !== undefined &&
                             message.reportResult.cobertura_percent !== null
                               ? `${message.reportResult.cobertura_percent.toFixed(1).replace('.', ',')}%`
-                              : '—'}
+                              : 'Meta não cadastrada'}
                           </p>
                           {Boolean(
                             message.reportResult.carteira_total_brl &&

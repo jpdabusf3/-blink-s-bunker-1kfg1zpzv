@@ -625,7 +625,7 @@ export function useMaestroChat(): UseMaestroChatReturn {
           const coberturaTxt =
             result.cobertura_percent !== undefined && result.cobertura_percent !== null
               ? ` | Cobertura: ${result.cobertura_percent.toFixed(1).replace('.', ',')}%`
-              : ''
+              : ' | Cobertura: Meta não cadastrada'
 
           const successText = `Relatório gerado com sucesso!\n\n• Período: ${result.periodo}\n• Faturamento Total: ${formattedBrl}${formattedUsd}\n• Pedidos/Notas: ${result.quantidade_notas}${coberturaTxt}\n• Arquivo: ${result.nome_arquivo}`
 

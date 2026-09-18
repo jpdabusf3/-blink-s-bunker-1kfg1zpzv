@@ -45,6 +45,10 @@ export function familiaCompleta(
     .trim()
     .toUpperCase()
   if (FAMILIA_MAP[bruta]) return FAMILIA_MAP[bruta]
-  // 3) Fallback: devolve o valor bruto ou '—'
-  return familiaBruta?.trim() || '—'
+  // 3) Fallback: devolve o valor bruto se válido ou 'Não identificado'
+  const fallback = String(familiaBruta || '').trim()
+  if (!fallback || fallback === '—' || fallback === '-' || fallback === '?') {
+    return 'Não identificado'
+  }
+  return fallback
 }

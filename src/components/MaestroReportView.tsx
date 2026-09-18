@@ -91,8 +91,8 @@ export function MaestroReportView({ reportData, config, generatedAt }: MaestroRe
     const csvLines: string[] = []
 
     // 1. Bloco de Cabeçalho Institucional & Metadados
-    csvLines.push('"Blink Biotech — Relatório de Vendas MAESTRO"')
-    csvLines.push('"Plataforma: Blink\'s Bunker · Inteligência Comercial & Gestão B2B"')
+    csvLines.push('"Blink Biotech - Relatório de Vendas MAESTRO"')
+    csvLines.push('"Plataforma: Blink\'s Bunker . Inteligência Comercial & Gestão B2B"')
     csvLines.push('"Origem: Assistente MAESTRO AI (Chat & Análise de Vendas)"')
     csvLines.push(`"Período de Referência";"${reportData.periodo || 'Personalizado'}"`)
     csvLines.push(`"Data e Hora de Geração";"${formattedGeneratedDateTime}"`)
@@ -142,7 +142,11 @@ export function MaestroReportView({ reportData, config, generatedAt }: MaestroRe
     }
     if (coberturaPercent !== null && coberturaPercent !== undefined) {
       csvLines.push(
-        `"Índice de Cobertura de Carteira";"${coberturaPercent.toFixed(1).replace('.', ',')}%";"Faturado realizado vs carteira"`,
+        `"Índice de Cobertura de Carteira";"${coberturaPercent.toFixed(1).replace('.', ',')}%";"Carteira de pedidos vs meta do período"`,
+      )
+    } else {
+      csvLines.push(
+        `"Índice de Cobertura de Carteira";"Meta não cadastrada";"Meta do período não cadastrada para apuração de cobertura comercial"`,
       )
     }
 
@@ -182,7 +186,7 @@ export function MaestroReportView({ reportData, config, generatedAt }: MaestroRe
     // 5. Rodapé Institucional
     csvLines.push('')
     csvLines.push(
-      '"Blink Biotech — Documento confidencial para arquivamento e análise da Diretoria Executiva"',
+      '"Blink Biotech - Documento confidencial para arquivamento e análise da Diretoria Executiva"',
     )
 
     const csvContent = '\uFEFF' + csvLines.join('\r\n')
@@ -340,12 +344,19 @@ export function MaestroReportView({ reportData, config, generatedAt }: MaestroRe
                 <span>Cobertura</span>
                 <Layers className="w-3.5 h-3.5 text-emerald-500" />
               </div>
-              <div className="text-base sm:text-lg font-bold text-foreground mt-1">
+              <div
+                className="text-sm sm:text-base font-bold text-foreground mt-1 truncate"
+                title={
+                  coberturaPercent !== null && coberturaPercent !== undefined
+                    ? `${coberturaPercent.toFixed(1).replace('.', ',')}%`
+                    : 'Meta não cadastrada'
+                }
+              >
                 {coberturaPercent !== null && coberturaPercent !== undefined
                   ? `${coberturaPercent.toFixed(1).replace('.', ',')}%`
-                  : '—'}
+                  : 'Meta não cadastrada'}
               </div>
-              <div className="text-[10px] text-muted-foreground mt-0.5">
+              <div className="text-[10px] text-muted-foreground mt-0.5 truncate">
                 {carteiraBrl ? `Carteira: ${formatCurrency(carteiraBrl)}` : 'Sem carteira definida'}
               </div>
             </CardContent>
