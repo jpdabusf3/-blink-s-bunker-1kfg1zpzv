@@ -209,13 +209,15 @@ routerAdd(
       }
 
       function parseNumber(val) {
+        if (val === undefined || val === null || val === '') return 0
         if (typeof val === 'number') return isNaN(val) ? 0 : val
-        if (!val) return 0
+
         var s = String(val).trim()
         if (!s) return 0
 
-        // Remover símbolos de moeda e espaços: R$, US$, U$, $, etc.
-        s = s.replace(/(?:R\$|US\$|U\$|\$|BRL|USD)/gi, '').trim()
+        // Remover caracteres invisíveis, espaços não-quebráveis e símbolos monetários
+        s = s.replace(/[\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF]/g, ' ')
+        s = s.replace(/(?:R\$|US\$|U\$|\$|BRL|USD|EUR|€)/gi, '').trim()
         s = s.replace(/\s+/g, '')
         if (!s) return 0
 
@@ -223,41 +225,42 @@ routerAdd(
         var hasComma = s.indexOf(',') !== -1
 
         if (hasDot && hasComma) {
-          // Ex: 1.234,56 ou 1,234.56
-          // Descobre qual separador aparece por último
+          // Ex: "1.234,56" ou "1,234.56" ou "1.234.567,89"
           var lastDot = s.lastIndexOf('.')
           var lastComma = s.lastIndexOf(',')
           if (lastComma > lastDot) {
-            // Formato brasileiro: 1.234,56
+            // Padrão brasileiro: ponto como milhar e vírgula decimal (ex: 1.234,56)
             s = s.replace(/\./g, '').replace(',', '.')
           } else {
-            // Formato americano: 1,234.56
+            // Padrão americano: vírgula como milhar e ponto decimal (ex: 1,234.56)
             s = s.replace(/,/g, '')
           }
         } else if (hasComma) {
-          // Só vírgula: se tiver 3 dígitos após a vírgula e nada mais (ex: 1,000) pode ser milhar americano,
-          // porém no contexto brasileiro vírgula é decimal (ex: 15,50 ou 1500,00)
-          s = s.replace(',', '.')
-        } else if (hasDot) {
-          // Só ponto: verificar se é milhar brasileiro (ex: 1.000 ou 15.420 ou 100.000)
-          // Se tiver 3 dígitos decimais exatos após o último ponto e o número for grande (ex: 15.420)
-          var lastDotIdx = s.lastIndexOf('.')
-          var decimals = s.substring(lastDotIdx + 1)
-          var intPart = s.substring(0, lastDotIdx)
-          if (
-            decimals.length === 3 &&
-            /^\d{3}$/.test(decimals) &&
-            intPart.length >= 1 &&
-            intPart.indexOf('.') === -1 &&
-            parseFloat(intPart) > 0 &&
-            s.indexOf('-') === -1
-          ) {
-            // Se tiver múltiplos pontos (ex: 1.234.567) é milhar com certeza
-            if ((s.match(/\./g) || []).length > 1) {
-              s = s.replace(/\./g, '')
-            }
+          // Apenas vírgula: no contexto brasileiro de faturamento, vírgula é separador decimal
+          // Ex: "1234,56" -> "1234.56", "15,5" -> "15.5", "1000,00" -> "1000.00"
+          // Se houver mais de uma vírgula (ex: "1,234,567"), trata como milhar americano
+          var commaMatches = s.match(/,/g) || []
+          if (commaMatches.length > 1) {
+            s = s.replace(/,/g, '')
+          } else {
+            s = s.replace(',', '.')
           }
+        } else if (hasDot) {
+          // Apenas ponto:
+          // Se tiver mais de um ponto (ex: 1.234.567), com certeza é milhar brasileiro
+          var dotMatches = s.match(/\./g) || []
+          if (dotMatches.length > 1) {
+            s = s.replace(/\./g, '')
+          }
+          // Se tiver um único ponto, verificar se é milhar brasileiro ou decimal:
+          // Em planilhas contábeis brasileiras exportadas sem centavos ou com formato inteiro:
+          // Ex: "14.182" na verdade é 14182 (14 mil 182) ou 14.182?
+          // Se tem 3 dígitos após o ponto e nenhum centavo, pode ser 14182.
+          // Mas se é decimal padrão JavaScript (ex: 14.18 ou 14.1820), deve ser mantido como float.
+          // Para evitar zerar ou corromper casas decimais em Dólar (ex: 3.3 ou 14.182),
+          // mantemos o ponto como decimal padrão caso não haja certeza.
         }
+
         var cleanNumeric = s.replace(/[^\d.-]/g, '')
         if (!cleanNumeric || cleanNumeric === '-' || cleanNumeric === '.') return 0
         var n = parseFloat(cleanNumeric)
@@ -528,11 +531,23 @@ routerAdd(
 
         // Capturar valores em Dólar (USD) e Real (R$)
         var valorUsd = parseNumber(
-          item.valor_usd ||
-            item.faturamento_usd ||
-            item.amount_usd ||
-            item.amount ||
-            item.total_usd,
+          item.valor_usd !== undefined && item.valor_usd !== null && item.valor_usd !== ''
+            ? item.valor_usd
+            : item.soma_de_vlr_total_usd !== undefined &&
+                item.soma_de_vlr_total_usd !== null &&
+                item.soma_de_vlr_total_usd !== ''
+              ? item.soma_de_vlr_total_usd
+              : item.faturamento_usd !== undefined &&
+                  item.faturamento_usd !== null &&
+                  item.faturamento_usd !== ''
+                ? item.faturamento_usd
+                : item.amount_usd !== undefined &&
+                    item.amount_usd !== null &&
+                    item.amount_usd !== ''
+                  ? item.amount_usd
+                  : item.total_usd !== undefined && item.total_usd !== null && item.total_usd !== ''
+                    ? item.total_usd
+                    : item.amount,
         )
         var valorUnitarioUsd = parseNumber(
           item.valor_unitario_usd || item.preco_unitario_usd || item.unit_price_usd,
@@ -542,13 +557,33 @@ routerAdd(
           valorUsd
 
         var valorItem = parseNumber(
-          item.valor ||
-            item.produto_valor_total ||
-            item.valor_total ||
-            item.total ||
-            item.valor_r$ ||
-            item.faturamento_r$ ||
-            item.total_r$,
+          item.valor !== undefined && item.valor !== null && item.valor !== ''
+            ? item.valor
+            : item.valor_brl !== undefined && item.valor_brl !== null && item.valor_brl !== ''
+              ? item.valor_brl
+              : item.soma_de_vlr_total_brl !== undefined &&
+                  item.soma_de_vlr_total_brl !== null &&
+                  item.soma_de_vlr_total_brl !== ''
+                ? item.soma_de_vlr_total_brl
+                : item.produto_valor_total !== undefined &&
+                    item.produto_valor_total !== null &&
+                    item.produto_valor_total !== ''
+                  ? item.produto_valor_total
+                  : item.valor_total !== undefined &&
+                      item.valor_total !== null &&
+                      item.valor_total !== ''
+                    ? item.valor_total
+                    : item.total !== undefined && item.total !== null && item.total !== ''
+                      ? item.total
+                      : item['valor_r$'] !== undefined &&
+                          item['valor_r$'] !== null &&
+                          item['valor_r$'] !== ''
+                        ? item['valor_r$']
+                        : item['faturamento_r$'] !== undefined &&
+                            item['faturamento_r$'] !== null &&
+                            item['faturamento_r$'] !== ''
+                          ? item['faturamento_r$']
+                          : item['total_r$'],
         )
         var valorUnitario = parseNumber(item.produto_valor_unitario || item.valor_unitario)
         var valorTotalNota = parseNumber(item.valor_total_nota) || valorItem
@@ -556,8 +591,33 @@ routerAdd(
         if (valorUsd > 0 && valorUnitarioUsd <= 0 && quantidade > 0) {
           valorUnitarioUsd = Math.round((valorUsd / quantidade) * 100) / 100
         }
-        var vendedorNome = String(item.vendedor || item.vendedor_nome || '').trim()
-        var gestorNome = String(item.gestor || item.gestor_tecnico || '').trim()
+        var vendedorNome = String(
+          item.vendedor ||
+            item.vendedor_nome ||
+            item.nome_vendedor ||
+            item.vendedores ||
+            item.consultor ||
+            item.representante ||
+            item.responsavel ||
+            item.sales_owner ||
+            item.salesowner ||
+            item.seller ||
+            item.sales_rep ||
+            item.salesperson ||
+            item.rca ||
+            item.comercial ||
+            '',
+        ).trim()
+        var gestorNome = String(
+          item.gestor ||
+            item.gestor_tecnico ||
+            item.responsavel_tecnico ||
+            item.gestor_comercial ||
+            item.gerente ||
+            item.technical_manager ||
+            item.manager ||
+            '',
+        ).trim()
         var unidadeFilial = String(item.unidade || item.filial || item.unidade_filial || '').trim()
         var canalVendas = String(item.canal_vendas || item.canal || 'Direto').trim()
         var statusPedido = String(item.status || 'realizado')
@@ -749,6 +809,10 @@ routerAdd(
 
         var gtRec = findGestaoTecnica(gestorNome, 'gestor_tecnico')
         var vdRec = findGestaoTecnica(vendedorNome, 'vendedor')
+        // Se não achou na função vendedor, tenta qualquer função ativa em gestao_tecnica
+        if (!vdRec && vendedorNome) {
+          vdRec = findGestaoTecnica(vendedorNome, null)
+        }
 
         try {
           var hvRecord
@@ -970,6 +1034,20 @@ routerAdd(
                   recFat.set('ano', fatAno)
                   recFat.set('semestre', fatSemestre)
                   recFat.set('user_id', userId)
+
+                  // Preencher vendedor na tabela faturamento se disponível
+                  try {
+                    if (vdRec || vendedorNome) {
+                      recFat.set(
+                        'vendedor',
+                        vdRec
+                          ? vdRec.getString
+                            ? vdRec.getString('nome')
+                            : vdRec.nome
+                          : vendedorNome,
+                      )
+                    }
+                  } catch (_) {}
 
                   try {
                     $app.save(recFat)

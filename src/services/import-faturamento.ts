@@ -455,22 +455,40 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
   },
   {
     key: 'vendedor',
-    label: 'Vendedor / Representante',
+    label: 'Vendedor / Responsável',
     required: false,
-    description: 'Nome do consultor ou vendedor responsável',
+    description: 'Nome do consultor, vendedor ou responsável comercial',
     aliases: [
       'vendedor',
+      'vendedores',
       'consultor',
+      'consultores',
       'representante',
+      'representantes',
       'comercial',
       'vendedor_nome',
       'nome_vendedor',
+      'nome vendedor',
       'rca',
+      'responsavel',
+      'responsavel_comercial',
+      'responsavel comercial',
+      'responsavel_vendas',
+      'responsavel vendas',
+      'resp',
       // Termos em inglês
       'seller',
+      'sellers',
       'salesperson',
       'sales_rep',
+      'sales rep',
+      'sales_owner',
+      'sales owner',
+      'salesowner',
       'rep',
+      'owner',
+      'account_owner',
+      'account owner',
     ],
   },
   {
@@ -685,6 +703,44 @@ export function parseProductDesc(val: unknown): string {
 }
 
 /**
+ * Formata um valor numérico bruto (inclusive string brasileira) para exibição consistente
+ */
+export function formatCurrencyPreview(val: unknown, prefix = ''): string {
+  if (val === undefined || val === null || val === '') return '—'
+  if (typeof val === 'number') {
+    if (isNaN(val)) return '—'
+    return `${prefix}${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  }
+  const s = String(val).trim()
+  if (!s) return '—'
+
+  // Limpar prefixos e parsear
+  const clean = s
+    .replace(/[\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF]/g, ' ')
+    .replace(/(?:R\$|US\$|U\$|\$|BRL|USD|EUR|€)/gi, '')
+    .trim()
+    .replace(/\s+/g, '')
+
+  if (!clean) return '—'
+
+  let normalized = clean
+  if (clean.includes('.') && clean.includes(',')) {
+    if (clean.lastIndexOf(',') > clean.lastIndexOf('.')) {
+      normalized = clean.replace(/\./g, '').replace(',', '.')
+    } else {
+      normalized = clean.replace(/,/g, '')
+    }
+  } else if (clean.includes(',')) {
+    normalized = clean.replace(',', '.')
+  }
+
+  const num = parseFloat(normalized.replace(/[^\d.-]/g, ''))
+  if (isNaN(num)) return s
+
+  return `${prefix}${num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+/**
  * Sugere automaticamente o mapeamento de colunas da planilha para os campos do CRM
  * de forma resiliente a acentos, maiúsculas/minúsculas, espaços e pontuações.
  */
@@ -707,18 +763,46 @@ export function autoSuggestMapping(
       norm.includes('usd') ||
       norm.includes('dolar') ||
       norm.includes('dollar') ||
-      norm.includes('amount') ||
-      norm === 'u' ||
-      norm === 'us'
+      norm.includes('amountusd') ||
+      norm === 'usd' ||
+      norm === 'us' ||
+      norm === 'u'
 
     const isBrlHeader =
       norm.includes('brl') ||
       norm.includes('r$') ||
       norm.includes('reais') ||
       norm.includes('real') ||
-      norm.includes('rs')
+      norm.includes('rs') ||
+      norm.includes('amountbrl')
 
     const isUnitHeader = norm.includes('unit') || norm.includes('preco') || norm.includes('precode')
+
+    // Regra prioritária para Vendedor / Representante / Sales Owner
+    // Garante que variações comuns não sejam ignoradas
+    if (
+      norm === 'vendedor' ||
+      norm === 'vendedores' ||
+      norm === 'vendedornome' ||
+      norm === 'nomevendedor' ||
+      norm === 'responsavel' ||
+      norm === 'responsavelcomercial' ||
+      norm === 'responsavelvendas' ||
+      norm === 'salesowner' ||
+      norm === 'salesrep' ||
+      norm === 'salesperson' ||
+      norm === 'seller' ||
+      norm === 'sellers' ||
+      norm === 'rca' ||
+      norm === 'consultor' ||
+      norm === 'representante'
+    ) {
+      if (!usedCRMFields.has('vendedor')) {
+        mapping[header] = 'vendedor'
+        usedCRMFields.add('vendedor')
+        return
+      }
+    }
 
     // Soma de Vlr Total - USD
     if (
@@ -1015,6 +1099,10 @@ const EXPECTED_HEADER_PATTERNS = [
   'vlrbrl',
   'vlrusd',
   'vendedor',
+  'vendedores',
+  'responsavel',
+  'salesowner',
+  'seller',
   'country',
   'pais',
   'nfano',
@@ -1299,6 +1387,10 @@ export async function importFaturamento(
         .replace(/[\r\n\t]+/g, ' ')
         .trim()
       canonRow[rawKey] = value
+      const normKey = normalizeKey(header)
+      if (normKey && !canonRow[normKey]) {
+        canonRow[normKey] = value
+      }
     })
     return canonRow
   })

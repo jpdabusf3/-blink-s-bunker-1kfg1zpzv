@@ -48,6 +48,7 @@ import {
   parseDateBR,
   parseClientName,
   parseProductDesc,
+  formatCurrencyPreview,
   parseFaturamentoPreview,
   importFaturamento,
   downloadFaturamentoTemplate,
@@ -218,10 +219,12 @@ export default function ImportarFaturamento() {
   const validationErrors = useMemo(() => {
     const list: string[] = []
     if (missingRequiredFields.length > 0) {
-      list.push(...missingRequiredFields.map((f) => f.label))
+      list.push(...missingRequiredFields.map((f) => `Campo obrigatório ausente: ${f.label}`))
     }
     if (!hasMappedValue) {
-      list.push('Ao menos um campo de valor: "Valor Total (USD $)" ou "Valor Total (R$)"')
+      list.push(
+        'Não encontramos a coluna de valores na planilha. Verifique o cabeçalho e tente novamente (associe a coluna de valores a "Valor Total (USD $)" ou "Valor Total (R$)").',
+      )
     }
     return list
   }, [missingRequiredFields, hasMappedValue])
@@ -232,8 +235,14 @@ export default function ImportarFaturamento() {
 
   const handleConfirmImport = async () => {
     if (!file) return
+    if (!hasMappedValue) {
+      toast.error(
+        'Não encontramos a coluna de valores na planilha. Verifique o cabeçalho e tente novamente.',
+      )
+      return
+    }
     if (validationErrors.length > 0) {
-      toast.error(`Campos pendentes para importação: ${validationErrors.join(', ')}`)
+      toast.error(validationErrors[0])
       return
     }
 
@@ -632,31 +641,126 @@ export default function ImportarFaturamento() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Linha indicadora de qual coluna da planilha alimentou cada campo */}
+                <div className="bg-muted/30 border rounded-lg px-4 py-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+                  <span className="font-semibold text-foreground flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-primary" /> Origem detectada de cada
+                    campo:
+                  </span>
+                  {FATURAMENTO_FIELDS.filter((f) =>
+                    ['data', 'cliente', 'produto', 'valor_usd', 'valor', 'vendedor'].includes(
+                      f.key,
+                    ),
+                  ).map((f) => {
+                    const sourceHeader = Object.keys(mapping).find((h) => mapping[h] === f.key)
+                    return (
+                      <span key={f.key} className="inline-flex items-center gap-1 text-[11px]">
+                        <strong className="text-foreground">{f.label.split('(')[0].trim()}:</strong>
+                        {sourceHeader ? (
+                          <Badge
+                            variant="secondary"
+                            className="font-mono text-[10px] px-1.5 py-0 h-4 bg-primary/10 text-primary border-primary/20"
+                          >
+                            {sourceHeader}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground/60 italic">não mapeada</span>
+                        )}
+                      </span>
+                    )
+                  })}
+                </div>
+
                 <div className="overflow-x-auto rounded-lg border">
                   <Table>
                     <TableHeader className="bg-muted/50">
                       <TableRow>
                         <TableHead className="w-12 text-center text-xs">#</TableHead>
-                        <TableHead className="text-xs">Data</TableHead>
-                        <TableHead className="text-xs">NF / Doc</TableHead>
-                        <TableHead className="text-xs">Cliente</TableHead>
-                        <TableHead className="text-xs">CNPJ</TableHead>
-                        <TableHead className="text-xs">Produto</TableHead>
-                        <TableHead className="text-xs">Família</TableHead>
+                        <TableHead className="text-xs">
+                          <div>Data</div>
+                          {Object.keys(mapping).find((h) => mapping[h] === 'data') && (
+                            <div className="text-[10px] font-mono font-normal text-muted-foreground truncate max-w-[100px]">
+                              de: {Object.keys(mapping).find((h) => mapping[h] === 'data')}
+                            </div>
+                          )}
+                        </TableHead>
+                        <TableHead className="text-xs">
+                          <div>NF / Doc</div>
+                          {Object.keys(mapping).find((h) => mapping[h] === 'numero_documento') && (
+                            <div className="text-[10px] font-mono font-normal text-muted-foreground truncate max-w-[90px]">
+                              de:{' '}
+                              {Object.keys(mapping).find((h) => mapping[h] === 'numero_documento')}
+                            </div>
+                          )}
+                        </TableHead>
+                        <TableHead className="text-xs">
+                          <div>Cliente</div>
+                          {Object.keys(mapping).find((h) => mapping[h] === 'cliente') && (
+                            <div className="text-[10px] font-mono font-normal text-muted-foreground truncate max-w-[120px]">
+                              de: {Object.keys(mapping).find((h) => mapping[h] === 'cliente')}
+                            </div>
+                          )}
+                        </TableHead>
+                        <TableHead className="text-xs">
+                          <div>CNPJ</div>
+                          {Object.keys(mapping).find((h) => mapping[h] === 'cnpj') && (
+                            <div className="text-[10px] font-mono font-normal text-muted-foreground truncate max-w-[90px]">
+                              de: {Object.keys(mapping).find((h) => mapping[h] === 'cnpj')}
+                            </div>
+                          )}
+                        </TableHead>
+                        <TableHead className="text-xs">
+                          <div>Produto</div>
+                          {Object.keys(mapping).find((h) => mapping[h] === 'produto') && (
+                            <div className="text-[10px] font-mono font-normal text-muted-foreground truncate max-w-[120px]">
+                              de: {Object.keys(mapping).find((h) => mapping[h] === 'produto')}
+                            </div>
+                          )}
+                        </TableHead>
+                        <TableHead className="text-xs">
+                          <div>Família</div>
+                          {Object.keys(mapping).find(
+                            (h) => mapping[h] === 'especie' || mapping[h] === 'familia_produto',
+                          ) && (
+                            <div className="text-[10px] font-mono font-normal text-muted-foreground truncate max-w-[90px]">
+                              de:{' '}
+                              {Object.keys(mapping).find(
+                                (h) => mapping[h] === 'especie' || mapping[h] === 'familia_produto',
+                              )}
+                            </div>
+                          )}
+                        </TableHead>
                         {mappedCrmFields.has('valor_usd') && (
                           <TableHead className="text-xs text-right text-emerald-700 dark:text-emerald-400">
-                            Valor USD ($)
+                            <div>Valor USD ($)</div>
+                            {Object.keys(mapping).find((h) => mapping[h] === 'valor_usd') && (
+                              <div className="text-[10px] font-mono font-normal text-emerald-600/70 truncate">
+                                de: {Object.keys(mapping).find((h) => mapping[h] === 'valor_usd')}
+                              </div>
+                            )}
                           </TableHead>
                         )}
                         {mappedCrmFields.has('valor') && (
                           <TableHead className="text-xs text-right text-primary">
-                            Valor R$
+                            <div>Valor R$</div>
+                            {Object.keys(mapping).find((h) => mapping[h] === 'valor') && (
+                              <div className="text-[10px] font-mono font-normal text-primary/70 truncate">
+                                de: {Object.keys(mapping).find((h) => mapping[h] === 'valor')}
+                              </div>
+                            )}
                           </TableHead>
                         )}
                         {!mappedCrmFields.has('valor_usd') && !mappedCrmFields.has('valor') && (
                           <TableHead className="text-xs text-right">Valor</TableHead>
                         )}
-                        <TableHead className="text-xs">Vendedor</TableHead>
+                        <TableHead className="text-xs">
+                          <div>Vendedor</div>
+                          {Object.keys(mapping).find((h) => mapping[h] === 'vendedor') && (
+                            <div className="text-[10px] font-mono font-normal text-muted-foreground truncate max-w-[90px]">
+                              de: {Object.keys(mapping).find((h) => mapping[h] === 'vendedor')}
+                            </div>
+                          )}
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -707,6 +811,9 @@ export default function ImportarFaturamento() {
                         const rawUsd = getValue('valor_usd')
                         const rawBrl = getValue('valor')
 
+                        // 8. VENDEDOR
+                        const rawVend = getValue('vendedor')
+
                         return (
                           <TableRow key={idx}>
                             <TableCell className="text-xs text-muted-foreground text-center font-mono">
@@ -736,20 +843,12 @@ export default function ImportarFaturamento() {
                             <TableCell className="text-xs">{formattedEspecie}</TableCell>
                             {mappedCrmFields.has('valor_usd') && (
                               <TableCell className="text-xs text-right font-semibold font-mono text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                                {rawUsd !== undefined &&
-                                rawUsd !== null &&
-                                String(rawUsd).trim() !== ''
-                                  ? String(rawUsd)
-                                  : '—'}
+                                {formatCurrencyPreview(rawUsd, '$ ')}
                               </TableCell>
                             )}
                             {mappedCrmFields.has('valor') && (
                               <TableCell className="text-xs text-right font-semibold font-mono text-primary whitespace-nowrap">
-                                {rawBrl !== undefined &&
-                                rawBrl !== null &&
-                                String(rawBrl).trim() !== ''
-                                  ? String(rawBrl)
-                                  : '—'}
+                                {formatCurrencyPreview(rawBrl, 'R$ ')}
                               </TableCell>
                             )}
                             {!mappedCrmFields.has('valor_usd') && !mappedCrmFields.has('valor') && (
@@ -757,8 +856,17 @@ export default function ImportarFaturamento() {
                                 —
                               </TableCell>
                             )}
-                            <TableCell className="text-xs text-muted-foreground">
-                              {String(getValue('vendedor') ?? '—')}
+                            <TableCell className="text-xs font-medium text-foreground">
+                              {rawVend ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <UserCheck className="w-3 h-3 text-emerald-600" />
+                                  <span>{String(rawVend)}</span>
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground/60 italic">
+                                  sem vendedor
+                                </span>
+                              )}
                             </TableCell>
                           </TableRow>
                         )
