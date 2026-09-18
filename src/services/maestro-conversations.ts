@@ -58,8 +58,9 @@ export function serializeMessagesForStorage(messages: ChatMessage[]): Serialized
         confirmationCard,
         reportConfig: msg.reportConfig || null,
         error: msg.error,
+        reportStatus: msg.reportStatus,
+        reportResult: msg.reportResult,
       }
-
       return serialized
     })
 }
@@ -89,6 +90,8 @@ export function deserializeMessagesFromStorage(saved: SerializedChatMessage[]): 
       confirmationCard: card,
       reportConfig: msg.reportConfig || null,
       error: msg.error,
+      reportStatus: msg.reportStatus,
+      reportResult: msg.reportResult,
     }
   })
 }

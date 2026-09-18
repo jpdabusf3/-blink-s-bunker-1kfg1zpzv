@@ -12,7 +12,7 @@ export interface MaestroReportConfig {
   ano?: number
   mes?: number
   semana?: number
-  modo?: 'month' | 'week'
+  modo?: 'month' | 'week' | 'custom' | string
   filtros?: {
     cliente?: string
     pais?: string
@@ -29,6 +29,24 @@ export interface MaestroReportConfig {
   }
   saida?: string
   observacoes?: string
+}
+
+export interface MaestroReportGenerationResult {
+  success: boolean
+  document_id: string
+  client_report_id?: string
+  nome_arquivo: string
+  titulo: string
+  periodo: string
+  faturado_total_brl: number
+  faturado_total_usd?: number
+  quantidade_notas: number
+  ticket_medio?: number
+  carteira_total_brl?: number
+  cobertura_percent?: number
+  top_clientes?: Array<{ cliente: string; valor_brl: number }>
+  top_familias?: Array<{ familia: string; valor_brl: number }>
+  error?: string
 }
 
 export interface MaestroChatSendResult {
@@ -158,4 +176,20 @@ export function extractReportConfigFromText(text: string): MaestroReportConfig |
   }
 
   return null
+}
+
+/**
+ * Dispara o processamento e consolidação de relatório no backend:
+ * consulta faturamento/pedidos, gera o PDF binário e salva em documents e client_reports.
+ */
+export async function gerarRelatorioMaestro(
+  config: MaestroReportConfig,
+): Promise<MaestroReportGenerationResult> {
+  const res = await pb.send<MaestroReportGenerationResult>('/backend/v1/maestro/gerar-relatorio', {
+    method: 'POST',
+    body: {
+      config,
+    },
+  })
+  return res
 }

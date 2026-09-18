@@ -45,6 +45,7 @@ export function Maestro() {
     handleCancelAction,
     handleRetryAnalysis,
     handleSelectQuickAction,
+    handleGenerateReportFromConfig,
     startNewChat,
   } = useMaestroChat()
 
@@ -257,13 +258,25 @@ export function Maestro() {
                       </div>
                     )}
 
-                    {/* Conteúdo de Texto */}
-                    {message.content && !message.isAnalyzing && (
-                      <div className="whitespace-pre-wrap leading-relaxed">{message.content}</div>
+                    {/* Loading de Geração de Relatório MAESTRO */}
+                    {message.reportStatus === 'processing' && (
+                      <div className="flex items-center gap-2.5 py-1 text-primary">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="font-medium animate-pulse">
+                          Gerando relatório e consolidando indicadores...
+                        </span>
+                      </div>
                     )}
 
+                    {/* Conteúdo de Texto */}
+                    {message.content &&
+                      !message.isAnalyzing &&
+                      message.reportStatus !== 'processing' && (
+                        <div className="whitespace-pre-wrap leading-relaxed">{message.content}</div>
+                      )}
+
                     {/* STATE 3: ERROR STATE COM BOTÃO TENTAR NOVAMENTE */}
-                    {message.error && (
+                    {message.error && !message.reportStatus && (
                       <div className="mt-2 pt-2 border-t border-border/40 flex flex-col gap-2">
                         <div className="flex items-center gap-2 text-red-400 text-xs">
                           <AlertTriangle className="h-4 w-4 shrink-0" />
@@ -280,6 +293,25 @@ export function Maestro() {
                             Tentar novamente
                           </Button>
                         )}
+                      </div>
+                    )}
+
+                    {/* Falha na geração do relatório MAESTRO com botão "Tentar novamente" */}
+                    {message.reportStatus === 'failed' && message.reportConfig && (
+                      <div className="mt-2 pt-2 border-t border-border/40 flex flex-col gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            if (message.reportConfig) {
+                              handleGenerateReportFromConfig(message.reportConfig, message.id)
+                            }
+                          }}
+                          className="w-fit text-xs h-8 gap-1.5 border-red-500/40 text-red-400 hover:bg-red-500/10"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          Tentar novamente
+                        </Button>
                       </div>
                     )}
 
@@ -305,6 +337,151 @@ export function Maestro() {
                       </div>
                     )}
                   </div>
+
+                  {/* Card de Relatório MAESTRO Gerado com Sucesso */}
+                  {message.reportStatus === 'success' && message.reportResult && (
+                    <div className="w-full max-w-xl bg-card border border-border/70 rounded-xl p-4 shadow-lg animate-in fade-in-50 duration-300">
+                      <div className="flex items-center justify-between pb-2 mb-3 border-b border-border/40">
+                        <div className="flex items-center gap-2">
+                          <div className="h-7 w-7 rounded-lg bg-primary/15 text-primary flex items-center justify-center">
+                            <FileText className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-sm text-foreground">
+                              {message.reportResult.titulo}
+                            </h4>
+                            <p className="text-xs text-muted-foreground">
+                              {message.reportResult.nome_arquivo}
+                            </p>
+                          </div>
+                        </div>
+
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-2 py-0.5 bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+                        >
+                          PDF Gerado
+                        </Badge>
+                      </div>
+
+                      {/* Badges de onde o arquivo foi salvo */}
+                      <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                        <Badge
+                          variant="secondary"
+                          className="text-[11px] bg-primary/10 text-primary border-primary/20 gap-1 font-normal"
+                        >
+                          <CheckCircle2 className="h-3 w-3" />
+                          Salvo em Relatórios automáticos
+                        </Badge>
+                        <Badge
+                          variant="secondary"
+                          className="text-[11px] bg-primary/10 text-primary border-primary/20 gap-1 font-normal"
+                        >
+                          <CheckCircle2 className="h-3 w-3" />
+                          Salvo em Documentos
+                        </Badge>
+                      </div>
+
+                      {/* Grade de KPIs principais */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3 bg-muted/30 p-2.5 rounded-lg border border-border/30">
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase font-medium">
+                            Faturamento
+                          </p>
+                          <p className="text-xs sm:text-sm font-bold text-foreground">
+                            {(message.reportResult.faturado_total_brl || 0).toLocaleString(
+                              'pt-BR',
+                              {
+                                style: 'currency',
+                                currency: 'BRL',
+                              },
+                            )}
+                          </p>
+                          {Boolean(
+                            message.reportResult.faturado_total_usd &&
+                            message.reportResult.faturado_total_usd > 0,
+                          ) && (
+                            <p className="text-[10px] text-muted-foreground">
+                              US${' '}
+                              {(message.reportResult.faturado_total_usd || 0).toLocaleString(
+                                'pt-BR',
+                                { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+                              )}
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase font-medium">
+                            Pedidos / Notas
+                          </p>
+                          <p className="text-xs sm:text-sm font-bold text-foreground">
+                            {message.reportResult.quantidade_notas || 0}
+                          </p>
+                          {Boolean(
+                            message.reportResult.ticket_medio &&
+                            message.reportResult.ticket_medio > 0,
+                          ) && (
+                            <p className="text-[10px] text-muted-foreground">
+                              Ticket:{' '}
+                              {(message.reportResult.ticket_medio || 0).toLocaleString('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL',
+                              })}
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase font-medium">
+                            Cobertura Carteira
+                          </p>
+                          <p className="text-xs sm:text-sm font-bold text-foreground">
+                            {message.reportResult.cobertura_percent !== undefined &&
+                            message.reportResult.cobertura_percent !== null
+                              ? `${message.reportResult.cobertura_percent.toFixed(1).replace('.', ',')}%`
+                              : '—'}
+                          </p>
+                          {Boolean(
+                            message.reportResult.carteira_total_brl &&
+                            message.reportResult.carteira_total_brl > 0,
+                          ) && (
+                            <p className="text-[10px] text-muted-foreground">
+                              Cart:{' '}
+                              {(message.reportResult.carteira_total_brl || 0).toLocaleString(
+                                'pt-BR',
+                                { style: 'currency', currency: 'BRL' },
+                              )}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Botões de Ação para navegar até Relatórios Automáticos e/ou Documentos */}
+                      <div className="flex flex-col sm:flex-row gap-2 pt-1 border-t border-border/30">
+                        <Button
+                          size="sm"
+                          className="flex-1 h-9 bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs justify-between"
+                          onClick={() => navigate('/relatorios-automaticos')}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            Ver em Relatórios automáticos
+                          </span>
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-9 text-xs justify-between"
+                          onClick={() => navigate('/documents')}
+                        >
+                          <span>Ver em Documentos</span>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* 3. CONFIRMATION CARD (Após análise do arquivo) */}
                   {message.confirmationCard && (

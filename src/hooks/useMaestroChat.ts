@@ -52,6 +52,8 @@ export interface ChatMessage {
   }>
   reportConfig?: MaestroReportConfig | null
   error?: string
+  reportStatus?: 'processing' | 'success' | 'failed'
+  reportResult?: MaestroReportGenerationResult
 }
 
 import { useEffect } from 'react'
@@ -62,6 +64,10 @@ import {
   deserializeMessagesFromStorage,
   clearMaestroConversationRecord,
 } from '@/services/maestro-conversations'
+import {
+  gerarRelatorioMaestro,
+  type MaestroReportGenerationResult,
+} from '@/services/maestro-service'
 
 export interface UseMaestroChatReturn {
   messages: ChatMessage[]
@@ -82,6 +88,10 @@ export interface UseMaestroChatReturn {
   handleCancelAction: (messageId: string) => void
   handleRetryAnalysis: () => Promise<void>
   handleSelectQuickAction: (actionType: DocumentType) => Promise<void>
+  handleGenerateReportFromConfig: (
+    config: MaestroReportConfig,
+    targetMsgId?: string,
+  ) => Promise<void>
   clearChat: () => void
   startNewChat: () => Promise<void>
 }
@@ -570,6 +580,95 @@ export function useMaestroChat(): UseMaestroChatReturn {
   )
 
   /**
+   * Executa a geração do relatório a partir do JSON de configuração retornado pelo MAESTRO.
+   */
+  const handleGenerateReportFromConfig = useCallback(
+    async (config: MaestroReportConfig, targetMsgId?: string) => {
+      const progressMsgId = targetMsgId || `report-progress-${Date.now()}`
+
+      if (!targetMsgId) {
+        const progressMsg: ChatMessage = {
+          id: progressMsgId,
+          role: 'assistant',
+          content: 'Gerando relatório e consolidando indicadores...',
+          timestamp: new Date(),
+          reportStatus: 'processing',
+          reportConfig: config,
+        }
+        setMessages((prev) => [...prev, progressMsg])
+      } else {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === targetMsgId
+              ? {
+                  ...m,
+                  reportStatus: 'processing',
+                  error: undefined,
+                }
+              : m,
+          ),
+        )
+      }
+
+      try {
+        const result = await gerarRelatorioMaestro(config)
+
+        if (result && result.success) {
+          const formattedBrl = (result.faturado_total_brl || 0).toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+          })
+          const formattedUsd =
+            result.faturado_total_usd && result.faturado_total_usd > 0
+              ? ` (US$ ${result.faturado_total_usd.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+              : ''
+          const coberturaTxt =
+            result.cobertura_percent !== undefined && result.cobertura_percent !== null
+              ? ` | Cobertura: ${result.cobertura_percent.toFixed(1).replace('.', ',')}%`
+              : ''
+
+          const successText = `Relatório gerado com sucesso!\n\n• Período: ${result.periodo}\n• Faturamento Total: ${formattedBrl}${formattedUsd}\n• Pedidos/Notas: ${result.quantidade_notas}${coberturaTxt}\n• Arquivo: ${result.nome_arquivo}`
+
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === progressMsgId
+                ? {
+                    ...m,
+                    content: successText,
+                    reportStatus: 'success',
+                    reportResult: result,
+                    reportConfig: config,
+                  }
+                : m,
+            ),
+          )
+        } else {
+          throw new Error(result?.error || 'Não foi possível gerar o relatório. Tente novamente.')
+        }
+      } catch (err: unknown) {
+        console.error('Erro na geração automática do relatório MAESTRO:', err)
+        const errMsg =
+          (err as Error).message || 'Não foi possível gerar o relatório. Tente novamente.'
+
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === progressMsgId
+              ? {
+                  ...m,
+                  content: 'Não foi possível gerar o relatório. Tente novamente.',
+                  reportStatus: 'failed',
+                  reportConfig: config,
+                  error: errMsg,
+                }
+              : m,
+          ),
+        )
+      }
+    },
+    [],
+  )
+
+  /**
    * Envio de mensagem com texto e/ou anexo
    */
   const sendMessage = useCallback(
@@ -651,28 +750,8 @@ export function useMaestroChat(): UseMaestroChatReturn {
         const finalContent = result.content || streamedText
         const config = extractReportConfigFromText(finalContent)
 
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantMsgId
-              ? {
-                  ...m,
-                  content: finalContent,
-                  reportConfig: config,
-                }
-              : m,
-          ),
-        )
-      } catch (streamErr: unknown) {
-        console.warn('Fallback síncrono para Maestro Chat:', streamErr)
-        try {
-          const syncResult = await sendMaestroMessageSync(text, conversationId)
-          if (syncResult.conversationId) {
-            setConversationId(syncResult.conversationId)
-          }
-
-          const finalContent = syncResult.content
-          const config = extractReportConfigFromText(finalContent)
-
+        if (config) {
+          // Se o agente devolveu a configuração de relatório, dispara AUTOMATICAMENTE a geração
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantMsgId
@@ -684,6 +763,57 @@ export function useMaestroChat(): UseMaestroChatReturn {
                 : m,
             ),
           )
+          handleGenerateReportFromConfig(config)
+        } else {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId
+                ? {
+                    ...m,
+                    content: finalContent,
+                    reportConfig: null,
+                  }
+                : m,
+            ),
+          )
+        }
+      } catch (streamErr: unknown) {
+        console.warn('Fallback síncrono para Maestro Chat:', streamErr)
+        try {
+          const syncResult = await sendMaestroMessageSync(text, conversationId)
+          if (syncResult.conversationId) {
+            setConversationId(syncResult.conversationId)
+          }
+
+          const finalContent = syncResult.content
+          const config = extractReportConfigFromText(finalContent)
+
+          if (config) {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMsgId
+                  ? {
+                      ...m,
+                      content: finalContent,
+                      reportConfig: config,
+                    }
+                  : m,
+              ),
+            )
+            handleGenerateReportFromConfig(config)
+          } else {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMsgId
+                  ? {
+                      ...m,
+                      content: finalContent,
+                      reportConfig: null,
+                    }
+                  : m,
+              ),
+            )
+          }
         } catch (syncErr: unknown) {
           console.error('Erro na conversa com Maestro:', syncErr)
           setMessages((prev) =>
@@ -725,6 +855,7 @@ export function useMaestroChat(): UseMaestroChatReturn {
     handleCancelAction,
     handleRetryAnalysis,
     handleSelectQuickAction,
+    handleGenerateReportFromConfig,
     clearChat,
     startNewChat,
     isLoadingHistory,
