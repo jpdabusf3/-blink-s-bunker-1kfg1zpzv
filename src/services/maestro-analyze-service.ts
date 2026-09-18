@@ -5,7 +5,24 @@ import { insertNF, insertItens } from '@/services/nfService'
 import { type ImportResult } from '@/services/import-excel'
 import { type FaturamentoImportResult } from '@/services/import-faturamento'
 
-export type DocumentType = 'invoice_pdf' | 'client_spreadsheet' | 'sales_spreadsheet' | 'unknown'
+import {
+  detectBlinkReportType,
+  parseMatrizVenda,
+  parsePedidosCarteira,
+  parseRelatorioVendasSemanal,
+  type MatrizVendaItem,
+  type PedidoCarteiraItem,
+  type RelatorioSemanalMetaItem,
+} from '@/services/blink-pdf-parsers'
+
+export type DocumentType =
+  | 'invoice_pdf'
+  | 'client_spreadsheet'
+  | 'sales_spreadsheet'
+  | 'matriz_venda'
+  | 'pedidos_carteira'
+  | 'relatorio_vendas_semanal'
+  | 'unknown'
 
 export interface InvoiceItemExtracted {
   produto_codigo?: string
@@ -66,6 +83,9 @@ export interface MaestroAnalysisResult {
     invoices?: InvoiceExtracted[]
     clients?: ClientExtracted[]
     sales?: SaleExtracted[]
+    matriz_venda?: MatrizVendaItem[]
+    pedidos_carteira?: PedidoCarteiraItem[]
+    relatorio_vendas_semanal?: RelatorioSemanalMetaItem[]
   }
 }
 
@@ -205,6 +225,57 @@ export async function analyzeMaestroFile(params: {
   }
 
   const data: MaestroAnalysisResult = await res.json()
+
+  // Se o hook retornou ou o texto local indica um dos 3 novos tipos de relatório Blink,
+  // enriquecer os dados usando os parsers locais de alta tolerância
+  const localType = detectBlinkReportType(params.extractedText || '', params.file.name)
+  const finalDocType =
+    data.document_type === 'unknown' && localType !== 'unknown'
+      ? localType
+      : data.document_type || localType
+
+  if (finalDocType === 'matriz_venda') {
+    const parsed = parseMatrizVenda(params.extractedText || '', params.file.name)
+    const uniqueClients = new Set(parsed.map((p) => p.cliente)).size
+    data.document_type = 'matriz_venda'
+    data.data.matriz_venda = parsed
+    data.summary = `${uniqueClients} clientes e ${parsed.length} valores mensais encontrados.`
+    data.preview_rows = parsed.slice(0, 5).map((p) => ({
+      Cliente: p.cliente,
+      País: p.pais,
+      Carteira: p.carteira,
+      Grupo: p.grupo_cliente,
+      Mês: `${p.mes.toUpperCase()}/${p.ano}`,
+      Valor: `R$ ${p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+    }))
+  } else if (finalDocType === 'pedidos_carteira') {
+    const parsed = parsePedidosCarteira(params.extractedText || '', params.file.name)
+    const uniqueClients = new Set(parsed.map((p) => p.cliente)).size
+    data.document_type = 'pedidos_carteira'
+    data.data.pedidos_carteira = parsed
+    data.summary = `${uniqueClients} clientes e ${parsed.length} pedidos em carteira encontrados.`
+    data.preview_rows = parsed.slice(0, 5).map((p) => ({
+      Cliente: p.cliente,
+      Segmento: p.segmento,
+      Mês: `${p.mes.toUpperCase()}/${p.ano}`,
+      Valor: `R$ ${p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+    }))
+  } else if (finalDocType === 'relatorio_vendas_semanal') {
+    const parsed = parseRelatorioVendasSemanal(params.extractedText || '', params.file.name)
+    data.document_type = 'relatorio_vendas_semanal'
+    data.data.relatorio_vendas_semanal = parsed
+    data.summary = `${parsed.length} metas e comparativos de vendas identificados.`
+    data.preview_rows = parsed.slice(0, 5).map((p) => ({
+      Bloco: p.periodo_rotulo,
+      Canal: p.canal,
+      Vendedor: p.vendedor_nome || 'Consolidado',
+      Carteira: p.carteira || '-',
+      Planejado: `R$ ${p.planejado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+      Realizado: `R$ ${p.realizado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+      Atingimento: `${p.atingimento_pct}%`,
+    }))
+  }
+
   return data
 }
 
@@ -494,5 +565,392 @@ export async function executeImportSales(
     navigationTab: '/historico-vendas',
     navigationLabel: 'Ver Histórico de Vendas',
     message: `Importação de vendas concluída: ${res.imported} registro(s) inserido(s), ${res.skipped_duplicates} duplicata(s) ignorada(s).`,
+  }
+}
+
+/**
+ * 1. Executa a importação do PDF Matriz de Venda
+ * Destino: coleção de faturamento / histórico de vendas (mesma coleção que a importação de Excel grava).
+ * Grava apenas no nível do cliente (NÃO duplica totais de grupo/carteira/país).
+ * Deduplicação: mesmo cliente + mês/ano + valor não grava duas vezes.
+ */
+export async function executeImportMatrizVenda(
+  items: MatrizVendaItem[],
+  originalFileName?: string,
+): Promise<ExecutionResult> {
+  const MESES_MAP_NUM: Record<string, number> = {
+    janeiro: 1,
+    fevereiro: 2,
+    março: 3,
+    abril: 4,
+    maio: 5,
+    junho: 6,
+    julho: 7,
+    agosto: 8,
+    setembro: 9,
+    outubro: 10,
+    novembro: 11,
+    dezembro: 12,
+  }
+
+  // Converter itens para linhas de faturamento
+  const rows = items.map((it) => {
+    const mesNum = MESES_MAP_NUM[it.mes.toLowerCase()] || 1
+    const mesStr = mesNum < 10 ? `0${mesNum}` : `${mesNum}`
+    const dataDoc = `${it.ano}-${mesStr}-01`
+
+    return {
+      data: dataDoc,
+      data_documento: dataDoc,
+      cliente: it.cliente,
+      cliente_nome: it.cliente,
+      pais: it.pais || 'Brasil',
+      country: it.pais || 'Brasil',
+      familia: it.carteira,
+      familia_de_produtos: it.carteira,
+      especie: it.carteira,
+      canal_vendas: it.grupo_cliente || 'Direto',
+      quantidade: 1,
+      valor_total_brl: it.valor,
+      valor: it.valor,
+      numero_documento: `MV-${it.ano}-${mesStr}`,
+      status: 'realizado',
+    }
+  })
+
+  const res = await pb.send<FaturamentoImportResult>('/backend/v1/importar-faturamento', {
+    method: 'POST',
+    body: JSON.stringify({
+      rows,
+      options: {
+        criarClienteNaoEncontrado: true,
+        fileName: originalFileName || 'Matriz_de_Venda.pdf',
+      },
+    }),
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+  // Também manter a tabela matriz_vendas em sincronia se aplicável
+  try {
+    for (const it of items) {
+      if (it.valor > 0) {
+        // Checar se já existe na matriz_vendas
+        const existing = await pb
+          .collection('matriz_vendas')
+          .getFirstListItem(
+            `razao_social = "${it.cliente.replace(/"/g, '\\"')}" && mes = "${it.mes}" && pais = "${it.pais}"`,
+          )
+          .catch(() => null)
+
+        if (!existing) {
+          const carteiraUpper = it.carteira.toUpperCase()
+          const validCarteira = ['AVES', 'PETS', 'RUMINANTES', 'SUINOS', 'AQUA'].includes(
+            carteiraUpper,
+          )
+            ? carteiraUpper
+            : carteiraUpper.includes('SU')
+              ? 'SUINOS'
+              : 'AVES'
+
+          await pb
+            .collection('matriz_vendas')
+            .create({
+              pais: it.pais,
+              carteira: validCarteira,
+              grupo_cliente: it.grupo_cliente,
+              razao_social: it.cliente,
+              mes: it.mes,
+              valor: it.valor,
+              atualizado_em: new Date().toISOString(),
+            })
+            .catch(() => {})
+        }
+      }
+    }
+  } catch (errSync) {
+    console.warn('Erro ao sincronizar matriz_vendas complementar:', errSync)
+  }
+
+  // Notificar realtime do CRM
+  if (typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'faturamento' } }))
+      window.dispatchEvent(
+        new CustomEvent('blink:datasync', { detail: { entity: 'historico_vendas' } }),
+      )
+      window.dispatchEvent(
+        new CustomEvent('blink:datasync', { detail: { entity: 'matriz_vendas' } }),
+      )
+      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'factories' } }))
+    } catch {
+      /* intentionally ignored */
+    }
+  }
+
+  const errorsList = (res.error_details || res.erros || []).map((e) => ({
+    row: e.linha,
+    reason: e.erro,
+  }))
+
+  return {
+    success: res.success,
+    inserted: res.imported,
+    skippedDuplicates: res.skipped_duplicates,
+    errorsCount: errorsList.length,
+    errorDetails: errorsList,
+    navigationTab: '/historico-vendas',
+    navigationLabel: 'Ver Faturamento / Histórico de Vendas',
+    message: `Matriz de Venda importada: ${res.imported} valor(es) gravado(s) em faturamento/histórico, ${res.skipped_duplicates} duplicata(s) ignorada(s).`,
+  }
+}
+
+/**
+ * 2. Executa a importação do PDF Pedidos em Carteira
+ * Destino: coleção de pedidos em carteira (pedidos_carteira)
+ * Deduplicação: cliente + mês + ano + valor
+ */
+export async function executeImportPedidosCarteira(
+  items: PedidoCarteiraItem[],
+  originalFileName?: string,
+): Promise<ExecutionResult> {
+  let inserted = 0
+  let skippedDuplicates = 0
+  const errorsList: Array<{ row: number; reason: string }> = []
+
+  // Calcular total geral por cliente para preencher campo total_geral
+  const totalsByClient: Record<string, number> = {}
+  for (const it of items) {
+    totalsByClient[it.cliente] = (totalsByClient[it.cliente] || 0) + it.valor
+  }
+
+  // Buscar registros existentes para deduplicar
+  const existingRecords = await pb
+    .collection('pedidos_carteira')
+    .getFullList<{ id: string; marca: string; mes: string; valor: number; ano?: number }>()
+    .catch(() => [])
+
+  const existingSet = new Set(
+    existingRecords.map(
+      (r) => `${r.marca.trim().toLowerCase()}__${r.mes.trim().toLowerCase()}__${r.valor}`,
+    ),
+  )
+
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i]
+    const rowNum = i + 1
+    const dedupeKey = `${it.cliente.trim().toLowerCase()}__${it.mes.trim().toLowerCase()}__${it.valor}`
+
+    if (existingSet.has(dedupeKey)) {
+      skippedDuplicates++
+      continue
+    }
+
+    try {
+      await pb.collection('pedidos_carteira').create({
+        marca: it.cliente,
+        cliente: it.cliente,
+        mes: it.mes.toLowerCase(),
+        ano: it.ano,
+        segmento: it.segmento,
+        valor: it.valor,
+        total_geral: totalsByClient[it.cliente] || it.valor,
+        atualizado_em: new Date().toISOString(),
+      })
+      existingSet.add(dedupeKey)
+      inserted++
+    } catch (err) {
+      errorsList.push({
+        row: rowNum,
+        reason: `Cliente ${it.cliente} (${it.mes}): ${(err as Error).message}`,
+      })
+    }
+  }
+
+  // Registrar auditoria
+  try {
+    const userId = pb.authStore.model?.id
+    if (userId) {
+      await pb.collection('activity_logs').create({
+        user: userId,
+        action: 'Importação Maestro - Pedidos em Carteira',
+        details: `Importados ${inserted} pedidos em carteira (${skippedDuplicates} duplicatas ignoradas) de "${originalFileName || 'arquivo.pdf'}".`,
+        target_collection: 'pedidos_carteira',
+        origem: 'painel',
+        tipo: 'outro',
+      })
+    }
+  } catch {
+    /* intentionally ignored */
+  }
+
+  // Notificar listeners
+  if (typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(
+        new CustomEvent('blink:datasync', { detail: { entity: 'pedidos_carteira' } }),
+      )
+    } catch {
+      /* intentionally ignored */
+    }
+  }
+
+  return {
+    success: inserted > 0 || items.length === skippedDuplicates,
+    inserted,
+    skippedDuplicates,
+    errorsCount: errorsList.length,
+    errorDetails: errorsList,
+    navigationTab: '/pedidos-carteira',
+    navigationLabel: 'Ver Pedidos em Carteira',
+    message: `Pedidos em carteira importados: ${inserted} inserido(s), ${skippedDuplicates} duplicata(s) ignorada(s).`,
+  }
+}
+
+/**
+ * 3. Executa a importação do PDF Relatório de Vendas Semanal
+ * Destino: PLANEJADO -> coleção de metas; REALIZADO -> comparativo de metas / realizado
+ * Preserva canal (BLINK/BR/INDUSTRIA/PREMIXEIRAS/DISTRIBUIDORAS/LATAM) e vendedor/carteira
+ */
+export async function executeImportRelatorioVendasSemanal(
+  items: RelatorioSemanalMetaItem[],
+  originalFileName?: string,
+): Promise<ExecutionResult> {
+  let inserted = 0
+  let skippedDuplicates = 0
+  const errorsList: Array<{ row: number; reason: string }> = []
+
+  // Carregar gestao_tecnica para vincular vendedores
+  const gestaoTecnicaList = await pb
+    .collection('gestao_tecnica')
+    .getFullList<{ id: string; nome: string; carteira?: string }>()
+    .catch(() => [])
+
+  // Mapa de canal válido para o enum do PB se aplicável
+  const CANAL_MAP: Record<string, string> = {
+    BLINK: 'Direto',
+    BR: 'Direto',
+    INDUSTRIA: 'Indústria',
+    PREMIXEIRAS: 'Premixera',
+    DISTRIBUIDORAS: 'Distribuidor',
+    LATAM: 'Direto',
+  }
+
+  const ESPECIE_MAP: Record<string, 'BOVINO' | 'SUINO' | 'AVE' | 'PET' | 'AQUA'> = {
+    Ruminantes: 'BOVINO',
+    Suínos: 'SUINO',
+    Suinos: 'SUINO',
+    Aves: 'AVE',
+    Pets: 'PET',
+    Aqua: 'AQUA',
+  }
+
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i]
+    const rowNum = i + 1
+
+    // Apenas itens que tenham planejado ou realizado > 0
+    if (it.planejado <= 0 && it.realizado <= 0) {
+      continue
+    }
+
+    // Vincular vendedor se houver
+    let matchedVendedorId = ''
+    if (it.vendedor_nome) {
+      const vNorm = it.vendedor_nome.toLowerCase().trim()
+      const found = gestaoTecnicaList.find(
+        (g) =>
+          g.nome.toLowerCase().trim().includes(vNorm) ||
+          vNorm.includes(g.nome.toLowerCase().trim()),
+      )
+      if (found) {
+        matchedVendedorId = found.id
+      }
+    }
+
+    const canalNormalizado = CANAL_MAP[it.canal.toUpperCase()] || 'Direto'
+    const especieNormalizada = it.carteira ? ESPECIE_MAP[it.carteira] : undefined
+
+    try {
+      // Checar se já existe meta para o mesmo período, canal e vendedor
+      const existingFilter = matchedVendedorId
+        ? `periodo = "${it.periodo}" && vendedor_id = "${matchedVendedorId}" && canal_vendas = "${canalNormalizado}"`
+        : `periodo = "${it.periodo}" && canal_vendas = "${canalNormalizado}"`
+
+      const existingMeta = await pb
+        .collection('metas')
+        .getFirstListItem(existingFilter)
+        .catch(() => null)
+
+      if (existingMeta) {
+        // Atualizar valores de planejado e realizado
+        await pb.collection('metas').update(existingMeta.id, {
+          meta_valor: it.planejado || existingMeta.meta_valor,
+          valor_realizado: it.realizado || existingMeta.valor_realizado,
+          canal: it.canal,
+          canal_vendas: canalNormalizado,
+          vendedor_nome: it.vendedor_nome || existingMeta.vendedor_nome,
+          tipo_resultado: it.periodo_rotulo,
+          atualizado_em: new Date().toISOString(),
+        })
+        skippedDuplicates++
+      } else {
+        await pb.collection('metas').create({
+          periodo: it.periodo,
+          meta_valor: it.planejado,
+          valor_realizado: it.realizado,
+          canal: it.canal,
+          canal_vendas: canalNormalizado,
+          vendedor_id: matchedVendedorId || null,
+          vendedor_nome: it.vendedor_nome || '',
+          especie: especieNormalizada || null,
+          tipo_resultado: it.periodo_rotulo,
+          atualizado_em: new Date().toISOString(),
+        })
+        inserted++
+      }
+    } catch (err) {
+      errorsList.push({
+        row: rowNum,
+        reason: `${it.periodo_rotulo} (${it.canal}): ${(err as Error).message}`,
+      })
+    }
+  }
+
+  // Registrar auditoria
+  try {
+    const userId = pb.authStore.model?.id
+    if (userId) {
+      await pb.collection('activity_logs').create({
+        user: userId,
+        action: 'Importação Maestro - Relatório de Vendas Semanal (Metas)',
+        details: `Importadas metas e realizados (${inserted} novas metas, ${skippedDuplicates} atualizadas) de "${originalFileName || 'arquivo.pdf'}".`,
+        target_collection: 'metas',
+        origem: 'painel',
+        tipo: 'outro',
+      })
+    }
+  } catch {
+    /* intentionally ignored */
+  }
+
+  // Notificar realtime do CRM
+  if (typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'metas' } }))
+      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'faturamento' } }))
+    } catch {
+      /* intentionally ignored */
+    }
+  }
+
+  return {
+    success: inserted > 0 || skippedDuplicates > 0,
+    inserted,
+    skippedDuplicates,
+    errorsCount: errorsList.length,
+    errorDetails: errorsList,
+    navigationTab: '/metas',
+    navigationLabel: 'Ver Metas e Desempenho',
+    message: `Relatório de Vendas Semanal importado: ${inserted} meta(s) inserida(s), ${skippedDuplicates} atualizada(s)/comparada(s).`,
   }
 }

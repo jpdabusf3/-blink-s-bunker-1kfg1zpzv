@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-18T14:28:30.297Z",
+  "generatedAt": "2026-09-18T15:31:58.309Z",
   "collections": [
     {
       "name": "users",
@@ -1324,6 +1324,24 @@
             "Cooperativa",
             "Online"
           ]
+        },
+        {
+          "name": "canal",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "vendedor_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tipo_resultado",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -1517,13 +1535,6 @@
           "system": false
         },
         {
-          "name": "mes",
-          "type": "select",
-          "required": false,
-          "system": false,
-          "selectValues": ["agosto", "setembro", "outubro", "novembro", "dezembro"]
-        },
-        {
           "name": "valor",
           "type": "number",
           "required": false,
@@ -1554,6 +1565,30 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "mes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ano",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "segmento",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cliente",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE INDEX idx_pedidos_carteira_marca_mes ON pedidos_carteira (marca, mes)"]

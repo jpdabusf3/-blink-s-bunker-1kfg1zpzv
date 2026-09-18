@@ -6,6 +6,9 @@ import {
   executeImportInvoices,
   executeRegisterClients,
   executeImportSales,
+  executeImportMatrizVenda,
+  executeImportPedidosCarteira,
+  executeImportRelatorioVendasSemanal,
   type MaestroAnalysisResult,
   type DocumentType,
   type ExecutionResult,
@@ -305,6 +308,12 @@ export function useMaestroChat(): UseMaestroChatReturn {
         title = 'Cadastrar Clientes'
       } else if (analysis.document_type === 'sales_spreadsheet') {
         title = 'Importar Dados de Vendas'
+      } else if (analysis.document_type === 'matriz_venda') {
+        title = 'Importar Matriz de Venda'
+      } else if (analysis.document_type === 'pedidos_carteira') {
+        title = 'Importar Pedidos em Carteira'
+      } else if (analysis.document_type === 'relatorio_vendas_semanal') {
+        title = 'Importar Metas e Vendas Semanal'
       }
 
       if (analysis.document_type === 'unknown') {
@@ -328,6 +337,18 @@ export function useMaestroChat(): UseMaestroChatReturn {
                     {
                       label: 'Gerar Relatório de Vendas',
                       action: () => handleSelectQuickAction('sales_spreadsheet'),
+                    },
+                    {
+                      label: 'Importar Matriz de Venda',
+                      action: () => handleSelectQuickAction('matriz_venda'),
+                    },
+                    {
+                      label: 'Importar Pedidos em Carteira',
+                      action: () => handleSelectQuickAction('pedidos_carteira'),
+                    },
+                    {
+                      label: 'Importar Relatório Semanal (Metas)',
+                      action: () => handleSelectQuickAction('relatorio_vendas_semanal'),
                     },
                   ],
                 }
@@ -390,6 +411,9 @@ export function useMaestroChat(): UseMaestroChatReturn {
     if (actionType === 'invoice_pdf') actionTitle = 'Importar Notas Fiscais'
     if (actionType === 'client_spreadsheet') actionTitle = 'Cadastrar Clientes'
     if (actionType === 'sales_spreadsheet') actionTitle = 'Gerar Relatório de Vendas'
+    if (actionType === 'matriz_venda') actionTitle = 'Importar Matriz de Venda'
+    if (actionType === 'pedidos_carteira') actionTitle = 'Importar Pedidos em Carteira'
+    if (actionType === 'relatorio_vendas_semanal') actionTitle = 'Importar Metas e Vendas Semanal'
 
     const assistantMsg: ChatMessage = {
       id: `assistant-choice-${Date.now()}`,
@@ -491,6 +515,15 @@ export function useMaestroChat(): UseMaestroChatReturn {
         } else if (card.actionType === 'client_spreadsheet') {
           const clients = card.analysisResult.data.clients || []
           execResult = await executeRegisterClients(clients)
+        } else if (card.actionType === 'matriz_venda') {
+          const items = card.analysisResult.data.matriz_venda || []
+          execResult = await executeImportMatrizVenda(items)
+        } else if (card.actionType === 'pedidos_carteira') {
+          const items = card.analysisResult.data.pedidos_carteira || []
+          execResult = await executeImportPedidosCarteira(items)
+        } else if (card.actionType === 'relatorio_vendas_semanal') {
+          const items = card.analysisResult.data.relatorio_vendas_semanal || []
+          execResult = await executeImportRelatorioVendasSemanal(items)
         } else {
           // sales_spreadsheet ou fallback de relatório
           const sales = card.analysisResult.data.sales || []

@@ -21,8 +21,29 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { FileText, Upload, Download, Trash2, Search, Loader2, FolderOpen } from 'lucide-react'
+import {
+  FileText,
+  Upload,
+  Download,
+  Trash2,
+  Search,
+  Loader2,
+  FolderOpen,
+  FileSpreadsheet,
+  CheckCircle2,
+  AlertCircle,
+} from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
+import {
+  uploadMaestroFile,
+  extractFileContentLocally,
+  analyzeMaestroFile,
+  executeImportMatrizVenda,
+  executeImportPedidosCarteira,
+  executeImportRelatorioVendasSemanal,
+  type MaestroAnalysisResult,
+  type ExecutionResult,
+} from '@/services/maestro-analyze-service'
 
 const CATEGORIES = ['Diretrizes', 'Políticas', 'Relatórios', 'Contratos', 'Apresentações', 'Outros']
 const ACCESS_LEVELS = ['CEO', 'Diretor', 'Gestor', 'Gerente', 'Manager', 'Vendedor', 'Comum']
@@ -40,6 +61,14 @@ export default function Documents() {
   const [category, setCategory] = useState('Diretrizes')
   const [accessLevel, setAccessLevel] = useState('Comum')
   const [file, setFile] = useState<File | null>(null)
+
+  // Estados da importação de relatórios PDF Blink
+  const [importReportOpen, setImportReportOpen] = useState(false)
+  const [reportFile, setReportFile] = useState<File | null>(null)
+  const [analyzingReport, setAnalyzingReport] = useState(false)
+  const [analysisResult, setAnalysisResult] = useState<MaestroAnalysisResult | null>(null)
+  const [executingImport, setExecutingImport] = useState(false)
+  const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null)
 
   const loadDocuments = async () => {
     try {
@@ -112,12 +141,27 @@ export default function Documents() {
             </p>
           </div>
         </div>
-        {canManage && (
-          <Button onClick={() => setUploadOpen(true)} className="gap-2">
-            <Upload className="w-4 h-4" />
-            Enviar Documento
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setReportFile(null)
+              setAnalysisResult(null)
+              setExecutionResult(null)
+              setImportReportOpen(true)
+            }}
+            className="gap-2 border-primary/30 text-primary hover:bg-primary/5"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            Importar Relatório PDF
           </Button>
-        )}
+          {canManage && (
+            <Button onClick={() => setUploadOpen(true)} className="gap-2">
+              <Upload className="w-4 h-4" />
+              Enviar Documento
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card className="shadow-subtle">
@@ -213,6 +257,266 @@ export default function Documents() {
           ))}
         </div>
       )}
+
+      {/* Dialog de Importação de Relatórios PDF Oficiais Blink */}
+      <Dialog open={importReportOpen} onOpenChange={setImportReportOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="w-5 h-5 text-primary" />
+              Importar Relatório Oficial Blink Biotech (PDF)
+            </DialogTitle>
+          </DialogHeader>
+
+          {!analysisResult && !executionResult && (
+            <div className="space-y-4 pt-2">
+              <p className="text-sm text-muted-foreground">
+                Selecione um relatório PDF oficial: <strong>Matriz de Venda</strong>,{' '}
+                <strong>Pedidos em Carteira</strong> ou <strong>Relatório de Vendas Semanal</strong>
+                . Os dados serão reconhecidos automaticamente com prévia antes da gravação no CRM.
+              </p>
+
+              <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
+                <input
+                  type="file"
+                  id="pdf-report-input"
+                  accept=".pdf"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const selected = e.target.files?.[0]
+                    if (!selected) return
+                    setReportFile(selected)
+                    setAnalyzingReport(true)
+                    try {
+                      const uploaded = await uploadMaestroFile(selected)
+                      const extracted = await extractFileContentLocally(selected)
+                      const analysis = await analyzeMaestroFile({
+                        fileId: uploaded.id,
+                        file: selected,
+                        extractedText: extracted.extractedText,
+                        rows: extracted.rows,
+                      })
+
+                      if (
+                        analysis.document_type !== 'matriz_venda' &&
+                        analysis.document_type !== 'pedidos_carteira' &&
+                        analysis.document_type !== 'relatorio_vendas_semanal'
+                      ) {
+                        toast({
+                          title: 'Formato não identificado',
+                          description:
+                            'Não foi possível ler o relatório. Verifique se o arquivo é a Matriz de Venda, Pedidos em Carteira ou Relatório Semanal e tente novamente.',
+                          variant: 'destructive',
+                        })
+                      } else {
+                        setAnalysisResult(analysis)
+                      }
+                    } catch {
+                      toast({
+                        title: 'Erro na análise',
+                        description:
+                          'Não foi possível ler o relatório. Verifique se o arquivo é um PDF válido e tente novamente.',
+                        variant: 'destructive',
+                      })
+                    } finally {
+                      setAnalyzingReport(false)
+                    }
+                  }}
+                />
+                <label
+                  htmlFor="pdf-report-input"
+                  className="cursor-pointer flex flex-col items-center gap-2"
+                >
+                  <Upload className="w-8 h-8 text-muted-foreground" />
+                  <span className="font-medium text-sm">
+                    {analyzingReport
+                      ? 'Analisando relatório...'
+                      : reportFile
+                        ? reportFile.name
+                        : 'Clique para selecionar o relatório PDF'}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Aceita: Matriz de venda *.pdf, Pedidos em carteira *.pdf, Relatório de vendas
+                    semanal *.pdf
+                  </span>
+                </label>
+              </div>
+
+              {analyzingReport && (
+                <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  Extraindo hierarquias, meses e valores do documento...
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Prévia e Confirmação */}
+          {analysisResult && !executionResult && (
+            <div className="space-y-4 pt-2">
+              <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-primary text-sm uppercase tracking-wide">
+                    {analysisResult.document_type === 'matriz_venda' &&
+                      'Matriz de Venda Identificada'}
+                    {analysisResult.document_type === 'pedidos_carteira' &&
+                      'Pedidos em Carteira Identificado'}
+                    {analysisResult.document_type === 'relatorio_vendas_semanal' &&
+                      'Relatório de Vendas Semanal Identificado'}
+                  </span>
+                  <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
+                    {Math.round(analysisResult.confidence * 100)}% confiança
+                  </span>
+                </div>
+                <p className="text-sm mt-1">{analysisResult.summary}</p>
+              </div>
+
+              {/* Tabela de prévia (primeiras 5 linhas) */}
+              {analysisResult.preview_rows && analysisResult.preview_rows.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase text-muted-foreground">
+                    Prévia dos Primeiros Registros Extraídos
+                  </p>
+                  <div className="border rounded-md overflow-x-auto max-h-60">
+                    <table className="w-full text-xs">
+                      <thead className="bg-muted">
+                        <tr>
+                          {Object.keys(analysisResult.preview_rows[0]).map((col) => (
+                            <th key={col} className="p-2 text-left font-medium">
+                              {col}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {analysisResult.preview_rows.map((row, idx) => (
+                          <tr key={idx} className="border-t hover:bg-muted/50">
+                            {Object.values(row).map((val, cIdx) => (
+                              <td key={cIdx} className="p-2 whitespace-nowrap">
+                                {String(val)}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setAnalysisResult(null)
+                    setReportFile(null)
+                  }}
+                  disabled={executingImport}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={async () => {
+                    setExecutingImport(true)
+                    try {
+                      let res: ExecutionResult
+                      if (analysisResult.document_type === 'matriz_venda') {
+                        res = await executeImportMatrizVenda(
+                          analysisResult.data.matriz_venda || [],
+                          reportFile?.name,
+                        )
+                      } else if (analysisResult.document_type === 'pedidos_carteira') {
+                        res = await executeImportPedidosCarteira(
+                          analysisResult.data.pedidos_carteira || [],
+                          reportFile?.name,
+                        )
+                      } else {
+                        res = await executeImportRelatorioVendasSemanal(
+                          analysisResult.data.relatorio_vendas_semanal || [],
+                          reportFile?.name,
+                        )
+                      }
+                      setExecutionResult(res)
+                      toast({
+                        title: 'Importação Concluída',
+                        description: res.message,
+                      })
+                    } catch {
+                      toast({
+                        title: 'Erro na importação',
+                        description: 'Ocorreu uma falha ao gravar os dados. Tente novamente.',
+                        variant: 'destructive',
+                      })
+                    } finally {
+                      setExecutingImport(false)
+                    }
+                  }}
+                  disabled={executingImport}
+                  className="gap-2"
+                >
+                  {executingImport ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4" />
+                  )}
+                  Confirmar Importação
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Resultado pós-gravação */}
+          {executionResult && (
+            <div className="space-y-4 pt-2">
+              <div
+                className={`p-4 rounded-lg flex items-start gap-3 ${
+                  executionResult.success
+                    ? 'bg-emerald-50 text-emerald-900 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-800'
+                    : 'bg-rose-50 text-rose-900 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-200 dark:border-rose-800'
+                }`}
+              >
+                {executionResult.success ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-rose-600 mt-0.5 shrink-0" />
+                )}
+                <div className="space-y-1">
+                  <p className="font-semibold text-sm">
+                    {executionResult.success ? 'Dados gravados com sucesso!' : 'Falha na gravação'}
+                  </p>
+                  <p className="text-xs">{executionResult.message}</p>
+                  <div className="flex gap-4 pt-1 text-xs">
+                    <span>
+                      Gravados: <strong>{executionResult.inserted}</strong>
+                    </span>
+                    <span>
+                      Ignorados/Deduplicados: <strong>{executionResult.skippedDuplicates}</strong>
+                    </span>
+                    {executionResult.errorsCount > 0 && (
+                      <span className="text-rose-600 font-semibold">
+                        Erros: {executionResult.errorsCount}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  onClick={() => {
+                    setImportReportOpen(false)
+                    setAnalysisResult(null)
+                    setReportFile(null)
+                    setExecutionResult(null)
+                  }}
+                >
+                  Fechar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
         <DialogContent>

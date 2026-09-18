@@ -98,73 +98,47 @@ routerAdd(
         lowerText.indexOf('dados do produto') !== -1 ||
         lowerText.indexOf('valor total da nota') !== -1
 
+      var isMatrizVenda =
+        (lowerText.indexOf('realizado 20') !== -1 || lowerText.indexOf('matriz de venda') !== -1) &&
+        (lowerText.indexOf('janeiro') !== -1 || lowerText.indexOf('fevereiro') !== -1) &&
+        (lowerText.indexOf('carteira') !== -1 || lowerText.indexOf('pais') !== -1)
+
+      var isPedidosCarteira =
+        lowerText.indexOf('pedidos em carteira') !== -1 ||
+        ((lowerText.indexOf('pet') !== -1 || lowerText.indexOf('ruminantes') !== -1) &&
+          lowerText.indexOf('total geral') !== -1 &&
+          (lowerText.indexOf('setembro') !== -1 || lowerText.indexOf('outubro') !== -1))
+
+      var isRelatorioSemanal =
+        (lowerText.indexOf('blink geral') !== -1 || lowerText.indexOf('geral br') !== -1) &&
+        lowerText.indexOf('planejado') !== -1 &&
+        lowerText.indexOf('realizado') !== -1 &&
+        (lowerText.indexOf('resultado') !== -1 || lowerText.indexOf('novos clientes') !== -1)
+
       // Prompt para estruturação de alta precisão via IA
       var aiPrompt =
         'Você é o motor de classificação e extração de documentos corporativos do assistente MAESTRO da Blink Biotech.\n' +
-        'Analise os dados extraídos do documento fornecido e classifique-o em EXATAMENTE um dos 4 tipos:\n' +
+        'Analise os dados extraídos do documento fornecido e classifique-o em EXATAMENTE um dos 7 tipos:\n' +
         '1. "invoice_pdf": Nota Fiscal ou DANFE brasileira (faturamento emitido ou recebido).\n' +
         '2. "client_spreadsheet": Planilha de cadastro de clientes / parceiros (contém colunas como Razão Social/Nome, CNPJ, Email, Telefone, Estado, Cidade).\n' +
         '3. "sales_spreadsheet": Planilha de faturamento ou histórico de vendas de pedidos (contém datas de vendas, clientes, códigos/descrição de produto, família de produtos, quantidades e valores).\n' +
-        '4. "unknown": Qualquer outro formato não reconhecido.\n\n' +
+        '4. "matriz_venda": Relatório PDF oficial "Matriz de venda" da Blink Biotech (contém colunas País, Carteira, Grupo Cliente, Razão Social, meses JANEIRO a SETEMBRO/DEZEMBRO e rodapé REALIZADO AAAA).\n' +
+        '5. "pedidos_carteira": Relatório PDF oficial "Pedidos em carteira" da Blink Biotech (contém janela de 6 meses MÊS | SETEMBRO OUTUBRO... e segmentos Pet, Ruminantes, Suínos e Total Geral).\n' +
+        '6. "relatorio_vendas_semanal": Relatório PDF oficial "Relatório de vendas semanal" da Blink Biotech (blocos RESULTADO SETEMBRO/Q3/YTD, BLINK GERAL | BR | INDUSTRIA | PREMIXEIRAS | DISTRIBUIDORAS | LATAM, linhas PLANEJADO e REALIZADO, vendedores e contagens de novos clientes).\n' +
+        '7. "unknown": Qualquer outro formato não reconhecido.\n\n' +
         'ESTRUTURA DE RETORNO OBRIGATÓRIA (JSON PURO):\n' +
         '{\n' +
-        '  "document_type": "invoice_pdf" | "client_spreadsheet" | "sales_spreadsheet" | "unknown",\n' +
+        '  "document_type": "invoice_pdf" | "client_spreadsheet" | "sales_spreadsheet" | "matriz_venda" | "pedidos_carteira" | "relatorio_vendas_semanal" | "unknown",\n' +
         '  "confidence": number (0 a 1),\n' +
-        '  "summary": string (resumo em português, ex: "3 notas fiscais e 12 itens encontrados" ou "25 clientes encontrados"),\n' +
+        '  "summary": string (resumo em português, ex: "42 clientes e 168 valores mensais encontrados"),\n' +
         '  "preview_rows": array com até 5 objetos representando as primeiras linhas estruturadas para exibição no chat,\n' +
         '  "data": {\n' +
-        '    // Se invoice_pdf:\n' +
-        '    "invoices": [\n' +
-        '      {\n' +
-        '        "numero_nf": string,\n' +
-        '        "serie": string,\n' +
-        '        "data_emissao": "AAAA-MM-DD",\n' +
-        '        "emitente_nome": string,\n' +
-        '        "emitente_cnpj": string,\n' +
-        '        "destinatario_nome": string,\n' +
-        '        "destinatario_cnpj": string,\n' +
-        '        "destinatario_uf": string,\n' +
-        '        "destinatario_cidade": string,\n' +
-        '        "valor_total_nota": number,\n' +
-        '        "itens": [\n' +
-        '          {\n' +
-        '            "produto_codigo": string,\n' +
-        '            "produto_descricao": string,\n' +
-        '            "produto_familia": string,\n' +
-        '            "produto_quantidade": number,\n' +
-        '            "produto_valor_unitario": number,\n' +
-        '            "produto_valor_total": number\n' +
-        '          }\n' +
-        '        ]\n' +
-        '      }\n' +
-        '    ],\n' +
-        '    // Se client_spreadsheet:\n' +
-        '    "clients": [\n' +
-        '      {\n' +
-        '        "nome": string,\n' +
-        '        "cnpj": string,\n' +
-        '        "email": string,\n' +
-        '        "telefone": string,\n' +
-        '        "estado": string,\n' +
-        '        "cidade": string,\n' +
-        '        "carteira": string,\n' +
-        '        "especie": string\n' +
-        '      }\n' +
-        '    ],\n' +
-        '    // Se sales_spreadsheet:\n' +
-        '    "sales": [\n' +
-        '      {\n' +
-        '        "data": "AAAA-MM-DD",\n' +
-        '        "cliente": string,\n' +
-        '        "cliente_cnpj": string,\n' +
-        '        "produto": string,\n' +
-        '        "produto_codigo": string,\n' +
-        '        "familia": string,\n' +
-        '        "quantidade": number,\n' +
-        '        "valor": number,\n' +
-        '        "numero_documento": string\n' +
-        '      }\n' +
-        '    ]\n' +
+        '    // Se invoice_pdf: "invoices": [...]\n' +
+        '    // Se client_spreadsheet: "clients": [...]\n' +
+        '    // Se sales_spreadsheet: "sales": [...]\n' +
+        '    // Se matriz_venda: "matriz_venda": [{ "cliente": string, "pais": string, "carteira": string, "grupo": string, "mes": string, "ano": number, "valor": number }]\n' +
+        '    // Se pedidos_carteira: "pedidos_carteira": [{ "cliente": string, "segmento": string, "mes": string, "ano": number, "valor": number }]\n' +
+        '    // Se relatorio_vendas_semanal: "relatorio_vendas_semanal": [{ "periodo_rotulo": string, "periodo": string, "tipo_bloco": string, "canal": string, "vendedor": string, "carteira": string, "planejado": number, "realizado": number }]\n' +
         '  }\n' +
         '}\n\n' +
         'DADOS PARA ANÁLISE:\n'
@@ -218,7 +192,31 @@ routerAdd(
 
       // Fallback determinístico caso a IA falhe
       if (!parsedResult) {
-        if (isDanfe) {
+        if (isMatrizVenda) {
+          parsedResult = {
+            document_type: 'matriz_venda',
+            confidence: 0.9,
+            summary: 'Relatório Matriz de Venda identificado',
+            preview_rows: [],
+            data: { matriz_venda: [] },
+          }
+        } else if (isPedidosCarteira) {
+          parsedResult = {
+            document_type: 'pedidos_carteira',
+            confidence: 0.9,
+            summary: 'Relatório Pedidos em Carteira identificado',
+            preview_rows: [],
+            data: { pedidos_carteira: [] },
+          }
+        } else if (isRelatorioSemanal) {
+          parsedResult = {
+            document_type: 'relatorio_vendas_semanal',
+            confidence: 0.9,
+            summary: 'Relatório de Vendas Semanal identificado',
+            preview_rows: [],
+            data: { relatorio_vendas_semanal: [] },
+          }
+        } else if (isDanfe) {
           parsedResult = {
             document_type: 'invoice_pdf',
             confidence: 0.85,
@@ -309,6 +307,24 @@ routerAdd(
           dataObj.sales.length > 0
         ) {
           preview = dataObj.sales.slice(0, 5)
+        } else if (
+          docType === 'matriz_venda' &&
+          Array.isArray(dataObj.matriz_venda) &&
+          dataObj.matriz_venda.length > 0
+        ) {
+          preview = dataObj.matriz_venda.slice(0, 5)
+        } else if (
+          docType === 'pedidos_carteira' &&
+          Array.isArray(dataObj.pedidos_carteira) &&
+          dataObj.pedidos_carteira.length > 0
+        ) {
+          preview = dataObj.pedidos_carteira.slice(0, 5)
+        } else if (
+          docType === 'relatorio_vendas_semanal' &&
+          Array.isArray(dataObj.relatorio_vendas_semanal) &&
+          dataObj.relatorio_vendas_semanal.length > 0
+        ) {
+          preview = dataObj.relatorio_vendas_semanal.slice(0, 5)
         }
       }
 
