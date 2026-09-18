@@ -29,6 +29,7 @@ import { isManager } from '@/lib/user-scope'
 import { useAuth } from '@/hooks/use-auth'
 import { Link } from 'react-router-dom'
 import { ClientHistoryDialog } from '@/components/ClientHistoryDialog'
+import { factoryMatchesVendedor, type UnifiedVendedorOption } from '@/lib/vendedorFilterHelper'
 
 const ANIMAL_SPECIES = [
   'Bovinos',
@@ -61,13 +62,15 @@ export default function Funil() {
   const canReview = isManager(user)
   const [reviewMode, setReviewMode] = useState(false)
   const [salesOwnerFilter, setSalesOwnerFilter] = useState('all')
+  const [vendedorOptions, setVendedorOptions] = useState<UnifiedVendedorOption[]>([])
   const [stateFilter, setStateFilter] = useState('all')
   const [speciesFilter, setSpeciesFilter] = useState('all')
   const [historyFactory, setHistoryFactory] = useState<Factory | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
   const factories = allFactories.filter(
     (f) =>
-      (salesOwnerFilter === 'all' || f.salesOwner === salesOwnerFilter) &&
+      (salesOwnerFilter === 'all' ||
+        factoryMatchesVendedor(f, salesOwnerFilter, vendedorOptions)) &&
       (stateFilter === 'all' || f.state === stateFilter) &&
       (speciesFilter === 'all' || f.animalSpecies === speciesFilter),
   )
@@ -92,6 +95,7 @@ export default function Funil() {
           <UserFilter
             value={salesOwnerFilter}
             onChange={setSalesOwnerFilter}
+            onOptionsLoaded={setVendedorOptions}
             className="w-[180px] h-9"
           />
           <Select value={stateFilter} onValueChange={setStateFilter}>

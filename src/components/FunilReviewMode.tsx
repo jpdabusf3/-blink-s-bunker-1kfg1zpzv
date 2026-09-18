@@ -20,6 +20,7 @@ import { formatCurrency } from '@/lib/utils'
 import { Save, UserCheck, Search, Filter } from 'lucide-react'
 import { UserFilter } from '@/components/UserFilter'
 import type { Factory } from '@/types'
+import { factoryMatchesVendedor, type UnifiedVendedorOption } from '@/lib/vendedorFilterHelper'
 
 const SPECIES = [
   'Bovinos',
@@ -86,6 +87,7 @@ export function FunilReviewMode() {
     profile: 'all',
     owner: 'all',
   })
+  const [unifiedVendedores, setUnifiedVendedores] = useState<UnifiedVendedorOption[]>([])
 
   const [editValues, setEditValues] = useState<
     Record<
@@ -136,10 +138,11 @@ export function FunilReviewMode() {
         if (filters.country !== 'all' && f.country !== filters.country) return false
         if (filters.region !== 'all' && f.stateRegion !== filters.region) return false
         if (filters.profile !== 'all' && f.profile_type !== filters.profile) return false
-        if (filters.owner !== 'all' && f.salesOwner !== filters.owner) return false
+        if (filters.owner !== 'all' && !factoryMatchesVendedor(f, filters.owner, unifiedVendedores))
+          return false
         return true
       }),
-    [factories, filters, searchTerm],
+    [factories, filters, searchTerm, unifiedVendedores],
   )
 
   const getOwnerName = (id?: string) => users.find((u) => u.id === id)?.name || ''
@@ -333,6 +336,7 @@ export function FunilReviewMode() {
         <UserFilter
           value={filters.owner}
           onChange={(v) => setFilters((p) => ({ ...p, owner: v }))}
+          onOptionsLoaded={setUnifiedVendedores}
           className="w-full md:w-[140px] bg-background text-xs h-9"
         />
       </div>

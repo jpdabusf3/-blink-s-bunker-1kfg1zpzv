@@ -10,7 +10,6 @@ const PB_EXCLUDED = [
   'salesOwnerName',
   'technicalManagerName',
   'gestor_tecnico_name',
-  'vendedor_name',
   'deadline',
 ]
 
@@ -58,7 +57,11 @@ export function mapRecordToFactory(record: any): Factory {
     gestor_tecnico_name:
       record.expand?.gestor_tecnico?.nome || record.expand?.gestor_tecnico_id?.nome || '',
     vendedor_id: record.vendedor_id,
-    vendedor_name: record.expand?.vendedor?.nome || record.expand?.vendedor_id?.nome || '',
+    vendedor_name:
+      record.vendedor_name ||
+      record.expand?.vendedor?.nome ||
+      record.expand?.vendedor_id?.nome ||
+      '',
     ultima_edicao_origem: record.ultima_edicao_origem,
     carteira: record.carteira,
     grupo_cliente: record.grupo_cliente,

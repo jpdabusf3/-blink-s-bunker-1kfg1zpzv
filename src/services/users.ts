@@ -13,6 +13,15 @@ export interface UserListItem {
   whatsapp?: string
   whatsapp_validated?: boolean
   gestao_tecnica_id?: string
+  expand?: {
+    gestao_tecnica_id?: {
+      id: string
+      nome: string
+      funcao?: string
+      regiao?: string
+      ativo?: boolean
+    }
+  }
 }
 
 export interface UserReportLog {
@@ -35,7 +44,7 @@ export interface UserReport {
 }
 
 export const getUsers = (): Promise<UserListItem[]> =>
-  pb.collection('users').getFullList({ sort: 'created' })
+  pb.collection('users').getFullList({ sort: 'created', expand: 'gestao_tecnica_id' })
 
 export const getUserReport = (userId: string): Promise<UserReport> =>
   pb.send(`/backend/v1/users/${userId}/report`, { method: 'GET' })

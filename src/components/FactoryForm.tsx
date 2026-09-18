@@ -84,6 +84,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const [vendedorId, setVendedorId] = useState<string>(factory?.vendedor_id || '')
+  const [vendedorTouched, setVendedorTouched] = useState<boolean>(false)
 
   const [species, setSpecies] = useState<string[]>(() => {
     if (!factory?.animalSpecies) return ['Ruminantes']
@@ -140,6 +141,54 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
       .catch(() => {})
   }, [])
 
+  // Auto-vínculo no cadastro:
+  // Se for um novo cliente (não edição) e o vendedor ainda não tiver sido alterado manualmente:
+  // Vincular automaticamente ao usuário logado, EXCETO se for Fernanda Franco.
+  useEffect(() => {
+    if (factory) return // Em edição, preservar o que já está salvo
+    if (vendedorTouched) return // Se o usuário já alterou o campo, respeitar a escolha manual
+    if (!user) return
+
+    // Verificar se é Fernanda Franco
+    const isFernanda =
+      (user.email || '').toLowerCase().includes('fernanda.franco') ||
+      (user.name || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase() === 'fernanda franco'
+
+    if (isFernanda) {
+      // Fernanda Franco não recebe auto-vínculo comercial: campo fica vazio a menos que ela selecione
+      return
+    }
+
+    // Tentar resolver pelo gestao_tecnica_id do usuário ou pelo nome na lista de membros
+    if (user.gestao_tecnica_id) {
+      setVendedorId(user.gestao_tecnica_id)
+      return
+    }
+
+    if (teamMembers.length > 0 && user.name) {
+      const normUserName = user.name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase()
+      const match = teamMembers.find(
+        (m) =>
+          m.nome
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toLowerCase() === normUserName,
+      )
+      if (match) {
+        setVendedorId(match.id)
+      }
+    }
+  }, [factory, vendedorTouched, user, teamMembers])
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
@@ -148,7 +197,32 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
     const focusValue = fd.get('focusLevel') as string
     const finalFocus = isNaN(Number(focusValue)) ? focusValue : Number(focusValue)
 
-    const vendedor = teamMembers.find((v) => v.id === vendedorId)
+    // Resolver dados do vendedor responsável selecionado ou auto-vinculado
+    const selectedMember = teamMembers.find((v) => v.id === vendedorId)
+    let finalVendedorId: string | undefined =
+      vendedorId && vendedorId !== 'none' ? vendedorId : undefined
+    let finalVendedorName: string | undefined = selectedMember?.nome
+
+    // Se não encontrou em teamMembers mas vendedorId foi setado (ex: id direto de gestao_tecnica)
+    if (!finalVendedorName && finalVendedorId && user?.gestao_tecnica_id === finalVendedorId) {
+      finalVendedorName = user.name || user.email
+    }
+
+    // Se for um novo cadastro e o usuário logado NÃO for Fernanda Franco, garantir fallback de auto-vínculo
+    if (!factory && !finalVendedorId && user) {
+      const isFernanda =
+        (user.email || '').toLowerCase().includes('fernanda.franco') ||
+        (user.name || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .trim()
+          .toLowerCase() === 'fernanda franco'
+
+      if (!isFernanda && !vendedorTouched) {
+        finalVendedorId = user.gestao_tecnica_id || undefined
+        finalVendedorName = user.name || user.email
+      }
+    }
 
     const errors: Record<string, string> = {}
     if (!fd.get('name')) errors.name = 'Nome é obrigatório'
@@ -193,8 +267,9 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
       state: (fd.get('state') as string) || undefined,
       gestor_tecnico_id: factory?.gestor_tecnico_id || undefined,
       gestor_tecnico_name: factory?.gestor_tecnico_name || undefined,
-      vendedor_id: vendedorId && vendedorId !== 'none' ? vendedorId : undefined,
-      vendedor_name: vendedor?.nome || undefined,
+      vendedor_id: finalVendedorId,
+      vendedor_name: finalVendedorName,
+      salesOwner: factory?.salesOwner || (user?.id ? user.id : undefined),
       salesChannel: (salesChannelState as Factory['salesChannel']) || undefined,
       indirectChannelType:
         (fd.get('indirectChannelType') as Factory['indirectChannelType']) || undefined,
@@ -216,7 +291,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
         updateFactory(factory.id, data)
         logActivity(
           `Fábrica atualizada: ${data.name}`,
-          `Vendedor: ${vendedor?.nome || 'Não atribuído'}, Espécies: ${species.join(', ')}, Carteira: ${carteira.join(', ')}`,
+          `Vendedor: ${finalVendedorName || 'Não atribuído'}, Espécies: ${species.join(', ')}, Carteira: ${carteira.join(', ')}`,
           factory.id,
           'factories',
         ).catch(() => {})
@@ -270,7 +345,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
         addFactory({ ...data, id: created.id })
         logActivity(
           `Nova fábrica cadastrada: ${data.name}`,
-          `Vendedor: ${vendedor?.nome || 'Não atribuído'}, Espécies: ${species.join(', ')}, Carteira: ${carteira.join(', ')}`,
+          `Vendedor: ${finalVendedorName || 'Não atribuído'}, Espécies: ${species.join(', ')}, Carteira: ${carteira.join(', ')}`,
           created.id,
           'factories',
         ).catch(() => {})
@@ -495,7 +570,13 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
           </h3>
           <div className="space-y-2">
             <Label>Vendedor Responsável</Label>
-            <Select value={vendedorId || 'none'} onValueChange={setVendedorId}>
+            <Select
+              value={vendedorId || 'none'}
+              onValueChange={(val) => {
+                setVendedorTouched(true)
+                setVendedorId(val)
+              }}
+            >
               <SelectTrigger className="bg-background">
                 <SelectValue placeholder="Selecione Vendedor" />
               </SelectTrigger>

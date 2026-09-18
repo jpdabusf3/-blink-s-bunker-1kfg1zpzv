@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { getAllFactories, updateFactoryPB } from '@/services/factories'
 import { getScopedFactories } from '@/lib/user-scope'
 import { useAuth } from '@/hooks/use-auth'
-import { getVendedoresGestao, type GestaoTecnica } from '@/services/gestao-tecnica'
+import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
+import { getUsers, type UserListItem } from '@/services/users'
 import { logActivity } from '@/services/activity-logs'
 import { exportFunilVendasToExcel } from '@/lib/exportFunilVendas'
 import { exportFullDashboardToPDF } from '@/lib/exportFullDashboard'
@@ -65,7 +66,11 @@ import {
   STATUS_TO_FUNNEL_STAGE,
   FUNNEL_STAGES_PERMITIDOS,
 } from '@/lib/funnel-status'
-import { factoryMatchesVendedor } from '@/lib/vendedorFilterHelper'
+import {
+  factoryMatchesVendedor,
+  buildUnifiedVendedoresList,
+  type UnifiedVendedorOption,
+} from '@/lib/vendedorFilterHelper'
 import { CANONICAL_SPECIES } from '@/components/FactoryForm'
 import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { SyncErrorBanner } from '@/components/SyncErrorBanner'
@@ -148,27 +153,36 @@ export default function FunilVendas() {
     setData: setSyncData,
   } = useRealtimeData<{
     factories: Factory[]
-    vendedores: GestaoTecnica[]
+    gestaoTecnica: GestaoTecnica[]
+    usersList: UserListItem[]
     dashboardData: ConsolidatedData | null
   }>({
-    entities: ['factories', 'metas', 'historico_vendas', 'gestao_tecnica'],
+    entities: ['factories', 'metas', 'historico_vendas', 'gestao_tecnica', 'users'],
     fetcher: async () => {
-      const [factoriesList, vendedoresList, dashData] = await Promise.all([
+      const [factoriesList, gestaoList, usersList, dashData] = await Promise.all([
         getAllFactories(),
-        getVendedoresGestao().catch(() => [] as GestaoTecnica[]),
+        getGestaoTecnica().catch(() => [] as GestaoTecnica[]),
+        getUsers().catch(() => [] as UserListItem[]),
         fetchConsolidatedData().catch(() => null),
       ])
       return {
         factories: factoriesList,
-        vendedores: vendedoresList,
+        gestaoTecnica: gestaoList,
+        usersList,
         dashboardData: dashData,
       }
     },
   })
 
   const factories = syncData?.factories || []
-  const vendedores = syncData?.vendedores || []
+  const gestaoTecnica = syncData?.gestaoTecnica || []
+  const usersList = syncData?.usersList || []
   const dashboardData = syncData?.dashboardData || null
+
+  // Lista unificada de todos os vendedores e gestores ativos (gestao_tecnica + users)
+  const unifiedVendedores = useMemo(() => {
+    return buildUnifiedVendedoresList(gestaoTecnica, usersList)
+  }, [gestaoTecnica, usersList])
 
   const updateLocalFactories = useCallback(
     (updater: (prev: Factory[]) => Factory[]) => {
@@ -202,7 +216,11 @@ export default function FunilVendas() {
     () =>
       funilVendasClients.filter((f) => {
         const status = f.status_funil as FunilVendasStatus
-        if (filters.vendedor !== 'all' && !factoryMatchesVendedor(f, filters.vendedor)) return false
+        if (
+          filters.vendedor !== 'all' &&
+          !factoryMatchesVendedor(f, filters.vendedor, unifiedVendedores)
+        )
+          return false
         if (filters.canal !== 'all' && f.profile_type !== filters.canal) return false
         if (filters.especie !== 'all') {
           const factorySpecies = Array.isArray(f.animalSpecies)
@@ -224,7 +242,7 @@ export default function FunilVendas() {
         if (filters.status !== 'all' && status !== filters.status) return false
         return true
       }),
-    [funilVendasClients, filters],
+    [funilVendasClients, filters, unifiedVendedores],
   )
 
   const selectedFactory = useMemo(
@@ -508,11 +526,11 @@ export default function FunilVendas() {
           <SelectTrigger className="w-[180px] h-9">
             <SelectValue placeholder="Vendedor" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="max-h-72">
             <SelectItem value="all">Todos Vendedores</SelectItem>
-            {vendedores.map((v) => (
-              <SelectItem key={v.id} value={v.id}>
-                {v.nome}
+            {unifiedVendedores.map((v) => (
+              <SelectItem key={v.value} value={v.value}>
+                {v.label}
               </SelectItem>
             ))}
           </SelectContent>
