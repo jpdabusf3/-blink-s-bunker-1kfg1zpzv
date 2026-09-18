@@ -29,45 +29,17 @@ export function isMasterOrCeo(user: any): boolean {
   return isSuperAdmin(user) || title === 'ceo' || title === 'diretor'
 }
 
-export function getScopedFactories(factories: Factory[], user: any): Factory[] {
-  // CEO, Diretor, Gestor, Gerente, Manager and Super Admin have total global data visibility
-  if (!user || isManager(user) || isSuperAdmin(user)) return factories
-  const area = user.geographicArea || ''
-  const country = user.country || ''
-  if (!area && !country) return factories
-  return factories.filter((f) => {
-    const countryMatch = !country || f.country === country
-    const regionMatch = !area || f.stateRegion === area || f.region === area
-    return countryMatch && regionMatch
-  })
+export function getScopedFactories(factories: Factory[], _user: any): Factory[] {
+  // Acesso irrestrito a todos os usuários da ferramenta (pedido literal do usuário)
+  return factories
 }
 
-export function getScopedOrders(orders: Order[], factories: Factory[], user: any): Order[] {
-  if (!user || isManager(user) || isSuperAdmin(user)) return orders
-  const area = user.geographicArea || ''
-  const country = user.country || ''
-  if (!area && !country) return orders
-  const allowedFactoryIds = new Set(
-    factories
-      .filter((f) => {
-        const countryMatch = !country || f.country === country
-        const regionMatch = !area || f.stateRegion === area || f.region === area
-        return countryMatch && regionMatch
-      })
-      .map((f) => f.id),
-  )
-  return orders.filter((o) => {
-    const countryMatch = !country || o.country === country
-    return allowedFactoryIds.has(o.factoryId) || (countryMatch && (o as any).region === area)
-  })
+export function getScopedOrders(orders: Order[], _factories: Factory[], _user: any): Order[] {
+  // Acesso irrestrito a todos os usuários da ferramenta (pedido literal do usuário)
+  return orders
 }
 
-export function getScopedTargets(targets: Target[], user: any): Target[] {
-  if (!user || isManager(user) || isSuperAdmin(user)) return targets
-  const area = user.geographicArea || ''
-  if (!area) return targets
-  return targets.filter(
-    (t) =>
-      t.categoryType === 'General' || (t.categoryType === 'Region' && t.categoryValue === area),
-  )
+export function getScopedTargets(targets: Target[], _user: any): Target[] {
+  // Acesso irrestrito a todos os usuários da ferramenta (pedido literal do usuário)
+  return targets
 }
