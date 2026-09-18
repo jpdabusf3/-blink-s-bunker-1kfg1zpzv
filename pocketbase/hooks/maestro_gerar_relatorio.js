@@ -422,13 +422,20 @@ routerAdd(
       function txt(s, size, font, x, yy) {
         line('BT /' + font + ' ' + size + ' Tf ' + x + ' ' + yy + ' Td (' + escPdf(s) + ') Tj ET')
       }
-      function heading(s) {
-        ensure(28)
+      function heading(s, desc) {
+        ensure(desc ? 38 : 28)
         y -= 6
-        line('0.88 0.18 0.18 rg ' + MARGIN + ' ' + (y - 4) + ' ' + contentW + ' 1.5 re f')
-        line('0.1 0.1 0.1 rg')
-        txt(s, 13, 'F2', MARGIN, y - 16)
-        y -= 26
+        // Barra indicadora azul marinho corporativo #1e3a8a
+        line('0.12 0.23 0.54 rg ' + MARGIN + ' ' + (y - 3) + ' ' + contentW + ' 2 re f')
+        line('0.06 0.09 0.16 rg')
+        txt(s, 12.5, 'F2', MARGIN, y - 16)
+        y -= 20
+        if (desc) {
+          line('0.4 0.45 0.55 rg')
+          txt(desc, 8.5, 'F1', MARGIN, y - 4)
+          line('0.06 0.09 0.16 rg')
+          y -= 12
+        }
       }
       function fieldLine(label, value) {
         ensure(16)
@@ -455,57 +462,107 @@ routerAdd(
         y -= h || 8
       }
 
-      // Cabeçalho Blink Biotech
-      line('0.88 0.18 0.18 rg ' + MARGIN + ' ' + (PAGE_H - 110) + ' ' + contentW + ' 60 re f')
+      // 1. Cabeçalho Corporativo Institucional (Azul Marinho #0f172a / #1e3a8a e Ocre #d97706)
+      line('0.06 0.09 0.16 rg ' + MARGIN + ' ' + (PAGE_H - 110) + ' ' + contentW + ' 60 re f')
+      // Faixa de destaque dourada #d97706
+      line('0.85 0.47 0.02 rg ' + MARGIN + ' ' + (PAGE_H - 113) + ' ' + contentW + ' 3 re f')
       line('1 1 1 rg')
-      line('BT /F2 20 Tf ' + (MARGIN + 16) + ' ' + (PAGE_H - 62) + ' Td (BLINK BIOTECH) Tj ET')
+      line('BT /F2 18 Tf ' + (MARGIN + 16) + ' ' + (PAGE_H - 60) + ' Td (BLINK BIOTECH) Tj ET')
       line(
-        'BT /F1 10 Tf ' +
+        'BT /F1 9.5 Tf ' +
           (MARGIN + 16) +
           ' ' +
-          (PAGE_H - 78) +
-          ' Td (Inteligencia Comercial  -  Relatorio de Vendas MAESTRO) Tj ET',
+          (PAGE_H - 76) +
+          " Td (Blink's Bunker  .  Inteligencia Comercial & Gestao B2B) Tj ET",
       )
-      line('0.1 0.1 0.1 rg')
-      y = PAGE_H - 140
+      line(
+        'BT /F2 8 Tf ' +
+          (PAGE_W - MARGIN - 175) +
+          ' ' +
+          (PAGE_H - 60) +
+          ' Td (DOCUMENTO DA DIRETORIA EXECUTIVA) Tj ET',
+      )
+      line('0.06 0.09 0.16 rg')
+      y = PAGE_H - 138
 
-      var tituloRelatorio = 'Relatório de Vendas MAESTRO — ' + periodoEtiqueta
-      txt(tituloRelatorio, 16, 'F2', MARGIN, y)
-      y -= 22
+      var tituloRelatorio = 'Blink Biotech — Relatório de Vendas MAESTRO'
+      txt(tituloRelatorio, 15, 'F2', MARGIN, y)
+      y -= 18
       txt(
-        'Período consolidado: ' +
-          periodoEtiqueta +
-          (startDateStr
-            ? ' (' + fmtDateOnly(startDateStr) + ' até ' + fmtDateOnly(endDateStr) + ')'
-            : ''),
+        'Demonstrativo Comercial Estruturado · Emissão Automática MAESTRO AI',
         10,
         'F1',
         MARGIN,
         y,
       )
-      y -= 14
-      txt('Solicitado por: ' + (userName || 'Usuário Autenticado'), 10, 'F1', MARGIN, y)
-      y -= 14
-      txt('Gerado em: ' + fmtDateTime(new Date().toISOString()), 10, 'F1', MARGIN, y)
-      y -= 10
-      line('0.8 0.8 0.8 rg ' + MARGIN + ' ' + (y - 2) + ' ' + contentW + ' 0.5 re f')
-      line('0.1 0.1 0.1 rg')
-      y -= 12
+      y -= 20
 
-      // Seção Filtros se aplicados
+      // Bloco de Metadados Corporativos
+      ensure(58)
+      line('0.97 0.98 0.99 rg ' + MARGIN + ' ' + (y - 52) + ' ' + contentW + ' 54 re f')
+      line('0.89 0.91 0.94 RG ' + MARGIN + ' ' + (y - 52) + ' ' + contentW + ' 54 re S')
+      line('0.06 0.09 0.16 rg')
+
+      var col1X = MARGIN + 10
+      var col2X = MARGIN + 140
+      var col3X = MARGIN + 280
+      var col4X = MARGIN + 390
+
+      // Linha 1 de Metadados
+      line('0.4 0.45 0.55 rg')
+      txt('ORIGEM', 7.5, 'F2', col1X, y - 10)
+      txt('PERÍODO', 7.5, 'F2', col2X, y - 10)
+      txt('EMITIDO EM', 7.5, 'F2', col3X, y - 10)
+      txt('EMITIDO POR', 7.5, 'F2', col4X, y - 10)
+
+      line('0.06 0.09 0.16 rg')
+      txt('Maestro AI (Vendas)', 9, 'F2', col1X, y - 22)
+      txt(periodoEtiqueta, 9, 'F2', col2X, y - 22)
+      txt(fmtDateTime(new Date().toISOString()), 9, 'F2', col3X, y - 22)
+      txt((userName || 'Diretoria').substring(0, 18), 9, 'F2', col4X, y - 22)
+
+      // Linha 2 de Metadados: Filtros
       var activeFiltersList = []
       if (filtros.segmento) activeFiltersList.push('Segmento: ' + filtros.segmento)
       if (filtros.pais) activeFiltersList.push('País: ' + filtros.pais)
-      if (filtros.estado) activeFiltersList.push('Estado: ' + filtros.estado)
+      if (filtros.estado) activeFiltersList.push('UF: ' + filtros.estado)
       if (filtros.cliente) activeFiltersList.push('Cliente: ' + filtros.cliente)
-      if (activeFiltersList.length > 0) {
-        heading('Filtros Aplicados')
-        fieldLine('Parâmetros', activeFiltersList.join(' | '))
-        gap(6)
-      }
+      var filtrosDesc =
+        activeFiltersList.length > 0
+          ? activeFiltersList.join(' | ')
+          : 'Visão Global / Sem filtros restritivos'
 
-      // Seção Indicadores Principais (KPIs)
-      heading('Resumo Geral dos Indicadores')
+      line('0.4 0.45 0.55 rg')
+      txt('FILTROS APLICADOS:', 7.5, 'F2', col1X, y - 36)
+      line('0.15 0.2 0.3 rg')
+      txt(filtrosDesc.substring(0, 95), 8.5, 'F1', col1X + 85, y - 36)
+      line('0.06 0.09 0.16 rg')
+      y -= 68
+
+      // Sumário Executivo do Documento (TOC)
+      ensure(42)
+      line('0.94 0.96 0.98 rg ' + MARGIN + ' ' + (y - 36) + ' ' + contentW + ' 38 re f')
+      // Borda lateral esquerda azul marinho
+      line('0.06 0.09 0.16 rg ' + MARGIN + ' ' + (y - 36) + ' 3.5 38 re f')
+      line('0.8 0.84 0.9 RG ' + MARGIN + ' ' + (y - 36) + ' ' + contentW + ' 38 re S')
+      line('0.06 0.09 0.16 rg')
+      txt('SUMÁRIO EXECUTIVO DO DOCUMENTO', 8, 'F2', MARGIN + 10, y - 12)
+      line('0.25 0.3 0.4 rg')
+      txt(
+        '1. Indicadores Gerais de Desempenho    ·    2. Top 10 Clientes    ·    3. Faturamento por Família    ·    4. Cobertura & Parecer',
+        8.5,
+        'F1',
+        MARGIN + 10,
+        y - 26,
+      )
+      line('0.06 0.09 0.16 rg')
+      y -= 52
+
+      // Seção 1: Indicadores Gerais de Desempenho (KPIs)
+      heading(
+        '1. Indicadores Gerais de Desempenho',
+        'Demonstrativo consolidado de receita faturada, volume operacional, ticket médio e atingimento de metas comerciais.',
+      )
       var kpis = []
       if (inclFaturamento) {
         kpis.push({ label: 'Faturamento Total BRL', value: fmtBRL(totalBrl) })
@@ -573,66 +630,111 @@ routerAdd(
         y -= boxH + 14
       }
 
-      // Seção Top 10 Clientes
+      // Seção 2: Top Clientes por Faturamento
       if (inclTopClientes && top10.length > 0) {
-        heading('Top 10 Clientes por Faturamento')
-        ensure(22)
-        line('0.92 0.93 0.95 rg ' + MARGIN + ' ' + (y - 14) + ' ' + contentW + ' 14 re f')
-        line('0.1 0.1 0.1 rg')
-        txt('#', 8, 'F2', MARGIN + 4, y - 10)
-        txt('Cliente', 8, 'F2', MARGIN + 28, y - 10)
-        txt('Faturamento (R$)', 8, 'F2', PAGE_W - MARGIN - 100, y - 10)
-        y -= 16
+        heading(
+          '2. Top Clientes por Faturamento',
+          'Relação dos clientes com maior representatividade no faturamento comercial do período.',
+        )
+        ensure(24)
+        // Cabeçalho da tabela zebrada corporativa
+        line('0.12 0.23 0.54 rg ' + MARGIN + ' ' + (y - 15) + ' ' + contentW + ' 16 re f')
+        line('1 1 1 rg')
+        txt('POS.', 8, 'F2', MARGIN + 6, y - 11)
+        txt('RAZÃO SOCIAL / CLIENTE', 8, 'F2', MARGIN + 40, y - 11)
+        txt('FATURAMENTO TOTAL (R$)', 8, 'F2', PAGE_W - MARGIN - 120, y - 11)
+        line('0.06 0.09 0.16 rg')
+        y -= 18
 
+        var totalTop10Brl = 0
         for (var ti = 0; ti < top10.length; ti++) {
-          ensure(14)
+          ensure(15)
           var cliItem = top10[ti]
+          totalTop10Brl += cliItem.valor_brl || 0
           if (ti % 2 === 1) {
-            line('0.97 0.97 0.98 rg ' + MARGIN + ' ' + (y - 12) + ' ' + contentW + ' 12 re f')
-            line('0.1 0.1 0.1 rg')
+            line('0.96 0.97 0.98 rg ' + MARGIN + ' ' + (y - 12) + ' ' + contentW + ' 13 re f')
+            line('0.06 0.09 0.16 rg')
           }
-          txt(String(ti + 1), 8, 'F1', MARGIN + 4, y - 9)
-          txt(String(cliItem.cliente).substring(0, 55), 8, 'F1', MARGIN + 28, y - 9)
-          txt(fmtBRL(cliItem.valor_brl), 8, 'F2', PAGE_W - MARGIN - 100, y - 9)
-          y -= 13
+          txt(String(ti + 1) + 'º', 8, 'F2', MARGIN + 6, y - 9)
+          txt(String(cliItem.cliente).substring(0, 55), 8, 'F1', MARGIN + 40, y - 9)
+          txt(fmtBRL(cliItem.valor_brl), 8, 'F2', PAGE_W - MARGIN - 120, y - 9)
+          y -= 14
         }
-        gap(6)
+        // Linha de total no rodapé da tabela
+        ensure(16)
+        line('0.88 0.91 0.94 rg ' + MARGIN + ' ' + (y - 12) + ' ' + contentW + ' 14 re f')
+        line('0.12 0.23 0.54 rg')
+        txt('TOTAL TOP ' + top10.length + ':', 8.5, 'F2', MARGIN + 6, y - 9)
+        txt(fmtBRL(totalTop10Brl), 8.5, 'F2', PAGE_W - MARGIN - 120, y - 9)
+        line('0.06 0.09 0.16 rg')
+        y -= 20
       }
 
-      // Seção Famílias de Produtos
+      // Seção 3: Famílias de Produtos
       if (inclFamilias && topFamilias.length > 0) {
-        heading('Faturamento por Família de Produtos')
-        ensure(22)
-        line('0.92 0.93 0.95 rg ' + MARGIN + ' ' + (y - 14) + ' ' + contentW + ' 14 re f')
-        line('0.1 0.1 0.1 rg')
-        txt('#', 8, 'F2', MARGIN + 4, y - 10)
-        txt('Família', 8, 'F2', MARGIN + 28, y - 10)
-        txt('Faturamento (R$)', 8, 'F2', PAGE_W - MARGIN - 100, y - 10)
-        y -= 16
+        heading(
+          '3. Faturamento por Família de Produtos',
+          'Distribuição da receita comercial por categoria e linha de produtos Blink Biotech.',
+        )
+        ensure(24)
+        line('0.12 0.23 0.54 rg ' + MARGIN + ' ' + (y - 15) + ' ' + contentW + ' 16 re f')
+        line('1 1 1 rg')
+        txt('POS.', 8, 'F2', MARGIN + 6, y - 11)
+        txt('FAMÍLIA DE PRODUTOS', 8, 'F2', MARGIN + 40, y - 11)
+        txt('FATURAMENTO TOTAL (R$)', 8, 'F2', PAGE_W - MARGIN - 120, y - 11)
+        line('0.06 0.09 0.16 rg')
+        y -= 18
 
+        var totalFamBrl = 0
         for (var fmi = 0; fmi < topFamilias.length; fmi++) {
-          ensure(14)
+          ensure(15)
           var famItem = topFamilias[fmi]
+          totalFamBrl += famItem.valor_brl || 0
           if (fmi % 2 === 1) {
-            line('0.97 0.97 0.98 rg ' + MARGIN + ' ' + (y - 12) + ' ' + contentW + ' 12 re f')
-            line('0.1 0.1 0.1 rg')
+            line('0.96 0.97 0.98 rg ' + MARGIN + ' ' + (y - 12) + ' ' + contentW + ' 13 re f')
+            line('0.06 0.09 0.16 rg')
           }
-          txt(String(fmi + 1), 8, 'F1', MARGIN + 4, y - 9)
-          txt(String(famItem.familia).substring(0, 55), 8, 'F1', MARGIN + 28, y - 9)
-          txt(fmtBRL(famItem.valor_brl), 8, 'F2', PAGE_W - MARGIN - 100, y - 9)
-          y -= 13
+          txt(String(fmi + 1) + 'º', 8, 'F2', MARGIN + 6, y - 9)
+          txt(String(famItem.familia).substring(0, 55), 8, 'F1', MARGIN + 40, y - 9)
+          txt(fmtBRL(famItem.valor_brl), 8, 'F2', PAGE_W - MARGIN - 120, y - 9)
+          y -= 14
         }
-        gap(6)
+        // Linha de total no rodapé da tabela
+        ensure(16)
+        line('0.88 0.91 0.94 rg ' + MARGIN + ' ' + (y - 12) + ' ' + contentW + ' 14 re f')
+        line('0.12 0.23 0.54 rg')
+        txt('TOTAL DAS FAMÍLIAS:', 8.5, 'F2', MARGIN + 6, y - 9)
+        txt(fmtBRL(totalFamBrl), 8.5, 'F2', PAGE_W - MARGIN - 120, y - 9)
+        line('0.06 0.09 0.16 rg')
+        y -= 20
       }
 
-      // Observações finais do Maestro se houver
-      if (config.observacoes) {
-        heading('Observações e Análise Operacional')
-        var obsLines = wrapText(config.observacoes, 95)
-        for (var oi = 0; oi < obsLines.length; oi++) {
-          ensure(13)
-          txt(obsLines[oi], 9, 'F1', MARGIN, y - 9)
-          y -= 12
+      // Seção 4: Parecer Estratégico e Observações Operacionais
+      if (config.observacoes || inclCobertura) {
+        heading(
+          '4. Parecer Estratégico & Observações Operacionais',
+          'Recomendações gerenciais e diretrizes para arquivamento executivo.',
+        )
+        if (inclCobertura && carteiraTotalBrl > 0) {
+          ensure(18)
+          var cobDesc =
+            'Cobertura Comercial de Carteira calculada em ' +
+            coberturaPercent.toFixed(1).replace('.', ',') +
+            '% (R$ ' +
+            fmtBRL(totalBrl) +
+            ' faturados frente a R$ ' +
+            fmtBRL(carteiraTotalBrl) +
+            ' em carteira de pedidos).'
+          txt(cobDesc, 8.5, 'F2', MARGIN, y - 8)
+          y -= 16
+        }
+        if (config.observacoes) {
+          var obsLines = wrapText(config.observacoes, 95)
+          for (var oi = 0; oi < obsLines.length; oi++) {
+            ensure(13)
+            txt(obsLines[oi], 8.5, 'F1', MARGIN, y - 8)
+            y -= 12
+          }
         }
         gap(6)
       }
@@ -640,22 +742,24 @@ routerAdd(
       // Finalizar página atual
       pages.push(cur)
 
-      // Rodapé em todas as páginas
+      // Rodapé institucional em todas as páginas
       var totalPages = pages.length
       for (var pi = 0; pi < totalPages; pi++) {
         var pg = pages[pi]
-        pg.push('0.5 0.5 0.5 rg')
+        // Linha divisória de rodapé
+        pg.push('0.85 0.88 0.92 rg ' + MARGIN + ' 44 ' + contentW + ' 1 re f')
+        pg.push('0.4 0.45 0.55 rg')
         pg.push(
           'BT /F1 8 Tf ' +
             MARGIN +
-            ' 35 Td (Blink Biotech - Inteligencia Comercial - MAESTRO AI) Tj ET',
+            ' 32 Td (Blink Biotech - Documento confidencial para Diretoria Executiva  .  MAESTRO AI) Tj ET',
         )
         pg.push(
-          'BT /F1 8 Tf ' +
-            (PAGE_W - MARGIN - 65) +
-            ' 35 Td (Pagina ' +
+          'BT /F2 8 Tf ' +
+            (PAGE_W - MARGIN - 75) +
+            ' 32 Td (Pagina ' +
             (pi + 1) +
-            '/' +
+            ' de ' +
             totalPages +
             ') Tj ET',
         )

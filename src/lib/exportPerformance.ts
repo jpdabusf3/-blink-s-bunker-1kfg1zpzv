@@ -1,108 +1,146 @@
 import type { PerformanceReportData } from '@/services/performance-report'
-import { formatCurrency } from './utils'
+import {
+  openCorporatePdfReport,
+  exportCorporateExcel,
+  formatMoedaBRL,
+  formatPercentBR,
+  type PdfSection,
+} from '@/lib/corporateDocuments'
 
 export function exportPerformanceToExcel(data: PerformanceReportData) {
-  const sep = ';'
-  const lines: string[] = []
-  lines.push('RELATÓRIO DE PERFORMANCE - BLINK BIOTECH')
-  lines.push(`Gerado em: ${new Date().toLocaleString('pt-BR')}`)
-  lines.push('')
-  lines.push(['Resumo Executivo', ''].join(sep))
-  lines.push(['Total de Vendas', data.summary.totalVendas.toString()].join(sep))
-  lines.push(['Valor Total', data.summary.valorTotal.toFixed(2).replace('.', ',')].join(sep))
-  lines.push(['Ticket Médio', data.summary.ticketMedio.toFixed(2).replace('.', ',')].join(sep))
-  lines.push(['Clientes Atendidos', data.summary.numClientes.toString()].join(sep))
-  lines.push(
-    ['Taxa de Conversão (%)', data.summary.taxaConversao.toFixed(1).replace('.', ',')].join(sep),
-  )
-  lines.push('')
-  lines.push(['Relatório por Gestor Técnico', ''].join(sep))
-  lines.push(
-    ['Gestor', 'Total Vendas', 'Valor Total', 'Meta', 'Realizado', 'Atingimento (%)'].join(sep),
-  )
-  data.gestores.forEach((g) => {
-    lines.push(
-      [
-        `"${g.nome}"`,
-        g.totalVendas.toString(),
-        g.valorTotal.toFixed(2).replace('.', ','),
-        g.metaValor.toFixed(2).replace('.', ','),
-        g.valorRealizado.toFixed(2).replace('.', ','),
-        g.metaAchievement.toFixed(1).replace('.', ','),
-      ].join(sep),
-    )
+  exportCorporateExcel({
+    slug: 'relatorio-performance',
+    metadata: {
+      titulo: 'Relatório Executivo de Performance Comercial',
+      subtitulo: 'Metas, Vendas Realizadas e Atingimento por Vendedor e Gestor Técnico',
+      origem: 'Módulo de Performance Comercial (/relatorio-performance)',
+      periodo: 'Consolidado Geral',
+      totalizacoes: [
+        { label: 'TOTAL DE VENDAS (PEDIDOS):', valor: data.summary.totalVendas },
+        { label: 'VALOR TOTAL REALIZADO (R$):', valor: formatMoedaBRL(data.summary.valorTotal) },
+        { label: 'TICKET MÉDIO (R$):', valor: formatMoedaBRL(data.summary.ticketMedio) },
+      ],
+    },
+    columns: [
+      { key: 'tipo', label: 'Tipo de Função', width: 18 },
+      { key: 'nome', label: 'Nome do Colaborador', width: 28 },
+      { key: 'totalVendas', label: 'Quantidade de Vendas', width: 22, isNumeric: true },
+      { key: 'valorTotal', label: 'Valor Total (R$)', width: 24, isCurrency: true },
+      { key: 'metaValor', label: 'Meta Atribuída (R$)', width: 24, isCurrency: true },
+      { key: 'valorRealizado', label: 'Valor Realizado (R$)', width: 24, isCurrency: true },
+      { key: 'atingimento', label: 'Atingimento (%)', width: 18 },
+    ],
+    rows: [
+      ...data.gestores.map((g) => ({
+        tipo: 'Gestor Técnico',
+        nome: g.nome,
+        totalVendas: g.totalVendas,
+        valorTotal: formatMoedaBRL(g.valorTotal),
+        metaValor: formatMoedaBRL(g.metaValor),
+        valorRealizado: formatMoedaBRL(g.valorRealizado),
+        atingimento: formatPercentBR(g.metaAchievement),
+      })),
+      ...data.vendedores.map((v) => ({
+        tipo: 'Vendedor',
+        nome: v.nome,
+        totalVendas: v.totalVendas,
+        valorTotal: formatMoedaBRL(v.valorTotal),
+        metaValor: formatMoedaBRL(v.metaValor),
+        valorRealizado: formatMoedaBRL(v.valorRealizado),
+        atingimento: formatPercentBR(v.metaAchievement),
+      })),
+    ],
   })
-  lines.push('')
-  lines.push(['Relatório por Vendedor', ''].join(sep))
-  lines.push(
-    ['Vendedor', 'Total Vendas', 'Valor Total', 'Meta', 'Realizado', 'Atingimento (%)'].join(sep),
-  )
-  data.vendedores.forEach((v) => {
-    lines.push(
-      [
-        `"${v.nome}"`,
-        v.totalVendas.toString(),
-        v.valorTotal.toFixed(2).replace('.', ','),
-        v.metaValor.toFixed(2).replace('.', ','),
-        v.valorRealizado.toFixed(2).replace('.', ','),
-        v.metaAchievement.toFixed(1).replace('.', ','),
-      ].join(sep),
-    )
-  })
-  lines.push('')
-  lines.push(['Ranking de Gestores', ''].join(sep))
-  lines.push(['Posição', 'Gestor', 'Valor Realizado'].join(sep))
-  data.gestorRanking.forEach((g, i) =>
-    lines.push([(i + 1).toString(), `"${g.nome}"`, g.valor.toFixed(2).replace('.', ',')].join(sep)),
-  )
-  lines.push('')
-  lines.push(['Ranking de Vendedores', ''].join(sep))
-  lines.push(['Posição', 'Vendedor', 'Valor Realizado'].join(sep))
-  data.vendedorRanking.forEach((v, i) =>
-    lines.push([(i + 1).toString(), `"${v.nome}"`, v.valor.toFixed(2).replace('.', ',')].join(sep)),
-  )
-  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
-  triggerDownload(blob, `relatorio_performance_${new Date().toISOString().slice(0, 10)}.csv`)
-}
-
-function triggerDownload(blob: Blob, filename: string) {
-  const link = document.createElement('a')
-  link.setAttribute('href', URL.createObjectURL(blob))
-  link.setAttribute('download', filename)
-  link.style.visibility = 'hidden'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
 }
 
 export function exportPerformanceToPDF(data: PerformanceReportData) {
-  const win = window.open('', '_blank')
-  if (!win) return
-  const gestorRows = data.gestores
-    .map(
-      (g) =>
-        `<tr><td>${g.nome}</td><td class="r">${g.totalVendas}</td><td class="r">${formatCurrency(g.valorTotal)}</td><td class="r">${formatCurrency(g.metaValor)}</td><td class="r">${g.metaValor > 0 ? g.metaAchievement.toFixed(1) + '%' : '—'}</td></tr>`,
-    )
-    .join('')
-  const vendRows = data.vendedores
-    .map(
-      (v) =>
-        `<tr><td>${v.nome}</td><td class="r">${v.totalVendas}</td><td class="r">${formatCurrency(v.valorTotal)}</td><td class="r">${formatCurrency(v.metaValor)}</td><td class="r">${v.metaValor > 0 ? v.metaAchievement.toFixed(1) + '%' : '—'}</td></tr>`,
-    )
-    .join('')
-  const gRank = data.gestorRanking
-    .map(
-      (g, i) =>
-        `<tr><td>${i + 1}º</td><td>${g.nome}</td><td class="r">${formatCurrency(g.valor)}</td></tr>`,
-    )
-    .join('')
-  const vRank = data.vendedorRanking
-    .map(
-      (v, i) =>
-        `<tr><td>${i + 1}º</td><td>${v.nome}</td><td class="r">${formatCurrency(v.valor)}</td></tr>`,
-    )
-    .join('')
-  const html = `<!DOCTYPE html><html><head><title>Relatório de Performance - Blink Biotech</title><meta charset="utf-8"><style>body{font-family:'Segoe UI',Arial,sans-serif;padding:40px;color:#333}h1{color:#1e3a8a}h2{color:#2563eb;margin-top:30px;border-bottom:2px solid #e2e8f0;padding-bottom:5px}table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}th,td{border-bottom:1px solid #e2e8f0;padding:8px;text-align:left}th{background:#f1f5f9}.r{text-align:right}.kpi{display:inline-block;margin:8px;padding:12px 20px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;text-align:center}.kpi b{display:block;font-size:22px;color:#2563eb}</style></head><body><h1>Relatório de Performance - Blink Biotech</h1><p>Gerado em: ${new Date().toLocaleString('pt-BR')}</p><div><div class="kpi"><b>${data.summary.totalVendas}</b>Total de Vendas</div><div class="kpi"><b>${formatCurrency(data.summary.valorTotal)}</b>Valor Total</div><div class="kpi"><b>${formatCurrency(data.summary.ticketMedio)}</b>Ticket Médio</div><div class="kpi"><b>${data.summary.numClientes}</b>Clientes</div><div class="kpi"><b>${data.summary.taxaConversao.toFixed(1)}%</b>Taxa Conversão</div></div><h2>Relatório por Gestor Técnico</h2><table><thead><tr><th>Gestor</th><th class="r">Vendas</th><th class="r">Valor Total</th><th class="r">Meta</th><th class="r">Atingimento</th></tr></thead><tbody>${gestorRows}</tbody></table><h2>Relatório por Vendedor</h2><table><thead><tr><th>Vendedor</th><th class="r">Vendas</th><th class="r">Valor Total</th><th class="r">Meta</th><th class="r">Atingimento</th></tr></thead><tbody>${vendRows}</tbody></table><h2>Ranking de Gestores</h2><table><thead><tr><th>Pos</th><th>Gestor</th><th class="r">Valor</th></tr></thead><tbody>${gRank}</tbody></table><h2>Ranking de Vendedores</h2><table><thead><tr><th>Pos</th><th>Vendedor</th><th class="r">Valor</th></tr></thead><tbody>${vRank}</tbody></table><script>window.onload=()=>{setTimeout(()=>window.print(),500)}</script></body></html>`
-  win.document.write(html)
-  win.document.close()
+  const sections: PdfSection[] = [
+    {
+      numero: 1,
+      titulo: 'Indicadores Globais de Performance',
+      descricao:
+        'Visão sintética do faturamento total acumulado, volume de transações, ticket médio e taxa média de conversão da equipe comercial.',
+      kpis: [
+        {
+          label: 'Total de Vendas',
+          valor: String(data.summary.totalVendas),
+          sub: 'Pedidos faturados',
+          accent: 'primary',
+        },
+        {
+          label: 'Faturamento Total',
+          valor: formatMoedaBRL(data.summary.valorTotal),
+          sub: 'Receita comercial acumulada',
+          accent: 'amber',
+        },
+        {
+          label: 'Ticket Médio',
+          valor: formatMoedaBRL(data.summary.ticketMedio),
+          sub: 'Média por operação',
+          accent: 'emerald',
+        },
+        {
+          label: 'Clientes Atendidos',
+          valor: String(data.summary.numClientes),
+          sub: 'Com compras realizadas',
+          accent: 'sky',
+        },
+      ],
+    },
+    {
+      numero: 2,
+      titulo: 'Performance por Gestor Técnico',
+      descricao:
+        'Acompanhamento das lideranças técnicas com volume de vendas, metas planejadas e taxa de alcance.',
+      table: {
+        columns: [
+          { header: 'Gestor Técnico', align: 'left', isBold: true },
+          { header: 'Qtd Vendas', width: '100px', align: 'right' },
+          { header: 'Valor Total (R$)', align: 'right' },
+          { header: 'Meta (R$)', align: 'right' },
+          { header: 'Atingimento (%)', width: '130px', align: 'right' },
+        ],
+        rows: data.gestores.map((g) => [
+          g.nome,
+          String(g.totalVendas),
+          formatMoedaBRL(g.valorTotal),
+          formatMoedaBRL(g.metaValor),
+          g.metaValor > 0 ? formatPercentBR(g.metaAchievement) : '—',
+        ]),
+        emptyMessage: 'Nenhum gestor técnico listado no período.',
+      },
+    },
+    {
+      numero: 3,
+      titulo: 'Performance por Vendedor Comercial',
+      descricao:
+        'Desempenho individualizado dos vendedores com valores executados, metas e percentual de entrega.',
+      table: {
+        columns: [
+          { header: 'Vendedor', align: 'left', isBold: true },
+          { header: 'Qtd Vendas', width: '100px', align: 'right' },
+          { header: 'Valor Total (R$)', align: 'right' },
+          { header: 'Meta (R$)', align: 'right' },
+          { header: 'Atingimento (%)', width: '130px', align: 'right' },
+        ],
+        rows: data.vendedores.map((v) => [
+          v.nome,
+          String(v.totalVendas),
+          formatMoedaBRL(v.valorTotal),
+          formatMoedaBRL(v.metaValor),
+          v.metaValor > 0 ? formatPercentBR(v.metaAchievement) : '—',
+        ]),
+        emptyMessage: 'Nenhum vendedor comercial listado no período.',
+      },
+    },
+  ]
+
+  return openCorporatePdfReport({
+    titulo: 'Relatório Executivo de Performance Comercial',
+    subtitulo: 'Painel de Desempenho e Metas · Gestores Técnicos e Consultores Comerciais B2B',
+    origem: 'Módulo de Performance (/relatorio-performance)',
+    periodo: 'Consolidado Geral',
+    sections,
+    orientacao: 'portrait',
+  })
 }

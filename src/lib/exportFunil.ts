@@ -145,18 +145,26 @@ export function exportFunilToPDF(rowsData: FunilExportRow[]) {
 }
 
 export function buildFunilExportRows(factories: Factory[]): FunilExportRow[] {
-  return factories.map((f) => ({
-    nome: f.name || '',
-    especie: f.species || '',
-    gestor: f.gestor_tecnico_name || f.technicalManagerName || '',
-    vendedor: f.vendedor_name || f.salesOwnerName || '',
-    statusFunil: f.status_funil || (typeof f.funnelStage === 'string' ? f.funnelStage : ''),
-    dataMudanca: f.funnel_stage_changed_at || f.created || '',
-    diasNoEstagio: f.funnel_stage_changed_at
-      ? Math.floor(
-          (Date.now() - new Date(f.funnel_stage_changed_at).getTime()) / (1000 * 60 * 60 * 24),
-        )
-      : 0,
-    motivoPerda: f.motivo_perda || '',
-  }))
+  return factories.map((f) => {
+    const raw = f as unknown as Record<string, unknown>
+    const dataMudanca =
+      (raw.funnel_stage_changed_at as string | undefined) || f.updated || f.created || ''
+    const diasNoEstagio = dataMudanca
+      ? Math.floor((Date.now() - new Date(dataMudanca).getTime()) / (1000 * 60 * 60 * 24))
+      : 0
+    const especieStr = Array.isArray(f.animalSpecies)
+      ? f.animalSpecies.join(', ')
+      : f.animalSpecies || (raw.species as string | undefined) || ''
+
+    return {
+      nome: f.name || '',
+      especie: especieStr,
+      gestor: f.gestor_tecnico_name || f.technicalManagerName || '',
+      vendedor: f.vendedor_name || f.salesOwnerName || '',
+      statusFunil: f.status_funil || (typeof f.funnelStage === 'string' ? f.funnelStage : ''),
+      dataMudanca,
+      diasNoEstagio: Math.max(0, diasNoEstagio),
+      motivoPerda: (raw.motivo_perda as string | undefined) || '',
+    }
+  })
 }

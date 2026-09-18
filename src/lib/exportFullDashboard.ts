@@ -1,18 +1,22 @@
 import type { Factory } from '@/types'
 import type { ConsolidatedData } from '@/services/consolidated-dashboard'
-import { formatCurrency, formatCompactCurrency } from './utils'
+import {
+  openCorporatePdfReport,
+  formatMoedaBRL,
+  formatPercentBR,
+  type PdfSection,
+} from '@/lib/corporateDocuments'
+import { formatCompactCurrency } from './utils'
 
 export function exportFullDashboardToPDF(
   funnelItems: Factory[],
   dashboardData: ConsolidatedData | null,
   filters:
     | { vendedor?: string; gestor?: string; canal?: string; especie?: string; status?: string }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     | any,
   periodView: 'mensal' | 'trimestral' = 'mensal',
 ) {
-  const win = window.open('', '_blank')
-  if (!win) return
-
   const kpis = dashboardData?.kpis
   const vendorRanking = dashboardData?.vendorRanking || []
   const gestorRanking = dashboardData?.gestorRanking || []
@@ -23,69 +27,203 @@ export function exportFullDashboardToPDF(
   const comparisonTitle =
     periodView === 'trimestral' ? 'Comparativo Trimestral' : 'Comparativo Mensal'
 
-  const funnelRows = funnelItems
-    .map(
-      (f) =>
-        `<tr><td>${f.name || ''}</td><td class="r">${formatCurrency(f.valor_medio || 0)}</td><td class="r">${formatCurrency(f.valor_atual || 0)}</td><td>${f.status_funil || '-'}</td><td>${f.proximos_passos || '-'}</td><td>${f.acao || '-'}</td></tr>`,
-    )
-    .join('')
+  const sections: PdfSection[] = []
+  let secIdx = 1
 
-  const vendorRows = vendorRanking
-    .map(
-      (v, i) =>
-        `<tr><td>${i + 1}º</td><td>${v.nome}</td><td class="r">${formatCurrency(v.totalSales)}</td><td class="r">${formatCurrency(v.metaValor)}</td><td class="r">${formatCurrency(v.valorRealizado)}</td><td class="r">${v.achievementPct.toFixed(1)}%</td></tr>`,
-    )
-    .join('')
-
-  const gestorRows = gestorRanking
-    .map(
-      (g, i) =>
-        `<tr><td>${i + 1}º</td><td>${g.nome}</td><td class="r">${formatCurrency(g.metaValor)}</td><td class="r">${formatCurrency(g.valorRealizado)}</td><td class="r">${formatCurrency(g.totalSales)}</td><td class="r">${g.achievementPct.toFixed(1)}%</td></tr>`,
-    )
-    .join('')
-
-  const comparisonRows = comparisonData
-    .map(
-      (m) =>
-        `<tr><td>${m.label}</td><td class="r">${formatCurrency(m.sales)}</td><td class="r">${formatCurrency(m.target)}</td><td class="r">${formatCurrency(m.achieved)}</td></tr>`,
-    )
-    .join('')
-
-  const filterDesc =
-    Object.entries(filters)
-      .filter(([, v]) => v !== 'all')
-      .map(([k, v]) => `${k}: ${v}`)
-      .join(' | ') || 'Sem filtros'
-
-  const html = `<!DOCTYPE html><html><head><title>Dashboard Completo - Blink Biotech</title><meta charset="utf-8"><style>
-  body{font-family:'Segoe UI',Arial,sans-serif;padding:40px;color:#333}
-  h1{color:#1e3a8a}h2{color:#2563eb;border-bottom:2px solid #e2e8f0;padding-bottom:8px;margin-top:30px}
-  .kpis{display:flex;gap:15px;flex-wrap:wrap;margin:20px 0}
-  .kpi{flex:1;min-width:200px;padding:15px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;text-align:center}
-  .kpi b{display:block;font-size:22px;color:#2563eb;margin-bottom:4px}.kpi span{font-size:12px;color:#64748b}
-  table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
-  th,td{border-bottom:1px solid #e2e8f0;padding:8px;text-align:left}th{background:#f1f5f9}
-  .r{text-align:right}.filters{background:#f8fafc;padding:10px;border-radius:6px;margin:10px 0;font-size:13px}
-  </style></head><body>
-  <h1>Dashboard Completo - Blink Biotech</h1>
-  <p>Gerado em: ${new Date().toLocaleString('pt-BR')}</p>
-  <div class="filters"><b>Filtros:</b> ${filterDesc}</div>
-  ${
-    kpis
-      ? `<h2>Indicadores Consolidados</h2><div class="kpis">
-  <div class="kpi"><b>${formatCompactCurrency(kpis.totalFunnelValue)}</b><span>Valor Total Funil</span></div>
-  <div class="kpi"><b>${kpis.ativoCount} / ${kpis.inativoCount} / ${kpis.encerradasCount}</b><span>Ativo / Inativo / Negociações Encerradas</span></div>
-  <div class="kpi"><b>${kpis.achievementPct.toFixed(1)}%</b><span>Atingimento Meta</span></div>
-  <div class="kpi"><b>${formatCompactCurrency(kpis.totalSales)}</b><span>Total Vendas</span></div></div>`
-      : ''
+  // 1. Indicadores Consolidados
+  if (kpis) {
+    sections.push({
+      numero: secIdx++,
+      titulo: 'Indicadores Consolidados de Performance',
+      descricao:
+        'Visão geral do valor do funil, volume de negociações ativas, atingimento de metas e receita total de vendas.',
+      kpis: [
+        {
+          label: 'Valor Total no Funil',
+          valor: formatCompactCurrency(kpis.totalFunnelValue),
+          sub: 'Pipeline consolidado',
+          accent: 'primary',
+        },
+        {
+          label: 'Ativos / Inativos / Encerrados',
+          valor: `${kpis.ativoCount} / ${kpis.inativoCount} / ${kpis.encerradasCount}`,
+          sub: 'Distribuição da carteira',
+          accent: 'amber',
+        },
+        {
+          label: 'Atingimento da Meta',
+          valor: formatPercentBR(kpis.achievementPct),
+          sub: 'Realizado vs Meta global',
+          accent: 'emerald',
+        },
+        {
+          label: 'Total de Vendas',
+          valor: formatCompactCurrency(kpis.totalSales),
+          sub: 'Faturamento acumulado',
+          accent: 'sky',
+        },
+      ],
+    })
   }
-  ${comparisonRows ? `<h2>${comparisonTitle}</h2><table><thead><tr><th>Período</th><th class="r">Vendas</th><th class="r">Meta</th><th class="r">Realizado</th></tr></thead><tbody>${comparisonRows}</tbody></table>` : ''}
-  ${vendorRows ? `<h2>Ranking de Vendedores</h2><table><thead><tr><th>#</th><th>Vendedor</th><th class="r">Vendas</th><th class="r">Meta</th><th class="r">Realizado</th><th class="r">%</th></tr></thead><tbody>${vendorRows}</tbody></table>` : ''}
-  ${gestorRows ? `<h2>Comparativo por Gestor Técnico</h2><table><thead><tr><th>#</th><th>Gestor</th><th class="r">Meta</th><th class="r">Realizado</th><th class="r">Vendas</th><th class="r">%</th></tr></thead><tbody>${gestorRows}</tbody></table>` : ''}
-  <h2>Funil de Vendas</h2><table><thead><tr><th>Cliente</th><th class="r">Valor Médio</th><th class="r">Valor Atual</th><th>Status Funil</th><th>Próximos Passos</th><th>Ação</th></tr></thead><tbody>${funnelRows}</tbody></table>
-  <script>window.onload=()=>{setTimeout(()=>window.print(),500)}</script>
-  </body></html>`
 
-  win.document.write(html)
-  win.document.close()
+  // 2. Comparativo Mensal / Trimestral
+  if (comparisonData.length > 0) {
+    const totalVendas = comparisonData.reduce((acc, m) => acc + (m.sales || 0), 0)
+    const totalMeta = comparisonData.reduce((acc, m) => acc + (m.target || 0), 0)
+    const totalRealizado = comparisonData.reduce((acc, m) => acc + (m.achieved || 0), 0)
+
+    sections.push({
+      numero: secIdx++,
+      titulo: comparisonTitle,
+      descricao:
+        'Acompanhamento temporal da evolução de vendas, metas planejadas e valores liquidados.',
+      table: {
+        columns: [
+          { header: 'Período', align: 'left', isBold: true },
+          { header: 'Vendas Totais (R$)', align: 'right' },
+          { header: 'Meta Planejada (R$)', align: 'right' },
+          { header: 'Realizado Liquidado (R$)', align: 'right' },
+        ],
+        rows: comparisonData.map((m) => [
+          m.label,
+          formatMoedaBRL(m.sales),
+          formatMoedaBRL(m.target),
+          formatMoedaBRL(m.achieved),
+        ]),
+        footerRow: [
+          'TOTAL:',
+          formatMoedaBRL(totalVendas),
+          formatMoedaBRL(totalMeta),
+          formatMoedaBRL(totalRealizado),
+        ],
+      },
+    })
+  }
+
+  // 3. Ranking de Vendedores
+  if (vendorRanking.length > 0) {
+    const totalSales = vendorRanking.reduce((acc, v) => acc + (v.totalSales || 0), 0)
+    const totalMeta = vendorRanking.reduce((acc, v) => acc + (v.metaValor || 0), 0)
+    const totalRealizado = vendorRanking.reduce((acc, v) => acc + (v.valorRealizado || 0), 0)
+
+    sections.push({
+      numero: secIdx++,
+      titulo: 'Ranking de Vendedores Comerciais',
+      descricao:
+        'Classificação individual por vendedor com valores realizados, metas atribuídas e percentual de atingimento.',
+      table: {
+        columns: [
+          { header: 'Posição', width: '70px', align: 'center', isBold: true },
+          { header: 'Vendedor', align: 'left' },
+          { header: 'Vendas (R$)', align: 'right' },
+          { header: 'Meta (R$)', align: 'right' },
+          { header: 'Realizado (R$)', align: 'right' },
+          { header: 'Atingimento (%)', width: '130px', align: 'right' },
+        ],
+        rows: vendorRanking.map((v, i) => [
+          `${i + 1}º`,
+          v.nome,
+          formatMoedaBRL(v.totalSales),
+          formatMoedaBRL(v.metaValor),
+          formatMoedaBRL(v.valorRealizado),
+          formatPercentBR(v.achievementPct),
+        ]),
+        footerRow: [
+          'TOTAL:',
+          `${vendorRanking.length} vendedor(es)`,
+          formatMoedaBRL(totalSales),
+          formatMoedaBRL(totalMeta),
+          formatMoedaBRL(totalRealizado),
+          '—',
+        ],
+      },
+    })
+  }
+
+  // 4. Comparativo por Gestor Técnico
+  if (gestorRanking.length > 0) {
+    const totalMetaG = gestorRanking.reduce((acc, g) => acc + (g.metaValor || 0), 0)
+    const totalRealizadoG = gestorRanking.reduce((acc, g) => acc + (g.valorRealizado || 0), 0)
+    const totalSalesG = gestorRanking.reduce((acc, g) => acc + (g.totalSales || 0), 0)
+
+    sections.push({
+      numero: secIdx++,
+      titulo: 'Comparativo por Gestor Técnico',
+      descricao: 'Desempenho consolidado por liderança técnica e territorial da Blink Biotech.',
+      table: {
+        columns: [
+          { header: 'Posição', width: '70px', align: 'center', isBold: true },
+          { header: 'Gestor Técnico', align: 'left' },
+          { header: 'Meta (R$)', align: 'right' },
+          { header: 'Realizado (R$)', align: 'right' },
+          { header: 'Vendas (R$)', align: 'right' },
+          { header: 'Atingimento (%)', width: '130px', align: 'right' },
+        ],
+        rows: gestorRanking.map((g, i) => [
+          `${i + 1}º`,
+          g.nome,
+          formatMoedaBRL(g.metaValor),
+          formatMoedaBRL(g.valorRealizado),
+          formatMoedaBRL(g.totalSales),
+          formatPercentBR(g.achievementPct),
+        ]),
+        footerRow: [
+          'TOTAL:',
+          `${gestorRanking.length} gestor(es)`,
+          formatMoedaBRL(totalMetaG),
+          formatMoedaBRL(totalRealizadoG),
+          formatMoedaBRL(totalSalesG),
+          '—',
+        ],
+      },
+    })
+  }
+
+  // 5. Funil de Vendas Detalhado
+  const totalValorMedio = funnelItems.reduce((acc, f) => acc + (f.valor_medio || 0), 0)
+  const totalValorAtual = funnelItems.reduce((acc, f) => acc + (f.valor_atual || 0), 0)
+
+  sections.push({
+    numero: secIdx++,
+    titulo: 'Detalhamento do Funil Comercial',
+    descricao:
+      'Listagem analítica das oportunidades ativas e em negociação com estágio, valores e planos de ação.',
+    table: {
+      columns: [
+        { header: 'Cliente / Fábrica', align: 'left', isBold: true },
+        { header: 'Valor Médio (R$)', align: 'right' },
+        { header: 'Valor Atual (R$)', align: 'right' },
+        { header: 'Status Funil', align: 'center' },
+        { header: 'Próximos Passos', align: 'left' },
+        { header: 'Ação Recomendada', align: 'left' },
+      ],
+      rows: funnelItems.map((f) => [
+        f.name || 'Sem nome',
+        formatMoedaBRL(f.valor_medio || 0),
+        formatMoedaBRL(f.valor_atual || 0),
+        f.status_funil || '—',
+        f.proximos_passos || '—',
+        f.acao || '—',
+      ]),
+      footerRow: [
+        `TOTAL (${funnelItems.length} clientes):`,
+        formatMoedaBRL(totalValorMedio),
+        formatMoedaBRL(totalValorAtual),
+        '',
+        '',
+        '',
+      ],
+      emptyMessage: 'Nenhuma oportunidade encontrada no funil para os filtros aplicados.',
+    },
+  })
+
+  return openCorporatePdfReport({
+    titulo: 'Dashboard Consolidado da Diretoria',
+    subtitulo: 'Relatório Integrado de Indicadores, Rankings, Comparativos e Funil Comercial B2B',
+    origem: 'Visão Geral Executiva (/funil-vendas)',
+    periodo: periodView === 'trimestral' ? 'Visão Trimestral' : 'Visão Mensal',
+    filtros: filters,
+    sections,
+    orientacao: 'landscape',
+  })
 }

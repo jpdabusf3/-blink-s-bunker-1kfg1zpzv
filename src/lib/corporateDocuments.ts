@@ -81,6 +81,12 @@ export function formatMoedaUSD(val?: number | null): string {
   )
 }
 
+/** Formata percentual brasileiro 00,0% */
+export function formatPercentBR(val?: number | null): string {
+  if (val === null || val === undefined || isNaN(Number(val))) return '—'
+  return `${Number(val).toFixed(1).replace('.', ',')}%`
+}
+
 /** Obtém o nome do usuário logado atualmente no PocketBase */
 export function getLoggedUserName(): string {
   try {

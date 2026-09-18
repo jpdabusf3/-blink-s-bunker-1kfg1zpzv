@@ -140,15 +140,13 @@ export default function HistoricoVendas() {
       }
 
       const activeFilters = {
-        periodo: selectedPeriod !== 'todos' ? selectedPeriod : 'Todos os períodos',
-        especie: selectedEspecie !== 'todas' ? selectedEspecie : undefined,
-        gestor: selectedGestor !== 'todos' ? selectedGestor : undefined,
-        vendedor: selectedVendedor !== 'todos' ? selectedVendedor : undefined,
-        canal: selectedCanal !== 'todos' ? selectedCanal : undefined,
-        status: selectedStatus !== 'todos' ? selectedStatus : undefined,
-        origem: selectedOrigem !== 'todas' ? selectedOrigem : undefined,
-        pais: selectedPais !== 'todos' ? selectedPais : undefined,
-        busca: searchTerm.trim() || undefined,
+        periodo: 'Todos os períodos',
+        especie: fEspecie !== 'all' ? fEspecie : undefined,
+        vendedor:
+          fVendedor !== 'all'
+            ? vendedores.find((v) => v.id === fVendedor)?.nome || fVendedor
+            : undefined,
+        canal: fCanal !== 'all' ? fCanal : undefined,
       }
 
       exportHistoricoVendasToExcel(filtered, activeFilters)
@@ -176,15 +174,13 @@ export default function HistoricoVendas() {
       }
 
       const activeFilters = {
-        periodo: selectedPeriod !== 'todos' ? selectedPeriod : 'Todos os períodos',
-        especie: selectedEspecie !== 'todas' ? selectedEspecie : undefined,
-        gestor: selectedGestor !== 'todos' ? selectedGestor : undefined,
-        vendedor: selectedVendedor !== 'todos' ? selectedVendedor : undefined,
-        canal: selectedCanal !== 'todos' ? selectedCanal : undefined,
-        status: selectedStatus !== 'todos' ? selectedStatus : undefined,
-        origem: selectedOrigem !== 'todas' ? selectedOrigem : undefined,
-        pais: selectedPais !== 'todos' ? selectedPais : undefined,
-        busca: searchTerm.trim() || undefined,
+        periodo: 'Todos os períodos',
+        especie: fEspecie !== 'all' ? fEspecie : undefined,
+        vendedor:
+          fVendedor !== 'all'
+            ? vendedores.find((v) => v.id === fVendedor)?.nome || fVendedor
+            : undefined,
+        canal: fCanal !== 'all' ? fCanal : undefined,
       }
 
       exportHistoricoVendasToPDF(filtered, activeFilters)

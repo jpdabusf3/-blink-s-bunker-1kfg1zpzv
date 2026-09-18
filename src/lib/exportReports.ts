@@ -1,74 +1,120 @@
 import { UserListItem, UserReport } from '@/services/users'
 import { ActivityLog, Factory } from '@/types'
-import { formatCurrency } from './utils'
+import {
+  openCorporatePdfReport,
+  exportCorporateExcel,
+  formatMoedaBRL,
+  formatPercentBR,
+  formatDataBR,
+  formatDataHoraBR,
+  type PdfSection,
+} from '@/lib/corporateDocuments'
 import { COUNTRY_TO_CONTINENT } from './continent-mapping'
 import { getActiveTemplate } from '@/services/excel-templates'
 
+/**
+ * Exporta relatório individual do usuário em Excel corporativo (.xlsx)
+ */
 export function exportUserReportToExcel(user: UserListItem, report: UserReport) {
-  const sep = ';'
-  const lines = [
-    ['Relatório de Usuário', 'Blink Biotech'].join(sep),
-    '',
-    ['Nome', user.name || 'N/A'].join(sep),
-    ['Email', user.email].join(sep),
-    ['Cargo', user.job_title || 'N/A'].join(sep),
-    ['Região', user.geographicArea || 'N/A'].join(sep),
-    ['País', user.country || 'N/A'].join(sep),
-    '',
-    ['Indicadores', 'Valor'].join(sep),
-    ['Metas Atingidas (%)', report.kpis.goalsAchieved.toFixed(1) + '%'].join(sep),
-    ['Prospectos', report.kpis.prospects].join(sep),
-    ['Fábricas Homologadas', report.kpis.homologated].join(sep),
-    ['Vendas Totais', report.kpis.totalOrdersValue.toString().replace('.', ',')].join(sep),
-    ['Meta Total', report.kpis.totalTargetsValue.toString().replace('.', ',')].join(sep),
-    '',
-    ['Data', 'Ação', 'Detalhes'].join(sep),
-    ...report.logs.map((l) =>
-      [
-        new Date(l.created).toLocaleDateString('pt-BR'),
-        `"${l.action.replace(/"/g, '""')}"`,
-        `"${(l.details || '-').replace(/"/g, '""')}"`,
-      ].join(sep),
-    ),
-  ]
-  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
-  const link = document.createElement('a')
-  const url = URL.createObjectURL(blob)
-  link.setAttribute('href', url)
-  link.setAttribute('download', `relatorio_${user.email}.csv`)
-  link.style.visibility = 'hidden'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
+  exportCorporateExcel({
+    slug: `relatorio-usuario-${user.email}`,
+    metadata: {
+      titulo: `Relatório do Colaborador — ${user.name || user.email}`,
+      subtitulo: `Cargo: ${user.job_title || 'N/A'} · Região: ${user.geographicArea || 'N/A'}`,
+      origem: 'Módulo de Usuários (/users)',
+      periodo: 'Consolidado Geral',
+      totalizacoes: [
+        { label: 'VENDAS TOTAIS (R$):', valor: formatMoedaBRL(report.kpis.totalOrdersValue) },
+        { label: 'META TOTAL (R$):', valor: formatMoedaBRL(report.kpis.totalTargetsValue) },
+        { label: 'ATINGIMENTO DE METAS:', valor: formatPercentBR(report.kpis.goalsAchieved) },
+      ],
+    },
+    columns: [
+      { key: 'data', label: 'Data / Hora', width: 18 },
+      { key: 'acao', label: 'Ação Realizada', width: 28 },
+      { key: 'detalhes', label: 'Detalhes da Operação', width: 45 },
+    ],
+    rows: report.logs.map((l) => ({
+      data: formatDataHoraBR(l.created),
+      acao: l.action,
+      detalhes: l.details || '—',
+    })),
+  })
 }
 
+/**
+ * Exporta relatório individual do usuário em PDF corporativo executivo
+ */
 export function exportUserReportToPDF(user: UserListItem, report: UserReport) {
-  const win = window.open('', '_blank')
-  if (!win) return
-  const html = `<!DOCTYPE html><html><head><title>Relatório - ${user.name}</title><meta charset="utf-8"><style>
-  body{font-family:'Segoe UI',Arial,sans-serif;padding:40px;color:#333}h1{color:#1e3a8a}
-  .kpi{display:inline-block;margin:10px;padding:15px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;text-align:center}
-  .kpi b{display:block;font-size:24px;color:#2563eb}table{width:100%;border-collapse:collapse;margin-top:20px;font-size:13px}
-  th,td{border-bottom:1px solid #e2e8f0;padding:8px;text-align:left}th{background:#f1f5f9}
-  </style></head><body>
-  <h1>Relatório de Usuário - Blink Biotech</h1>
-  <p><b>Nome:</b> ${user.name || 'N/A'} | <b>Email:</b> ${user.email} | <b>Cargo:</b> ${user.job_title || 'N/A'}</p>
-  <p><b>Região:</b> ${user.geographicArea || 'N/A'} | <b>País:</b> ${user.country || 'N/A'}</p>
-  <div>
-  <div class="kpi"><b>${report.kpis.goalsAchieved.toFixed(1)}%</b>Metas Atingidas</div>
-  <div class="kpi"><b>${report.kpis.prospects}</b>Prospectos</div>
-  <div class="kpi"><b>${report.kpis.homologated}</b>Homologadas</div>
-  <div class="kpi"><b>${formatCurrency(report.kpis.totalOrdersValue)}</b>Vendas Totais</div>
-  </div>
-  <table><thead><tr><th>Data</th><th>Ação</th><th>Detalhes</th></tr></thead><tbody>
-  ${report.logs.map((l) => `<tr><td>${new Date(l.created).toLocaleString('pt-BR')}</td><td>${l.action}</td><td>${l.details || '-'}</td></tr>`).join('')}
-  </tbody></table>
-  <script>window.onload=()=>{setTimeout(()=>window.print(),500)}</script>
-  </body></html>`
-  win.document.write(html)
-  win.document.close()
+  const sections: PdfSection[] = [
+    {
+      numero: 1,
+      titulo: 'Indicadores Individuais de Performance',
+      descricao:
+        'Acompanhamento direto do atingimento de metas comerciais, prospecção e homologação de contas.',
+      kpis: [
+        {
+          label: 'Atingimento de Metas',
+          valor: formatPercentBR(report.kpis.goalsAchieved),
+          sub: 'Taxa global de metas',
+          accent: 'primary',
+        },
+        {
+          label: 'Prospectos Ativos',
+          valor: String(report.kpis.prospects),
+          sub: 'Contas em prospecção',
+          accent: 'amber',
+        },
+        {
+          label: 'Fábricas Homologadas',
+          valor: String(report.kpis.homologated),
+          sub: 'Clientes ativos',
+          accent: 'emerald',
+        },
+        {
+          label: 'Vendas Totais Realizadas',
+          valor: formatMoedaBRL(report.kpis.totalOrdersValue),
+          sub: 'Volume comercial fechado',
+          accent: 'sky',
+        },
+      ],
+    },
+    {
+      numero: 2,
+      titulo: 'Histórico Recente de Ações e Logs do Usuário',
+      descricao:
+        "Registro de auditoria com atividades executadas pelo colaborador dentro do sistema Blink's Bunker.",
+      table: {
+        columns: [
+          { header: 'Data e Hora', width: '130px', align: 'center', isBold: true },
+          { header: 'Ação Registrada', width: '220px', align: 'left' },
+          { header: 'Detalhamento da Operação', align: 'left' },
+        ],
+        rows: report.logs.map((l) => [formatDataHoraBR(l.created), l.action, l.details || '—']),
+        footerRow: ['TOTAL DE REGISTROS:', `${report.logs.length} ação(ões)`, ''],
+        emptyMessage: 'Nenhuma ação recente registrada para este colaborador.',
+      },
+    },
+  ]
+
+  return openCorporatePdfReport({
+    titulo: `Relatório Individual do Colaborador — ${user.name || user.email}`,
+    subtitulo: `Cargo: ${user.job_title || 'N/A'} · Área / Região: ${user.geographicArea || 'N/A'} · País: ${user.country || 'Brasil'}`,
+    origem: 'Módulo de Usuários (/users)',
+    periodo: 'Consolidado Geral',
+    filtros: {
+      Colaborador: user.name || user.email,
+      Cargo: user.job_title || 'N/A',
+      Email: user.email,
+    },
+    sections,
+    orientacao: 'portrait',
+  })
 }
 
+/**
+ * Exporta macro relatório executivo da carteira em Excel (.xlsx)
+ */
 export async function exportExecutiveMacroReport(
   factories: Factory[],
   filtersApplied?: Record<string, string>,
@@ -81,274 +127,153 @@ export async function exportExecutiveMacroReport(
     /* noop */
   }
 
-  const aggregates = new Map<
-    string,
-    {
-      continent: string
-      country: string
-      state: string
-      region: string
-      count: number
-      potential: number
-      capacity: number
-      activeClients: number
-      prospects: number
-    }
-  >()
+  const totalPotencial = factories.reduce((s, f) => s + (f.potentialValue || 0), 0)
 
-  factories.forEach((f) => {
-    const continent = COUNTRY_TO_CONTINENT[f.country || ''] || 'Outro'
-    const country = f.country || 'Brasil'
-    const state = f.state || f.city || 'Não informado'
-    const regionStr = String(
-      f.stateRegion ||
-        (Array.isArray(f.region) ? f.region.join(', ') : f.region) ||
-        'Não informado',
-    )
-    const key = `${continent}|${country}|${state}|${regionStr}`
-
-    if (!aggregates.has(key)) {
-      aggregates.set(key, {
-        continent,
-        country,
-        state,
-        region: regionStr,
-        count: 0,
-        potential: 0,
-        capacity: 0,
-        activeClients: 0,
-        prospects: 0,
-      })
-    }
-    const agg = aggregates.get(key)!
-    agg.count++
-    agg.potential += f.potentialValue || 0
-    agg.capacity += f.capacity || 0
-    if (f.status === 'Atendido') agg.activeClients++
-    if (f.status === 'Prospeção') agg.prospects++
+  exportCorporateExcel({
+    slug: 'relatorio-executivo-macro',
+    metadata: {
+      titulo: 'Relatório Executivo Macro de Clientes e Fábricas',
+      subtitulo: `Template: ${templateName || 'Padrão Corporativo'} · Mapeamento Completo da Carteira`,
+      origem: 'Painel Geral de Relatórios (/relatorios)',
+      periodo: 'Consolidado Geral',
+      filtros: filtersApplied,
+      totalizacoes: [
+        { label: 'TOTAL DE CLIENTES / FÁBRICAS:', valor: factories.length },
+        { label: 'POTENCIAL TOTAL DA CARTEIRA (R$):', valor: formatMoedaBRL(totalPotencial) },
+      ],
+    },
+    columns: [
+      { key: 'fabrica', label: 'Fábrica / Razão Social', width: 30 },
+      { key: 'perfil', label: 'Perfil / Carteira', width: 20 },
+      { key: 'especie', label: 'Espécie Animal', width: 18 },
+      { key: 'canal', label: 'Canal de Venda', width: 18 },
+      { key: 'pais', label: 'País', width: 16 },
+      { key: 'localizacao', label: 'Estado / Cidade', width: 22 },
+      { key: 'status', label: 'Status Cadastral', width: 18 },
+      { key: 'estagio', label: 'Estágio do Funil', width: 18 },
+      { key: 'prioridade', label: 'Prioridade', width: 14 },
+      { key: 'potencial', label: 'Potencial Estimado (R$)', width: 22, isCurrency: true },
+      { key: 'responsavel', label: 'Gestor / Vendedor', width: 24 },
+    ],
+    rows: factories.map((f) => ({
+      fabrica: f.name || 'Sem nome',
+      perfil: f.profile_type || f.sector || '—',
+      especie: f.animalSpecies || 'Multiespécie',
+      canal: f.salesChannel === 'Indirect' ? `Indireto (${f.indirectChannelType || ''})` : 'Direto',
+      pais: f.country || 'Brasil',
+      localizacao: [f.city, f.state].filter(Boolean).join(' - ') || '—',
+      status: f.status || '—',
+      estagio: f.funnelStage || '—',
+      prioridade: f.priority || 'Média',
+      potencial: formatMoedaBRL(f.potentialValue || 0),
+      responsavel: f.salesOwnerName || f.salesOwner || 'Não atribuído',
+    })),
   })
-
-  // Format HTML table that opens as full Excel XLSX spreadsheet natively
-  const filterDesc = filtersApplied
-    ? Object.entries(filtersApplied)
-        .filter(([, v]) => v && v !== 'all')
-        .map(([k, v]) => `${k}: ${v}`)
-        .join(' | ') || 'Todas as Fábricas / Sem filtro'
-    : 'Todas as Fábricas'
-
-  const totalClients = factories.length
-  const totalPotential = factories.reduce((s, f) => s + (f.potentialValue || 0), 0)
-  const totalCapacity = factories.reduce((s, f) => s + (f.capacity || 0), 0)
-
-  const xmlContent = `
-    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-    <head>
-      <meta charset="utf-8"/>
-      <!--[if gte mso 9]>
-      <xml>
-        <x:ExcelWorkbook>
-          <x:ExcelWorksheets>
-            <x:ExcelWorksheet>
-              <x:Name>Relatório Executivo Macro</x:Name>
-              <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
-            </x:ExcelWorksheet>
-          </x:ExcelWorksheets>
-        </x:ExcelWorkbook>
-      </xml>
-      <![endif]-->
-      <style>
-        body { font-family: Calibri, Arial, sans-serif; }
-        .header { background-color: #1e3a8a; color: #ffffff; font-weight: bold; font-size: 16pt; text-align: center; }
-        .sub-header { background-color: #3b82f6; color: #ffffff; font-weight: bold; font-size: 11pt; }
-        .title-row { background-color: #f1f5f9; font-weight: bold; }
-        .th { background-color: #0f172a; color: #ffffff; font-weight: bold; }
-        .number { mso-number-format:"\\#\\,##0\\.00"; text-align: right; }
-        .int { mso-number-format:"\\#\\,##0"; text-align: right; }
-        .total { background-color: #e2e8f0; font-weight: bold; }
-      </style>
-    </head>
-    <body>
-      <table>
-        <tr><td colspan="9" class="header">RELATÓRIO EXECUTIVO MACRO - BLINK BIOTECH</td></tr>
-        <tr><td colspan="9"><b>Template:</b> ${templateName || 'Padrão'} | <b>Gerado em:</b> ${new Date().toLocaleString('pt-BR')}</td></tr>
-        <tr><td colspan="9"><b>Filtros Aplicados:</b> ${filterDesc}</td></tr>
-        <tr><td colspan="9"></td></tr>
-
-        <tr class="title-row"><td colspan="9">RESUMO AGREGADO POR PAÍS, ESTADO E REGIÃO</td></tr>
-        <tr class="th">
-          <th>Continente</th>
-          <th>País</th>
-          <th>Estado / Cidade</th>
-          <th>Região</th>
-          <th>Total de Clientes</th>
-          <th>Clientes Ativos</th>
-          <th>Em Prospecção</th>
-          <th>Potencial Total (R$)</th>
-          <th>Capacidade Total (t/mês)</th>
-        </tr>
-        ${Array.from(aggregates.values())
-          .map(
-            (a) => `
-          <tr>
-            <td>${a.continent}</td>
-            <td>${a.country}</td>
-            <td>${a.state}</td>
-            <td>${a.region}</td>
-            <td class="int">${a.count}</td>
-            <td class="int">${a.activeClients}</td>
-            <td class="int">${a.prospects}</td>
-            <td class="number">${a.potential.toFixed(2)}</td>
-            <td class="int">${a.capacity}</td>
-          </tr>
-        `,
-          )
-          .join('')}
-        <tr class="total">
-          <td colspan="4" style="text-align:right">TOTAL GERAL:</td>
-          <td class="int">${totalClients}</td>
-          <td class="int">${factories.filter((f) => f.status === 'Atendido').length}</td>
-          <td class="int">${factories.filter((f) => f.status === 'Prospeção').length}</td>
-          <td class="number">${totalPotential.toFixed(2)}</td>
-          <td class="int">${totalCapacity}</td>
-        </tr>
-        <tr><td colspan="9"></td></tr>
-
-        <tr class="title-row"><td colspan="9">DETALHAMENTO COMPLETO DA CARTEIRA DE CLIENTES E PROSPECTOS</td></tr>
-        <tr class="th">
-          <th>Fábrica</th>
-          <th>Perfil / Carteira</th>
-          <th>Espécie Animal</th>
-          <th>Canal de Venda</th>
-          <th>País</th>
-          <th>Estado/Cidade</th>
-          <th>Status</th>
-          <th>Estágio Funil</th>
-          <th>Prioridade</th>
-          <th>Prob. (%)</th>
-          <th>Potencial (R$)</th>
-          <th>Gestor Técnico / Vendedor</th>
-          <th>Próximos Passos / Abordagem</th>
-        </tr>
-        ${factories
-          .map(
-            (f) => `
-          <tr>
-            <td>${f.name || ''}</td>
-            <td>${f.profile_type || f.sector || '-'}</td>
-            <td>${f.animalSpecies || 'Multiespécie'}</td>
-            <td>${f.salesChannel === 'Indirect' ? `Indireto (${f.indirectChannelType || ''})` : 'Direto'}</td>
-            <td>${f.country || 'Brasil'}</td>
-            <td>${[f.city, f.state].filter(Boolean).join(' - ')}</td>
-            <td>${f.status || ''}</td>
-            <td>${f.funnelStage || ''}</td>
-            <td>${f.priority || 'Medium'}</td>
-            <td class="int">${f.winProbability || 0}</td>
-            <td class="number">${(f.potentialValue || 0).toFixed(2)}</td>
-            <td>${f.salesOwnerName || f.salesOwner || 'Não atribuído'}</td>
-            <td>${f.suggested_approach || f.notes || '-'}</td>
-          </tr>
-        `,
-          )
-          .join('')}
-      </table>
-    </body>
-    </html>
-  `
-
-  const blob = new Blob([xmlContent], { type: 'application/vnd.ms-excel;charset=utf-8;' })
-  const link = document.createElement('a')
-  const url = URL.createObjectURL(blob)
-  link.setAttribute('href', url)
-  link.setAttribute(
-    'download',
-    `relatorio_executivo_macro_blink_${new Date().toISOString().slice(0, 10)}.xlsx`,
-  )
-  link.style.visibility = 'hidden'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
 }
 
 export async function exportGeographicReport(factories: Factory[]) {
   return exportExecutiveMacroReport(factories)
 }
 
+/**
+ * Exporta equipe comercial para planilha Excel (.xlsx) corporativa
+ */
 export function exportTeamToExcel(users: UserListItem[]) {
-  const sep = ';'
-  const headers = [
-    'Nome',
-    'Email',
-    'Cargo',
-    'Área de Atuação',
-    'País',
-    'WhatsApp',
-    'Validado por WhatsApp',
-    'Data de Cadastro',
-  ]
-  const lines = [
-    headers.join(sep),
-    ...users.map((u) =>
-      [
-        `"${(u.name || 'N/A').replace(/"/g, '""')}"`,
-        `"${u.email.replace(/"/g, '""')}"`,
-        `"${(u.job_title || 'N/A').replace(/"/g, '""')}"`,
-        `"${(u.geographicArea || 'N/A').replace(/"/g, '""')}"`,
-        `"${(u.country || 'N/A').replace(/"/g, '""')}"`,
-        `"${(u.whatsapp || '').replace(/"/g, '""')}"`,
-        `"${u.whatsapp_validated ? 'Sim' : 'Não'}"`,
-        new Date(u.created).toLocaleDateString('pt-BR'),
-      ].join(sep),
-    ),
-  ]
-  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
-  const link = document.createElement('a')
-  const url = URL.createObjectURL(blob)
-  link.setAttribute('href', url)
-  link.setAttribute('download', 'relatorio_equipe_blink_biotech.csv')
-  link.style.visibility = 'hidden'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
+  exportCorporateExcel({
+    slug: 'relatorio-equipe',
+    metadata: {
+      titulo: 'Relatório Corporativo da Equipe Comercial',
+      subtitulo: 'Cadastro, Cargos, Contatos e Áreas de Atuação dos Colaboradores',
+      origem: 'Gestão de Equipe (/equipe)',
+      periodo: 'Consolidado Geral',
+      totalizacoes: [{ label: 'TOTAL DE COLABORADORES:', valor: users.length }],
+    },
+    columns: [
+      { key: 'nome', label: 'Nome Completo', width: 28 },
+      { key: 'email', label: 'E-mail Institucional', width: 30 },
+      { key: 'cargo', label: 'Cargo / Função', width: 24 },
+      { key: 'area', label: 'Área / Território de Atuação', width: 26 },
+      { key: 'pais', label: 'País de Origem', width: 16 },
+      { key: 'whatsapp', label: 'WhatsApp', width: 18 },
+      { key: 'validado', label: 'Validado por WhatsApp', width: 20 },
+      { key: 'dataCadastro', label: 'Data de Cadastro', width: 16 },
+    ],
+    rows: users.map((u) => ({
+      nome: u.name || '—',
+      email: u.email,
+      cargo: u.job_title || '—',
+      area: u.geographicArea || '—',
+      pais: u.country || 'Brasil',
+      whatsapp: u.whatsapp || '—',
+      validado: u.whatsapp_validated ? 'Sim' : 'Não',
+      dataCadastro: formatDataBR(u.created),
+    })),
+  })
 }
 
+/**
+ * Exporta logs de auditoria em Excel (.xlsx) corporativo
+ */
 export function exportActivityLogsToExcel(logs: ActivityLog[]) {
-  const sep = ';'
-  const content = [
-    ['Data', 'Usuário', 'Ação', 'Detalhes'].join(sep),
-    ...logs.map((l) =>
-      [
-        new Date(l.created).toLocaleDateString('pt-BR'),
-        `"${(l.expand?.user?.name || l.expand?.user?.email || 'Sistema').replace(/"/g, '""')}"`,
-        `"${l.action.replace(/"/g, '""')}"`,
-        `"${(l.details || '-').replace(/"/g, '""')}"`,
-      ].join(sep),
-    ),
-  ].join('\n')
-  const blob = new Blob(['\uFEFF' + content], { type: 'text/csv;charset=utf-8;' })
-  const link = document.createElement('a')
-  const url = URL.createObjectURL(blob)
-  link.setAttribute('href', url)
-  link.setAttribute('download', 'logs_atividade_blink_biotech.csv')
-  link.style.visibility = 'hidden'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
+  exportCorporateExcel({
+    slug: 'logs-auditoria-atividades',
+    metadata: {
+      titulo: 'Logs de Auditoria e Atividades do Sistema',
+      subtitulo: 'Rastreabilidade Completa de Operações, Autenticações e Alterações',
+      origem: 'Painel de Auditoria (/admin/logs)',
+      periodo: 'Consolidado Geral',
+      totalizacoes: [{ label: 'TOTAL DE REGISTROS DE AUDITORIA:', valor: logs.length }],
+    },
+    columns: [
+      { key: 'data', label: 'Data e Hora', width: 18 },
+      { key: 'usuario', label: 'Usuário Responsável', width: 26 },
+      { key: 'acao', label: 'Ação Realizada', width: 30 },
+      { key: 'detalhes', label: 'Detalhamento do Registro', width: 50 },
+    ],
+    rows: logs.map((l) => ({
+      data: formatDataHoraBR(l.created),
+      usuario: l.expand?.user?.name || l.expand?.user?.email || 'Sistema / Automático',
+      acao: l.action,
+      detalhes: l.details || '—',
+    })),
+  })
 }
 
+/**
+ * Exporta logs de auditoria em PDF corporativo executivo
+ */
 export function exportActivityLogsToPDF(logs: ActivityLog[]) {
-  const win = window.open('', '_blank')
-  if (!win) return
-  const html = `<!DOCTYPE html><html><head><title>Logs de Atividade - Blink Biotech</title><meta charset="utf-8"><style>
-  body{font-family:'Segoe UI',Arial,sans-serif;padding:40px;color:#333}h1{color:#1e3a8a}
-  table{width:100%;border-collapse:collapse;margin-top:20px;font-size:13px}th,td{border-bottom:1px solid #e2e8f0;padding:8px;text-align:left}th{background:#f1f5f9}
-  </style></head><body>
-  <h1>Logs de Atividade - Blink Biotech</h1>
-  <p>Gerado em: ${new Date().toLocaleString('pt-BR')} | Total: ${logs.length} registro(s)</p>
-  <table><thead><tr><th>Data</th><th>Usuário</th><th>Ação</th><th>Detalhes</th></tr></thead><tbody>
-  ${logs.map((l) => `<tr><td>${new Date(l.created).toLocaleString('pt-BR')}</td><td>${l.expand?.user?.name || l.expand?.user?.email || 'Sistema'}</td><td>${l.action}</td><td>${l.details || '-'}</td></tr>`).join('')}
-  </tbody></table>
-  <script>window.onload=()=>{setTimeout(()=>window.print(),500)}</script>
-  </body></html>`
-  win.document.write(html)
-  win.document.close()
+  const sections: PdfSection[] = [
+    {
+      numero: 1,
+      titulo: 'Auditoria de Ações e Logs do Bunker',
+      descricao:
+        'Registro corporativo de eventos, sincronizações e execuções operacionais registradas no sistema.',
+      table: {
+        columns: [
+          { header: 'Data e Hora', width: '130px', align: 'center', isBold: true },
+          { header: 'Usuário', width: '180px', align: 'left' },
+          { header: 'Ação', width: '220px', align: 'left' },
+          { header: 'Detalhes da Operação', align: 'left' },
+        ],
+        rows: logs.map((l) => [
+          formatDataHoraBR(l.created),
+          l.expand?.user?.name || l.expand?.user?.email || 'Sistema',
+          l.action,
+          l.details || '—',
+        ]),
+        footerRow: ['TOTAL:', `${logs.length} evento(s) auditado(s)`, '', ''],
+        emptyMessage: 'Nenhum registro de log encontrado.',
+      },
+    },
+  ]
+
+  return openCorporatePdfReport({
+    titulo: 'Logs de Atividade e Auditoria do Bunker',
+    subtitulo: 'Relatório Oficial de Rastreabilidade e Governança Operacional',
+    origem: 'Painel Administrativo (/admin/logs)',
+    periodo: 'Consolidado Geral',
+    sections,
+    orientacao: 'landscape',
+  })
 }

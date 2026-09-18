@@ -76,11 +76,12 @@ export function MaestroReportView({ reportData, config, generatedAt }: MaestroRe
     return reportData.por_familia || []
   }, [reportData.por_familia])
 
-  // Exportação CSV conforme requisitos:
-  // - Cabeçalhos em português
-  // - Datas DD/MM/AAAA
-  // - Moeda formatada em R$
-  // - Nome de arquivo: relatorio-vendas-YYYY-MM-DD.csv
+  // Exportação CSV corporativa do MAESTRO:
+  // - Cabeçalhos institucionais "Blink Biotech — Relatório de Vendas MAESTRO"
+  // - Metadados no topo: Título, Plataforma, Origem, Período, Data/Hora de Geração, Filtros
+  // - Cabeçalhos formais em Title Case
+  // - Totais e contagens de registros no rodapé de cada seção
+  // - Nome de arquivo estrito: relatorio-vendas-YYYY-MM-DD.csv
   const handleExportCSV = () => {
     const yyyy = generatedAt.getFullYear()
     const mm = (generatedAt.getMonth() + 1).toString().padStart(2, '0')
@@ -89,69 +90,100 @@ export function MaestroReportView({ reportData, config, generatedAt }: MaestroRe
 
     const csvLines: string[] = []
 
-    // Cabeçalho institucional do relatório
-    csvLines.push('"RELATÓRIO DE VENDAS PERSONALIZADO - MAESTRO"')
-    csvLines.push(`"Data de Geração";"${formattedGeneratedDate}"`)
+    // 1. Bloco de Cabeçalho Institucional & Metadados
+    csvLines.push('"Blink Biotech — Relatório de Vendas MAESTRO"')
+    csvLines.push('"Plataforma: Blink\'s Bunker · Inteligência Comercial & Gestão B2B"')
+    csvLines.push('"Origem: Assistente MAESTRO AI (Chat & Análise de Vendas)"')
     csvLines.push(`"Período de Referência";"${reportData.periodo || 'Personalizado'}"`)
+    csvLines.push(`"Data e Hora de Geração";"${formattedGeneratedDateTime}"`)
+    csvLines.push('"Emitido Por";"Diretoria Executiva / Maestro AI"')
 
     if (config?.filtros) {
       const activeFilters: string[] = []
       if (config.filtros.segmento) activeFilters.push(`Segmento: ${config.filtros.segmento}`)
       if (config.filtros.marca) activeFilters.push(`Marca: ${config.filtros.marca}`)
       if (config.filtros.cliente) activeFilters.push(`Cliente: ${config.filtros.cliente}`)
-      if (config.filtros.estado) activeFilters.push(`Estado: ${config.filtros.estado}`)
+      if (config.filtros.estado) activeFilters.push(`UF: ${config.filtros.estado}`)
       if (config.filtros.pais) activeFilters.push(`País: ${config.filtros.pais}`)
       if (activeFilters.length > 0) {
         csvLines.push(`"Filtros Aplicados";"${activeFilters.join(' | ')}"`)
+      } else {
+        csvLines.push('"Filtros Aplicados";"Visão Global Consolidada"')
       }
+    } else {
+      csvLines.push('"Filtros Aplicados";"Visão Global Consolidada"')
     }
 
     csvLines.push('')
 
-    // Resumo Geral / KPIs
-    csvLines.push('"RESUMO GERAL"')
-    csvLines.push('"Indicador";"Valor"')
-    csvLines.push(`"Faturamento Total (R$)";"${formatCurrency(faturadoBrl)}"`)
+    // 2. Seção 1: Indicadores Gerais de Desempenho (KPIs)
+    csvLines.push('"1. Indicadores Gerais de Desempenho"')
+    csvLines.push('"Indicador";"Valor Principal";"Detalhamento Adicional"')
+    csvLines.push(
+      `"Faturamento Total (R$)";"${formatCurrency(faturadoBrl)}";"Receita total liquidada no período"`,
+    )
     if (faturadoUsd > 0) {
       csvLines.push(
-        `"Faturamento Total (USD)";"US$ ${faturadoUsd.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}"`,
+        `"Faturamento Total (USD)";"US$ ${faturadoUsd.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}";"Receita convertida em moeda estrangeira"`,
       )
     }
-    csvLines.push(`"Quantidade de Pedidos / Notas";"${qtdNotas}"`)
+    csvLines.push(
+      `"Quantidade de Pedidos / Notas";"${qtdNotas}";"Notas fiscais faturadas no período"`,
+    )
     if (ticketMedio !== null) {
-      csvLines.push(`"Ticket Médio (R$)";"${formatCurrency(ticketMedio)}"`)
+      csvLines.push(
+        `"Ticket Médio por Pedido (R$)";"${formatCurrency(ticketMedio)}";"Média de faturamento por nota emitida"`,
+      )
     }
     if (carteiraBrl !== null && carteiraBrl !== undefined) {
-      csvLines.push(`"Carteira Total (R$)";"${formatCurrency(carteiraBrl)}"`)
+      csvLines.push(
+        `"Carteira de Pedidos / Backlog (R$)";"${formatCurrency(carteiraBrl)}";"Pedidos em carteira pendentes de entrega"`,
+      )
     }
     if (coberturaPercent !== null && coberturaPercent !== undefined) {
-      csvLines.push(`"Cobertura da Carteira";"${coberturaPercent.toFixed(1).replace('.', ',')}%"`)
+      csvLines.push(
+        `"Índice de Cobertura de Carteira";"${coberturaPercent.toFixed(1).replace('.', ',')}%";"Faturado realizado vs carteira"`,
+      )
     }
 
-    // Top Clientes
+    // 3. Seção 2: Top Clientes por Faturamento
     if (filteredClientes.length > 0) {
+      const totalClientesBrl = filteredClientes.reduce((acc, c) => acc + (c.valor_brl || 0), 0)
       csvLines.push('')
-      csvLines.push('"TOP CLIENTES"')
-      csvLines.push('"Posição";"Nome do Cliente";"Faturamento Total (R$)"')
+      csvLines.push('"2. Top Clientes por Faturamento"')
+      csvLines.push('"Posição";"Razão Social / Nome do Cliente";"Faturamento Total (R$)"')
       filteredClientes.forEach((c, idx) => {
         csvLines.push(
-          `"${idx + 1}";"${c.cliente.replace(/"/g, '""')}";"${formatCurrency(c.valor_brl)}"`,
+          `"${idx + 1}º";"${c.cliente.replace(/"/g, '""')}";"${formatCurrency(c.valor_brl)}"`,
         )
       })
+      csvLines.push(
+        `"TOTAL DE CLIENTES";"${filteredClientes.length} registro(s)";"${formatCurrency(totalClientesBrl)}"`,
+      )
     }
 
-    // Famílias de Produtos
+    // 4. Seção 3: Faturamento por Família de Produtos
     if (filteredFamilias.length > 0) {
+      const totalFamiliasBrl = filteredFamilias.reduce((acc, f) => acc + (f.valor_brl || 0), 0)
       csvLines.push('')
-      csvLines.push('"FATURAMENTO POR FAMÍLIA DE PRODUTOS"')
+      csvLines.push('"3. Faturamento por Família de Produtos"')
       csvLines.push('"Posição";"Família de Produtos";"Faturamento Total (R$)"')
       filteredFamilias.forEach((f, idx) => {
         const nomeFam = familiaCompleta('', f.familia)
         csvLines.push(
-          `"${idx + 1}";"${nomeFam.replace(/"/g, '""')}";"${formatCurrency(f.valor_brl)}"`,
+          `"${idx + 1}º";"${nomeFam.replace(/"/g, '""')}";"${formatCurrency(f.valor_brl)}"`,
         )
       })
+      csvLines.push(
+        `"TOTAL DE FAMÍLIAS";"${filteredFamilias.length} registro(s)";"${formatCurrency(totalFamiliasBrl)}"`,
+      )
     }
+
+    // 5. Rodapé Institucional
+    csvLines.push('')
+    csvLines.push(
+      '"Blink Biotech — Documento confidencial para arquivamento e análise da Diretoria Executiva"',
+    )
 
     const csvContent = '\uFEFF' + csvLines.join('\r\n')
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })

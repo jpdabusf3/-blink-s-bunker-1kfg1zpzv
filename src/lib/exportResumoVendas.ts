@@ -1,4 +1,9 @@
-import { formatCurrency } from '@/lib/utils'
+import {
+  openCorporatePdfReport,
+  formatMoedaBRL,
+  formatPercentBR,
+  type PdfSection,
+} from '@/lib/corporateDocuments'
 import { familiaCompleta } from '@/constants/familiaProdutos'
 import type { ResumoClienteItem, ResumoFamiliaItem } from '@/services/resumo-vendas'
 
@@ -29,387 +34,170 @@ export interface ResumoPdfExportOptions {
   includeCobertura: boolean
 }
 
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
-
-function formatPercentBR(val: number | null | undefined): string {
-  if (val === null || val === undefined || isNaN(val)) return '—'
-  return `${val.toFixed(1).replace('.', ',')}%`
-}
-
+/**
+ * Emite o PDF corporativo do Resumo de Vendas (/resumo) utilizando o
+ * modelo institucional Blink Biotech (cabeçalho formal, metadados, sumário,
+ * seções numeradas, KPIs em destaque, tabelas zebradas e rodapé com paginação).
+ */
 export function exportResumoVendasToPDF(
   data: ResumoPdfExportData,
   options: ResumoPdfExportOptions,
 ): boolean {
-  const win = window.open('', '_blank')
-  if (!win) {
-    throw new Error('Não foi possível abrir a janela de impressão. Permita pop-ups no navegador.')
-  }
+  const sections: PdfSection[] = []
+  let sectionIndex = 1
 
-  // Data e hora de geração no formato DD/MM/AAAA HH:mm
-  const now = new Date()
-  const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`)
-  const dataGeracao = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`
-
-  const sectionsHtml: string[] = []
-
-  // 1. Cards de Resumo
+  // 1. Seção: Cards de Resumo / Indicadores Principais
   if (options.includeCards) {
-    sectionsHtml.push(`
-      <div class="section">
-        <h2 class="section-title">Indicadores Principais</h2>
-        <div class="kpi-grid">
-          <div class="kpi-card">
-            <span class="kpi-label">Faturamento Total</span>
-            <span class="kpi-value primary">${formatCurrency(data.faturadoBrl)}</span>
-            <span class="kpi-sub">Receita total no período</span>
-          </div>
-          <div class="kpi-card">
-            <span class="kpi-label">Pedidos Faturados</span>
-            <span class="kpi-value">${data.qtdNotas}</span>
-            <span class="kpi-sub">Notas fiscais emitidas</span>
-          </div>
-          <div class="kpi-card">
-            <span class="kpi-label">Ticket Médio</span>
-            <span class="kpi-value">${data.ticketMedio !== null ? formatCurrency(data.ticketMedio) : '—'}</span>
-            <span class="kpi-sub">Média por nota emitida</span>
-          </div>
-          <div class="kpi-card">
-            <span class="kpi-label">Clientes Ativos</span>
-            <span class="kpi-value">${data.clientesAtivos !== null ? data.clientesAtivos : '—'}</span>
-            <span class="kpi-sub">Com compras no período</span>
-          </div>
-        </div>
-      </div>
-    `)
+    sections.push({
+      numero: sectionIndex++,
+      titulo: 'Indicadores Gerais de Desempenho',
+      descricao:
+        'Visão consolidada do faturamento faturado, volume de notas emitidas, ticket médio por transação e clientes ativos com faturamento no período selecionado.',
+      kpis: [
+        {
+          label: 'Faturamento Total',
+          valor: formatMoedaBRL(data.faturadoBrl),
+          sub: 'Receita total liquidada no período',
+          accent: 'primary',
+        },
+        {
+          label: 'Pedidos Faturados',
+          valor: String(data.qtdNotas),
+          sub: 'Notas fiscais emitidas no período',
+          accent: 'amber',
+        },
+        {
+          label: 'Ticket Médio',
+          valor: data.ticketMedio !== null ? formatMoedaBRL(data.ticketMedio) : '—',
+          sub: 'Média de faturamento por nota fiscal',
+          accent: 'emerald',
+        },
+        {
+          label: 'Clientes Ativos',
+          valor: data.clientesAtivos !== null ? String(data.clientesAtivos) : '—',
+          sub: 'Compras confirmadas no período',
+          accent: 'sky',
+        },
+      ],
+    })
   }
 
-  // 2. Top 10 Clientes
+  // 2. Seção: Top 10 Clientes
   if (options.includeTopClientes) {
-    const rows =
-      data.top10Clientes.length === 0
-        ? '<tr><td colspan="3" class="text-center empty">Nenhum cliente com faturamento registrado.</td></tr>'
-        : data.top10Clientes
-            .map(
-              (c, idx) => `
-          <tr>
-            <td class="text-center font-mono w-col-num">${idx + 1}</td>
-            <td><strong>${escapeHtml(c.cliente || 'Outros')}</strong></td>
-            <td class="text-right font-mono font-bold">${formatCurrency(c.valor_brl)}</td>
-          </tr>
-        `,
-            )
-            .join('')
+    const totalTop10 = data.top10Clientes.reduce((acc, c) => acc + (c.valor_brl || 0), 0)
 
-    sectionsHtml.push(`
-      <div class="section">
-        <h2 class="section-title">Top 10 Clientes</h2>
-        <table>
-          <thead>
-            <tr>
-              <th class="text-center w-col-num">#</th>
-              <th>Cliente</th>
-              <th class="text-right">Faturamento Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
-      </div>
-    `)
+    sections.push({
+      numero: sectionIndex++,
+      titulo: 'Top Clientes por Faturamento',
+      descricao:
+        'Classificação dos clientes com maior representatividade no faturamento do período, ordenados pelo valor total em reais.',
+      table: {
+        columns: [
+          { header: 'Posição', width: '70px', align: 'center', isBold: true },
+          { header: 'Razão Social / Nome do Cliente', align: 'left' },
+          { header: 'Faturamento Total (R$)', width: '220px', align: 'right' },
+        ],
+        rows: data.top10Clientes.map((c, idx) => [
+          `${idx + 1}º`,
+          c.cliente || 'Outros / Não Identificado',
+          formatMoedaBRL(c.valor_brl),
+        ]),
+        footerRow:
+          data.top10Clientes.length > 0
+            ? [
+                'TOTAL:',
+                `${data.top10Clientes.length} cliente(s) listado(s)`,
+                formatMoedaBRL(totalTop10),
+              ]
+            : undefined,
+        emptyMessage: 'Nenhum faturamento de cliente registrado no período selecionado.',
+      },
+    })
   }
 
-  // 3. Top Famílias de Produtos
+  // 3. Seção: Top Famílias de Produtos
   if (options.includeTopFamilias) {
-    const rows =
-      data.topFamilias.length === 0
-        ? '<tr><td colspan="3" class="text-center empty">Nenhuma família com faturamento registrado.</td></tr>'
-        : data.topFamilias
-            .map(
-              (f, idx) => `
-          <tr>
-            <td class="text-center font-mono w-col-num">${idx + 1}</td>
-            <td><strong>${escapeHtml(familiaCompleta('', f.familia))}</strong></td>
-            <td class="text-right font-mono font-bold">${formatCurrency(f.valor_brl)}</td>
-          </tr>
-        `,
-            )
-            .join('')
+    const totalFamilias = data.topFamilias.reduce((acc, f) => acc + (f.valor_brl || 0), 0)
 
-    sectionsHtml.push(`
-      <div class="section">
-        <h2 class="section-title">Top Famílias de Produtos</h2>
-        <table>
-          <thead>
-            <tr>
-              <th class="text-center w-col-num">#</th>
-              <th>Família</th>
-              <th class="text-right">Faturamento Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
-      </div>
-    `)
+    sections.push({
+      numero: sectionIndex++,
+      titulo: 'Faturamento por Família de Produtos',
+      descricao:
+        'Distribuição do faturamento por família e categoria de produto comercializada pela Blink Biotech no período.',
+      table: {
+        columns: [
+          { header: 'Posição', width: '70px', align: 'center', isBold: true },
+          { header: 'Família de Produtos', align: 'left' },
+          { header: 'Faturamento Total (R$)', width: '220px', align: 'right' },
+        ],
+        rows: data.topFamilias.map((f, idx) => [
+          `${idx + 1}º`,
+          familiaCompleta('', f.familia),
+          formatMoedaBRL(f.valor_brl),
+        ]),
+        footerRow:
+          data.topFamilias.length > 0
+            ? ['TOTAL:', `${data.topFamilias.length} família(s)`, formatMoedaBRL(totalFamilias)]
+            : undefined,
+        emptyMessage:
+          'Nenhuma família de produtos com faturamento registrado no período selecionado.',
+      },
+    })
   }
 
-  // 4. Cobertura de Carteira
+  // 4. Seção: Cobertura de Carteira (Backlog vs Realizado)
   if (options.includeCobertura) {
-    const rows =
-      data.coverageData.length === 0
-        ? '<tr><td colspan="4" class="text-center empty">Sem dados de cobertura disponíveis.</td></tr>'
-        : data.coverageData
-            .map((cov) => {
-              const pct = cov.coberturaPercent
-              let badgeClass = 'badge-neutral'
-              if (pct !== null && pct !== undefined && !isNaN(pct)) {
-                if (pct < 50) badgeClass = 'badge-danger'
-                else if (pct <= 80) badgeClass = 'badge-warning'
-                else badgeClass = 'badge-success'
-              }
+    const totalCarteira = data.coverageData.reduce((acc, c) => acc + (c.carteiraBrl || 0), 0)
+    const totalFaturado = data.coverageData.reduce((acc, c) => acc + (c.faturadoBrl || 0), 0)
+    const coberturaGlobal = totalCarteira > 0 ? (totalFaturado / totalCarteira) * 100 : null
 
-              return `
-          <tr>
-            <td><strong>${escapeHtml(cov.label)}</strong></td>
-            <td class="text-right font-mono">${cov.carteiraBrl !== null ? formatCurrency(cov.carteiraBrl) : '—'}</td>
-            <td class="text-right font-mono font-bold">${formatCurrency(cov.faturadoBrl)}</td>
-            <td class="text-right">
-              <span class="badge ${badgeClass}">${formatPercentBR(cov.coberturaPercent)}</span>
-            </td>
-          </tr>
-        `
-            })
-            .join('')
-
-    sectionsHtml.push(`
-      <div class="section">
-        <h2 class="section-title">Cobertura de Carteira (Backlog vs Realizado)</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Mês</th>
-              <th class="text-right">Valor em Carteira (Backlog)</th>
-              <th class="text-right">Valor Realizado (Faturado)</th>
-              <th class="text-right">Cobertura</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
-      </div>
-    `)
+    sections.push({
+      numero: sectionIndex++,
+      titulo: 'Cobertura de Carteira (Backlog vs Faturado Realizado)',
+      descricao:
+        'Histórico evolutivo de 6 meses comparando a carteira de pedidos em aberto (backlog comercial) contra a receita faturada realizada e percentual de cobertura atingido.',
+      table: {
+        columns: [
+          { header: 'Mês de Referência', width: '150px', align: 'left', isBold: true },
+          { header: 'Valor em Carteira / Backlog (R$)', align: 'right' },
+          { header: 'Valor Faturado Realizado (R$)', align: 'right' },
+          { header: 'Índice de Cobertura (%)', width: '170px', align: 'right' },
+        ],
+        rows: data.coverageData.map((cov) => [
+          cov.label,
+          cov.carteiraBrl !== null ? formatMoedaBRL(cov.carteiraBrl) : '—',
+          formatMoedaBRL(cov.faturadoBrl),
+          formatPercentBR(cov.coberturaPercent),
+        ]),
+        footerRow:
+          data.coverageData.length > 0
+            ? [
+                'TOTAL / MÉDIA:',
+                formatMoedaBRL(totalCarteira),
+                formatMoedaBRL(totalFaturado),
+                formatPercentBR(coberturaGlobal),
+              ]
+            : undefined,
+        emptyMessage: 'Sem dados históricos de cobertura disponíveis para o período informado.',
+      },
+    })
   }
 
-  const html = `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8" />
-  <title>Resumo de Vendas — Blink Biotech</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      padding: 32px;
-      color: #0f172a;
-      background: #ffffff;
-      line-height: 1.45;
-      font-size: 13px;
-    }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      border-bottom: 2px solid #e2e8f0;
-      padding-bottom: 16px;
-      margin-bottom: 24px;
-    }
-    .header-brand {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #64748b;
-      margin-bottom: 4px;
-    }
-    h1 {
-      font-size: 24px;
-      font-weight: 800;
-      color: #0f172a;
-      margin: 0;
-      line-height: 1.2;
-    }
-    .header-meta {
-      text-align: right;
-      font-size: 12px;
-      color: #475569;
-    }
-    .periodo-pill {
-      display: inline-block;
-      padding: 4px 10px;
-      background: #f1f5f9;
-      border: 1px solid #cbd5e1;
-      border-radius: 9999px;
-      font-weight: 700;
-      color: #0f172a;
-      font-size: 12px;
-      margin-bottom: 4px;
-    }
-    .section {
-      margin-bottom: 28px;
-      page-break-inside: avoid;
-    }
-    .section-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: #1e293b;
-      margin: 0 0 12px 0;
-      border-bottom: 1px solid #e2e8f0;
-      padding-bottom: 6px;
-    }
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-    }
-    .kpi-card {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 14px 16px;
-    }
-    .kpi-label {
-      display: block;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #64748b;
-      margin-bottom: 6px;
-    }
-    .kpi-value {
-      display: block;
-      font-size: 20px;
-      font-weight: 800;
-      color: #0f172a;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    }
-    .kpi-value.primary {
-      color: #0284c7;
-    }
-    .kpi-sub {
-      display: block;
-      font-size: 11px;
-      color: #64748b;
-      margin-top: 4px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-    }
-    th, td {
-      border-bottom: 1px solid #e2e8f0;
-      padding: 8px 10px;
-      text-align: left;
-    }
-    th {
-      background: #f1f5f9;
-      font-weight: 600;
-      color: #334155;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-    }
-    .text-center { text-align: center; }
-    .text-right { text-align: right; }
-    .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
-    .font-bold { font-weight: 700; }
-    .w-col-num { width: 44px; }
-    .empty { color: #64748b; padding: 18px !important; }
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 700;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    }
-    .badge-success {
-      background: #dcfce7;
-      color: #15803d;
-      border: 1px solid #86efac;
-    }
-    .badge-warning {
-      background: #fef3c7;
-      color: #b45309;
-      border: 1px solid #fde68a;
-    }
-    .badge-danger {
-      background: #fee2e2;
-      color: #b91c1c;
-      border: 1px solid #fca5a5;
-    }
-    .badge-neutral {
-      background: #f1f5f9;
-      color: #475569;
-      border: 1px solid #cbd5e1;
-    }
-    .footer {
-      margin-top: 36px;
-      padding-top: 12px;
-      border-top: 1px solid #e2e8f0;
-      display: flex;
-      justify-content: space-between;
-      color: #94a3b8;
-      font-size: 11px;
-    }
-    @media print {
-      body { padding: 0; }
-      @page { size: portrait; margin: 12mm; }
-      .section { page-break-inside: avoid; }
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div>
-      <div class="header-brand">Blink Biotech</div>
-      <h1>Resumo de Vendas</h1>
-    </div>
-    <div class="header-meta">
-      <div><span class="periodo-pill">Período: ${escapeHtml(data.periodo || '—')}</span></div>
-      <div>Gerado em: <strong>${escapeHtml(dataGeracao)}</strong></div>
-    </div>
-  </div>
+  if (sections.length === 0) {
+    throw new Error('Nenhuma seção foi selecionada para compor o relatório PDF.')
+  }
 
-  ${sectionsHtml.join('')}
-
-  <div class="footer">
-    <span>Blink Biotech — Relatório de Vendas</span>
-    <span>Documento gerado automaticamente</span>
-  </div>
-
-  <script>
-    window.onload = function() {
-      setTimeout(function() {
-        window.print();
-      }, 400);
-    };
-  </script>
-</body>
-</html>`
-
-  win.document.write(html)
-  win.document.close()
-  return true
+  return openCorporatePdfReport({
+    titulo: 'Resumo Executivo de Vendas',
+    subtitulo:
+      'Demonstrativo Comercial Consolidado · Indicadores, Clientes, Famílias e Cobertura de Carteira',
+    origem: 'Módulo Resumo de Vendas (/resumo)',
+    periodo: data.periodo || 'Consolidado Geral',
+    filtros: {
+      'Período Analisado': data.periodo || 'Geral',
+      'Módulo de Origem': 'Resumo Comercial',
+    },
+    sections,
+    orientacao: 'portrait',
+  })
 }
