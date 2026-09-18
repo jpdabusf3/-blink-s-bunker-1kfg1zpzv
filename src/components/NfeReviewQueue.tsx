@@ -129,12 +129,22 @@ export function NfeReviewQueue({ onPedidoAprovado, onOpenUpload }: NfeReviewQueu
   }, [loadData])
 
   useRealtimeData('nfe_pedidos', loadData)
+  useRealtimeData('notas_fiscais', loadData)
+  useRealtimeData('nf_itens', loadData)
 
   const filteredPedidos = useMemo(() => {
     return pedidos.filter((p) => {
       // Filtro de Status
       if (statusFilter === 'pendente_all') {
-        if (p.status !== 'pendente' && p.status !== 'pendencia_produto') return false
+        if (
+          p.status !== 'pendente' &&
+          p.status !== 'pendencia_produto' &&
+          p.status !== 'importada'
+        ) {
+          return false
+        }
+      } else if (statusFilter === 'pendente') {
+        if (p.status !== 'pendente' && p.status !== 'importada') return false
       } else if (statusFilter !== 'all') {
         if (p.status !== statusFilter) return false
       }
@@ -154,7 +164,9 @@ export function NfeReviewQueue({ onPedidoAprovado, onOpenUpload }: NfeReviewQueu
   }, [pedidos, statusFilter, searchTerm])
 
   const counts = useMemo(() => {
-    const pendentes = pedidos.filter((p) => p.status === 'pendente').length
+    const pendentes = pedidos.filter(
+      (p) => p.status === 'pendente' || p.status === 'importada',
+    ).length
     const pendenciaProd = pedidos.filter((p) => p.status === 'pendencia_produto').length
     const aprovados = pedidos.filter((p) => p.status === 'aprovado').length
     const totalPendentes = pendentes + pendenciaProd
@@ -278,6 +290,7 @@ export function NfeReviewQueue({ onPedidoAprovado, onOpenUpload }: NfeReviewQueu
           </Badge>
         )
       case 'pendente':
+      case 'importada':
         return (
           <Badge
             variant="outline"
@@ -506,7 +519,7 @@ export function NfeReviewQueue({ onPedidoAprovado, onOpenUpload }: NfeReviewQueu
                           }
                         >
                           <TableCell className="font-semibold whitespace-nowrap">
-                            <span className="text-primary font-mono">#{p.numero_nf}</span>
+                            <span className="text-primary font-mono">#{p.numero_nf || 'S/N'}</span>
                           </TableCell>
                           <TableCell className="whitespace-nowrap text-xs">
                             {p.data_emissao
@@ -514,7 +527,9 @@ export function NfeReviewQueue({ onPedidoAprovado, onOpenUpload }: NfeReviewQueu
                               : '—'}
                           </TableCell>
                           <TableCell className="font-medium max-w-[220px]">
-                            <div className="truncate font-semibold">{p.cliente_nome}</div>
+                            <div className="truncate font-semibold">
+                              {p.cliente_nome || 'Sem Razão Social'}
+                            </div>
                             {p.expand?.factory_id && (
                               <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                                 <Building2 className="w-3 h-3" /> Vinculado ao cadastro do CRM
@@ -523,9 +538,11 @@ export function NfeReviewQueue({ onPedidoAprovado, onOpenUpload }: NfeReviewQueu
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground max-w-[160px]">
                             <div>
-                              {p.cliente_cidade ? `${p.cliente_cidade}/${p.cliente_uf || ''}` : '—'}
+                              {p.cliente_cidade
+                                ? `${p.cliente_cidade}/${p.cliente_uf || ''}`
+                                : p.cliente_uf || '—'}
                             </div>
-                            <div className="text-[10px] font-mono">{p.cliente_cnpj || ''}</div>
+                            <div className="text-[10px] font-mono">{p.cliente_cnpj || '—'}</div>
                           </TableCell>
                           <TableCell className="text-xs">
                             <div className="flex items-center gap-1">
@@ -542,13 +559,13 @@ export function NfeReviewQueue({ onPedidoAprovado, onOpenUpload }: NfeReviewQueu
                             </div>
                             {itensList[0] && (
                               <p className="text-[10px] text-muted-foreground truncate max-w-[180px]">
-                                {itensList[0].nome}
+                                {itensList[0].nome || 'Item sem descrição'}
                               </p>
                             )}
                           </TableCell>
                           <TableCell className="text-xs whitespace-nowrap">
                             <span className="font-mono text-[11px] bg-muted px-1.5 py-0.5 rounded">
-                              {p.frete_modalidade || 'FOB'}
+                              {p.frete_modalidade || 'CIF'}
                             </span>
                           </TableCell>
                           <TableCell className="text-right font-bold text-primary whitespace-nowrap">
@@ -561,7 +578,9 @@ export function NfeReviewQueue({ onPedidoAprovado, onOpenUpload }: NfeReviewQueu
                             <div className="flex items-center justify-center gap-1">
                               <Button
                                 variant={
-                                  p.status === 'pendente' || p.status === 'pendencia_produto'
+                                  p.status === 'pendente' ||
+                                  p.status === 'pendencia_produto' ||
+                                  p.status === 'importada'
                                     ? 'default'
                                     : 'outline'
                                 }
@@ -569,7 +588,9 @@ export function NfeReviewQueue({ onPedidoAprovado, onOpenUpload }: NfeReviewQueu
                                 className="h-7 text-xs gap-1"
                                 onClick={() => openReviewModal(p)}
                               >
-                                {p.status === 'pendente' || p.status === 'pendencia_produto' ? (
+                                {p.status === 'pendente' ||
+                                p.status === 'pendencia_produto' ||
+                                p.status === 'importada' ? (
                                   <>
                                     <Edit className="w-3.5 h-3.5" /> Conferir / Aprovar
                                   </>
@@ -975,7 +996,8 @@ export function NfeReviewQueue({ onPedidoAprovado, onOpenUpload }: NfeReviewQueu
           <DialogFooter className="flex flex-col sm:flex-row justify-between items-center gap-2 pt-3 border-t">
             {selectedPedido &&
             (selectedPedido.status === 'pendente' ||
-              selectedPedido.status === 'pendencia_produto') ? (
+              selectedPedido.status === 'pendencia_produto' ||
+              selectedPedido.status === 'importada') ? (
               <>
                 <Button
                   type="button"

@@ -86,17 +86,14 @@ export default function Pedidos() {
   }>({
     entities: ['historico_vendas', 'nfe_pedidos', 'notas_fiscais', 'pedidos'],
     fetcher: async () => {
-      const [vendas, nfes, nfRecords] = await Promise.all([
+      const [vendas, nfes] = await Promise.all([
         getHistoricoVendas(),
         getNfePedidos('all').catch(() => []),
-        pb
-          .collection('notas_fiscais')
-          .getFullList({ filter: 'status="importada" || status="pendente"' })
-          .catch(() => []),
       ])
-      const pCount =
-        nfes.filter((n) => n.status === 'pendente' || n.status === 'pendencia_produto').length +
-        nfRecords.length
+      const pCount = nfes.filter(
+        (n) =>
+          n.status === 'pendente' || n.status === 'pendencia_produto' || n.status === 'importada',
+      ).length
       return {
         pedidos: vendas,
         pendentesCount: pCount,

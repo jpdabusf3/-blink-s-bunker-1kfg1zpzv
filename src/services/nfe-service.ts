@@ -25,6 +25,7 @@ export interface NfeItem {
 
 export type NfeStatus =
   | 'pendente'
+  | 'importada'
   | 'pendencia_produto'
   | 'aprovado'
   | 'rejeitado'
@@ -126,7 +127,9 @@ export interface NfePedido {
     gestor_tecnico_id?: { id: string; nome: string }
     vendedor_id?: { id: string; nome: string }
     aprovado_por?: { id: string; name: string }
+    [key: string]: unknown
   }
+  _sourceTable?: 'nfe_pedidos' | 'notas_fiscais'
 }
 
 export interface ProdutoCatalogo {
@@ -274,52 +277,536 @@ export async function processarNfeExcel(
   })
 }
 
-export async function getNfePedidos(status?: NfeStatus | 'all'): Promise<NfePedido[]> {
-  const filter = status && status !== 'all' ? `status = "${status}"` : ''
-  return pb.collection('nfe_pedidos').getFullList<NfePedido>({
-    filter,
-    sort: '-created',
-    expand: 'factory_id,gestor_tecnico_id,vendedor_id,aprovado_por',
+interface NotaFiscalRecord {
+  id: string
+  numero_nf?: string
+  serie?: string
+  chave_acesso?: string
+  data_emissao?: string
+  natureza_operacao?: string
+  protocolo_autorizacao?: string
+  destinatario_nome?: string
+  destinatario_cnpj?: string
+  destinatario_ie?: string
+  destinatario_endereco?: string
+  destinatario_bairro?: string
+  destinatario_cep?: string
+  destinatario_municipio?: string
+  destinatario_uf?: string
+  destinatario_fone?: string
+  fatura_numero?: string
+  fatura_vencimento?: string
+  fatura_valor?: number
+  bc_icms?: number
+  valor_icms?: number
+  valor_frete?: number
+  valor_seguro?: number
+  desconto?: number
+  outras_despesas?: number
+  valor_ipi?: number
+  valor_total_produtos?: number
+  valor_total_nota?: number
+  frete_modalidade?: string
+  volumes_quantidade?: number
+  volumes_especie?: string
+  peso_bruto?: number
+  peso_liquido?: number
+  ordem_compra?: string
+  valor_aproximado_tributos?: number
+  especie_destino?: string
+  canal_vendas?: string
+  gestor_tecnico_id?: string
+  vendedor_id?: string
+  arquivo_pdf_url?: string
+  status?: string
+  user_id?: string
+  created?: string
+  updated?: string
+  raw_text?: string
+  expand?: {
+    gestor_tecnico_id?: { id: string; nome?: string }
+    vendedor_id?: { id: string; nome?: string }
+    [key: string]: unknown
+  }
+}
+
+interface NfItemRecord {
+  id: string
+  nota_fiscal_id: string
+  produto_codigo?: string
+  produto_descricao?: string
+  produto_ncm?: string
+  produto_cst?: string
+  produto_cfop?: string
+  produto_unidade?: string
+  produto_quantidade?: number
+  produto_valor_unitario?: number
+  produto_valor_total?: number
+  bc_icms?: number
+  valor_icms?: number
+  valor_ipi?: number
+  aliq_icms?: number
+  aliq_ipi?: number
+}
+
+function mapNotaFiscalToNfePedido(
+  nf: NotaFiscalRecord,
+  itemsByNfId: Map<string, NfItemRecord[]>,
+  catalogCodes: Set<string>,
+): NfePedido {
+  const rawItems = itemsByNfId.get(nf.id) || []
+  let hasPendingProduct = false
+
+  const mappedItens: NfeItem[] = rawItems.map((item) => {
+    const rawCod = (item.produto_codigo || '').trim().toUpperCase()
+    const isND = !rawCod || rawCod === 'ND'
+    const isKnown = !isND && catalogCodes.has(rawCod)
+
+    if (!isND && !isKnown) {
+      hasPendingProduct = true
+    }
+
+    return {
+      codigo: item.produto_codigo || '',
+      nome: item.produto_descricao || 'Produto sem descrição',
+      ncm: item.produto_ncm || undefined,
+      cst: item.produto_cst || undefined,
+      cfop: item.produto_cfop || undefined,
+      unidade: item.produto_unidade || 'KG',
+      quantidade: Number(item.produto_quantidade) || 0,
+      preco_unitario: Number(item.produto_valor_unitario) || 0,
+      valor_total: Number(item.produto_valor_total) || 0,
+      aliquota_icms: item.aliq_icms !== undefined ? Number(item.aliq_icms) : undefined,
+      valor_icms: item.valor_icms !== undefined ? Number(item.valor_icms) : undefined,
+      reconhecido: isKnown,
+    }
   })
+
+  // Mapeamento de status:
+  // Se nf.status é 'confirmada' -> 'aprovado'
+  // Se nf.status é 'importada' ou 'pendente':
+  //   - Se há itens não catalogados -> 'pendencia_produto'
+  //   - Caso contrário -> 'pendente'
+  let mappedStatus: NfeStatus = 'pendente'
+  if (nf.status === 'confirmada' || nf.status === 'revisada') {
+    mappedStatus = 'aprovado'
+  } else if (hasPendingProduct) {
+    mappedStatus = 'pendencia_produto'
+  } else {
+    mappedStatus = 'pendente'
+  }
+
+  const valorTotal =
+    Number(nf.valor_total_nota) ||
+    Number(nf.valor_total_produtos) ||
+    mappedItens.reduce((sum, it) => sum + (it.valor_total || 0), 0)
+
+  // Extrair nome do arquivo do URL se existir
+  let arquivoNome: string | undefined
+  if (nf.arquivo_pdf_url) {
+    try {
+      const parts = nf.arquivo_pdf_url.split('/')
+      arquivoNome = decodeURIComponent(parts[parts.length - 1] || '')
+    } catch {
+      arquivoNome = undefined
+    }
+  }
+
+  const gestorNome = nf.expand?.gestor_tecnico_id?.nome
+  const vendedorNome = nf.expand?.vendedor_id?.nome
+
+  return {
+    id: nf.id,
+    _sourceTable: 'notas_fiscais',
+    numero_nf: nf.numero_nf || 'S/N',
+    serie_nf: nf.serie || '1',
+    chave_acesso: nf.chave_acesso || undefined,
+    natureza_operacao: nf.natureza_operacao || undefined,
+    protocolo_autorizacao: nf.protocolo_autorizacao || undefined,
+    data_emissao: nf.data_emissao || nf.created || new Date().toISOString(),
+
+    cliente_nome: nf.destinatario_nome?.trim() || 'Sem Razão Social',
+    cliente_cnpj: nf.destinatario_cnpj || undefined,
+    cliente_municipio: nf.destinatario_municipio || undefined,
+    cliente_cidade: nf.destinatario_municipio || undefined,
+    cliente_uf: nf.destinatario_uf || undefined,
+    cliente_endereco: nf.destinatario_endereco || undefined,
+    cliente_bairro_distrito: nf.destinatario_bairro || undefined,
+    cliente_cep: nf.destinatario_cep || undefined,
+    cliente_inscricao_estadual: nf.destinatario_ie || undefined,
+    cliente_fone: nf.destinatario_fone || undefined,
+
+    especie: nf.especie_destino || 'BOVINO',
+    canal_vendas: nf.canal_vendas || 'Direto',
+    gestor_tecnico_id: nf.gestor_tecnico_id || undefined,
+    vendedor_id: nf.vendedor_id || undefined,
+    itens: mappedItens,
+
+    base_calculo_icms: nf.bc_icms !== undefined ? Number(nf.bc_icms) : undefined,
+    valor_icms: nf.valor_icms !== undefined ? Number(nf.valor_icms) : undefined,
+    valor_total_produtos:
+      nf.valor_total_produtos !== undefined ? Number(nf.valor_total_produtos) : undefined,
+    valor_frete: nf.valor_frete !== undefined ? Number(nf.valor_frete) : undefined,
+    frete_valor: nf.valor_frete !== undefined ? Number(nf.valor_frete) : undefined,
+    valor_seguro: nf.valor_seguro !== undefined ? Number(nf.valor_seguro) : undefined,
+    desconto: nf.desconto !== undefined ? Number(nf.desconto) : undefined,
+    outras_despesas: nf.outras_despesas !== undefined ? Number(nf.outras_despesas) : undefined,
+    valor_ipi: nf.valor_ipi !== undefined ? Number(nf.valor_ipi) : undefined,
+    valor_total: valorTotal,
+    valor_total_nota: Number(nf.valor_total_nota) || valorTotal,
+    valor_aproximado_tributos:
+      nf.valor_aproximado_tributos !== undefined ? Number(nf.valor_aproximado_tributos) : undefined,
+
+    fatura_numero: nf.fatura_numero || undefined,
+    fatura_vencimento: nf.fatura_vencimento || undefined,
+    fatura_valor: nf.fatura_valor !== undefined ? Number(nf.fatura_valor) : undefined,
+
+    frete_modalidade: nf.frete_modalidade || 'CIF',
+    modalidade_frete: nf.frete_modalidade || 'CIF',
+    volumes:
+      nf.volumes_quantidade || nf.volumes_especie
+        ? `${nf.volumes_quantidade || ''} ${nf.volumes_especie || ''}`.trim()
+        : undefined,
+    peso_bruto: nf.peso_bruto !== undefined ? Number(nf.peso_bruto) : undefined,
+    peso_liquido: nf.peso_liquido !== undefined ? Number(nf.peso_liquido) : undefined,
+    ordem_compra: nf.ordem_compra || undefined,
+
+    status: mappedStatus,
+    motivo_pendencia: hasPendingProduct
+      ? 'Itens não vinculados ao catálogo de produtos'
+      : undefined,
+    arquivo_nome: arquivoNome,
+    raw_text: nf.raw_text || undefined,
+    created: nf.created || new Date().toISOString(),
+    updated: nf.updated || new Date().toISOString(),
+
+    expand: {
+      gestor_tecnico_id: gestorNome
+        ? { id: nf.gestor_tecnico_id || '', nome: gestorNome }
+        : undefined,
+      vendedor_id: vendedorNome ? { id: nf.vendedor_id || '', nome: vendedorNome } : undefined,
+    },
+  }
+}
+
+export async function getNfePedidos(status?: NfeStatus | 'all'): Promise<NfePedido[]> {
+  // 1. Buscar nfe_pedidos com tratamento resiliente
+  const nfePedidosPromise = (async () => {
+    try {
+      const filter = status && status !== 'all' ? `status = "${status}"` : ''
+      const res = await pb.collection('nfe_pedidos').getFullList<NfePedido>({
+        filter,
+        sort: '-created',
+        expand: 'factory_id,gestor_tecnico_id,vendedor_id,aprovado_por',
+      })
+      return res.map((r) => ({ ...r, _sourceTable: 'nfe_pedidos' as const }))
+    } catch (err) {
+      console.warn('[getNfePedidos] Falha ao consultar nfe_pedidos:', err)
+      return [] as NfePedido[]
+    }
+  })()
+
+  // 2. Buscar notas_fiscais + nf_itens + catálogo com tratamento resiliente
+  const notasFiscaisPromise = (async () => {
+    try {
+      // Montar filtro de notas_fiscais de acordo com o status solicitado
+      let nfFilter = ''
+      if (status === 'pendente' || status === 'pendencia_produto') {
+        nfFilter = 'status="importada" || status="pendente"'
+      } else if (status === 'aprovado') {
+        nfFilter = 'status="confirmada" || status="revisada"'
+      } else if (status && status !== 'all') {
+        nfFilter = `status="${status}"`
+      }
+
+      const [nfRecords, allItens, prods] = await Promise.all([
+        pb
+          .collection('notas_fiscais')
+          .getFullList<NotaFiscalRecord>({
+            filter: nfFilter,
+            sort: '-created',
+            expand: 'gestor_tecnico_id,vendedor_id',
+          })
+          .catch((err) => {
+            console.warn('[getNfePedidos] Falha ao buscar notas_fiscais:', err)
+            return [] as NotaFiscalRecord[]
+          }),
+        pb
+          .collection('nf_itens')
+          .getFullList<NfItemRecord>({
+            sort: 'created',
+          })
+          .catch((err) => {
+            console.warn('[getNfePedidos] Falha ao buscar nf_itens:', err)
+            return [] as NfItemRecord[]
+          }),
+        pb
+          .collection('produtos')
+          .getFullList<{ codigo?: string }>({
+            fields: 'codigo',
+          })
+          .catch(() => [] as Array<{ codigo?: string }>),
+      ])
+
+      const catalogCodes = new Set(
+        prods.map((p) => (p.codigo || '').trim().toUpperCase()).filter(Boolean),
+      )
+
+      // Agrupar itens por nota_fiscal_id
+      const itemsByNfId = new Map<string, NfItemRecord[]>()
+      for (const it of allItens) {
+        if (!it.nota_fiscal_id) continue
+        const list = itemsByNfId.get(it.nota_fiscal_id) || []
+        list.push(it)
+        itemsByNfId.set(it.nota_fiscal_id, list)
+      }
+
+      return nfRecords.map((nf) => mapNotaFiscalToNfePedido(nf, itemsByNfId, catalogCodes))
+    } catch (err) {
+      console.warn('[getNfePedidos] Falha ao unificar notas_fiscais:', err)
+      return [] as NfePedido[]
+    }
+  })()
+
+  const [fromNfePedidos, fromNotasFiscais] = await Promise.all([
+    nfePedidosPromise,
+    notasFiscaisPromise,
+  ])
+
+  // Desduplicar caso o mesmo id ou numero_nf exista em ambos (preferir nfe_pedidos se houver)
+  const seenIds = new Set<string>()
+  const combined: NfePedido[] = []
+
+  for (const p of fromNfePedidos) {
+    seenIds.add(p.id)
+    combined.push(p)
+  }
+
+  for (const p of fromNotasFiscais) {
+    if (!seenIds.has(p.id)) {
+      seenIds.add(p.id)
+      // Se filtramos por status específico, aplicar na saída mapeada
+      if (!status || status === 'all' || p.status === status) {
+        combined.push(p)
+      }
+    }
+  }
+
+  // Ordenar decrescente pela data de emissão / criação
+  combined.sort((a, b) => {
+    const timeA = new Date(a.data_emissao || a.created).getTime() || 0
+    const timeB = new Date(b.data_emissao || b.created).getTime() || 0
+    return timeB - timeA
+  })
+
+  return combined
 }
 
 export async function getNfePedidoById(id: string): Promise<NfePedido> {
-  return pb.collection('nfe_pedidos').getOne<NfePedido>(id, {
-    expand: 'factory_id,gestor_tecnico_id,vendedor_id,aprovado_por',
-  })
+  // Tentar primeiro em nfe_pedidos
+  try {
+    const res = await pb.collection('nfe_pedidos').getOne<NfePedido>(id, {
+      expand: 'factory_id,gestor_tecnico_id,vendedor_id,aprovado_por',
+    })
+    return { ...res, _sourceTable: 'nfe_pedidos' }
+  } catch {
+    // Fallback: tentar em notas_fiscais
+    const [nf, items, prods] = await Promise.all([
+      pb.collection('notas_fiscais').getOne<NotaFiscalRecord>(id, {
+        expand: 'gestor_tecnico_id,vendedor_id',
+      }),
+      pb
+        .collection('nf_itens')
+        .getFullList<NfItemRecord>({
+          filter: `nota_fiscal_id="${id}"`,
+        })
+        .catch(() => [] as NfItemRecord[]),
+      pb
+        .collection('produtos')
+        .getFullList<{ codigo?: string }>({
+          fields: 'codigo',
+        })
+        .catch(() => [] as Array<{ codigo?: string }>),
+    ])
+
+    const catalogCodes = new Set(
+      prods.map((p) => (p.codigo || '').trim().toUpperCase()).filter(Boolean),
+    )
+    const map = new Map<string, NfItemRecord[]>([[id, items]])
+    return mapNotaFiscalToNfePedido(nf, map, catalogCodes)
+  }
 }
 
 export async function aprovarNfePedido(
   id: string,
   dadosEditados?: Partial<NfePedido>,
 ): Promise<{ success: boolean; nfe_id: string; venda_id: string; mensagem: string }> {
-  return pb.send('/backend/v1/nfe/aprovar', {
-    method: 'POST',
-    body: JSON.stringify({ id, dados: dadosEditados }),
-    headers: { 'Content-Type': 'application/json' },
-  })
+  // 1. Tentar endpoint customizado /backend/v1/nfe/aprovar se existir
+  try {
+    const res = await pb.send('/backend/v1/nfe/aprovar', {
+      method: 'POST',
+      body: JSON.stringify({ id, dados: dadosEditados }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    return res
+  } catch (backendErr) {
+    console.info(
+      '[aprovarNfePedido] Endpoint /backend/v1/nfe/aprovar não disponível ou falhou, executando aprovação direta no banco:',
+      backendErr,
+    )
+  }
+
+  // 2. Aprovação direta e resiliente suportando tanto 'nfe_pedidos' quanto 'notas_fiscais'
+  // Identificar se o registro está em nfe_pedidos ou notas_fiscais
+  let isNotasFiscais = false
+  try {
+    await pb.collection('notas_fiscais').getOne(id)
+    isNotasFiscais = true
+  } catch {
+    isNotasFiscais = false
+  }
+
+  const currentUser = pb.authStore.model
+
+  if (isNotasFiscais) {
+    // Atualizar status na coleção notas_fiscais para 'confirmada'
+    const updatePayload: Record<string, unknown> = {
+      status: 'confirmada',
+    }
+    if (dadosEditados?.cliente_nome) updatePayload.destinatario_nome = dadosEditados.cliente_nome
+    if (dadosEditados?.cliente_cnpj) updatePayload.destinatario_cnpj = dadosEditados.cliente_cnpj
+    if (dadosEditados?.numero_nf) updatePayload.numero_nf = dadosEditados.numero_nf
+    if (dadosEditados?.data_emissao) updatePayload.data_emissao = dadosEditados.data_emissao
+    if (dadosEditados?.especie) updatePayload.especie_destino = dadosEditados.especie
+    if (dadosEditados?.canal_vendas) updatePayload.canal_vendas = dadosEditados.canal_vendas
+    if (dadosEditados?.vendedor_id) updatePayload.vendedor_id = dadosEditados.vendedor_id
+    if (dadosEditados?.valor_total) updatePayload.valor_total_nota = dadosEditados.valor_total
+
+    await pb.collection('notas_fiscais').update(id, updatePayload)
+
+    // Se já existem registros em historico_vendas criados na importação, atualizar status
+    try {
+      const hvList = await pb.collection('historico_vendas').getFullList<{ id: string }>({
+        filter: `numero_documento="${dadosEditados?.numero_nf || ''}"`,
+      })
+      for (const hv of hvList) {
+        await pb.collection('historico_vendas').update(hv.id, { status: 'realizado' })
+      }
+    } catch {
+      // Ignorar se não encontrar em historico_vendas
+    }
+
+    return {
+      success: true,
+      nfe_id: id,
+      venda_id: id,
+      mensagem: 'Nota fiscal aprovada e confirmada com sucesso.',
+    }
+  } else {
+    // Atualizar na coleção nfe_pedidos
+    const updatePayload: Partial<NfePedido> = {
+      ...dadosEditados,
+      status: 'aprovado',
+      aprovado_por: currentUser?.id,
+      aprovado_em: new Date().toISOString(),
+    }
+    const updated = await pb.collection('nfe_pedidos').update<NfePedido>(id, updatePayload)
+    return {
+      success: true,
+      nfe_id: updated.id,
+      venda_id: updated.id,
+      mensagem: 'Pedido de NF-e aprovado com sucesso.',
+    }
+  }
 }
 
 export async function rejeitarNfePedido(
   id: string,
   motivo?: string,
 ): Promise<{ success: boolean; nfe_id: string; mensagem: string }> {
-  return pb.send('/backend/v1/nfe/rejeitar', {
-    method: 'POST',
-    body: JSON.stringify({ id, motivo }),
-    headers: { 'Content-Type': 'application/json' },
-  })
+  // 1. Tentar endpoint customizado /backend/v1/nfe/rejeitar se existir
+  try {
+    const res = await pb.send('/backend/v1/nfe/rejeitar', {
+      method: 'POST',
+      body: JSON.stringify({ id, motivo }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    return res
+  } catch (backendErr) {
+    console.info(
+      '[rejeitarNfePedido] Endpoint /backend/v1/nfe/rejeitar não disponível, executando rejeição direta no banco:',
+      backendErr,
+    )
+  }
+
+  // 2. Rejeição direta no banco
+  let isNotasFiscais = false
+  try {
+    await pb.collection('notas_fiscais').getOne(id)
+    isNotasFiscais = true
+  } catch {
+    isNotasFiscais = false
+  }
+
+  if (isNotasFiscais) {
+    // Remover ou alterar status
+    await pb.collection('notas_fiscais').delete(id)
+    return {
+      success: true,
+      nfe_id: id,
+      mensagem: 'Nota fiscal rejeitada e removida da fila.',
+    }
+  } else {
+    await pb.collection('nfe_pedidos').update(id, {
+      status: 'rejeitado',
+      motivo_pendencia: motivo || 'Rejeitado pelo usuário',
+    })
+    return {
+      success: true,
+      nfe_id: id,
+      mensagem: 'Pedido de NF-e rejeitado.',
+    }
+  }
 }
 
 export async function excluirNfePedido(id: string): Promise<boolean> {
-  return pb.collection('nfe_pedidos').delete(id)
+  try {
+    await pb.collection('nfe_pedidos').delete(id)
+    return true
+  } catch {
+    try {
+      await pb.collection('notas_fiscais').delete(id)
+      return true
+    } catch (err) {
+      console.error('[excluirNfePedido] Erro ao excluir:', err)
+      return false
+    }
+  }
 }
 
 export async function atualizarNfePedido(
   id: string,
   dados: Partial<NfePedido>,
 ): Promise<NfePedido> {
-  return pb.collection('nfe_pedidos').update<NfePedido>(id, dados)
+  try {
+    return await pb.collection('nfe_pedidos').update<NfePedido>(id, dados)
+  } catch {
+    // Se estiver em notas_fiscais
+    const nfPayload: Record<string, unknown> = {}
+    if (dados.cliente_nome) nfPayload.destinatario_nome = dados.cliente_nome
+    if (dados.cliente_cnpj) nfPayload.destinatario_cnpj = dados.cliente_cnpj
+    if (dados.cliente_cidade) nfPayload.destinatario_municipio = dados.cliente_cidade
+    if (dados.cliente_uf) nfPayload.destinatario_uf = dados.cliente_uf
+    if (dados.numero_nf) nfPayload.numero_nf = dados.numero_nf
+    if (dados.data_emissao) nfPayload.data_emissao = dados.data_emissao
+    if (dados.especie) nfPayload.especie_destino = dados.especie
+    if (dados.canal_vendas) nfPayload.canal_vendas = dados.canal_vendas
+    if (dados.vendedor_id) nfPayload.vendedor_id = dados.vendedor_id
+    if (dados.valor_total) nfPayload.valor_total_nota = dados.valor_total
+
+    await pb.collection('notas_fiscais').update(id, nfPayload)
+    return getNfePedidoById(id)
+  }
 }
 
 export async function getProdutosCatalogo(): Promise<ProdutoCatalogo[]> {
