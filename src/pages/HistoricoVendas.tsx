@@ -130,53 +130,77 @@ export default function HistoricoVendas() {
   }
 
   const handleExportExcel = () => {
-    if (filtered.length === 0) {
-      toast({
-        title: 'Sem dados para exportar',
-        description: 'Nenhum registro encontrado com os filtros atuais.',
-        variant: 'destructive',
-      })
-      return
-    }
     try {
-      exportHistoricoVendasToExcel(filtered)
+      if (filtered.length === 0) {
+        toast({
+          title: 'Sem dados para exportar',
+          description: 'Ajuste os filtros para encontrar registros.',
+        })
+        return
+      }
+
+      const activeFilters = {
+        periodo: selectedPeriod !== 'todos' ? selectedPeriod : 'Todos os períodos',
+        especie: selectedEspecie !== 'todas' ? selectedEspecie : undefined,
+        gestor: selectedGestor !== 'todos' ? selectedGestor : undefined,
+        vendedor: selectedVendedor !== 'todos' ? selectedVendedor : undefined,
+        canal: selectedCanal !== 'todos' ? selectedCanal : undefined,
+        status: selectedStatus !== 'todos' ? selectedStatus : undefined,
+        origem: selectedOrigem !== 'todas' ? selectedOrigem : undefined,
+        pais: selectedPais !== 'todos' ? selectedPais : undefined,
+        busca: searchTerm.trim() || undefined,
+      }
+
+      exportHistoricoVendasToExcel(filtered, activeFilters)
       toast({
         title: 'Exportação concluída',
-        description: `${filtered.length} registro(s) exportados em formato Excel (.csv).`,
+        description: `${filtered.length} registro(s) exportados em formato corporativo Excel (.xlsx).`,
       })
     } catch {
       toast({
-        title: 'Erro ao exportar',
-        description: 'Não foi possível gerar a planilha. Tente novamente.',
         variant: 'destructive',
+        title: 'Erro ao exportar',
+        description: 'Não foi possível gerar a planilha.',
       })
     }
   }
 
   const handleExportPDF = () => {
-    if (filtered.length === 0) {
-      toast({
-        title: 'Sem dados para exportar',
-        description: 'Nenhum registro encontrado com os filtros atuais.',
-        variant: 'destructive',
-      })
-      return
-    }
     try {
-      exportHistoricoVendasToPDF(filtered)
+      if (filtered.length === 0) {
+        toast({
+          title: 'Sem dados para exportar',
+          description: 'Ajuste os filtros para encontrar registros.',
+        })
+        return
+      }
+
+      const activeFilters = {
+        periodo: selectedPeriod !== 'todos' ? selectedPeriod : 'Todos os períodos',
+        especie: selectedEspecie !== 'todas' ? selectedEspecie : undefined,
+        gestor: selectedGestor !== 'todos' ? selectedGestor : undefined,
+        vendedor: selectedVendedor !== 'todos' ? selectedVendedor : undefined,
+        canal: selectedCanal !== 'todos' ? selectedCanal : undefined,
+        status: selectedStatus !== 'todos' ? selectedStatus : undefined,
+        origem: selectedOrigem !== 'todas' ? selectedOrigem : undefined,
+        pais: selectedPais !== 'todos' ? selectedPais : undefined,
+        busca: searchTerm.trim() || undefined,
+      }
+
+      exportHistoricoVendasToPDF(filtered, activeFilters)
       toast({
         title: 'Documento PDF gerado',
-        description: 'Janela de impressão aberta com os dados da tela.',
+        description:
+          'A janela de impressão corporativa foi aberta. Verifique se o pop-up não foi bloqueado.',
       })
     } catch (err) {
       toast({
+        variant: 'destructive',
         title: 'Erro ao gerar PDF',
         description: err instanceof Error ? err.message : 'Não foi possível gerar o PDF.',
-        variant: 'destructive',
       })
     }
   }
-
   return (
     <div className="space-y-6 animate-fade-in pb-10">
       {/* Banner de erro com retry padronizado mantendo dados em tela */}

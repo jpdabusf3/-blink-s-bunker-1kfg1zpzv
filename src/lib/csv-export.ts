@@ -1,5 +1,11 @@
 import type { Factory } from '@/types'
-import { formatCurrency } from '@/lib/utils'
+import {
+  exportCorporateExcel,
+  formatDataBR,
+  formatMoedaBRL,
+  getLoggedUserName,
+  type ExcelColumnDef,
+} from './corporateDocuments'
 
 export interface ParsedAddress {
   cep: string
@@ -25,11 +31,6 @@ export function extractCep(text?: string | null): string {
 
 /**
  * Parses free-text address into CEP, logradouro, numero, bairro.
- * Examples handled:
- * - "Rua das Flores, 123, Centro, CEP 12345-678"
- * - "Av. Paulista, 1000 - Bela Vista"
- * - "Rodovia BR 101, Km 50, s/n - Zona Rural"
- * - "Rua Exemplo, S/N, Bairro Alto"
  */
 export function parseAddress(rawAddress?: string | null): ParsedAddress {
   const result: ParsedAddress = {
@@ -44,7 +45,6 @@ export function parseAddress(rawAddress?: string | null): ParsedAddress {
   const raw = String(rawAddress).trim()
   result.cep = extractCep(raw)
 
-  // Remove CEP substrings
   const withoutCep = raw
     .replace(
       /\bCEP:?\s*\d{2}\.?\d{3}-?\d{3}\b|\bCEP:?\s*\d{8}\b|\b\d{2}\.?\d{3}-?\d{3}\b|\b\d{8}\b/gi,
@@ -52,7 +52,6 @@ export function parseAddress(rawAddress?: string | null): ParsedAddress {
     )
     .trim()
 
-  // Split by common delimiters (comma, hyphen, dash, semicolon)
   const parts = withoutCep
     .split(/[,;\-–—]/)
     .map((p) => p.trim())
@@ -62,7 +61,6 @@ export function parseAddress(rawAddress?: string | null): ParsedAddress {
     result.logradouro = parts[0]
   }
 
-  // Regex for number / s/n / sem número
   const numRegex =
     /\b(?:n[º°.]?\s*|n[uú]mero\s*|n\s+)?(\d+[a-zA-Z]?|S\/N|s\/n|sn|sem\s+n[uú]mero)\b/i
   const numMatch = withoutCep.match(numRegex)
@@ -75,16 +73,13 @@ export function parseAddress(rawAddress?: string | null): ParsedAddress {
     }
   }
 
-  // Look for bairro in parts
   if (parts.length >= 3) {
-    // If part 1 is number, part 2 is likely bairro
     if (/^\d+|s\/n|sn$/i.test(parts[1])) {
       result.bairro = parts[2]
     } else if (parts.length >= 2 && !result.bairro) {
       result.bairro = parts[parts.length - 1]
     }
   } else if (parts.length === 2 && !result.bairro) {
-    // If second part is not just a number, it could be the bairro
     if (!/^\d+$/i.test(parts[1])) {
       result.bairro = parts[1]
     }
@@ -97,13 +92,7 @@ export function parseAddress(rawAddress?: string | null): ParsedAddress {
  * Format date to DD/MM/YYYY
  */
 export function formatDateBR(dateVal?: string | number | Date | null): string {
-  if (!dateVal) return '-'
-  const d = dateVal instanceof Date ? dateVal : new Date(dateVal)
-  if (isNaN(d.getTime())) return '-'
-  const day = String(d.getDate()).padStart(2, '0')
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const year = d.getFullYear()
-  return `${day}/${month}/${year}`
+  return formatDataBR(dateVal)
 }
 
 /**
@@ -111,116 +100,75 @@ export function formatDateBR(dateVal?: string | number | Date | null): string {
  */
 export function formatCurrencyBR(value?: number | null): string {
   if (value === null || value === undefined || isNaN(Number(value))) {
-    return '-'
+    return '—'
   }
-  return formatCurrency(Number(value))
+  return formatMoedaBRL(Number(value))
 }
 
 /**
  * Replaces null, undefined, empty strings or purely whitespace values with "-"
  */
 export function formatStringVal(val?: string | null): string {
-  if (val === null || val === undefined) return '-'
+  if (val === null || val === undefined) return '—'
   const s = String(val).trim()
-  return s.length > 0 ? s : '-'
+  return s.length > 0 ? s : '—'
 }
 
 /**
- * Escapes CSV field for semicolon separated files with double quotes
- */
-function escapeCsvCell(cell: string): string {
-  const needsQuotes =
-    cell.includes(';') || cell.includes('"') || cell.includes('\n') || cell.includes('\r')
-  const escaped = cell.replace(/"/g, '""')
-  return needsQuotes ? `"${escaped}"` : escaped
-}
-
-/**
- * Columns in exact order:
- * 1. Nome
- * 2. CNPJ
- * 3. Cidade
- * 4. Estado
- * 5. CEP
- * 6. Logradouro
- * 7. Numero
- * 8. Bairro
- * 9. Telefone
- * 10. Email
- * 11. Gestor Tecnico
- * 12. Vendedor
- * 13. Status Funil
- * 14. Valor Potencial
- * 15. Precisao Geocode
- * 16. Status Endereco
- * 17. Enriquecido Em
+ * Gera conteúdo CSV tradicional com cabeçalhos em maiúsculo (retrocompatibilidade)
  */
 export function generateClientsCSV(factories: Factory[]): string {
   const headers = [
-    'Nome',
+    'Razão Social / Nome',
     'CNPJ',
     'Cidade',
-    'Estado',
+    'Estado (UF)',
     'CEP',
     'Logradouro',
-    'Numero',
+    'Número',
     'Bairro',
-    'Telefone',
-    'Email',
-    'Gestor Tecnico',
-    'Vendedor',
-    'Status Funil',
-    'Valor Potencial',
-    'Precisao Geocode',
-    'Status Endereco',
-    'Enriquecido Em',
+    'Telefone de Contato',
+    'E-mail Corporativo',
+    'Gestor Técnico',
+    'Vendedor Responsável',
+    'Status no Funil',
+    'Valor Potencial Estimado (R$)',
+    'Precisão do Geocode',
+    'Status do Endereço',
+    'Data de Enriquecimento',
   ]
 
+  const escapeCsv = (val: string) => {
+    const s = String(val ?? '')
+    if (s.includes(';') || s.includes('"') || s.includes('\n')) {
+      return `"${s.replace(/"/g, '""')}"`
+    }
+    return s
+  }
+
   const rows = factories.map((f) => {
-    // Address parsing from free-text `address` or fallback
     const addr = parseAddress(f.address || f.standardized_address)
-
-    const nome = formatStringVal(f.name)
-    const cnpj = formatStringVal(f.cnpj)
-    const cidade = formatStringVal(f.city)
-    const estado = formatStringVal(f.state)
-    const cep = formatStringVal(addr.cep)
-    const logradouro = formatStringVal(addr.logradouro)
-    const numero = formatStringVal(addr.numero)
-    const bairro = formatStringVal(addr.bairro)
-    const telefone = formatStringVal(f.contactPhone)
-    const email = formatStringVal(f.contact_email)
-    const gestorTecnico = formatStringVal(f.gestor_tecnico_name || f.technicalManagerName)
-    const vendedor = formatStringVal(f.vendedor_name || f.salesOwnerName)
-    const statusFunil = formatStringVal(
-      f.status_funil || (typeof f.funnelStage === 'string' ? f.funnelStage : ''),
-    )
-    const valorPotencial = formatCurrencyBR(f.potentialValue)
-    const precisaoGeocode = formatStringVal(f.geocode_precision)
-    const statusEndereco = formatStringVal(f.address_status)
-    const enriquecidoEm = formatDateBR(f.enriched_at)
-
-    const rowValues = [
-      nome,
-      cnpj,
-      cidade,
-      estado,
-      cep,
-      logradouro,
-      numero,
-      bairro,
-      telefone,
-      email,
-      gestorTecnico,
-      vendedor,
-      statusFunil,
-      valorPotencial,
-      precisaoGeocode,
-      statusEndereco,
-      enriquecidoEm,
+    return [
+      formatStringVal(f.name),
+      formatStringVal(f.cnpj),
+      formatStringVal(f.city),
+      formatStringVal(f.state),
+      formatStringVal(addr.cep),
+      formatStringVal(addr.logradouro),
+      formatStringVal(addr.numero),
+      formatStringVal(addr.bairro),
+      formatStringVal(f.contactPhone),
+      formatStringVal(f.contact_email),
+      formatStringVal(f.gestor_tecnico_name || f.technicalManagerName),
+      formatStringVal(f.vendedor_name || f.salesOwnerName),
+      formatStringVal(f.status_funil || (typeof f.funnelStage === 'string' ? f.funnelStage : '')),
+      formatCurrencyBR(f.potentialValue),
+      formatStringVal(f.geocode_precision),
+      formatStringVal(f.address_status),
+      formatDateBR(f.enriched_at),
     ]
-
-    return rowValues.map(escapeCsvCell).join(';')
+      .map(escapeCsv)
+      .join(';')
   })
 
   return [headers.join(';'), ...rows].join('\r\n')
@@ -243,18 +191,81 @@ export function downloadCSV(filename: string, csvContent: string): void {
 }
 
 /**
- * Generates and downloads the clients CSV
- * File name: clientes-export-YYYY-MM-DD.csv
+ * Exporta a carteira de clientes para planilha Excel corporativa (.xlsx)
+ * com cabeçalhos formais, título executivo e rodapé de totais.
  */
 export function exportClientsToCSV(factories: Factory[]): { filename: string; count: number } {
-  const now = new Date()
-  const yyyy = now.getFullYear()
-  const mm = String(now.getMonth() + 1).padStart(2, '0')
-  const dd = String(now.getDate()).padStart(2, '0')
-  const filename = `clientes-export-${yyyy}-${mm}-${dd}.csv`
+  const columns: ExcelColumnDef[] = [
+    { key: 'nome', label: 'Razão Social / Nome do Cliente', width: 34 },
+    { key: 'cnpj', label: 'CNPJ', width: 22 },
+    { key: 'cidade', label: 'Cidade', width: 18 },
+    { key: 'estado', label: 'UF', width: 8 },
+    { key: 'cep', label: 'CEP', width: 14 },
+    { key: 'logradouro', label: 'Logradouro', width: 26 },
+    { key: 'numero', label: 'Número', width: 12 },
+    { key: 'bairro', label: 'Bairro', width: 18 },
+    { key: 'telefone', label: 'Telefone Corporativo', width: 18 },
+    { key: 'email', label: 'E-mail Comercial', width: 26 },
+    { key: 'gestorTecnico', label: 'Gestor Técnico Responsável', width: 24 },
+    { key: 'vendedor', label: 'Vendedor Responsável', width: 24 },
+    { key: 'statusFunil', label: 'Status no Funil Comercial', width: 18 },
+    { key: 'valorPotencial', label: 'Valor Potencial Anual (R$)', width: 22, isCurrency: true },
+    { key: 'precisaoGeocode', label: 'Precisão Geocode', width: 16 },
+    { key: 'statusEndereco', label: 'Status do Endereço', width: 16 },
+    { key: 'enriquecidoEm', label: 'Data de Enriquecimento', width: 16 },
+  ]
 
-  const csv = generateClientsCSV(factories)
-  downloadCSV(filename, csv)
+  let somaPotencial = 0
+
+  const rows = factories.map((f) => {
+    const addr = parseAddress(f.address || f.standardized_address)
+    const pot = Number(f.potentialValue || 0)
+    somaPotencial += pot
+
+    return {
+      nome: formatStringVal(f.name),
+      cnpj: formatStringVal(f.cnpj),
+      cidade: formatStringVal(f.city),
+      estado: formatStringVal(f.state),
+      cep: formatStringVal(addr.cep),
+      logradouro: formatStringVal(addr.logradouro),
+      numero: formatStringVal(addr.numero),
+      bairro: formatStringVal(addr.bairro),
+      telefone: formatStringVal(f.contactPhone),
+      email: formatStringVal(f.contact_email),
+      gestorTecnico: formatStringVal(f.gestor_tecnico_name || f.technicalManagerName),
+      vendedor: formatStringVal(f.vendedor_name || f.salesOwnerName),
+      statusFunil: formatStringVal(
+        f.status_funil || (typeof f.funnelStage === 'string' ? f.funnelStage : ''),
+      ),
+      valorPotencial: pot,
+      precisaoGeocode: formatStringVal(f.geocode_precision),
+      statusEndereco: formatStringVal(f.address_status),
+      enriquecidoEm: formatDateBR(f.enriched_at),
+    }
+  })
+
+  exportCorporateExcel({
+    slug: 'carteira-clientes',
+    metadata: {
+      titulo: 'Carteira de Clientes e Indústrias Homologadas',
+      subtitulo: 'Cadastro comercial consolidado com localização e enriquecimento de dados',
+      origem: 'Base Cadastral de Clientes (/cadastro)',
+      periodo: 'Consolidado Geral',
+      geradoPor: getLoggedUserName(),
+      totalizacoes: [
+        { label: 'VALOR POTENCIAL TOTAL ESTIMADO (R$):', valor: somaPotencial },
+        {
+          label: 'TICKET MÉDIO POTENCIAL (R$):',
+          valor: factories.length > 0 ? somaPotencial / factories.length : 0,
+        },
+      ],
+    },
+    columns,
+    rows,
+  })
+
+  const filename = `carteira-clientes-geral-${new Date().toISOString().slice(0, 10)}.xlsx`
 
   return {
     filename,

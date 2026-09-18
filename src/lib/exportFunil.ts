@@ -1,68 +1,162 @@
-import { formatCurrency } from '@/lib/utils'
+import type { Factory } from '@/types'
+import {
+  exportCorporateExcel,
+  openCorporatePdfReport,
+  formatDataBR,
+  formatMoedaBRL,
+  getLoggedUserName,
+  type ExcelColumnDef,
+  type PdfSection,
+} from './corporateDocuments'
 
 export interface FunilExportRow {
-  name: string
-  valor_medio: number
-  valor_atual: number
-  status_funil: string
-  proximos_passos: string
-  acao: string
-  vendedor_name?: string
+  nome: string
+  especie: string
+  gestor: string
+  vendedor: string
+  statusFunil: string
+  dataMudanca: string
+  diasNoEstagio: number
+  motivoPerda?: string
 }
 
-export function exportFunilToExcel(rows: FunilExportRow[]) {
-  const sep = ';'
-  const headers = [
-    'Cliente',
-    'Valor Medio',
-    'Valor Atual',
-    'Status Funil',
-    'Proximos Passos',
-    'Acao',
-    'Vendedor',
+export function exportFunilToExcel(rowsData: FunilExportRow[]) {
+  const columns: ExcelColumnDef[] = [
+    { key: 'nome', label: 'Cliente / Razão Social', width: 34 },
+    { key: 'especie', label: 'Espécie Animal Atendida', width: 22 },
+    { key: 'gestor', label: 'Gestor Técnico Responsável', width: 24 },
+    { key: 'vendedor', label: 'Vendedor Responsável', width: 24 },
+    { key: 'statusFunil', label: 'Estágio Atual do Funil', width: 22 },
+    { key: 'dataMudanca', label: 'Data da Última Mudança', width: 18 },
+    { key: 'diasNoEstagio', label: 'Dias no Estágio', width: 16, isNumeric: true },
+    { key: 'motivoPerda', label: 'Motivo da Perda (quando aplicável)', width: 32 },
   ]
-  const lines = [
-    headers.join(sep),
-    ...rows.map((r) =>
-      [
-        `"${r.name.replace(/"/g, '""')}"`,
-        r.valor_medio.toFixed(2).replace('.', ','),
-        r.valor_atual.toFixed(2).replace('.', ','),
-        `"${r.status_funil}"`,
-        `"${(r.proximos_passos || '-').replace(/"/g, '""')}"`,
-        `"${(r.acao || '-').replace(/"/g, '""')}"`,
-        `"${(r.vendedor_name || '-').replace(/"/g, '""')}"`,
-      ].join(sep),
-    ),
-  ]
-  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
-  const link = document.createElement('a')
-  link.setAttribute('href', URL.createObjectURL(blob))
-  link.setAttribute('download', `funil_vendas_blink_${new Date().toISOString().slice(0, 10)}.csv`)
-  link.style.visibility = 'hidden'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
+
+  const rows = rowsData.map((r) => ({
+    nome: r.nome || 'Não informado',
+    especie: r.especie || '—',
+    gestor: r.gestor || 'Não atribuído',
+    vendedor: r.vendedor || 'Não atribuído',
+    statusFunil: r.statusFunil || '—',
+    dataMudanca: formatDataBR(r.dataMudanca),
+    diasNoEstagio: Number(r.diasNoEstagio || 0),
+    motivoPerda: r.motivoPerda || '—',
+  }))
+
+  const mediaDias =
+    rowsData.length > 0
+      ? Math.round(rowsData.reduce((s, r) => s + (r.diasNoEstagio || 0), 0) / rowsData.length)
+      : 0
+
+  exportCorporateExcel({
+    slug: 'funil-clientes',
+    metadata: {
+      titulo: 'Pipeline de Clientes no Funil Comercial',
+      subtitulo: 'Status de evolução das contas, tempo em cada estágio e histórico de perdas',
+      origem: 'Gestão de Funil (/funil)',
+      periodo: 'Consolidado Geral',
+      geradoPor: getLoggedUserName(),
+      totalizacoes: [
+        { label: 'TOTAL DE CONTAS NO FUNIL:', valor: rowsData.length },
+        { label: 'TEMPO MÉDIO NO ESTÁGIO ATUAL (DIAS):', valor: mediaDias },
+      ],
+    },
+    columns,
+    rows,
+  })
 }
 
-export function exportFunilToPDF(rows: FunilExportRow[]) {
-  const win = window.open('', '_blank')
-  if (!win) return
-  const totalMedio = rows.reduce((s, r) => s + r.valor_medio, 0)
-  const totalAtual = rows.reduce((s, r) => s + r.valor_atual, 0)
-  const html = `<!DOCTYPE html><html><head><title>Funil de Vendas - Blink Biotech</title><meta charset="utf-8"><style>
-  body{font-family:'Segoe UI',Arial,sans-serif;padding:40px;color:#333}h1{color:#1e3a8a}
-  table{width:100%;border-collapse:collapse;margin-top:20px;font-size:12px}th,td{border-bottom:1px solid #e2e8f0;padding:8px;text-align:left}th{background:#f1f5f9}
-  .r{text-align:right}.total{font-weight:bold;background:#f8fafc}
-  </style></head><body>
-  <h1>Funil de Vendas - Blink Biotech</h1>
-  <p>Gerado em: ${new Date().toLocaleString('pt-BR')} | Total: ${rows.length} cliente(s)</p>
-  <table><thead><tr><th>Cliente</th><th class="r">Valor Medio</th><th class="r">Valor Atual</th><th>Status</th><th>Proximos Passos</th><th>Acao</th><th>Vendedor</th></tr></thead><tbody>
-  ${rows.map((r) => `<tr><td>${r.name}</td><td class="r">${formatCurrency(r.valor_medio)}</td><td class="r">${formatCurrency(r.valor_atual)}</td><td>${r.status_funil}</td><td>${r.proximos_passos || '-'}</td><td>${r.acao || '-'}</td><td>${r.vendedor_name || '-'}</td></tr>`).join('')}
-  <tr class="total"><td>TOTAL</td><td class="r">${formatCurrency(totalMedio)}</td><td class="r">${formatCurrency(totalAtual)}</td><td colspan="4"></td></tr>
-  </tbody></table>
-  <script>window.onload=()=>{setTimeout(()=>window.print(),500)}</script>
-  </body></html>`
-  win.document.write(html)
-  win.document.close()
+export function exportFunilToPDF(rowsData: FunilExportRow[]) {
+  const mediaDias =
+    rowsData.length > 0
+      ? Math.round(rowsData.reduce((s, r) => s + (r.diasNoEstagio || 0), 0) / rowsData.length)
+      : 0
+
+  const tableRows = rowsData.map((r) => [
+    r.nome || '—',
+    r.especie || '—',
+    r.gestor || '—',
+    r.vendedor || '—',
+    r.statusFunil || '—',
+    formatDataBR(r.dataMudanca),
+    `${r.diasNoEstagio || 0} dias`,
+    r.motivoPerda || '—',
+  ])
+
+  const sections: PdfSection[] = [
+    {
+      numero: 1,
+      titulo: 'Indicadores Globais de Funil',
+      descricao: 'Visão executiva das contas ativas por maturidade comercial.',
+      kpis: [
+        {
+          label: 'Total de Contas',
+          valor: String(rowsData.length),
+          sub: 'Mapeadas no processo comercial',
+          accent: 'sky',
+        },
+        {
+          label: 'Permanência Média',
+          valor: `${mediaDias} dias`,
+          sub: 'Tempo médio no estágio atual',
+          accent: 'amber',
+        },
+      ],
+    },
+    {
+      numero: 2,
+      titulo: 'Listagem de Clientes por Estágio',
+      descricao: 'Acompanhamento nominal dos clientes, responsáveis técnicos e comerciais.',
+      table: {
+        columns: [
+          { header: 'Cliente / Razão Social', isBold: true },
+          { header: 'Espécie', width: '85px' },
+          { header: 'Gestor Técnico', width: '100px' },
+          { header: 'Vendedor', width: '100px' },
+          { header: 'Estágio Atual', width: '90px', align: 'center' },
+          { header: 'Última Mudança', width: '85px', align: 'center' },
+          { header: 'Permanência', width: '80px', align: 'right' },
+          { header: 'Motivo da Perda', width: '120px' },
+        ],
+        rows: tableRows,
+        footerRow: [
+          'TOTAL DE CONTAS',
+          '—',
+          '—',
+          '—',
+          `${rowsData.length} contas`,
+          '—',
+          `Média: ${mediaDias} d`,
+          '—',
+        ],
+      },
+    },
+  ]
+
+  openCorporatePdfReport({
+    titulo: 'Relatório Executivo do Funil de Clientes',
+    subtitulo: 'Status e Evolução da Carteira Comercial de Contas',
+    origem: 'Gestão de Funil (/funil)',
+    periodo: 'Consolidado Geral',
+    geradoPor: getLoggedUserName(),
+    orientacao: 'landscape',
+    sections,
+  })
+}
+
+export function buildFunilExportRows(factories: Factory[]): FunilExportRow[] {
+  return factories.map((f) => ({
+    nome: f.name || '',
+    especie: f.species || '',
+    gestor: f.gestor_tecnico_name || f.technicalManagerName || '',
+    vendedor: f.vendedor_name || f.salesOwnerName || '',
+    statusFunil: f.status_funil || (typeof f.funnelStage === 'string' ? f.funnelStage : ''),
+    dataMudanca: f.funnel_stage_changed_at || f.created || '',
+    diasNoEstagio: f.funnel_stage_changed_at
+      ? Math.floor(
+          (Date.now() - new Date(f.funnel_stage_changed_at).getTime()) / (1000 * 60 * 60 * 24),
+        )
+      : 0,
+    motivoPerda: f.motivo_perda || '',
+  }))
 }
