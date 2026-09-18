@@ -39,12 +39,6 @@
   ],
   "shortcuts": [
     {
-      "name": "Notas Fiscais",
-      "short_name": "NFs",
-      "url": "/upload-nf",
-      "description": "Leitor de notas fiscais"
-    },
-    {
       "name": "Dashboard",
       "short_name": "Painel",
       "url": "/dashboard",

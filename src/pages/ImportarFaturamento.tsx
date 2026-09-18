@@ -27,7 +27,6 @@ import {
   Loader2,
   RotateCcw,
   Download,
-  ArrowLeft,
   Layers,
   Sparkles,
   TrendingUp,
@@ -217,11 +216,6 @@ export default function ImportarFaturamento() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2" asChild>
-            <Link to="/importar-clientes">
-              <ArrowLeft className="w-4 h-4" /> Importar Clientes
-            </Link>
-          </Button>
           <Button
             variant="outline"
             size="sm"

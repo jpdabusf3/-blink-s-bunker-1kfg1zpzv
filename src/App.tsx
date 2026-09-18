@@ -10,7 +10,6 @@ import FunilVendas from './pages/FunilVendas'
 import SWOT from './pages/SWOT'
 import Matriz from './pages/Matriz'
 import Pedidos from './pages/Pedidos'
-import NovoPedido from './pages/NovoPedido'
 import Metas from './pages/Metas'
 import NotFound from './pages/NotFound'
 import Login from './pages/Login'
@@ -28,12 +27,10 @@ import MapaClientes from './pages/MapaClientes'
 import UsersPage from './pages/Users'
 import TeamManagement from './pages/TeamManagement'
 import Atividades from './pages/Atividades'
-import ImportarClientes from './pages/ImportarClientes'
 import ImportarFaturamento from './pages/ImportarFaturamento'
 import RelatorioAtividades from './pages/RelatorioAtividades'
 import PerformanceReport from './pages/PerformanceReport'
 import { SuperAdminRoute } from './components/SuperAdminRoute'
-import UploadNF from './pages/UploadNF'
 import { Component, lazy, Suspense, type ErrorInfo, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -150,14 +147,6 @@ const App = () => (
                       <Route path="/swot" element={<SWOT />} />
                       <Route path="/matriz" element={<Matriz />} />
                       <Route
-                        path="/upload-nf"
-                        element={
-                          <RouteErrorBoundary>
-                            <UploadNF />
-                          </RouteErrorBoundary>
-                        }
-                      />
-                      <Route
                         path="/historico"
                         element={
                           <Suspense fallback={<PageSkeleton />}>
@@ -166,7 +155,6 @@ const App = () => (
                         }
                       />
                       <Route path="/pedidos" element={<Pedidos />} />
-                      <Route path="/novo-pedido" element={<NovoPedido />} />
                       <Route
                         path="/produtos"
                         element={
@@ -188,7 +176,6 @@ const App = () => (
                       <Route path="/relatorios" element={<Relatorios />} />
                       <Route path="/relatorios-automaticos" element={<RelatoriosAutomaticos />} />
                       <Route path="/atividades" element={<Atividades />} />
-                      <Route path="/importar-clientes" element={<ImportarClientes />} />
                       <Route path="/importar-faturamento" element={<ImportarFaturamento />} />
                       <Route path="/relatorio-atividades" element={<RelatorioAtividades />} />
                       <Route path="/relatorio-performance" element={<PerformanceReport />} />
