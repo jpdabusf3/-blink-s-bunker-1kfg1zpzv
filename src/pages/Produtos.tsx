@@ -324,9 +324,10 @@ export function Produtos() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[200px]">Código</TableHead>
+                  <TableHead className="w-[180px]">Código</TableHead>
                   <TableHead>Nome</TableHead>
-                  <TableHead className="w-[240px]">Família</TableHead>
+                  <TableHead className="w-[130px]">Família</TableHead>
+                  <TableHead className="w-[180px]">Perfil do Produto</TableHead>
                   <TableHead className="text-right w-[120px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -340,7 +341,10 @@ export function Produtos() {
                       <Skeleton className="h-4 w-48" />
                     </TableCell>
                     <TableCell>
-                      <Skeleton className="h-6 w-32 rounded-full" />
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-28" />
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
@@ -357,15 +361,20 @@ export function Produtos() {
           <div className="md:hidden p-4 space-y-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="p-4 rounded-lg border border-border bg-card space-y-3">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-5 w-3/4" />
-                <div className="flex justify-between items-center pt-2">
-                  <Skeleton className="h-6 w-24 rounded-full" />
-                  <Skeleton className="h-8 w-16" />
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1.5">
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-5 w-40" />
+                  </div>
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-border/50">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-8 w-28" />
                 </div>
               </div>
             ))}
-          </div>
+          </div>{' '}
         </Card>
       )}
 
@@ -420,17 +429,19 @@ export function Produtos() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[200px]">Código</TableHead>
+                      <TableHead className="w-[180px]">Código</TableHead>
                       <TableHead>Nome</TableHead>
-                      <TableHead className="w-[240px]">Família</TableHead>
+                      <TableHead className="w-[130px]">Família</TableHead>
+                      <TableHead className="w-[180px]">Perfil do Produto</TableHead>
                       <TableHead className="text-right w-[120px]">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredProdutos.map((p) => {
-                      const famCode = derivarFamiliaPorCodigo(p.codigo) || p.familia || '—'
-                      const rotulo = FAMILIA_ROTULOS[famCode as FamiliaCatalogo]
-                      const famDisplay = rotulo ? `${famCode} · ${rotulo}` : famCode
+                      const famCode = derivarFamiliaPorCodigo(p.codigo) || p.familia || ''
+                      const rotulo = famCode
+                        ? FAMILIA_ROTULOS[famCode as FamiliaCatalogo]
+                        : undefined
                       return (
                         <TableRow key={p.id}>
                           <TableCell className="font-mono font-semibold text-foreground text-sm">
@@ -438,15 +449,15 @@ export function Produtos() {
                           </TableCell>
                           <TableCell className="font-medium text-foreground">{p.nome}</TableCell>
                           <TableCell>
-                            <Badge variant="secondary" className="font-medium text-xs gap-1">
-                              <span className="font-mono font-bold text-primary">{famCode}</span>
-                              {rotulo && (
-                                <span className="text-muted-foreground font-normal">
-                                  · {rotulo}
-                                </span>
-                              )}
-                            </Badge>
+                            {famCode ? (
+                              <Badge variant="secondary" className="font-medium text-xs">
+                                <span className="font-mono font-bold text-primary">{famCode}</span>
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">—</span>
+                            )}
                           </TableCell>
+                          <TableCell className="text-sm text-foreground">{rotulo || '—'}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
                               <Button
@@ -474,12 +485,11 @@ export function Produtos() {
                   </TableBody>
                 </Table>
               </div>
-
               {/* VISUALIZAÇÃO RESPONSIVA MOBILE: CARDS (< 768px) */}
               <div className="md:hidden p-4 space-y-3">
                 {filteredProdutos.map((p) => {
-                  const famCode = derivarFamiliaPorCodigo(p.codigo) || p.familia || '—'
-                  const rotulo = FAMILIA_ROTULOS[famCode as FamiliaCatalogo]
+                  const famCode = derivarFamiliaPorCodigo(p.codigo) || p.familia || ''
+                  const rotulo = famCode ? FAMILIA_ROTULOS[famCode as FamiliaCatalogo] : undefined
                   return (
                     <div
                       key={p.id}
@@ -494,10 +504,21 @@ export function Produtos() {
                             {p.nome}
                           </h4>
                         </div>
-                        <Badge variant="secondary" className="text-xs font-semibold shrink-0">
-                          {famCode}
-                          {rotulo ? ` · ${rotulo}` : ''}
-                        </Badge>
+                        {famCode ? (
+                          <Badge
+                            variant="secondary"
+                            className="text-xs font-semibold shrink-0 font-mono text-primary"
+                          >
+                            {famCode}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-xs shrink-0">—</span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs pt-1">
+                        <span className="text-muted-foreground">Perfil do Produto:</span>
+                        <span className="font-medium text-foreground">{rotulo || '—'}</span>
                       </div>
 
                       <div className="flex justify-end gap-2 pt-2 border-t border-border/50">
@@ -521,7 +542,7 @@ export function Produtos() {
                     </div>
                   )
                 })}
-              </div>
+              </div>{' '}
             </>
           )}
         </Card>
