@@ -217,170 +217,370 @@ export function FaturamentoUploadHistory({
         ) : (
           /* ESTADO 4: SUCCESS (Renderizado com fade-in sutil) */
           <div className="rounded-lg border overflow-hidden animate-fade-in">
-            <Table>
-              <TableHeader className="bg-muted/50">
-                <TableRow>
-                  <TableHead className="w-[36px] px-2 text-center"></TableHead>
-                  <TableHead className="text-xs font-semibold">
-                    <span className="flex items-center gap-1.5">
-                      <FileSpreadsheet className="w-3.5 h-3.5 text-muted-foreground" /> Nome do
-                      Arquivo
-                    </span>
-                  </TableHead>
-                  <TableHead className="w-[170px] text-xs font-semibold">
-                    <span className="flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-muted-foreground" /> Data / Hora
-                    </span>
-                  </TableHead>
-                  <TableHead className="text-xs text-right font-semibold">
-                    <span className="inline-flex items-center gap-1">
-                      <Layers className="w-3.5 h-3.5 text-muted-foreground" /> Linhas Importadas
-                    </span>
-                  </TableHead>
-                  <TableHead className="text-xs text-right font-semibold">
-                    <span className="inline-flex items-center gap-1">
-                      <AlertTriangle className="w-3.5 h-3.5 text-muted-foreground" /> Linhas com
-                      Erro
-                    </span>
-                  </TableHead>
-                  <TableHead className="w-[120px] text-center text-xs font-semibold">
-                    Status
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <div>
+              {/* Tabela para Desktop (>= 768px) */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow>
+                      <TableHead className="w-8 text-center text-xs"></TableHead>
+                      <TableHead className="text-xs font-semibold">
+                        <span className="inline-flex items-center gap-1">
+                          <FileSpreadsheet className="w-3.5 h-3.5 text-muted-foreground" /> Nome do
+                          Arquivo
+                        </span>
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold">
+                        <span className="inline-flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5 text-muted-foreground" /> Data / Hora
+                        </span>
+                      </TableHead>
+                      <TableHead className="text-xs text-right font-semibold">
+                        <span className="inline-flex items-center gap-1">
+                          <Layers className="w-3.5 h-3.5 text-muted-foreground" /> Linhas Importadas
+                        </span>
+                      </TableHead>
+                      <TableHead className="text-xs text-right font-semibold">
+                        <span className="inline-flex items-center gap-1">
+                          <AlertTriangle className="w-3.5 h-3.5 text-muted-foreground" /> Linhas com
+                          Erro
+                        </span>
+                      </TableHead>
+                      <TableHead className="text-xs text-right font-semibold">
+                        Valor Total (R$)
+                      </TableHead>
+                      <TableHead className="w-[120px] text-center text-xs font-semibold">
+                        Status
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredHistory.map((item) => {
+                      const isExpanded = expandedIds.has(item.id)
+                      const hasDetails = Boolean(item.details && item.details.trim().length > 0)
+
+                      return (
+                        <React.Fragment key={item.id}>
+                          <TableRow
+                            className={`text-xs transition-colors ${
+                              hasDetails ? 'cursor-pointer hover:bg-muted/40' : 'hover:bg-muted/20'
+                            } ${isExpanded ? 'bg-muted/30' : ''}`}
+                            onClick={() => {
+                              if (hasDetails) toggleExpand(item.id)
+                            }}
+                          >
+                            {/* Botão / Chevron de expansão */}
+                            <TableCell className="px-2 text-center">
+                              {hasDetails ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    toggleExpand(item.id)
+                                  }}
+                                  className="p-1 hover:bg-muted rounded text-muted-foreground transition-transform"
+                                  title={isExpanded ? 'Recolher detalhes' : 'Ver detalhes de erros'}
+                                >
+                                  {isExpanded ? (
+                                    <ChevronDown className="w-3.5 h-3.5 text-foreground" />
+                                  ) : (
+                                    <ChevronRight className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                              ) : (
+                                <span className="inline-block w-3.5" />
+                              )}
+                            </TableCell>
+
+                            {/* Nome do Arquivo */}
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="font-medium text-foreground max-w-[280px] sm:max-w-[340px] truncate"
+                                  title={item.file_name}
+                                >
+                                  {item.file_name}
+                                </span>
+                                {item.file_type && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-[10px] uppercase font-mono px-1 py-0 h-4 shrink-0"
+                                  >
+                                    {item.file_type}
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+
+                            {/* Data e Hora em DD/MM/AAAA HH:mm */}
+                            <TableCell className="font-mono text-muted-foreground whitespace-nowrap">
+                              {formatDate(item.imported_at)}
+                            </TableCell>
+
+                            {/* Linhas Importadas */}
+                            <TableCell className="text-right font-mono font-semibold">
+                              {item.imported_rows > 0 ? (
+                                <span className="text-emerald-700 dark:text-emerald-400">
+                                  {item.imported_rows.toLocaleString('pt-BR')}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">0</span>
+                              )}
+                              {item.total_rows > 0 && (
+                                <span className="text-[10px] text-muted-foreground block font-normal">
+                                  de {item.total_rows.toLocaleString('pt-BR')} total
+                                </span>
+                              )}
+                            </TableCell>
+
+                            {/* Linhas com Erro */}
+                            <TableCell className="text-right font-mono font-semibold">
+                              {item.error_rows > 0 ? (
+                                <span className="text-destructive">
+                                  {item.error_rows.toLocaleString('pt-BR')}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">0</span>
+                              )}
+                            </TableCell>
+
+                            {/* Valor Total Formatado 1.234,56 R$ com graceful fallback */}
+                            <TableCell className="text-right font-mono font-semibold whitespace-nowrap">
+                              {typeof item.total_value === 'number' && item.total_value > 0 ? (
+                                <span className="text-emerald-700 dark:text-emerald-400">
+                                  R${' '}
+                                  {item.total_value.toLocaleString('pt-BR', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+
+                            {/* Badge de Status */}
+                            <TableCell className="text-center">
+                              {renderStatusBadge(item.status)}
+                            </TableCell>
+                          </TableRow>
+
+                          {/* Linha expansível para detalhes dos erros e detalhamento breakdown */}
+                          {isExpanded && (
+                            <TableRow className="bg-muted/20 border-b">
+                              <TableCell colSpan={7} className="p-3 pl-10">
+                                <div className="rounded-md border border-border/60 bg-background/80 p-3 space-y-3 text-xs">
+                                  <div className="flex items-center justify-between border-b pb-2">
+                                    <span className="font-semibold text-foreground flex items-center gap-1.5">
+                                      <FileText className="w-3.5 h-3.5 text-primary" />
+                                      Detalhamento da Importação
+                                    </span>
+                                    {item.error_rows > 0 && (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-[10px] text-destructive border-destructive/30"
+                                      >
+                                        {item.error_rows} linha(s) com erro
+                                      </Badge>
+                                    )}
+                                  </div>
+
+                                  {/* Breakdown de contadores: importados / ignorados (skipped) / duplicatas / valor total */}
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                                    <div className="p-2.5 rounded-lg bg-muted/40 border">
+                                      <span className="text-[11px] text-muted-foreground block">
+                                        Importados (Válidos)
+                                      </span>
+                                      <span className="font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                                        {typeof item.imported_rows === 'number'
+                                          ? item.imported_rows.toLocaleString('pt-BR')
+                                          : '—'}
+                                      </span>
+                                    </div>
+                                    <div className="p-2.5 rounded-lg bg-muted/40 border">
+                                      <span className="text-[11px] text-muted-foreground block">
+                                        Ignorados (Pulados)
+                                      </span>
+                                      <span className="font-mono text-sm font-bold text-amber-600 dark:text-amber-400">
+                                        {typeof item.skipped_rows === 'number'
+                                          ? item.skipped_rows.toLocaleString('pt-BR')
+                                          : '—'}
+                                      </span>
+                                    </div>
+                                    <div className="p-2.5 rounded-lg bg-muted/40 border">
+                                      <span className="text-[11px] text-muted-foreground block">
+                                        Duplicatas Identificadas
+                                      </span>
+                                      <span className="font-mono text-sm font-bold text-blue-600 dark:text-blue-400">
+                                        {typeof item.duplicate_rows === 'number'
+                                          ? item.duplicate_rows.toLocaleString('pt-BR')
+                                          : '—'}
+                                      </span>
+                                    </div>
+                                    <div className="p-2.5 rounded-lg bg-muted/40 border">
+                                      <span className="text-[11px] text-muted-foreground block">
+                                        Valor Total em R$
+                                      </span>
+                                      <span className="font-mono text-sm font-bold text-foreground">
+                                        {typeof item.total_value === 'number' &&
+                                        item.total_value > 0
+                                          ? `R$ ${item.total_value.toLocaleString('pt-BR', {
+                                              minimumFractionDigits: 2,
+                                              maximumFractionDigits: 2,
+                                            })}`
+                                          : '—'}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {hasDetails ? (
+                                    <div className="space-y-1">
+                                      <span className="text-[11px] font-medium text-muted-foreground">
+                                        Log / Detalhes registrados:
+                                      </span>
+                                      <pre className="whitespace-pre-wrap font-mono text-[11px] text-muted-foreground bg-muted/40 p-2.5 rounded max-h-48 overflow-y-auto leading-relaxed">
+                                        {item.details}
+                                      </pre>
+                                    </div>
+                                  ) : (
+                                    <p className="text-muted-foreground italic text-[11px]">
+                                      Sem detalhes adicionais de erros.
+                                    </p>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Cards para Mobile (< 768px) */}
+              <div className="md:hidden space-y-3 p-3">
                 {filteredHistory.map((item) => {
                   const isExpanded = expandedIds.has(item.id)
                   const hasDetails = Boolean(item.details && item.details.trim().length > 0)
 
                   return (
-                    <React.Fragment key={item.id}>
-                      <TableRow
-                        className={`text-xs transition-colors ${
-                          hasDetails ? 'cursor-pointer hover:bg-muted/40' : 'hover:bg-muted/20'
-                        } ${isExpanded ? 'bg-muted/30' : ''}`}
-                        onClick={() => {
-                          if (hasDetails) toggleExpand(item.id)
-                        }}
-                      >
-                        {/* Botão / Chevron de expansão */}
-                        <TableCell className="px-2 text-center">
-                          {hasDetails ? (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                toggleExpand(item.id)
-                              }}
-                              className="p-1 hover:bg-muted rounded text-muted-foreground transition-transform"
-                              title={isExpanded ? 'Recolher detalhes' : 'Ver detalhes de erros'}
-                            >
-                              {isExpanded ? (
-                                <ChevronDown className="w-3.5 h-3.5 text-foreground" />
-                              ) : (
-                                <ChevronRight className="w-3.5 h-3.5" />
-                              )}
-                            </button>
+                    <div
+                      key={item.id}
+                      className="rounded-xl border bg-card p-3.5 space-y-3 shadow-xs"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p
+                            className="font-medium text-foreground text-xs truncate"
+                            title={item.file_name}
+                          >
+                            {item.file_name}
+                          </p>
+                          <span className="text-[10px] font-mono text-muted-foreground block">
+                            {formatDate(item.imported_at)}
+                          </span>
+                        </div>
+                        <div className="shrink-0">{renderStatusBadge(item.status)}</div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 text-xs pt-1 border-t">
+                        <div>
+                          <span className="text-[10px] text-muted-foreground block">
+                            Importadas
+                          </span>
+                          <span className="font-mono font-bold text-emerald-600">
+                            {item.imported_rows > 0
+                              ? item.imported_rows.toLocaleString('pt-BR')
+                              : '0'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-muted-foreground block">Erros</span>
+                          <span className="font-mono font-bold text-destructive">
+                            {item.error_rows > 0 ? item.error_rows.toLocaleString('pt-BR') : '0'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-muted-foreground block">
+                            Valor (R$)
+                          </span>
+                          <span className="font-mono font-bold text-foreground">
+                            {typeof item.total_value === 'number' && item.total_value > 0
+                              ? `R$ ${item.total_value.toLocaleString('pt-BR', {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}`
+                              : '—'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Botão de expansão para ver detalhes */}
+                      <div className="pt-1 border-t flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => toggleExpand(item.id)}
+                          className="h-7 text-xs gap-1 px-2"
+                        >
+                          {isExpanded ? (
+                            <>
+                              <ChevronDown className="w-3.5 h-3.5" /> Ocultar detalhes
+                            </>
                           ) : (
-                            <span className="inline-block w-3.5" />
+                            <>
+                              <ChevronRight className="w-3.5 h-3.5" /> Ver detalhamento
+                            </>
                           )}
-                        </TableCell>
+                        </Button>
+                      </div>
 
-                        {/* Nome do Arquivo */}
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="font-medium text-foreground max-w-[280px] sm:max-w-[340px] truncate"
-                              title={item.file_name}
-                            >
-                              {item.file_name}
-                            </span>
-                            {item.file_type && (
-                              <Badge
-                                variant="secondary"
-                                className="text-[10px] uppercase font-mono px-1 py-0 h-4 shrink-0"
-                              >
-                                {item.file_type}
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-
-                        {/* Data e Hora em DD/MM/AAAA HH:mm */}
-                        <TableCell className="font-mono text-muted-foreground whitespace-nowrap">
-                          {formatDate(item.imported_at)}
-                        </TableCell>
-
-                        {/* Linhas Importadas */}
-                        <TableCell className="text-right font-mono font-semibold">
-                          {item.imported_rows > 0 ? (
-                            <span className="text-emerald-700 dark:text-emerald-400">
-                              {item.imported_rows.toLocaleString('pt-BR')}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">0</span>
-                          )}
-                          {item.total_rows > 0 && (
-                            <span className="text-[10px] text-muted-foreground block font-normal">
-                              de {item.total_rows.toLocaleString('pt-BR')} total
-                            </span>
-                          )}
-                        </TableCell>
-
-                        {/* Linhas com Erro */}
-                        <TableCell className="text-right font-mono font-semibold">
-                          {item.error_rows > 0 ? (
-                            <span className="text-destructive">
-                              {item.error_rows.toLocaleString('pt-BR')}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">0</span>
-                          )}
-                        </TableCell>
-
-                        {/* Badge de Status */}
-                        <TableCell className="text-center">
-                          {renderStatusBadge(item.status)}
-                        </TableCell>
-                      </TableRow>
-
-                      {/* Linha expansível para detalhes dos erros */}
+                      {/* Detalhes expandidos no Mobile */}
                       {isExpanded && (
-                        <TableRow className="bg-muted/20 border-b">
-                          <TableCell colSpan={6} className="p-3 pl-10">
-                            <div className="rounded-md border border-border/60 bg-background/80 p-3 space-y-2 text-xs">
-                              <div className="flex items-center justify-between border-b pb-1.5">
-                                <span className="font-semibold text-foreground flex items-center gap-1.5">
-                                  <FileText className="w-3.5 h-3.5 text-primary" />
-                                  Detalhes da Importação / Log de Erros
-                                </span>
-                                {item.error_rows > 0 && (
-                                  <Badge
-                                    variant="outline"
-                                    className="text-[10px] text-destructive border-destructive/30"
-                                  >
-                                    {item.error_rows} linha(s) com erro
-                                  </Badge>
-                                )}
-                              </div>
-                              {hasDetails ? (
-                                <pre className="whitespace-pre-wrap font-mono text-[11px] text-muted-foreground bg-muted/40 p-2.5 rounded max-h-48 overflow-y-auto leading-relaxed">
-                                  {item.details}
-                                </pre>
-                              ) : (
-                                <p className="text-muted-foreground italic text-[11px]">
-                                  Sem detalhes de erros.
-                                </p>
-                              )}
+                        <div className="rounded-lg bg-muted/40 border p-3 space-y-2.5 text-xs">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="p-2 rounded bg-background border">
+                              <span className="text-[10px] text-muted-foreground block">
+                                Ignoradas
+                              </span>
+                              <span className="font-mono font-semibold text-amber-600">
+                                {typeof item.skipped_rows === 'number' ? item.skipped_rows : '—'}
+                              </span>
                             </div>
-                          </TableCell>
-                        </TableRow>
+                            <div className="p-2 rounded bg-background border">
+                              <span className="text-[10px] text-muted-foreground block">
+                                Duplicatas
+                              </span>
+                              <span className="font-mono font-semibold text-blue-600">
+                                {typeof item.duplicate_rows === 'number'
+                                  ? item.duplicate_rows
+                                  : '—'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {hasDetails ? (
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-medium text-muted-foreground">
+                                Log:
+                              </span>
+                              <pre className="whitespace-pre-wrap font-mono text-[10px] text-muted-foreground bg-background p-2 rounded max-h-36 overflow-y-auto">
+                                {item.details}
+                              </pre>
+                            </div>
+                          ) : (
+                            <p className="text-[10px] text-muted-foreground italic">
+                              Sem detalhes adicionais.
+                            </p>
+                          )}
+                        </div>
                       )}
-                    </React.Fragment>
+                    </div>
                   )
                 })}
-              </TableBody>
-            </Table>
+              </div>
+            </div>{' '}
           </div>
         )}
       </CardContent>

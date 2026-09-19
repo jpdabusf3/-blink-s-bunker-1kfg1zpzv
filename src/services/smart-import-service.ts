@@ -616,12 +616,16 @@ export function validateSmartRows(
  * - importFaturamento para planilhas / tabelas
  * - executeImportMatrizVenda / executeImportPedidosCarteira / executeImportRelatorioVendasSemanal para relatórios PDF Blink
  */
-export async function executeSmartImport(params: {
+export interface ExecuteSmartImportOptions {
   parseResult: SmartImportParseResult
   mapping: Record<string, FaturamentoFieldKey | ''>
   ignoreDuplicates: boolean
   autoCreateClients?: boolean
-}): Promise<{
+  rowsToImportOverride?: Record<string, unknown>[]
+  onProgress?: (current: number, total: number) => void
+}
+
+export async function executeSmartImport(params: ExecuteSmartImportOptions): Promise<{
   success: boolean
   totalRead: number
   imported: number
@@ -632,7 +636,14 @@ export async function executeSmartImport(params: {
   errorDetails: Array<{ row: number; reason: string }>
   message: string
 }> {
-  const { parseResult, mapping, ignoreDuplicates, autoCreateClients = true } = params
+  const {
+    parseResult,
+    mapping,
+    ignoreDuplicates,
+    autoCreateClients = true,
+    rowsToImportOverride,
+    onProgress,
+  } = params
 
   // 1. Relatórios PDF oficiais da Blink identificados
   if (parseResult.detectedType === 'pdf_matriz_venda' && parseResult.blinkData?.matrizVenda) {
@@ -693,20 +704,26 @@ export async function executeSmartImport(params: {
   // Filtrar duplicatas em memória antes de enviar se a opção ignoreDuplicates estiver ativada
   const validation = validateSmartRows(parseResult.rows, mapping)
 
-  // Filtrar apenas linhas válidas (linhas inválidas não bloqueiam)
-  let rowsToProcess = parseResult.rows.filter((_, idx) => {
-    const rowVal = validation.rowValidations[idx]
-    if (!rowVal || !rowVal.isValid) return false
-    if (ignoreDuplicates && rowVal.isDuplicate) return false
-    return true
-  })
-
-  // Se o usuário selecionou "Importar mesmo assim"
-  if (!ignoreDuplicates) {
+  // Se o chamador especificou explicitamente as linhas a processar (ex: após filtro de ignoradas)
+  let rowsToProcess: Record<string, unknown>[]
+  if (rowsToImportOverride) {
+    rowsToProcess = rowsToImportOverride
+  } else {
+    // Filtrar apenas linhas válidas (linhas inválidas não bloqueiam)
     rowsToProcess = parseResult.rows.filter((_, idx) => {
       const rowVal = validation.rowValidations[idx]
-      return rowVal && rowVal.isValid
+      if (!rowVal || !rowVal.isValid) return false
+      if (ignoreDuplicates && rowVal.isDuplicate) return false
+      return true
     })
+
+    // Se o usuário selecionou "Importar mesmo assim"
+    if (!ignoreDuplicates) {
+      rowsToProcess = parseResult.rows.filter((_, idx) => {
+        const rowVal = validation.rowValidations[idx]
+        return rowVal && rowVal.isValid
+      })
+    }
   }
 
   if (rowsToProcess.length === 0) {
@@ -761,6 +778,7 @@ export async function executeSmartImport(params: {
   const importRes = await importFaturamento(memoryFile, mapping, {
     criarClienteNaoEncontrado: autoCreateClients,
     fileName: parseResult.fileName,
+    onProgress,
   })
 
   const errorDetails = [

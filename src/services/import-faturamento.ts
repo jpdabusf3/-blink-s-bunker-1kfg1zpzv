@@ -1013,6 +1013,7 @@ export function autoSuggestMapping(
 export interface FaturamentoImportOptions {
   criarClienteNaoEncontrado: boolean
   fileName?: string
+  onProgress?: (current: number, total: number) => void
 }
 
 export interface FaturamentoImportError {
