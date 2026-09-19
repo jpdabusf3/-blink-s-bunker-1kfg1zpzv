@@ -774,7 +774,8 @@ export function SmartImportFlow({ onSuccess }: SmartImportFlowProps) {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="rounded-lg border overflow-x-auto">
+              {/* VISUALIZAÇÃO DESKTOP: TABELA (>= 768px) */}
+              <div className="hidden md:block rounded-lg border overflow-x-auto">
                 <Table>
                   <TableHeader className="bg-muted/50">
                     <TableRow>
@@ -849,6 +850,97 @@ export function SmartImportFlow({ onSuccess }: SmartImportFlowProps) {
                     })}
                   </TableBody>
                 </Table>
+              </div>
+
+              {/* VISUALIZAÇÃO MOBILE: CARDS (< 768px) */}
+              <div className="md:hidden space-y-3">
+                {parseResult.headers.map((header) => {
+                  const currentField = mapping[header] || ''
+                  const sampleVal = parseResult.rows[0]?.[header]
+                  const fieldDef = FATURAMENTO_FIELDS.find((f) => f.key === currentField)
+
+                  return (
+                    <div
+                      key={header}
+                      className="p-3.5 rounded-xl border border-border bg-card space-y-2.5 shadow-xs"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="text-[10px] text-muted-foreground block font-medium uppercase tracking-wider">
+                            Coluna Detectada
+                          </span>
+                          <span className="font-mono text-xs font-bold text-foreground break-all">
+                            {header}
+                          </span>
+                        </div>
+                        {currentField && (
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] shrink-0 font-medium bg-primary/10 text-primary border-primary/20"
+                          >
+                            Mapeado
+                          </Badge>
+                        )}
+                      </div>
+
+                      {sampleVal !== undefined &&
+                        sampleVal !== null &&
+                        String(sampleVal) !== '' && (
+                          <div className="text-xs bg-muted/40 p-2 rounded border border-border/40">
+                            <span className="text-[10px] text-muted-foreground block">
+                              Exemplo (Linha 1):
+                            </span>
+                            <span className="font-mono text-[11px] text-foreground break-all">
+                              {String(sampleVal)}
+                            </span>
+                          </div>
+                        )}
+
+                      <div className="space-y-1 pt-1">
+                        <Label className="text-[11px] text-muted-foreground block">
+                          Campo no CRM / Destino:
+                        </Label>
+                        <Select
+                          value={currentField || 'none'}
+                          onValueChange={(val) =>
+                            handleMappingChange(header, val as FaturamentoFieldKey | 'none')
+                          }
+                        >
+                          <SelectTrigger className="h-9 text-xs w-full">
+                            <SelectValue placeholder="Ignorar coluna" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[280px]">
+                            <SelectItem value="none" className="text-muted-foreground text-xs">
+                              -- Ignorar coluna --
+                            </SelectItem>
+                            {FATURAMENTO_FIELDS.map((f) => {
+                              const isAssignedElsewhere = Object.entries(mapping).some(
+                                ([h, key]) => key === f.key && h !== header,
+                              )
+                              return (
+                                <SelectItem key={f.key} value={f.key} className="text-xs">
+                                  <span>
+                                    {f.label} {f.required && '★'}
+                                  </span>
+                                  {isAssignedElsewhere && (
+                                    <span className="text-[10px] text-amber-600 ml-2">
+                                      (já associado)
+                                    </span>
+                                  )}
+                                </SelectItem>
+                              )
+                            })}
+                          </SelectContent>
+                        </Select>
+                        {fieldDef && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            {fieldDef.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
 
               {/* Alertas de Mapeamento */}

@@ -169,13 +169,38 @@ export function FaturamentoUploadHistory({
       </CardHeader>
 
       <CardContent className="space-y-3">
-        {/* ESTADO 1: LOADING (Linhas skeleton no lugar da lista) */}
+        {/* ESTADO 1: LOADING (Desktop: Linhas de tabela skeleton / Mobile < 768px: Cards skeleton) */}
         {loading && history.length === 0 ? (
-          <div className="space-y-2 py-4">
-            <div className="h-10 w-full bg-muted/60 animate-pulse rounded" />
-            <div className="h-10 w-full bg-muted/40 animate-pulse rounded" />
-            <div className="h-10 w-full bg-muted/30 animate-pulse rounded" />
-            <div className="h-10 w-full bg-muted/20 animate-pulse rounded" />
+          <div className="py-2">
+            {/* Skeleton Desktop (Tabela) */}
+            <div className="hidden md:block space-y-2">
+              <div className="h-10 w-full bg-muted/60 animate-pulse rounded" />
+              <div className="h-10 w-full bg-muted/40 animate-pulse rounded" />
+              <div className="h-10 w-full bg-muted/30 animate-pulse rounded" />
+              <div className="h-10 w-full bg-muted/20 animate-pulse rounded" />
+            </div>
+            {/* Skeleton Mobile (Cards) */}
+            <div className="md:hidden space-y-3 p-1">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="p-3.5 rounded-xl border border-border bg-card space-y-3 animate-pulse"
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1.5 w-3/4">
+                      <div className="h-4 w-40 bg-muted/60 rounded" />
+                      <div className="h-3 w-24 bg-muted/40 rounded" />
+                    </div>
+                    <div className="h-5 w-16 bg-muted/50 rounded-full" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/50">
+                    <div className="h-6 bg-muted/30 rounded" />
+                    <div className="h-6 bg-muted/30 rounded" />
+                    <div className="h-6 bg-muted/30 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : error ? (
           /* ESTADO 3: ERROR */
@@ -206,12 +231,12 @@ export function FaturamentoUploadHistory({
             <p className="text-sm font-medium text-foreground">
               {searchTerm
                 ? 'Nenhuma importação encontrada para este filtro.'
-                : 'Nenhuma importação realizada ainda.'}
+                : 'Nenhuma importação realizada'}
             </p>
             <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
               {searchTerm
                 ? 'Tente pesquisar por outro termo ou limpe o campo de busca.'
-                : 'Envie um arquivo de faturamento ou relatório acima para registrar e alimentar o histórico do bunker.'}
+                : 'Envie um arquivo de faturamento (.xlsx ou .csv) na aba de importação para registrar e alimentar o histórico.'}
             </p>
           </div>
         ) : (
