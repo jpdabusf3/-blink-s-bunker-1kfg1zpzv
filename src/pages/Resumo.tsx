@@ -58,9 +58,9 @@ import { useGlobalData } from '@/store/GlobalDataProvider'
 import { getFaturamentos, type FaturamentoRecord } from '@/services/resumo-vendas'
 import { getPedidosCarteira, type PedidoCarteira } from '@/services/pedidos-carteira'
 import { gestaoPedidosService, type PedidoRecord } from '@/services/gestao-pedidos'
-import { CODIGO_CANONICO_ROTULO } from '@/constants/familiaProdutos'
 import { SyncErrorBanner } from '@/components/SyncErrorBanner'
-
+import { MetasVendedorSegmentoSection } from '@/components/MetasVendedorSegmentoSection'
+import { CODIGO_CANONICO_ROTULO } from '@/constants/familiaProdutos'
 export type PeriodType = 'mes' | 'trimestre' | 'ano' | 'personalizado'
 
 const MONTH_NAMES = [
@@ -1452,6 +1452,13 @@ export default function Resumo() {
           </div>
         </div>
       )}
+
+      {/* Seção Aditiva: Metas por Vendedor e Segmento (no rodapé da página após todas as seções existentes) */}
+      <MetasVendedorSegmentoSection
+        faturamentos={faturamentos}
+        factoryMap={factoryMap}
+        factories={globalFactories}
+      />
 
       {/* Painel de Chat MAESTRO */}
       <MaestroChatPanel

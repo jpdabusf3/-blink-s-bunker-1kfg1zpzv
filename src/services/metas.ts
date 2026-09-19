@@ -9,9 +9,13 @@ export const CANAL_VENDAS_OPTIONS = [
   'Online',
 ] as const
 
+export const SEGMENTOS_METAS = ['AVES', 'PETS', 'RUMINANTES', 'SUINOS', 'AQUA'] as const
+
+export type SegmentoMeta = (typeof SEGMENTOS_METAS)[number]
+
 export interface Meta {
   id: string
-  vendedor_id: string
+  vendedor_id?: string
   gestor_tecnico_id?: string
   especie?: string
   canal_vendas?: string
@@ -21,6 +25,13 @@ export interface Meta {
   acrescimo_percentual?: number
   decrecimo_percentual?: number
   atualizado_em?: string
+  // Novos campos aditivos por vendedor e segmento
+  vendedor?: string
+  segmento?: string
+  mes?: number
+  ano?: number
+  valor_meta?: number
+  vendedor_nome?: string
   created: string
   updated: string
   expand?: {
@@ -36,7 +47,7 @@ export const getMetas = () =>
   })
 
 export const createMeta = (data: {
-  vendedor_id: string
+  vendedor_id?: string
   gestor_tecnico_id?: string | null
   especie?: string | null
   canal_vendas?: string | null
@@ -45,6 +56,12 @@ export const createMeta = (data: {
   valor_realizado?: number
   acrescimo_percentual?: number
   decrecimo_percentual?: number
+  vendedor?: string
+  segmento?: string
+  mes?: number
+  ano?: number
+  valor_meta?: number
+  vendedor_nome?: string
 }) => pb.collection('metas').create(data)
 
 export const updateMeta = (
@@ -59,7 +76,71 @@ export const updateMeta = (
     valor_realizado: number
     acrescimo_percentual: number
     decrecimo_percentual: number
+    vendedor: string
+    segmento: string
+    mes: number
+    ano: number
+    valor_meta: number
+    vendedor_nome: string
   }>,
 ) => pb.collection('metas').update(id, data)
 
 export const deleteMeta = (id: string) => pb.collection('metas').delete(id)
+
+export interface MetaVendedorSegmentoInput {
+  vendedor: string
+  segmento: string
+  mes: number
+  ano: number
+  valor_meta: number
+  vendedor_id?: string
+}
+
+export const getMetasPorPeriodo = (mes: number, ano: number) => {
+  const periodoStr = `${ano}-${String(mes).padStart(2, '0')}`
+  const filter = `(mes = ${mes} && ano = ${ano}) || periodo = "${periodoStr}"`
+  return pb.collection('metas').getFullList<Meta>({
+    filter,
+    sort: 'vendedor,segmento',
+    expand: 'vendedor_id,gestor_tecnico_id',
+  })
+}
+
+export const saveMetaVendedorSegmento = async (
+  input: MetaVendedorSegmentoInput,
+  id?: string,
+): Promise<Meta> => {
+  const periodoStr = `${input.ano}-${String(input.mes).padStart(2, '0')}`
+  const payload = {
+    vendedor: input.vendedor.trim(),
+    segmento: input.segmento.trim().toUpperCase(),
+    mes: input.mes,
+    ano: input.ano,
+    valor_meta: input.valor_meta,
+    meta_valor: input.valor_meta,
+    periodo: periodoStr,
+    vendedor_nome: input.vendedor.trim(),
+    ...(input.vendedor_id ? { vendedor_id: input.vendedor_id } : {}),
+    atualizado_em: new Date().toISOString(),
+  }
+
+  if (id) {
+    return pb.collection('metas').update<Meta>(id, payload)
+  }
+
+  // Se não tiver id, verificar se já existe meta para essa chave antes de criar (para evitar violação da constraint única)
+  try {
+    const existing = await pb
+      .collection('metas')
+      .getFirstListItem<Meta>(
+        `vendedor = "${payload.vendedor}" && segmento = "${payload.segmento}" && mes = ${payload.mes} && ano = ${payload.ano}`,
+      )
+    if (existing) {
+      return pb.collection('metas').update<Meta>(existing.id, payload)
+    }
+  } catch {
+    // Record não encontrado, segue para create
+  }
+
+  return pb.collection('metas').create<Meta>(payload)
+}

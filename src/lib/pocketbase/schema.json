@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-19T17:10:33.745Z",
+  "generatedAt": "2026-09-19T17:29:44.049Z",
   "collections": [
     {
       "name": "users",
@@ -1354,6 +1354,36 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "vendedor",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "segmento",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "mes",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ano",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_meta",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -1362,7 +1392,9 @@
         "CREATE INDEX `idx_metas_gestor_tecnico_id` ON `metas` (gestor_tecnico_id)",
         "CREATE INDEX `idx_metas_especie` ON `metas` (especie)",
         "CREATE INDEX `idx_metas_periodo` ON `metas` (periodo)",
-        "CREATE INDEX `idx_metas_canal_vendas` ON `metas` (canal_vendas)"
+        "CREATE INDEX `idx_metas_canal_vendas` ON `metas` (canal_vendas)",
+        "CREATE INDEX `idx_metas_mes_ano` ON `metas` (mes, ano)",
+        "CREATE UNIQUE INDEX `idx_metas_vendedor_segmento_mes_ano` ON `metas` (vendedor, segmento, mes, ano)"
       ]
     },
     {
