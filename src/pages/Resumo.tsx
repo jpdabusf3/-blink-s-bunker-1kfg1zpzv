@@ -60,6 +60,7 @@ import { getPedidosCarteira, type PedidoCarteira } from '@/services/pedidos-cart
 import { gestaoPedidosService, type PedidoRecord } from '@/services/gestao-pedidos'
 import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 import { MetasVendedorSegmentoSection } from '@/components/MetasVendedorSegmentoSection'
+import { AlertasCarteiraSection } from '@/components/dashboard/AlertasCarteiraSection'
 import { CODIGO_CANONICO_ROTULO } from '@/constants/familiaProdutos'
 export type PeriodType = 'mes' | 'trimestre' | 'ano' | 'personalizado'
 
@@ -996,6 +997,16 @@ export default function Resumo() {
       {/* 4. ESTADO SUCCESS (Content fades in) */}
       {!loading && !isEmpty && (
         <div className="space-y-8 animate-fade-in">
+          {/* Seção 0: Alertas de Carteira (Topo do Resumo, antes de todas as seções) */}
+          <AlertasCarteiraSection
+            pedidosCarteira={pedidosCarteira}
+            pedidosAbertos={pedidosAbertos}
+            globalOrders={globalOrders}
+            isLoading={loading}
+            isError={Boolean(error && faturamentos.length === 0 && pedidosCarteira.length === 0)}
+            onRetry={() => void loadData()}
+          />
+
           {/* Seção 1: 5 KPI Cards no topo */}
           {/* Mobile: 1 coluna (< 768px). md: 2 ou 3 colunas. xl: 5 colunas */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
