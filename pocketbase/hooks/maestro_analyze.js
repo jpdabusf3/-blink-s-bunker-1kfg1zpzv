@@ -40,6 +40,7 @@ routerAdd(
       var fileId = body.file_id || body.fileId || ''
       var filePath = body.file_path || body.filePath || ''
       var mimeType = body.mime_type || body.mimeType || ''
+      var fileName = body.file_name || body.fileName || ''
       var clientExtractedText = body.extracted_text || body.raw_text || ''
       var clientRows = body.rows || []
 
@@ -48,9 +49,42 @@ routerAdd(
       if (fileId) {
         try {
           uploadRecord = $app.findRecordById('maestro_uploads', fileId)
+          if (uploadRecord && !mimeType) {
+            mimeType = uploadRecord.getString('mime_type') || ''
+          }
+          if (uploadRecord && !fileName) {
+            fileName = uploadRecord.getString('nome_original') || ''
+          }
         } catch (_) {}
       }
 
+      // Se for uma imagem (PNG, JPG, WEBP, GIF, etc.)
+      var isImage =
+        (mimeType && mimeType.indexOf('image/') === 0) ||
+        /\.(png|jpe?g|webp|gif|heic|heif)$/i.test(fileName)
+
+      if (isImage) {
+        return e.json(200, {
+          success: true,
+          file_id: fileId,
+          file_name: fileName,
+          mime_type: mimeType || 'image/png',
+          document_type: 'image',
+          confidence: 1.0,
+          summary:
+            'Imagem anexada com sucesso (' +
+            (fileName || 'imagem') +
+            '). O Maestro reconheceu seu arquivo.',
+          preview_rows: [],
+          data: {
+            image: {
+              file_id: fileId,
+              file_name: fileName,
+              mime_type: mimeType || 'image/png',
+            },
+          },
+        })
+      }
       // Se temos o registro e o $documents estiver disponível, tentar $documents.toMarkdown
       var serverMarkdown = ''
       if (

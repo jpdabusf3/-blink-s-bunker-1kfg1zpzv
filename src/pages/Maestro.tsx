@@ -7,6 +7,8 @@ import {
   X,
   FileText,
   FileSpreadsheet,
+  FileImage,
+  ImageIcon,
   CheckCircle2,
   XCircle,
   AlertTriangle,
@@ -19,15 +21,21 @@ import {
   FileCheck,
   Bot,
   User,
+  ZoomIn,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useMaestroChat, type ChatMessage } from '@/hooks/useMaestroChat'
 import { cn } from '@/lib/utils'
 
 export function Maestro() {
   const navigate = useNavigate()
+  const [selectedImage, setSelectedImage] = React.useState<{ url: string; name: string } | null>(
+    null,
+  )
+
   const {
     messages,
     attachedFile,
@@ -88,6 +96,12 @@ export function Maestro() {
       hour: '2-digit',
       minute: '2-digit',
     })
+  }
+
+  const isImageFile = (name: string, type?: string) => {
+    if (type?.startsWith('image/')) return true
+    const ext = (name.split('.').pop() || '').toLowerCase()
+    return ['png', 'jpg', 'jpeg', 'webp', 'gif', 'heic', 'heif'].includes(ext)
   }
 
   return (
@@ -235,18 +249,60 @@ export function Maestro() {
                   >
                     {/* Anexo dentro da bolha de mensagem */}
                     {message.attachment && (
-                      <div className="flex items-center gap-2 mb-2 p-2 rounded-lg bg-background/30 border border-border/40 text-xs">
-                        {message.attachment.name.endsWith('.pdf') ? (
-                          <FileText className="h-4 w-4 text-red-400 shrink-0" />
+                      <div className="mb-2">
+                        {isImageFile(message.attachment.name, message.attachment.type) ? (
+                          <div className="rounded-xl overflow-hidden border border-border/50 bg-background/40 p-1.5 space-y-1.5 max-w-xs">
+                            {message.attachment.url ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setSelectedImage({
+                                    url: message.attachment!.url!,
+                                    name: message.attachment!.name,
+                                  })
+                                }
+                                className="relative group block w-full rounded-lg overflow-hidden bg-black/10 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                              >
+                                <img
+                                  src={message.attachment.url}
+                                  alt={message.attachment.name}
+                                  className="w-full max-h-56 object-cover rounded-lg transition-transform duration-200 group-hover:scale-105"
+                                  loading="lazy"
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white gap-1.5 text-xs font-medium">
+                                  <ZoomIn className="h-4 w-4" />
+                                  <span>Ampliar</span>
+                                </div>
+                              </button>
+                            ) : (
+                              <div className="h-28 rounded-lg bg-muted flex flex-col items-center justify-center text-muted-foreground gap-1">
+                                <FileImage className="h-8 w-8 text-amber-500/60" />
+                                <span className="text-[11px]">Imagem anexada</span>
+                              </div>
+                            )}
+
+                            <div className="flex items-center justify-between text-[11px] px-1 text-muted-foreground">
+                              <span className="truncate max-w-[180px] font-medium text-foreground">
+                                {message.attachment.name}
+                              </span>
+                              <span>{formatFileSize(message.attachment.size)}</span>
+                            </div>
+                          </div>
                         ) : (
-                          <FileSpreadsheet className="h-4 w-4 text-emerald-400 shrink-0" />
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-background/30 border border-border/40 text-xs">
+                            {message.attachment.name.endsWith('.pdf') ? (
+                              <FileText className="h-4 w-4 text-red-400 shrink-0" />
+                            ) : (
+                              <FileSpreadsheet className="h-4 w-4 text-emerald-400 shrink-0" />
+                            )}
+                            <span className="truncate max-w-[200px] font-medium">
+                              {message.attachment.name}
+                            </span>
+                            <span className="text-muted-foreground ml-auto shrink-0">
+                              {formatFileSize(message.attachment.size)}
+                            </span>
+                          </div>
                         )}
-                        <span className="truncate max-w-[200px] font-medium">
-                          {message.attachment.name}
-                        </span>
-                        <span className="text-muted-foreground ml-auto shrink-0">
-                          {formatFileSize(message.attachment.size)}
-                        </span>
                       </div>
                     )}
 
@@ -691,18 +747,40 @@ export function Maestro() {
         {/* Attached File Preview Card above Input */}
         {attachedFile && (
           <div className="mb-2 p-2.5 rounded-xl bg-card border border-amber-500/30 flex items-center justify-between text-xs animate-in slide-in-from-bottom-2 duration-200">
-            <div className="flex items-center gap-2.5 overflow-hidden">
-              <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
-                {attachedFile.name.endsWith('.pdf') ? (
-                  <FileText className="h-4 w-4" />
-                ) : (
-                  <FileSpreadsheet className="h-4 w-4" />
-                )}
-              </div>
+            <div className="flex items-center gap-3 overflow-hidden">
+              {attachedFile.isImage && attachedFile.previewUrl ? (
+                <div className="relative h-12 w-12 rounded-lg overflow-hidden border border-border/60 shrink-0 bg-muted">
+                  <img
+                    src={attachedFile.previewUrl}
+                    alt={attachedFile.name}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="h-9 w-9 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
+                  {attachedFile.isImage ? (
+                    <FileImage className="h-4 w-4" />
+                  ) : attachedFile.name.endsWith('.pdf') ? (
+                    <FileText className="h-4 w-4 text-red-400" />
+                  ) : (
+                    <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
+                  )}
+                </div>
+              )}
               <div className="truncate">
-                <p className="font-medium text-foreground truncate max-w-[260px] sm:max-w-md">
-                  {attachedFile.name}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-foreground truncate max-w-[240px] sm:max-w-md">
+                    {attachedFile.name}
+                  </p>
+                  {attachedFile.isImage && (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] py-0 px-1.5 h-4 bg-amber-500/10 text-amber-500 border-amber-500/30 shrink-0"
+                    >
+                      Imagem
+                    </Badge>
+                  )}
+                </div>
                 <p className="text-[11px] text-muted-foreground">
                   {formatFileSize(attachedFile.size)} • Pronto para envio
                 </p>
@@ -727,7 +805,7 @@ export function Maestro() {
             type="file"
             ref={fileInputRef}
             onChange={handleFileChange}
-            accept=".pdf,.xlsx,.xls,.csv"
+            accept=".png,.jpg,.jpeg,.webp,.gif,.heic,.heif,.pdf,.xlsx,.xls,.csv,image/*"
             className="hidden"
           />
 
@@ -739,7 +817,7 @@ export function Maestro() {
             onClick={() => fileInputRef.current?.click()}
             disabled={isSending || isAnalyzing || isExecuting}
             className="h-11 w-11 rounded-xl text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 shrink-0 transition-colors"
-            title="Anexar PDF, XLSX, XLS ou CSV (máx 20MB)"
+            title="Anexar imagens (PNG, JPG), PDF ou planilhas (máx 20MB)"
           >
             <Paperclip className="h-5 w-5" />
           </Button>
@@ -770,10 +848,36 @@ export function Maestro() {
           </Button>
         </div>
         <p className="text-[10px] text-muted-foreground/70 text-center mt-1.5 pb-1">
-          Suporta PDF de notas fiscais (DANFE), planilhas XLSX/XLS/CSV de clientes e vendas (até 20
-          MB).
+          Suporta imagens (PNG, JPG, WEBP, GIF), PDF de notas fiscais (DANFE) e planilhas
+          XLSX/XLS/CSV (até 20 MB).
         </p>
       </div>
+
+      {/* Modal de visualização ampliada de imagem */}
+      <Dialog
+        open={Boolean(selectedImage)}
+        onOpenChange={(open) => !open && setSelectedImage(null)}
+      >
+        <DialogContent className="max-w-3xl p-4 sm:p-6 bg-card border-border/80">
+          <DialogHeader className="pb-2 border-b border-border/40">
+            <div className="flex items-center gap-2">
+              <ImageIcon className="h-4 w-4 text-amber-500" />
+              <DialogTitle className="text-sm font-semibold truncate max-w-lg">
+                {selectedImage?.name || 'Imagem anexada'}
+              </DialogTitle>
+            </div>
+          </DialogHeader>
+          <div className="flex items-center justify-center p-2 max-h-[75vh] overflow-auto">
+            {selectedImage && (
+              <img
+                src={selectedImage.url}
+                alt={selectedImage.name}
+                className="max-h-[70vh] w-auto max-w-full rounded-lg object-contain shadow-md"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

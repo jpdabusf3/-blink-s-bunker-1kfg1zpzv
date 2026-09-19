@@ -27,6 +27,8 @@ export interface AttachedFile {
   size: number
   uploadedId?: string
   uploadedUrl?: string
+  previewUrl?: string
+  isImage?: boolean
 }
 
 export interface ChatMessage {
@@ -38,6 +40,8 @@ export interface ChatMessage {
     name: string
     size: number
     type: string
+    url?: string
+    isImage?: boolean
   }
   isAnalyzing?: boolean
   isExecuting?: boolean
@@ -120,11 +124,17 @@ export function useMaestroChat(): UseMaestroChatReturn {
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleAttachFile = useCallback((file: File) => {
-    // Validação de tipo de arquivo: PDF, XLSX, XLS, CSV
+    // Validação de tipo de arquivo: PDF, XLSX, XLS, CSV e Imagens (PNG, JPG, JPEG, WEBP, GIF, HEIC, HEIF)
     const ext = (file.name.split('.').pop() || '').toLowerCase()
-    const allowed = ['pdf', 'xlsx', 'xls', 'csv']
-    if (!allowed.includes(ext)) {
-      throw new Error('Formato não suportado. Por favor, anexe arquivos em PDF, XLSX, XLS ou CSV.')
+    const imageExts = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'heic', 'heif']
+    const docExts = ['pdf', 'xlsx', 'xls', 'csv']
+    const allowed = [...docExts, ...imageExts]
+    const isImage = imageExts.includes(ext) || file.type.startsWith('image/')
+
+    if (!allowed.includes(ext) && !isImage) {
+      throw new Error(
+        'Formato não suportado. Por favor, anexe imagens (PNG, JPG, JPEG, WEBP, GIF) ou documentos (PDF, XLSX, XLS, CSV).',
+      )
     }
 
     // Validação de tamanho: max 20 MB
@@ -133,10 +143,21 @@ export function useMaestroChat(): UseMaestroChatReturn {
       throw new Error('O arquivo excede o tamanho máximo permitido de 20 MB.')
     }
 
+    let previewUrl: string | undefined
+    if (isImage && typeof URL !== 'undefined' && URL.createObjectURL) {
+      try {
+        previewUrl = URL.createObjectURL(file)
+      } catch {
+        // fallback silencioso
+      }
+    }
+
     setAttachedFile({
       file,
       name: file.name,
       size: file.size,
+      isImage,
+      previewUrl,
     })
   }, [])
 
@@ -272,12 +293,16 @@ export function useMaestroChat(): UseMaestroChatReturn {
     const fileCardMessage: ChatMessage = {
       id: analyzingMsgId,
       role: 'assistant',
-      content: `Recebi seu arquivo "${fileObj.name}". Analisando o conteúdo...`,
+      content: fileObj.isImage
+        ? `Recebi sua imagem "${fileObj.name}". Processando o anexo...`
+        : `Recebi seu arquivo "${fileObj.name}". Analisando o conteúdo...`,
       timestamp: new Date(),
       attachment: {
         name: fileObj.name,
         size: fileObj.size,
-        type: fileObj.file.type || 'document',
+        type: fileObj.file.type || (fileObj.isImage ? 'image/png' : 'document'),
+        url: fileObj.uploadedUrl || fileObj.previewUrl,
+        isImage: fileObj.isImage,
       },
       isAnalyzing: true,
     }
@@ -289,6 +314,38 @@ export function useMaestroChat(): UseMaestroChatReturn {
       const uploaded = await uploadMaestroFile(fileObj.file)
       fileObj.uploadedId = uploaded.id
       fileObj.uploadedUrl = uploaded.url
+
+      // Atualiza também a mensagem do usuário e de análise com a URL definitiva no PocketBase
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (m.attachment && m.attachment.name === fileObj.name) {
+            return {
+              ...m,
+              attachment: {
+                ...m.attachment,
+                url: uploaded.url,
+              },
+            }
+          }
+          return m
+        }),
+      )
+
+      // Se for imagem, o reconhecimento é direto e amigável
+      if (fileObj.isImage) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === analyzingMsgId
+              ? {
+                  ...msg,
+                  isAnalyzing: false,
+                  content: `Recebi sua imagem "${fileObj.name}" com sucesso! Ela foi anexada e armazenada de forma segura na conversa. Como posso ajudar com esta imagem? Você pode me descrever o que deseja fazer ou fazer perguntas sobre ela.`,
+                }
+              : msg,
+          ),
+        )
+        return
+      }
 
       // 2. Extração de texto/linhas cliente-side para dar precisão máxima
       const { extractedText, rows } = await extractFileContentLocally(fileObj.file)
@@ -730,12 +787,19 @@ export function useMaestroChat(): UseMaestroChatReturn {
         const userMsg: ChatMessage = {
           id: `user-${Date.now()}`,
           role: 'user',
-          content: text || `Analisar arquivo: ${currentAttachment.name}`,
+          content:
+            text ||
+            (currentAttachment.isImage
+              ? `Anexou imagem: ${currentAttachment.name}`
+              : `Analisar arquivo: ${currentAttachment.name}`),
           timestamp: new Date(),
           attachment: {
             name: currentAttachment.name,
             size: currentAttachment.size,
-            type: currentAttachment.file.type || 'document',
+            type:
+              currentAttachment.file.type || (currentAttachment.isImage ? 'image/png' : 'document'),
+            url: currentAttachment.uploadedUrl || currentAttachment.previewUrl,
+            isImage: currentAttachment.isImage,
           },
         }
 

@@ -25,6 +25,7 @@ export type DocumentType =
   | 'pedidos_carteira'
   | 'relatorio_vendas_semanal'
   | 'atendimento_pedidos'
+  | 'image'
   | 'unknown'
 
 export interface InvoiceItemExtracted {
@@ -74,9 +75,17 @@ export interface SaleExtracted {
   numero_documento?: string
 }
 
+export interface ImageExtracted {
+  file_id?: string
+  file_name?: string
+  mime_type?: string
+  url?: string
+}
+
 export interface MaestroAnalysisResult {
   success: boolean
   file_id: string
+  file_name?: string
   mime_type: string
   document_type: DocumentType
   confidence: number
@@ -90,6 +99,7 @@ export interface MaestroAnalysisResult {
     pedidos_carteira?: PedidoCarteiraItem[]
     relatorio_vendas_semanal?: RelatorioSemanalMetaItem[]
     atendimento_pedidos?: AtendimentoPedidoItem[]
+    image?: ImageExtracted
   }
 }
 
@@ -212,12 +222,12 @@ export async function analyzeMaestroFile(params: {
     },
     body: JSON.stringify({
       file_id: params.fileId,
+      file_name: params.file.name,
       mime_type: params.file.type,
       extracted_text: params.extractedText || '',
       rows: params.rows || [],
     }),
   })
-
   if (!res.ok) {
     const errorBody = await res.json().catch(() => ({}))
     if (res.status === 401) {
