@@ -1,0 +1,141 @@
+import pb from '@/lib/pocketbase/client'
+
+export type PedidoStatus = 'ABERTO' | 'FATURADO' | 'CANCELADO'
+
+export interface PedidoRecord {
+  id: string
+  clienteId: string
+  produtoId: string
+  quantidade: number
+  valorUnitario: number
+  valorTotal: number
+  status: PedidoStatus
+  dataPedido: string // ISO date string (YYYY-MM-DD or full ISO)
+  dataEntregaPrevista?: string
+  nfNumero?: string
+  created?: string
+  updated?: string
+  expand?: {
+    clienteId?: {
+      id: string
+      name: string
+      city?: string
+      state?: string
+      cnpj?: string
+    }
+    produtoId?: {
+      id: string
+      codigo?: string
+      nome: string
+      linha?: string
+      preco_base?: number
+      unidade_medida?: string
+    }
+  }
+}
+
+export interface PedidoInput {
+  clienteId: string
+  produtoId: string
+  quantidade: number
+  valorUnitario: number
+  valorTotal: number
+  status: PedidoStatus
+  dataPedido: string
+  dataEntregaPrevista?: string
+  nfNumero?: string
+}
+
+export interface ClienteOption {
+  id: string
+  name: string
+  city?: string
+  state?: string
+}
+
+export interface ProdutoOption {
+  id: string
+  codigo?: string
+  nome: string
+  linha?: string
+  preco_base?: number
+  unidade_medida?: string
+}
+
+export const gestaoPedidosService = {
+  /**
+   * Busca todos os pedidos cadastrados com expansão de clienteId e produtoId
+   */
+  async listPedidos(): Promise<PedidoRecord[]> {
+    return pb.collection('pedidos').getFullList<PedidoRecord>({
+      expand: 'clienteId,produtoId',
+      sort: '-dataPedido,-created',
+    })
+  },
+
+  /**
+   * Busca clientes (factories) disponíveis para seleção
+   */
+  async listClientes(): Promise<ClienteOption[]> {
+    return pb.collection('factories').getFullList<ClienteOption>({
+      fields: 'id,name,city,state',
+      sort: 'name',
+    })
+  },
+
+  /**
+   * Busca produtos disponíveis para seleção
+   */
+  async listProdutos(): Promise<ProdutoOption[]> {
+    return pb.collection('produtos').getFullList<ProdutoOption>({
+      filter: 'ativo = true',
+      fields: 'id,codigo,nome,linha,preco_base,unidade_medida',
+      sort: 'nome',
+    })
+  },
+
+  /**
+   * Cria um novo pedido
+   */
+  async createPedido(data: PedidoInput): Promise<PedidoRecord> {
+    const userId = pb.authStore.record?.id
+    return pb.collection('pedidos').create<PedidoRecord>(
+      {
+        ...data,
+        user_id: userId || '',
+      },
+      {
+        expand: 'clienteId,produtoId',
+      },
+    )
+  },
+
+  /**
+   * Atualiza um pedido existente
+   */
+  async updatePedido(id: string, data: Partial<PedidoInput>): Promise<PedidoRecord> {
+    return pb.collection('pedidos').update<PedidoRecord>(id, data, {
+      expand: 'clienteId,produtoId',
+    })
+  },
+
+  /**
+   * Atualiza apenas o status de um pedido diretamente na linha
+   */
+  async updateStatus(id: string, status: PedidoStatus): Promise<PedidoRecord> {
+    return pb.collection('pedidos').update<PedidoRecord>(
+      id,
+      { status },
+      {
+        expand: 'clienteId,produtoId',
+      },
+    )
+  },
+
+  /**
+   * Exclui um pedido
+   */
+  async deletePedido(id: string): Promise<boolean> {
+    return pb.collection('pedidos').delete(id)
+  },
+}

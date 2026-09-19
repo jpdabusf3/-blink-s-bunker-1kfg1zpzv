@@ -49,6 +49,7 @@ export function AppSidebar() {
     { name: t('nav.funil'), path: '/funil', icon: BarChart2 },
     { name: 'Funil de Vendas', path: '/funil-vendas', icon: Layers },
     { name: 'Implantação de Novos Pedidos', path: '/pedidos', icon: ShoppingCart, badge: 'NF' },
+    { name: 'Pedidos', path: '/gestao-pedidos', icon: ShoppingCart },
     { name: 'Produtos', path: '/produtos', icon: Package },
     { name: 'Resumo', path: '/resumo', icon: BarChart2 },
     { name: 'Histórico', path: '/historico', icon: TrendingUp },

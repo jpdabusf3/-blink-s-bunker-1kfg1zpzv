@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-19T16:31:06.762Z",
+  "generatedAt": "2026-09-19T16:36:50.847Z",
   "collections": [
     {
       "name": "users",
@@ -3219,13 +3219,13 @@
         {
           "name": "cliente_nome",
           "type": "text",
-          "required": true,
+          "required": false,
           "system": false
         },
         {
           "name": "cliente_email",
           "type": "text",
-          "required": true,
+          "required": false,
           "system": false
         },
         {
@@ -3437,11 +3437,66 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clienteId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "factories"
+        },
+        {
+          "name": "produtoId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "produtos"
+        },
+        {
+          "name": "valorUnitario",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valorTotal",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["ABERTO", "FATURADO", "CANCELADO"]
+        },
+        {
+          "name": "dataPedido",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "dataEntregaPrevista",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "nfNumero",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_pedidos_cliente ON pedidos (cliente_nome)",
-        "CREATE INDEX idx_pedidos_created ON pedidos (created DESC)"
+        "CREATE INDEX idx_pedidos_created ON pedidos (created DESC)",
+        "CREATE INDEX `idx_pedidos_clienteId` ON `pedidos` (clienteId)",
+        "CREATE INDEX `idx_pedidos_produtoId` ON `pedidos` (produtoId)",
+        "CREATE INDEX `idx_pedidos_status` ON `pedidos` (status)",
+        "CREATE INDEX `idx_pedidos_dataPedido` ON `pedidos` (dataPedido)"
       ]
     },
     {
