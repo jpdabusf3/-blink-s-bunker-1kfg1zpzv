@@ -1,100 +1,104 @@
 import pb from '@/lib/pocketbase/client'
 import { z } from 'zod'
 
-export const CATEGORIAS_PRODUTO = [
-  'Mycotoxin Binders',
-  'Yeast Derivatives',
-  'Organic Minerals',
-  'Yeast Cell Wall',
+/**
+ * Famílias e regras de derivação por prefixo:
+ * BBMO = "Mos/BetaLink"
+ * BBMY = "Mycolink"
+ * BPMI = "Minerais Orgânicos"
+ * BPMY = "Leveduras"
+ * BBMI = "Blends"
+ */
+export const FAMILIAS_CATALOGO = [
+  'Mos/BetaLink',
+  'Mycolink',
+  'Minerais Orgânicos',
+  'Leveduras',
   'Blends',
 ] as const
 
-export type CategoriaProduto = (typeof CATEGORIAS_PRODUTO)[number]
+export type FamiliaCatalogo = (typeof FAMILIAS_CATALOGO)[number]
 
-export const LINHAS_PRODUTO = ['MOS', 'Mycotoxin', 'Minerals', 'Yeast', 'Blend'] as const
+/**
+ * Mapeamento estrito do prefixo do código para a Família oficial
+ */
+export const PREFIXO_PARA_FAMILIA: Record<string, FamiliaCatalogo> = {
+  BBMO: 'Mos/BetaLink',
+  BBMY: 'Mycolink',
+  BPMI: 'Minerais Orgânicos',
+  BPMY: 'Leveduras',
+  BBMI: 'Blends',
+}
 
-export type LinhaProduto = (typeof LINHAS_PRODUTO)[number]
+/**
+ * Calcula a família automaticamente a partir do código do produto.
+ * Não digitada pelo usuário.
+ */
+export function derivarFamiliaPorCodigo(codigo?: string | null): string {
+  if (!codigo) return ''
+  const clean = codigo.trim().toUpperCase()
+  // Pega as 4 primeiras letras antes do ponto ou início do código
+  const prefix = clean.split('.')[0] || clean.slice(0, 4)
+  if (PREFIXO_PARA_FAMILIA[prefix]) {
+    return PREFIXO_PARA_FAMILIA[prefix]
+  }
+  // Fallbacks seguros se o código começar diretamente com o prefixo
+  for (const [p, fam] of Object.entries(PREFIXO_PARA_FAMILIA)) {
+    if (clean.startsWith(p)) return fam
+  }
+  return ''
+}
 
 export interface Produto {
   id: string
   codigo: string
   nome: string
-  categoria: CategoriaProduto | string
-  linha: LinhaProduto | string
-  ativo: boolean
+  familia: string
+  categoria?: string
+  linha?: string
+  ativo?: boolean
   user_id?: string
+  createdAt?: string
+  updatedAt?: string
   created?: string
   updated?: string
 }
 
 export interface ListProdutosParams {
-  page?: number
-  perPage?: number
   search?: string
-  categoria?: string
-  linha?: string
-  showInactive?: boolean
+  familia?: string
 }
 
-export interface ListProdutosResponse {
-  items: Produto[]
-  page: number
-  perPage: number
-  totalItems: number
-  totalPages: number
-}
-
-// Regex validação: 3 a 4 letras maiúsculas, '.', 2 letras maiúsculas e 3 dígitos (ex: BBMO.BE001, BPMI.OR001)
-export const CODIGO_PRODUTO_REGEX = /^[A-Z]{3,4}\.[A-Z]{2}\d{3}$/
-
-export const ProdutoSchema = z.object({
-  codigo: z
-    .string()
-    .min(1, 'Código é obrigatório')
-    .regex(CODIGO_PRODUTO_REGEX, 'Codigo invalido. Use o formato XXXX.XX000.'),
-  nome: z.string().min(1, 'Nome é obrigatório').trim(),
-  categoria: z.enum(CATEGORIAS_PRODUTO),
-  linha: z.enum(LINHAS_PRODUTO),
-  ativo: z.boolean().default(true),
+export const ProdutoFormSchema = z.object({
+  codigo: z.string().min(1, 'Informe o código').trim(),
+  nome: z.string().min(1, 'Informe o nome').trim(),
 })
 
-export type ProdutoFormData = z.infer<typeof ProdutoSchema>
-
-export const ProdutoUpdateSchema = z.object({
-  nome: z.string().min(1, 'Nome é obrigatório').trim(),
-  categoria: z.enum(CATEGORIAS_PRODUTO),
-  linha: z.enum(LINHAS_PRODUTO),
-  ativo: z.boolean().default(true),
-})
-
-export type ProdutoUpdateFormData = z.infer<typeof ProdutoUpdateSchema>
+export type ProdutoFormData = z.infer<typeof ProdutoFormSchema>
 
 export const produtosService = {
   /**
-   * Lista produtos com filtros, busca debouncada e paginação
+   * Deriva a família a partir do código
    */
-  async listProdutos(params: ListProdutosParams = {}): Promise<ListProdutosResponse> {
+  derivarFamilia(codigo?: string | null): string {
+    return derivarFamiliaPorCodigo(codigo)
+  },
+
+  /**
+   * Lista todos os produtos com suporte a busca debouncada e filtro por família
+   */
+  async listAll(params: ListProdutosParams = {}): Promise<Produto[]> {
     try {
-      const page = params.page || 1
-      const perPage = params.perPage || 20
       const filters: string[] = []
 
-      // Filtro ativo
-      if (!params.showInactive) {
-        filters.push('ativo = true')
+      // Filtro por Família (se diferente de 'all')
+      if (params.familia && params.familia !== 'all') {
+        const famEscaped = params.familia.replace(/"/g, '\\"')
+        // Pode estar salvo como a família da nova especificação ou mapeado
+        filters.push(`(familia = "${famEscaped}" || codigo ~ "${famEscaped}")`)
       }
 
-      // Filtro Categoria
-      if (params.categoria && params.categoria !== 'All' && params.categoria !== 'Todos') {
-        filters.push(`categoria = "${params.categoria}"`)
-      }
-
-      // Filtro Linha
-      if (params.linha && params.linha !== 'All' && params.linha !== 'Todos') {
-        filters.push(`linha = "${params.linha}"`)
-      }
-
-      // Filtro Busca (codigo OU nome)
+      // Filtro por Busca (código OU nome)
       if (params.search && params.search.trim() !== '') {
         const term = params.search.trim().replace(/"/g, '\\"')
         filters.push(`(codigo ~ "${term}" || nome ~ "${term}")`)
@@ -102,117 +106,148 @@ export const produtosService = {
 
       const filterStr = filters.join(' && ')
 
-      // Ordenação padrão: categoria ascendente, depois codigo ascendente
-      const res = await pb.collection('produtos').getList<Produto>(page, perPage, {
-        filter: filterStr,
-        sort: 'categoria,codigo',
+      // Busca todos os registros (produtos são catálogo de referência, ~40 itens)
+      const records = await pb.collection('produtos').getFullList<Produto>({
+        filter: filterStr || undefined,
+        sort: 'codigo',
       })
 
-      return {
-        items: res.items,
-        page: res.page,
-        perPage: res.perPage,
-        totalItems: res.totalItems,
-        totalPages: res.totalPages,
-      }
+      // Normaliza o campo familia resolvendo a derivação caso esteja vazio ou legacy
+      return records.map((r) => ({
+        ...r,
+        familia: r.familia
+          ? PREFIXO_PARA_FAMILIA[r.codigo?.slice(0, 4)] || r.familia
+          : derivarFamiliaPorCodigo(r.codigo),
+        createdAt: r.created || r.createdAt,
+        updatedAt: r.updated || r.updatedAt,
+      }))
     } catch (err: unknown) {
-      console.error('Erro ao listar produtos:', err)
-      throw new Error('Erro ao carregar produtos.')
+      console.error('[produtosService] Erro ao listar produtos:', err)
+      throw new Error('Não foi possível carregar os produtos')
     }
   },
 
   /**
-   * Obtém um produto pelo ID
+   * Verifica se já existe um produto com o mesmo código (exceto ele mesmo se for edição)
    */
-  async getProdutoById(id: string): Promise<Produto> {
+  async checkCodigoExistente(codigo: string, excludeId?: string): Promise<boolean> {
+    const clean = codigo.trim().toUpperCase()
+    if (!clean) return false
     try {
-      return await pb.collection('produtos').getOne<Produto>(id)
-    } catch (err: unknown) {
-      console.error('Erro ao buscar produto por ID:', err)
-      throw new Error('Erro ao buscar produto.')
+      const records = await pb.collection('produtos').getList<Produto>(1, 1, {
+        filter: `codigo = "${clean.replace(/"/g, '\\"')}"`,
+      })
+      if (records.items.length === 0) return false
+      if (excludeId && records.items[0].id === excludeId) return false
+      return true
+    } catch (err) {
+      console.error('[produtosService] Erro ao verificar código:', err)
+      return false
     }
   },
 
   /**
-   * Cria um novo produto com validação de unicidade de código
+   * Cria um novo produto com derivação automática de família e validação inline de unicidade
    */
   async createProduto(data: ProdutoFormData): Promise<Produto> {
+    const cleanCodigo = data.codigo.trim().toUpperCase()
+    const cleanNome = data.nome.trim()
+
+    if (!cleanCodigo) {
+      throw new Error('Informe o código')
+    }
+    if (!cleanNome) {
+      throw new Error('Informe o nome')
+    }
+
+    const jaExiste = await this.checkCodigoExistente(cleanCodigo)
+    if (jaExiste) {
+      throw new Error('Código já cadastrado')
+    }
+
+    const familiaDerivada = derivarFamiliaPorCodigo(cleanCodigo)
+    const currentUserId = pb.authStore.model?.id || ''
+
+    const payload: Record<string, any> = {
+      codigo: cleanCodigo,
+      nome: cleanNome,
+      familia: familiaDerivada || undefined,
+      ativo: true,
+    }
+    if (currentUserId) {
+      payload.user_id = currentUserId
+    }
+
     try {
-      const validated = ProdutoSchema.parse(data)
-      const cleanCodigo = validated.codigo.trim().toUpperCase()
-
-      // Validação de unicidade do código
-      try {
-        const existing = await pb
-          .collection('produtos')
-          .getFirstListItem(`codigo = "${cleanCodigo}"`)
-        if (existing) {
-          throw new Error('Já existe um produto cadastrado com este código.')
-        }
-      } catch (checkErr: any) {
-        if (checkErr?.message?.includes('Já existe um produto')) {
-          throw checkErr
-        }
-        // Se 404 (não encontrou), prossegue normalmente
+      const created = await pb.collection('produtos').create<Produto>(payload)
+      return {
+        ...created,
+        familia: created.familia || familiaDerivada,
+        createdAt: created.created,
+        updatedAt: created.updated,
       }
-
-      const currentUserId = pb.authStore.model?.id || ''
-      const payload = {
-        codigo: cleanCodigo,
-        nome: validated.nome.trim(),
-        categoria: validated.categoria,
-        linha: validated.linha,
-        ativo: validated.ativo,
-        user_id: currentUserId,
+    } catch (err: any) {
+      console.error('[produtosService] Erro ao criar produto:', err)
+      if (err?.message?.includes('UNIQUE') || err?.data?.codigo?.code === 'validation_not_unique') {
+        throw new Error('Código já cadastrado')
       }
-
-      return await pb.collection('produtos').create<Produto>(payload)
-    } catch (err: unknown) {
-      console.error('Erro ao criar produto:', err)
-      if (err instanceof z.ZodError) {
-        throw new Error(err.issues[0]?.message || 'Dados inválidos.')
-      }
-      if (err instanceof Error) {
-        throw err
-      }
-      throw new Error('Erro ao cadastrar produto.')
+      throw new Error(err?.message || 'Erro ao cadastrar produto')
     }
   },
 
   /**
-   * Atualiza um produto existente
+   * Atualiza um produto existente com derivação automática de família e validação inline de unicidade
    */
-  async updateProduto(id: string, data: ProdutoUpdateFormData): Promise<Produto> {
+  async updateProduto(id: string, data: ProdutoFormData): Promise<Produto> {
+    const cleanCodigo = data.codigo.trim().toUpperCase()
+    const cleanNome = data.nome.trim()
+
+    if (!cleanCodigo) {
+      throw new Error('Informe o código')
+    }
+    if (!cleanNome) {
+      throw new Error('Informe o nome')
+    }
+
+    const jaExiste = await this.checkCodigoExistente(cleanCodigo, id)
+    if (jaExiste) {
+      throw new Error('Código já cadastrado')
+    }
+
+    const familiaDerivada = derivarFamiliaPorCodigo(cleanCodigo)
+
+    const payload: Record<string, any> = {
+      codigo: cleanCodigo,
+      nome: cleanNome,
+      familia: familiaDerivada || undefined,
+    }
+
     try {
-      const validated = ProdutoUpdateSchema.parse(data)
-      const payload = {
-        nome: validated.nome.trim(),
-        categoria: validated.categoria,
-        linha: validated.linha,
-        ativo: validated.ativo,
+      const updated = await pb.collection('produtos').update<Produto>(id, payload)
+      return {
+        ...updated,
+        familia: updated.familia || familiaDerivada,
+        createdAt: updated.created,
+        updatedAt: updated.updated,
       }
-      return await pb.collection('produtos').update<Produto>(id, payload)
-    } catch (err: unknown) {
-      console.error('Erro ao atualizar produto:', err)
-      if (err instanceof z.ZodError) {
-        throw new Error(err.issues[0]?.message || 'Dados inválidos.')
+    } catch (err: any) {
+      console.error('[produtosService] Erro ao atualizar produto:', err)
+      if (err?.message?.includes('UNIQUE') || err?.data?.codigo?.code === 'validation_not_unique') {
+        throw new Error('Código já cadastrado')
       }
-      if (err instanceof Error) {
-        throw err
-      }
-      throw new Error('Erro ao atualizar produto.')
+      throw new Error(err?.message || 'Erro ao atualizar produto')
     }
   },
 
   /**
-   * Desativação de produto (soft delete: ativo = false)
+   * Exclui um produto do banco de dados
    */
-  async deactivateProduto(id: string): Promise<Produto> {
+  async deleteProduto(id: string): Promise<boolean> {
     try {
-      return await pb.collection('produtos').update<Produto>(id, { ativo: false })
-    } catch (err: unknown) {
-      console.error('Erro ao desativar produto:', err)
-      throw new Error('Erro ao desativar produto.')
+      return await pb.collection('produtos').delete(id)
+    } catch (err: any) {
+      console.error('[produtosService] Erro ao excluir produto:', err)
+      throw new Error(err?.message || 'Erro ao excluir produto')
     }
   },
 }

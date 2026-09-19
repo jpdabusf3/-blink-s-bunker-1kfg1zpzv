@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-19T16:06:51.653Z",
+  "generatedAt": "2026-09-19T16:17:56.157Z",
   "collections": [
     {
       "name": "users",
@@ -2514,7 +2514,17 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["Adsorventes", "Aditivos", "Minerais Organicos", "Suplementos", "Blends"]
+          "selectValues": [
+            "Mos/BetaLink",
+            "Mycolink",
+            "Minerais Orgânicos",
+            "Leveduras",
+            "Blends",
+            "Adsorventes",
+            "Aditivos",
+            "Minerais Organicos",
+            "Suplementos"
+          ]
         },
         {
           "name": "especie_destino",

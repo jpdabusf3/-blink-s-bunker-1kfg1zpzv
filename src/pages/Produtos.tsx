@@ -1,26 +1,8 @@
-import React, { useState } from 'react'
-import {
-  Package,
-  Plus,
-  Search,
-  RotateCcw,
-  Edit2,
-  Trash2,
-  CheckCircle2,
-  AlertCircle,
-  Filter,
-  ChevronLeft,
-  ChevronRight,
-  ShieldCheck,
-  Tag,
-} from 'lucide-react'
+import React, { useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
   TableBody,
@@ -29,6 +11,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -47,684 +36,573 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Badge } from '@/components/ui/badge'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { useToast } from '@/hooks/use-toast'
+  Package,
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  AlertTriangle,
+  RotateCcw,
+  Layers,
+  Sparkles,
+} from 'lucide-react'
+import { toast } from 'sonner'
 import { useProdutos } from '@/hooks/useProdutos'
 import {
-  CATEGORIAS_PRODUTO,
-  LINHAS_PRODUTO,
+  FAMILIAS_CATALOGO,
+  derivarFamiliaPorCodigo,
+  produtosService,
   type Produto,
   type ProdutoFormData,
-  type ProdutoUpdateFormData,
-  CODIGO_PRODUTO_REGEX,
 } from '@/services/produtos-service'
 
 export function Produtos() {
-  const { toast } = useToast()
   const {
     produtos,
     loading,
     error,
-    totalPages,
-    currentPage,
-    totalItems,
-    search,
-    filterCategoria,
-    filterLinha,
-    showInactive,
+    searchTerm,
+    debouncedSearch,
+    familiaFilter,
     loadProdutos,
     createProduto,
     updateProduto,
-    deactivateProduto,
-    setPage,
-    setSearch,
-    setFilterCategoria,
-    setFilterLinha,
-    toggleShowInactive,
+    deleteProduto,
+    setSearchTerm,
+    setFamiliaFilter,
   } = useProdutos()
 
-  // Modal Novo Produto
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [createFormData, setCreateFormData] = useState<ProdutoFormData>({
+  // Modal de Criação / Edição
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingProduto, setEditingProduto] = useState<Produto | null>(null)
+  const [formData, setFormData] = useState<ProdutoFormData>({
     codigo: '',
     nome: '',
-    categoria: 'Mycotoxin Binders',
-    linha: 'MOS',
-    ativo: true,
   })
-  const [createErrors, setCreateErrors] = useState<Record<string, string>>({})
-  const [isSubmittingCreate, setIsSubmittingCreate] = useState(false)
+  const [formErrors, setFormErrors] = useState<{ codigo?: string; nome?: string }>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Modal Editar Produto
-  const [editingProduto, setEditingProduto] = useState<Produto | null>(null)
-  const [editFormData, setEditFormData] = useState<ProdutoUpdateFormData>({
-    nome: '',
-    categoria: 'Mycotoxin Binders',
-    linha: 'MOS',
-    ativo: true,
-  })
-  const [editErrors, setEditErrors] = useState<Record<string, string>>({})
-  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false)
+  // Diálogo de confirmação de exclusão
+  const [deletingProduto, setDeletingProduto] = useState<Produto | null>(null)
+  const [deletePending, setDeletePending] = useState(false)
 
-  // Modal Desativar (Soft Delete)
-  const [deactivatingProduto, setDeactivatingProduto] = useState<Produto | null>(null)
-  const [isSubmittingDeactivate, setIsSubmittingDeactivate] = useState(false)
+  // Família derivada dinamicamente para o formulário
+  const familiaDerivada = useMemo(() => {
+    return derivarFamiliaPorCodigo(formData.codigo)
+  }, [formData.codigo])
 
-  // Handlers para Create
-  const handleOpenCreate = () => {
-    setCreateFormData({
+  // Filtragem local adicional se necessário (mantendo sincronia instantânea)
+  const filteredProdutos = useMemo(() => {
+    return produtos.filter((p) => {
+      // Busca debouncada por código ou nome
+      if (debouncedSearch.trim()) {
+        const q = debouncedSearch.toLowerCase().trim()
+        const codeMatch = (p.codigo || '').toLowerCase().includes(q)
+        const nameMatch = (p.nome || '').toLowerCase().includes(q)
+        if (!codeMatch && !nameMatch) return false
+      }
+
+      // Filtro por Família
+      if (familiaFilter !== 'all') {
+        const fam = (p.familia || derivarFamiliaPorCodigo(p.codigo)).toLowerCase().trim()
+        const filterFam = familiaFilter.toLowerCase().trim()
+        if (fam !== filterFam && !fam.includes(filterFam)) {
+          return false
+        }
+      }
+
+      return true
+    })
+  }, [produtos, debouncedSearch, familiaFilter])
+
+  // Abertura do formulário para novo produto
+  const handleOpenNew = () => {
+    setEditingProduto(null)
+    setFormData({
       codigo: '',
       nome: '',
-      categoria: 'Mycotoxin Binders',
-      linha: 'MOS',
-      ativo: true,
     })
-    setCreateErrors({})
-    setIsCreateOpen(true)
+    setFormErrors({})
+    setDialogOpen(true)
   }
 
-  const handleValidateCreate = (): boolean => {
-    const errs: Record<string, string> = {}
-    const cleanCodigo = createFormData.codigo.trim().toUpperCase()
-
-    if (!cleanCodigo) {
-      errs.codigo = 'Código é obrigatório.'
-    } else if (!CODIGO_PRODUTO_REGEX.test(cleanCodigo)) {
-      errs.codigo = 'Codigo invalido. Use o formato XXXX.XX000.'
-    }
-
-    if (!createFormData.nome.trim()) {
-      errs.nome = 'Nome é obrigatório.'
-    }
-
-    setCreateErrors(errs)
-    return Object.keys(errs).length === 0
-  }
-
-  const handleSaveCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!handleValidateCreate()) return
-
-    setIsSubmittingCreate(true)
-    try {
-      await createProduto({
-        ...createFormData,
-        codigo: createFormData.codigo.trim().toUpperCase(),
-        nome: createFormData.nome.trim(),
-      })
-      toast({
-        title: 'Sucesso!',
-        description: 'Produto cadastrado!',
-      })
-      setIsCreateOpen(false)
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro ao cadastrar produto.'
-      toast({
-        title: 'Erro ao cadastrar',
-        description: msg,
-        variant: 'destructive',
-      })
-    } finally {
-      setIsSubmittingCreate(false)
-    }
-  }
-
-  // Handlers para Edit
+  // Abertura do formulário para edição
   const handleOpenEdit = (p: Produto) => {
     setEditingProduto(p)
-    setEditFormData({
+    setFormData({
+      codigo: p.codigo,
       nome: p.nome,
-      categoria: (p.categoria as any) || 'Mycotoxin Binders',
-      linha: (p.linha as any) || 'MOS',
-      ativo: p.ativo !== false,
     })
-    setEditErrors({})
+    setFormErrors({})
+    setDialogOpen(true)
   }
 
-  const handleValidateEdit = (): boolean => {
-    const errs: Record<string, string> = {}
-    if (!editFormData.nome.trim()) {
-      errs.nome = 'Nome é obrigatório.'
+  // Validação inline
+  const validateForm = async (): Promise<boolean> => {
+    const errs: { codigo?: string; nome?: string } = {}
+    const cleanCodigo = formData.codigo.trim().toUpperCase()
+    const cleanNome = formData.nome.trim()
+
+    if (!cleanCodigo) {
+      errs.codigo = 'Informe o código'
+    } else {
+      // Verificar unicidade de código
+      const exists = await produtosService.checkCodigoExistente(cleanCodigo, editingProduto?.id)
+      if (exists) {
+        errs.codigo = 'Código já cadastrado'
+      }
     }
-    setEditErrors(errs)
+
+    if (!cleanNome) {
+      errs.nome = 'Informe o nome'
+    }
+
+    setFormErrors(errs)
     return Object.keys(errs).length === 0
   }
 
-  const handleSaveEdit = async (e: React.FormEvent) => {
+  // Salvar formulário (Create ou Edit)
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!editingProduto || !handleValidateEdit()) return
-
-    setIsSubmittingEdit(true)
+    setIsSubmitting(true)
     try {
-      await updateProduto(editingProduto.id, {
-        ...editFormData,
-        nome: editFormData.nome.trim(),
-      })
-      toast({
-        title: 'Sucesso!',
-        description: 'Produto atualizado!',
-      })
+      const isValid = await validateForm()
+      if (!isValid) {
+        setIsSubmitting(false)
+        return
+      }
+
+      const cleanCodigo = formData.codigo.trim().toUpperCase()
+      const cleanNome = formData.nome.trim()
+
+      if (editingProduto) {
+        await updateProduto(editingProduto.id, {
+          codigo: cleanCodigo,
+          nome: cleanNome,
+        })
+      } else {
+        await createProduto({
+          codigo: cleanCodigo,
+          nome: cleanNome,
+        })
+      }
+
+      toast.success('Produto salvo com sucesso.')
+      setDialogOpen(false)
       setEditingProduto(null)
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro ao atualizar produto.'
-      toast({
-        title: 'Erro ao atualizar',
-        description: msg,
-        variant: 'destructive',
-      })
+    } catch (err: any) {
+      console.error('[Produtos] Erro ao salvar:', err)
+      const msg = err?.message || 'Erro ao salvar produto'
+      if (msg.includes('Código já cadastrado')) {
+        setFormErrors((prev) => ({ ...prev, codigo: 'Código já cadastrado' }))
+      } else if (msg.includes('Informe o código')) {
+        setFormErrors((prev) => ({ ...prev, codigo: 'Informe o código' }))
+      } else if (msg.includes('Informe o nome')) {
+        setFormErrors((prev) => ({ ...prev, nome: 'Informe o nome' }))
+      } else {
+        toast.error(msg)
+      }
     } finally {
-      setIsSubmittingEdit(false)
+      setIsSubmitting(false)
     }
   }
 
-  // Handlers para Deactivate
-  const handleConfirmDeactivate = async () => {
-    if (!deactivatingProduto) return
-
-    setIsSubmittingDeactivate(true)
+  // Confirmação de exclusão
+  const handleConfirmDelete = async () => {
+    if (!deletingProduto) return
+    setDeletePending(true)
     try {
-      await deactivateProduto(deactivatingProduto.id)
-      toast({
-        title: 'Sucesso!',
-        description: 'Produto desativado!',
-      })
-      setDeactivatingProduto(null)
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro ao desativar produto.'
-      toast({
-        title: 'Erro ao desativar',
-        description: msg,
-        variant: 'destructive',
-      })
+      await deleteProduto(deletingProduto.id)
+      toast.success('Produto excluído.')
+      setDeletingProduto(null)
+    } catch (err: any) {
+      console.error('[Produtos] Erro ao excluir produto:', err)
+      toast.error('Erro ao excluir produto. Tente novamente.')
     } finally {
-      setIsSubmittingDeactivate(false)
+      setDeletePending(false)
     }
   }
 
   return (
-    <div className="space-y-6 pb-16 animate-fade-in">
-      {/* Header com Título e Botão Novo Produto */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Produtos Blink</h1>
-            <Badge
-              variant="outline"
-              className="text-xs font-semibold bg-primary/10 text-primary border-primary/20"
-            >
-              Catálogo Oficial
-            </Badge>
+    <div className="space-y-6">
+      {/* Barra superior de Ações e Filtros (mesmo padrão visual do ClientesManager) */}
+      <Card className="shadow-subtle border-border">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-xl flex items-center gap-2">
+                <Package className="w-5 h-5 text-primary" />
+                Catálogo de Produtos
+              </CardTitle>
+              <CardDescription>
+                Gerencie o catálogo oficial de produtos Blink, códigos e famílias de produtos.
+              </CardDescription>
+            </div>
+            <Button onClick={handleOpenNew} className="gap-2 shrink-0">
+              <Plus className="w-4 h-4" /> Novo Produto
+            </Button>
           </div>
-          <p className="text-muted-foreground text-sm">
-            Gerencie o catálogo oficial de produtos, linhas e categorias da Blink Biotech.
-          </p>
-        </div>
-
-        <Button onClick={handleOpenCreate} className="gap-2 h-11 px-5 shadow-sm min-h-[44px]">
-          <Plus className="w-4 h-4" /> Novo Produto
-        </Button>
-      </div>
-
-      {/* Barra de Filtros e Busca */}
-      <Card className="shadow-subtle">
-        <CardContent className="p-4 sm:p-5">
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-            {/* Campo de Busca Debouncada */}
-            <div className="relative flex-1 min-w-[240px]">
-              <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+            {/* Input de busca por código ou nome com debounce */}
+            <div className="md:col-span-8 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por código ou nome..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 h-11 min-h-[44px] text-sm"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 bg-background"
               />
             </div>
 
-            {/* Dropdown Categoria */}
-            <div className="w-full sm:w-[220px]">
-              <Select value={filterCategoria} onValueChange={setFilterCategoria}>
-                <SelectTrigger className="h-11 min-h-[44px] text-xs">
-                  <SelectValue placeholder="Categoria: Todas" />
+            {/* Dropdown de filtro por Família */}
+            <div className="md:col-span-4">
+              <Select value={familiaFilter} onValueChange={setFamiliaFilter}>
+                <SelectTrigger aria-label="Filtrar por Família">
+                  <SelectValue placeholder="Família: Todas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="All">Todas as Categorias</SelectItem>
-                  {CATEGORIAS_PRODUTO.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
+                  <SelectItem value="all">Família: Todas</SelectItem>
+                  {FAMILIAS_CATALOGO.map((fam) => (
+                    <SelectItem key={fam} value={fam}>
+                      {fam}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            {/* Dropdown Linha */}
-            <div className="w-full sm:w-[180px]">
-              <Select value={filterLinha} onValueChange={setFilterLinha}>
-                <SelectTrigger className="h-11 min-h-[44px] text-xs">
-                  <SelectValue placeholder="Linha: Todas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">Todas as Linhas</SelectItem>
-                  {LINHAS_PRODUTO.map((lin) => (
-                    <SelectItem key={lin} value={lin}>
-                      {lin}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Toggle Ativo */}
-            <div className="flex items-center gap-2 shrink-0 px-2 py-1 bg-muted/40 rounded-lg border h-11 min-h-[44px]">
-              <Switch
-                id="toggle-inactive"
-                checked={showInactive}
-                onCheckedChange={toggleShowInactive}
-              />
-              <Label
-                htmlFor="toggle-inactive"
-                className="text-xs font-medium cursor-pointer text-muted-foreground select-none"
-              >
-                {showInactive ? 'Exibindo inativos' : 'Apenas ativos'}
-              </Label>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* UX STATE 3: ERROR */}
+      {/* ESTADO 1: ERROR */}
       {error && !loading && (
-        <Card className="border-destructive/30 bg-destructive/5">
-          <CardContent className="p-8 text-center space-y-4">
-            <div className="w-12 h-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
-              <AlertCircle className="w-6 h-6" />
+        <Card className="border-destructive/30 bg-destructive/5 text-center p-8">
+          <div className="flex flex-col items-center justify-center space-y-3">
+            <div className="p-3 bg-destructive/10 rounded-full text-destructive">
+              <AlertTriangle className="w-8 h-8" />
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-foreground">Erro ao carregar produtos.</h3>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto mt-1">
-                Não foi possível consultar os registros no momento. Tente novamente.
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold text-foreground">
+                Não foi possível carregar os produtos
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-md">
+                Ocorreu uma falha na comunicação com o banco de dados. Verifique sua conexão e tente
+                novamente.
               </p>
             </div>
-            <Button variant="outline" onClick={loadProdutos} className="h-11 min-h-[44px] gap-2">
+            <Button onClick={loadProdutos} variant="outline" className="gap-2 mt-2">
               <RotateCcw className="w-4 h-4" /> Tentar novamente
             </Button>
-          </CardContent>
+          </div>
         </Card>
       )}
 
-      {/* UX STATE 1: LOADING SKELETON (5 linhas com animação pulse) */}
+      {/* ESTADO 2: LOADING (Skeleton rows imitando a tabela) */}
       {loading && (
-        <Card className="shadow-subtle">
-          <CardContent className="p-4 sm:p-6 space-y-3">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between p-4 rounded-lg border bg-muted/20 animate-pulse gap-4"
-              >
-                <div className="flex items-center gap-3 w-1/3">
-                  <Skeleton className="w-10 h-10 rounded" />
-                  <div className="space-y-1.5 flex-1">
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="h-3 w-40" />
-                  </div>
-                </div>
-                <div className="hidden md:flex items-center gap-4 flex-1 justify-around">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-5 w-16 rounded-full" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-9 w-9 rounded" />
-                  <Skeleton className="h-9 w-9 rounded" />
+        <Card className="shadow-subtle border-border">
+          <div className="p-4 border-b">
+            <Skeleton className="h-5 w-48" />
+          </div>
+          {/* Skeleton para Desktop (Tabela) */}
+          <div className="hidden md:block overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">Código</TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead className="w-[240px]">Família</TableHead>
+                  <TableHead className="text-right w-[120px]">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell>
+                      <Skeleton className="h-4 w-28" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-48" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-6 w-32 rounded-full" />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Skeleton className="h-8 w-8 rounded-md" />
+                        <Skeleton className="h-8 w-8 rounded-md" />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          {/* Skeleton para Mobile (Cards) */}
+          <div className="md:hidden p-4 space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="p-4 rounded-lg border border-border bg-card space-y-3">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-5 w-3/4" />
+                <div className="flex justify-between items-center pt-2">
+                  <Skeleton className="h-6 w-24 rounded-full" />
+                  <Skeleton className="h-8 w-16" />
                 </div>
               </div>
             ))}
-          </CardContent>
+          </div>
         </Card>
       )}
 
-      {/* UX STATE 2: EMPTY STATE */}
+      {/* ESTADO 3: EMPTY */}
       {!loading && !error && produtos.length === 0 && (
-        <Card className="shadow-subtle border-dashed">
-          <CardContent className="p-12 text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">
-              <Package className="w-8 h-8" />
+        <Card className="border-dashed p-12 text-center shadow-subtle">
+          <div className="flex flex-col items-center justify-center space-y-3">
+            <div className="p-4 bg-primary/10 rounded-full text-primary">
+              <Package className="w-10 h-10" />
             </div>
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold text-foreground">Nenhum produto encontrado</h3>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Cadastre seu primeiro produto ou ajuste os filtros.
-              </p>
-            </div>
-            <Button onClick={handleOpenCreate} className="h-11 min-h-[44px] gap-2 mt-2">
-              <Plus className="w-4 h-4" /> Novo Produto
+            <h3 className="text-lg font-semibold text-foreground">Nenhum produto cadastrado</h3>
+            <p className="text-sm text-muted-foreground max-w-md">
+              Cadastre o primeiro produto para iniciar a gestão do catálogo da Blink.
+            </p>
+            <Button onClick={handleOpenNew} className="gap-2 mt-3">
+              <Plus className="w-4 h-4" /> Cadastrar produto
             </Button>
-          </CardContent>
+          </div>
         </Card>
       )}
 
-      {/* UX STATE 4: SUCCESS LIST / TABLE (Fade-in ao carregar) */}
+      {/* ESTADO 4: SUCESSO / LISTAGEM COM DADOS */}
       {!loading && !error && produtos.length > 0 && (
-        <div className="space-y-4 animate-fade-in">
-          {/* Visualização Desktop (Table >= 768px) */}
-          <div className="hidden md:block">
-            <Card className="shadow-subtle overflow-hidden">
-              <div className="overflow-x-auto">
+        <Card className="shadow-subtle border-border">
+          <div className="px-6 py-3 border-b flex items-center justify-between text-xs text-muted-foreground">
+            <span>
+              {filteredProdutos.length} produto(s) encontrado(s) de um total de {produtos.length}
+            </span>
+            {(searchTerm || familiaFilter !== 'all') && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs gap-1"
+                onClick={() => {
+                  setSearchTerm('')
+                  setFamiliaFilter('all')
+                }}
+              >
+                <RotateCcw className="w-3 h-3" /> Limpar filtros
+              </Button>
+            )}
+          </div>
+
+          {filteredProdutos.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              Nenhum produto atende aos filtros selecionados.
+            </div>
+          ) : (
+            <>
+              {/* VISUALIZAÇÃO DESKTOP: TABELA (>= 768px) */}
+              <div className="hidden md:block overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-muted/40">
-                      <TableHead className="w-[160px]">Código</TableHead>
-                      <TableHead className="min-w-[240px]">Nome</TableHead>
-                      <TableHead className="w-[140px]">Linha</TableHead>
-                      <TableHead className="w-[180px]">Categoria</TableHead>
-                      <TableHead className="w-[100px] text-center">Ativo</TableHead>
-                      <TableHead className="w-[120px] text-right">Ações</TableHead>
+                    <TableRow>
+                      <TableHead className="w-[200px]">Código</TableHead>
+                      <TableHead>Nome</TableHead>
+                      <TableHead className="w-[240px]">Família</TableHead>
+                      <TableHead className="text-right w-[120px]">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {produtos.map((p) => (
-                      <TableRow
-                        key={p.id}
-                        className={`hover:bg-muted/30 transition-colors ${
-                          !p.ativo ? 'opacity-60 bg-muted/10' : ''
-                        }`}
-                      >
-                        <TableCell className="font-mono font-semibold text-primary text-xs">
-                          {p.codigo}
-                        </TableCell>
-                        <TableCell className="font-medium text-foreground">{p.nome}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="font-medium text-xs bg-muted/40">
-                            {p.linha}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="secondary"
-                            className="font-normal text-xs bg-primary/10 text-primary border-primary/20"
-                          >
-                            {p.categoria}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {p.ativo ? (
-                            <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] gap-1 font-medium">
-                              <CheckCircle2 className="w-3 h-3" /> Ativo
+                    {filteredProdutos.map((p) => {
+                      const fam = p.familia || derivarFamiliaPorCodigo(p.codigo) || '—'
+                      return (
+                        <TableRow key={p.id}>
+                          <TableCell className="font-mono font-semibold text-foreground text-sm">
+                            {p.codigo}
+                          </TableCell>
+                          <TableCell className="font-medium text-foreground">{p.nome}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="font-medium text-xs">
+                              {fam}
                             </Badge>
-                          ) : (
-                            <Badge
-                              variant="secondary"
-                              className="text-muted-foreground text-[11px]"
-                            >
-                              Inativo
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => handleOpenEdit(p)}
-                              className="h-9 w-9 text-muted-foreground hover:text-foreground"
-                              title="Editar Produto"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </Button>
-                            {p.ativo && (
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
                               <Button
-                                size="icon"
                                 variant="ghost"
-                                onClick={() => setDeactivatingProduto(p)}
-                                className="h-9 w-9 text-muted-foreground hover:text-destructive"
-                                title="Desativar Produto"
+                                size="icon"
+                                onClick={() => handleOpenEdit(p)}
+                                title="Editar produto"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setDeletingProduto(p)}
+                                className="text-destructive hover:text-destructive"
+                                title="Excluir produto"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
                   </TableBody>
                 </Table>
               </div>
-            </Card>
-          </div>
 
-          {/* Visualização Mobile (Cards < 768px) */}
-          <div className="grid grid-cols-1 gap-3 md:hidden">
-            {produtos.map((p) => (
-              <Card
-                key={p.id}
-                className={`shadow-subtle transition-all ${
-                  !p.ativo ? 'opacity-65 bg-muted/10' : 'bg-card'
-                }`}
-              >
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <span className="font-mono text-xs font-bold text-primary block">
-                        {p.codigo}
-                      </span>
-                      <h4 className="font-semibold text-foreground text-sm mt-0.5">{p.nome}</h4>
+              {/* VISUALIZAÇÃO RESPONSIVA MOBILE: CARDS (< 768px) */}
+              <div className="md:hidden p-4 space-y-3">
+                {filteredProdutos.map((p) => {
+                  const fam = p.familia || derivarFamiliaPorCodigo(p.codigo) || '—'
+                  return (
+                    <div
+                      key={p.id}
+                      className="p-4 rounded-lg border border-border bg-card space-y-2.5 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="text-xs font-mono font-bold text-primary block">
+                            {p.codigo}
+                          </span>
+                          <h4 className="font-semibold text-foreground text-base leading-tight mt-0.5">
+                            {p.nome}
+                          </h4>
+                        </div>
+                        <Badge variant="secondary" className="text-xs font-semibold shrink-0">
+                          {fam}
+                        </Badge>
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-2 border-t border-border/50">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 text-xs h-8"
+                          onClick={() => handleOpenEdit(p)}
+                        >
+                          <Edit className="w-3.5 h-3.5" /> Editar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 text-xs h-8 text-destructive border-destructive/20 hover:bg-destructive/10"
+                          onClick={() => setDeletingProduto(p)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" /> Excluir
+                        </Button>
+                      </div>
                     </div>
-                    {p.ativo ? (
-                      <Badge className="bg-emerald-500 text-white text-[10px] gap-1 shrink-0">
-                        <CheckCircle2 className="w-2.5 h-2.5" /> Ativo
-                      </Badge>
-                    ) : (
-                      <Badge
-                        variant="secondary"
-                        className="text-[10px] shrink-0 text-muted-foreground"
-                      >
-                        Inativo
-                      </Badge>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-wrap text-xs">
-                    <Badge variant="outline" className="text-[11px] bg-muted/40">
-                      Linha: {p.linha}
-                    </Badge>
-                    <Badge
-                      variant="secondary"
-                      className="text-[11px] bg-primary/10 text-primary border-primary/20"
-                    >
-                      {p.categoria}
-                    </Badge>
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/50">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleOpenEdit(p)}
-                      className="h-11 min-h-[44px] px-3 text-xs gap-1.5 flex-1"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" /> Editar
-                    </Button>
-                    {p.ativo && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setDeactivatingProduto(p)}
-                        className="h-11 min-h-[44px] px-3 text-xs gap-1.5 text-destructive border-destructive/20 hover:bg-destructive/10"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" /> Desativar
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Paginação */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-lg bg-card border shadow-subtle">
-            <p className="text-xs text-muted-foreground">
-              Mostrando <span className="font-medium text-foreground">{produtos.length}</span> de{' '}
-              <span className="font-medium text-foreground">{totalItems}</span> produtos (Página{' '}
-              <span className="font-medium text-foreground">{currentPage}</span> de{' '}
-              <span className="font-medium text-foreground">{totalPages}</span>)
-            </p>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage <= 1 || loading}
-                className="h-11 min-h-[44px] px-3 gap-1 text-xs"
-              >
-                <ChevronLeft className="w-4 h-4" /> Anterior
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage >= totalPages || loading}
-                className="h-11 min-h-[44px] px-3 gap-1 text-xs"
-              >
-                Próxima <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+        </Card>
       )}
 
-      {/* MODAL: NOVO PRODUTO */}
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+      {/* MODAL: NOVO PRODUTO / EDITAR PRODUTO */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[480px]">
-          <form onSubmit={handleSaveCreate}>
+          <form onSubmit={handleSave}>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Plus className="w-5 h-5 text-primary" /> Cadastrar Novo Produto
+                {editingProduto ? (
+                  <>
+                    <Edit className="w-5 h-5 text-primary" /> Editar Produto
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-5 h-5 text-primary" /> Novo Produto
+                  </>
+                )}
               </DialogTitle>
               <DialogDescription>
-                Informe o código, nome, linha e categoria conforme a especificação Blink.
+                {editingProduto
+                  ? 'Atualize os dados do produto no catálogo.'
+                  : 'Preencha os campos para cadastrar um novo produto no catálogo.'}
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-4">
-              {/* Código */}
+              {/* Campo Código */}
               <div className="space-y-1.5">
-                <Label htmlFor="create-codigo" className="text-xs font-semibold">
+                <Label htmlFor="prod-codigo" className="text-xs font-semibold">
                   Código <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  id="create-codigo"
-                  placeholder="Ex: BBMO.BE001, BPMI.OR001"
-                  className={`h-11 min-h-[44px] font-mono text-xs uppercase ${
-                    createErrors.codigo ? 'border-destructive ring-1 ring-destructive' : ''
+                  id="prod-codigo"
+                  placeholder="Ex: BBMO.BE001"
+                  value={formData.codigo}
+                  onChange={(e) => {
+                    const val = e.target.value.toUpperCase()
+                    setFormData((prev) => ({ ...prev, codigo: val }))
+                    if (formErrors.codigo) {
+                      setFormErrors((prev) => ({ ...prev, codigo: undefined }))
+                    }
+                  }}
+                  className={`font-mono uppercase text-sm ${
+                    formErrors.codigo ? 'border-destructive ring-1 ring-destructive' : ''
                   }`}
-                  value={createFormData.codigo}
-                  onChange={(e) =>
-                    setCreateFormData((prev) => ({
-                      ...prev,
-                      codigo: e.target.value.toUpperCase(),
-                    }))
-                  }
                 />
-                {createErrors.codigo ? (
-                  <p className="text-[11px] text-destructive">{createErrors.codigo}</p>
-                ) : (
-                  <p className="text-[11px] text-muted-foreground">
-                    Formato: 3-4 letras, ponto, 2 letras e 3 números (ex: BPMI.OR001)
-                  </p>
+                {formErrors.codigo && (
+                  <p className="text-xs text-destructive">{formErrors.codigo}</p>
                 )}
               </div>
 
-              {/* Nome */}
+              {/* Campo Nome */}
               <div className="space-y-1.5">
-                <Label htmlFor="create-nome" className="text-xs font-semibold">
-                  Nome do Produto <span className="text-destructive">*</span>
+                <Label htmlFor="prod-nome" className="text-xs font-semibold">
+                  Nome <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  id="create-nome"
-                  placeholder="Ex: Blink Calcium 17 - SC"
-                  className={`h-11 min-h-[44px] text-sm ${
-                    createErrors.nome ? 'border-destructive ring-1 ring-destructive' : ''
+                  id="prod-nome"
+                  placeholder="Ex: Blink Mos - SC"
+                  value={formData.nome}
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, nome: e.target.value }))
+                    if (formErrors.nome) {
+                      setFormErrors((prev) => ({ ...prev, nome: undefined }))
+                    }
+                  }}
+                  className={`text-sm ${
+                    formErrors.nome ? 'border-destructive ring-1 ring-destructive' : ''
                   }`}
-                  value={createFormData.nome}
-                  onChange={(e) => setCreateFormData((prev) => ({ ...prev, nome: e.target.value }))}
                 />
-                {createErrors.nome && (
-                  <p className="text-[11px] text-destructive">{createErrors.nome}</p>
-                )}
+                {formErrors.nome && <p className="text-xs text-destructive">{formErrors.nome}</p>}
               </div>
 
-              {/* Linha (Select 5 opções) */}
+              {/* Família Exibida Automaticamente (Derivada) */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">
-                  Linha <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={createFormData.linha}
-                  onValueChange={(val: any) =>
-                    setCreateFormData((prev) => ({ ...prev, linha: val }))
-                  }
-                >
-                  <SelectTrigger className="h-11 min-h-[44px] text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LINHAS_PRODUTO.map((l) => (
-                      <SelectItem key={l} value={l}>
-                        {l}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Categoria (Select 5 opções) */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">
-                  Categoria <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={createFormData.categoria}
-                  onValueChange={(val: any) =>
-                    setCreateFormData((prev) => ({ ...prev, categoria: val }))
-                  }
-                >
-                  <SelectTrigger className="h-11 min-h-[44px] text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIAS_PRODUTO.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Toggle Ativo */}
-              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-                <div className="space-y-0.5">
-                  <Label htmlFor="create-ativo" className="text-xs font-medium cursor-pointer">
-                    Produto Ativo
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-primary" />
+                    Família (calculada automaticamente)
                   </Label>
-                  <p className="text-[11px] text-muted-foreground">
-                    Produtos ativos ficam disponíveis para pedidos e faturamento.
-                  </p>
+                  <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-primary" /> Derivada do prefixo
+                  </span>
                 </div>
-                <Switch
-                  id="create-ativo"
-                  checked={createFormData.ativo}
-                  onCheckedChange={(checked) =>
-                    setCreateFormData((prev) => ({ ...prev, ativo: checked }))
-                  }
-                />
+                <div className="p-3 rounded-lg border bg-muted/40 flex items-center justify-between">
+                  <span className="text-sm font-medium text-foreground">
+                    {familiaDerivada || (
+                      <span className="text-muted-foreground text-xs italic">
+                        Informe o código com prefixo válido (BBMO, BBMY, BPMI, BPMY ou BBMI)
+                      </span>
+                    )}
+                  </span>
+                  {familiaDerivada && (
+                    <Badge variant="outline" className="text-xs bg-background">
+                      {familiaDerivada}
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -732,173 +610,52 @@ export function Produtos() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setIsCreateOpen(false)}
-                className="h-11 min-h-[44px]"
+                onClick={() => setDialogOpen(false)}
+                disabled={isSubmitting}
               >
                 Cancelar
               </Button>
-              <Button
-                type="submit"
-                disabled={isSubmittingCreate}
-                className="h-11 min-h-[44px] gap-2"
-              >
-                {isSubmittingCreate ? 'Salvando...' : 'Cadastrar Produto'}
+              <Button type="submit" disabled={isSubmitting} className="gap-2">
+                {isSubmitting
+                  ? 'Salvando...'
+                  : editingProduto
+                    ? 'Salvar Alterações'
+                    : 'Cadastrar Produto'}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* MODAL: EDITAR PRODUTO */}
-      <Dialog open={!!editingProduto} onOpenChange={(open) => !open && setEditingProduto(null)}>
-        <DialogContent className="sm:max-w-[480px]">
-          <form onSubmit={handleSaveEdit}>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Edit2 className="w-5 h-5 text-primary" /> Editar Produto
-              </DialogTitle>
-              <DialogDescription>
-                Atualize as informações do produto. O código não pode ser alterado.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 py-4">
-              {/* Código (Readonly) */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Código</Label>
-                <Input
-                  disabled
-                  value={editingProduto?.codigo || ''}
-                  className="h-11 min-h-[44px] font-mono text-xs bg-muted cursor-not-allowed uppercase"
-                />
-              </div>
-
-              {/* Nome */}
-              <div className="space-y-1.5">
-                <Label htmlFor="edit-nome" className="text-xs font-semibold">
-                  Nome do Produto <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="edit-nome"
-                  className={`h-11 min-h-[44px] text-sm ${
-                    editErrors.nome ? 'border-destructive ring-1 ring-destructive' : ''
-                  }`}
-                  value={editFormData.nome}
-                  onChange={(e) => setEditFormData((prev) => ({ ...prev, nome: e.target.value }))}
-                />
-                {editErrors.nome && (
-                  <p className="text-[11px] text-destructive">{editErrors.nome}</p>
-                )}
-              </div>
-
-              {/* Linha (Select) */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">
-                  Linha <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={editFormData.linha}
-                  onValueChange={(val: any) => setEditFormData((prev) => ({ ...prev, linha: val }))}
-                >
-                  <SelectTrigger className="h-11 min-h-[44px] text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LINHAS_PRODUTO.map((l) => (
-                      <SelectItem key={l} value={l}>
-                        {l}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Categoria (Select) */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">
-                  Categoria <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={editFormData.categoria}
-                  onValueChange={(val: any) =>
-                    setEditFormData((prev) => ({ ...prev, categoria: val }))
-                  }
-                >
-                  <SelectTrigger className="h-11 min-h-[44px] text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIAS_PRODUTO.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Toggle Ativo */}
-              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-                <div className="space-y-0.5">
-                  <Label htmlFor="edit-ativo" className="text-xs font-medium cursor-pointer">
-                    Produto Ativo
-                  </Label>
-                  <p className="text-[11px] text-muted-foreground">
-                    Desative caso o produto tenha sido descontinuado.
-                  </p>
-                </div>
-                <Switch
-                  id="edit-ativo"
-                  checked={editFormData.ativo}
-                  onCheckedChange={(checked) =>
-                    setEditFormData((prev) => ({ ...prev, ativo: checked }))
-                  }
-                />
-              </div>
-            </div>
-
-            <DialogFooter className="gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setEditingProduto(null)}
-                className="h-11 min-h-[44px]"
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isSubmittingEdit} className="h-11 min-h-[44px] gap-2">
-                {isSubmittingEdit ? 'Salvando...' : 'Salvar Alterações'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* MODAL: CONFIRMAÇÃO DE DESATIVAÇÃO (SOFT DELETE) */}
+      {/* MODAL: CONFIRMAÇÃO DE EXCLUSÃO */}
       <AlertDialog
-        open={!!deactivatingProduto}
-        onOpenChange={(open) => !open && setDeactivatingProduto(null)}
+        open={!!deletingProduto}
+        onOpenChange={(open) => {
+          if (!open) setDeletingProduto(null)
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Desativar este produto?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir este produto?</AlertDialogTitle>
             <AlertDialogDescription>
-              O produto{' '}
+              Esta ação removerá o produto{' '}
               <strong className="text-foreground">
-                {deactivatingProduto?.nome} ({deactivatingProduto?.codigo})
+                {deletingProduto?.nome} ({deletingProduto?.codigo})
               </strong>{' '}
-              será marcado como inativo e não aparecerá nas listagens padrão de pedidos. Você poderá
-              reativá-lo a qualquer momento.
+              do catálogo. Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="h-11 min-h-[44px]">Cancelar</AlertDialogCancel>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletePending}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleConfirmDeactivate}
-              disabled={isSubmittingDeactivate}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 h-11 min-h-[44px]"
+              onClick={(e) => {
+                e.preventDefault()
+                handleConfirmDelete()
+              }}
+              disabled={deletePending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isSubmittingDeactivate ? 'Desativando...' : 'Desativar'}
+              {deletePending ? 'Excluindo...' : 'Excluir'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
