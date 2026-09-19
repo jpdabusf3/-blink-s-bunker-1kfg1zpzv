@@ -9,6 +9,7 @@ import {
   executeImportMatrizVenda,
   executeImportPedidosCarteira,
   executeImportRelatorioVendasSemanal,
+  executeImportAtendimentoPedidos,
   type MaestroAnalysisResult,
   type DocumentType,
   type ExecutionResult,
@@ -314,6 +315,8 @@ export function useMaestroChat(): UseMaestroChatReturn {
         title = 'Importar Pedidos em Carteira'
       } else if (analysis.document_type === 'relatorio_vendas_semanal') {
         title = 'Importar Metas e Vendas Semanal'
+      } else if (analysis.document_type === 'atendimento_pedidos') {
+        title = 'Importar Atendimento a Pedidos'
       }
 
       if (analysis.document_type === 'unknown') {
@@ -349,6 +352,10 @@ export function useMaestroChat(): UseMaestroChatReturn {
                     {
                       label: 'Importar Relatório Semanal (Metas)',
                       action: () => handleSelectQuickAction('relatorio_vendas_semanal'),
+                    },
+                    {
+                      label: 'Importar Atendimento a Pedidos',
+                      action: () => handleSelectQuickAction('atendimento_pedidos'),
                     },
                   ],
                 }
@@ -414,6 +421,7 @@ export function useMaestroChat(): UseMaestroChatReturn {
     if (actionType === 'matriz_venda') actionTitle = 'Importar Matriz de Venda'
     if (actionType === 'pedidos_carteira') actionTitle = 'Importar Pedidos em Carteira'
     if (actionType === 'relatorio_vendas_semanal') actionTitle = 'Importar Metas e Vendas Semanal'
+    if (actionType === 'atendimento_pedidos') actionTitle = 'Importar Atendimento a Pedidos'
 
     const assistantMsg: ChatMessage = {
       id: `assistant-choice-${Date.now()}`,
@@ -524,6 +532,9 @@ export function useMaestroChat(): UseMaestroChatReturn {
         } else if (card.actionType === 'relatorio_vendas_semanal') {
           const items = card.analysisResult.data.relatorio_vendas_semanal || []
           execResult = await executeImportRelatorioVendasSemanal(items)
+        } else if (card.actionType === 'atendimento_pedidos') {
+          const items = card.analysisResult.data.atendimento_pedidos || []
+          execResult = await executeImportAtendimentoPedidos(items)
         } else {
           // sales_spreadsheet ou fallback de relatório
           const sales = card.analysisResult.data.sales || []

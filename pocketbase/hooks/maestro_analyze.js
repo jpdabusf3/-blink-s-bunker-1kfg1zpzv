@@ -115,20 +115,29 @@ routerAdd(
         lowerText.indexOf('realizado') !== -1 &&
         (lowerText.indexOf('resultado') !== -1 || lowerText.indexOf('novos clientes') !== -1)
 
+      var isAtendimentoPedidos =
+        lowerText.indexOf('atendimento a pedidos') !== -1 ||
+        lowerText.indexOf('atendimento pedidos') !== -1 ||
+        ((lowerText.indexOf('pedido') !== -1 || lowerText.indexOf('nº pedido') !== -1) &&
+          (lowerText.indexOf('fob') !== -1 || lowerText.indexOf('cif') !== -1) &&
+          (lowerText.indexOf('data solicitada') !== -1 ||
+            lowerText.indexOf('entrega confirmada') !== -1))
+
       // Prompt para estruturação de alta precisão via IA
       var aiPrompt =
         'Você é o motor de classificação e extração de documentos corporativos do assistente MAESTRO da Blink Biotech.\n' +
-        'Analise os dados extraídos do documento fornecido e classifique-o em EXATAMENTE um dos 7 tipos:\n' +
+        'Analise os dados extraídos do documento fornecido e classifique-o em EXATAMENTE um dos 8 tipos:\n' +
         '1. "invoice_pdf": Nota Fiscal ou DANFE brasileira (faturamento emitido ou recebido).\n' +
         '2. "client_spreadsheet": Planilha de cadastro de clientes / parceiros (contém colunas como Razão Social/Nome, CNPJ, Email, Telefone, Estado, Cidade).\n' +
         '3. "sales_spreadsheet": Planilha de faturamento ou histórico de vendas de pedidos (contém datas de vendas, clientes, códigos/descrição de produto, família de produtos, quantidades e valores).\n' +
         '4. "matriz_venda": Relatório PDF oficial "Matriz de venda" da Blink Biotech (contém colunas País, Carteira, Grupo Cliente, Razão Social, meses JANEIRO a SETEMBRO/DEZEMBRO e rodapé REALIZADO AAAA).\n' +
         '5. "pedidos_carteira": Relatório PDF oficial "Pedidos em carteira" da Blink Biotech (contém janela de 6 meses MÊS | SETEMBRO OUTUBRO... e segmentos Pet, Ruminantes, Suínos e Total Geral).\n' +
         '6. "relatorio_vendas_semanal": Relatório PDF oficial "Relatório de vendas semanal" da Blink Biotech (blocos RESULTADO SETEMBRO/Q3/YTD, BLINK GERAL | BR | INDUSTRIA | PREMIXEIRAS | DISTRIBUIDORAS | LATAM, linhas PLANEJADO e REALIZADO, vendedores e contagens de novos clientes).\n' +
-        '7. "unknown": Qualquer outro formato não reconhecido.\n\n' +
+        '7. "atendimento_pedidos": Tabela ou relatório "Atendimento a pedidos - carteira" da Blink Biotech (colunas Nº Pedido, Cliente, Envio FOB/CIF, Data Solicitada, Entrega Confirmada, Obs).\n' +
+        '8. "unknown": Qualquer outro formato não reconhecido.\n\n' +
         'ESTRUTURA DE RETORNO OBRIGATÓRIA (JSON PURO):\n' +
         '{\n' +
-        '  "document_type": "invoice_pdf" | "client_spreadsheet" | "sales_spreadsheet" | "matriz_venda" | "pedidos_carteira" | "relatorio_vendas_semanal" | "unknown",\n' +
+        '  "document_type": "invoice_pdf" | "client_spreadsheet" | "sales_spreadsheet" | "matriz_venda" | "pedidos_carteira" | "relatorio_vendas_semanal" | "atendimento_pedidos" | "unknown",\n' +
         '  "confidence": number (0 a 1),\n' +
         '  "summary": string (resumo em português, ex: "42 clientes e 168 valores mensais encontrados"),\n' +
         '  "preview_rows": array com até 5 objetos representando as primeiras linhas estruturadas para exibição no chat,\n' +
@@ -192,7 +201,15 @@ routerAdd(
 
       // Fallback determinístico caso a IA falhe
       if (!parsedResult) {
-        if (isMatrizVenda) {
+        if (isAtendimentoPedidos) {
+          parsedResult = {
+            document_type: 'atendimento_pedidos',
+            confidence: 0.95,
+            summary: 'Relatório Atendimento a Pedidos identificado',
+            preview_rows: [],
+            data: { atendimento_pedidos: [] },
+          }
+        } else if (isMatrizVenda) {
           parsedResult = {
             document_type: 'matriz_venda',
             confidence: 0.9,
@@ -325,6 +342,12 @@ routerAdd(
           dataObj.relatorio_vendas_semanal.length > 0
         ) {
           preview = dataObj.relatorio_vendas_semanal.slice(0, 5)
+        } else if (
+          docType === 'atendimento_pedidos' &&
+          Array.isArray(dataObj.atendimento_pedidos) &&
+          dataObj.atendimento_pedidos.length > 0
+        ) {
+          preview = dataObj.atendimento_pedidos.slice(0, 5)
         }
       }
 

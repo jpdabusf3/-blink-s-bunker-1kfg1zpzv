@@ -37,6 +37,20 @@ export interface RelatorioSemanalMetaItem {
   atingimento_pct?: number
 }
 
+export interface AtendimentoPedidoItem {
+  numeroPedido: string
+  cliente: string
+  envio: 'FOB' | 'CIF' | string
+  dataSolicitada?: string // YYYY-MM-DD ou vazio
+  dataSolicitadaRaw?: string
+  entregaConfirmada?: string // YYYY-MM-DD ou vazio
+  entregaConfirmadaRaw?: string
+  observacoes: string
+  dataAmbigua?: boolean
+  clienteResolvidoId?: string
+  clienteResolvidoNome?: string
+}
+
 const MESES_NOMES = [
   'JANEIRO',
   'FEVEREIRO',
@@ -182,9 +196,42 @@ export function extractDateFromFileName(fileName: string): { ano: number; mes: n
 export function detectBlinkReportType(
   text: string,
   fileName: string = '',
-): 'matriz_venda' | 'pedidos_carteira' | 'relatorio_vendas_semanal' | 'unknown' {
+):
+  | 'matriz_venda'
+  | 'pedidos_carteira'
+  | 'relatorio_vendas_semanal'
+  | 'atendimento_pedidos'
+  | 'unknown' {
   const lowerText = (text || '').toLowerCase()
   const lowerFileName = (fileName || '').toLowerCase()
+
+  // 0. Atendimento a pedidos (carteira):
+  // Título "Atendimento a pedidos" ou colunas Nº Pedido, Cliente, Envio, Data Solicitada, Entrega Confirmada
+  const hasAtendimentoName =
+    lowerFileName.includes('atendimento') ||
+    lowerFileName.includes('status de pedido') ||
+    (lowerFileName.includes('pedido') && lowerFileName.includes('setembro'))
+  const hasAtendimentoTitle =
+    lowerText.includes('atendimento a pedidos') ||
+    lowerText.includes('atendimento pedidos') ||
+    lowerText.includes('atendimento de pedidos')
+  const hasAtendimentoColumns =
+    (lowerText.includes('pedido') ||
+      lowerText.includes('nº pedido') ||
+      lowerText.includes('no pedido')) &&
+    lowerText.includes('cliente') &&
+    (lowerText.includes('envio') || lowerText.includes('fob') || lowerText.includes('cif')) &&
+    (lowerText.includes('data solicitada') ||
+      lowerText.includes('entrega confirmada') ||
+      lowerText.includes('solicitada'))
+
+  if (
+    hasAtendimentoTitle ||
+    hasAtendimentoColumns ||
+    (hasAtendimentoName && (lowerText.includes('fob') || lowerText.includes('cif')))
+  ) {
+    return 'atendimento_pedidos'
+  }
 
   // 1. Matriz de venda:
   // Rodapé "REALIZADO <ano>" + colunas de meses por extenso, e/ou nome do arquivo
@@ -745,4 +792,219 @@ function extractMonetaryValues(line: string): number[] {
   }
 
   return vals
+}
+
+/**
+ * PARSER 4: ATENDIMENTO A PEDIDOS (CARTEIRA SETEMBRO/OUTUBRO)
+ * Layout da tabela:
+ * Nº Pedido | Cliente | Envio | Data Solicitada | Entrega Confirmada | Obs
+ * Linhas com número textual como "Cotação" são suportadas.
+ * "Aguardando data" vira data vazia (não rejeitado).
+ * Tratamento de datas com formato dia/mês ambíguo ou padrão BR (DD/MM/AAAA) / US (MM/DD/AAAA)
+ * e flag `dataAmbigua` para notificação na prévia.
+ */
+export function parseAtendimentoPedidosDate(rawDateStr: string): {
+  isoDate?: string
+  raw: string
+  isAmbigua: boolean
+} {
+  const s = (rawDateStr || '').trim()
+  if (!s || /aguardando/i.test(s) || s === '-' || s === '–') {
+    return { raw: s, isAmbigua: false }
+  }
+
+  // Tentar encontrar DD/MM/AAAA ou MM/DD/AAAA ou DD/MM/YY
+  // Também tolerar digitação sem barra antes do ano (ex: 09/102026 -> 09/10/2026)
+  let normalized = s.replace(/(\d{2})\/(\d{2})(\d{4})/, '$1/$2/$3')
+  const match = normalized.match(/(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})/)
+  if (!match) {
+    return { raw: s, isAmbigua: false }
+  }
+
+  let p1 = parseInt(match[1], 10)
+  let p2 = parseInt(match[2], 10)
+  let year = parseInt(match[3], 10)
+  if (year < 100) year += 2000
+
+  let day = p1
+  let month = p2
+  let isAmbigua = false
+
+  // Se p2 > 12 e p1 <= 12, com certeza é formato MM/DD/YYYY (ex: 10/15/2026 -> 15 de Outubro)
+  if (p2 > 12 && p1 <= 12) {
+    month = p1
+    day = p2
+    isAmbigua = true // Marcamos como ambiguidade tratada
+  } else if (p1 > 12 && p2 <= 12) {
+    // Formato claro DD/MM/YYYY
+    day = p1
+    month = p2
+  } else if (p1 <= 12 && p2 <= 12 && p1 !== p2) {
+    // Ambos <= 12: ex 05/10 ou 10/05
+    // No Brasil o padrão geral é DD/MM.
+    // Mas se o arquivo contiver padrão invertido evidente (como 10/05 ao lado de 05/10),
+    // marcamos como ambígua para transparência na prévia.
+    day = p1
+    month = p2
+    isAmbigua = true
+  }
+
+  const iso = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  return { isoDate: iso, raw: s, isAmbigua }
+}
+
+export function parseAtendimentoPedidos(
+  text: string,
+  rows?: Array<Record<string, unknown>>,
+): AtendimentoPedidoItem[] {
+  const items: AtendimentoPedidoItem[] = []
+
+  // 1. Se vierem rows estruturadas (planilha ou JSON extraído)
+  if (Array.isArray(rows) && rows.length > 0) {
+    for (const r of rows) {
+      const keys = Object.keys(r)
+      const findKey = (candidates: string[]) =>
+        keys.find((k) =>
+          candidates.some((c) =>
+            k
+              .toLowerCase()
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .includes(c),
+          ),
+        )
+
+      const pedidoKey = findKey(['pedido', 'nº pedido', 'no pedido', 'numero'])
+      const clienteKey = findKey(['cliente', 'razao', 'nome'])
+      const envioKey = findKey(['envio', 'frete', 'modalidade'])
+      const solicitadaKey = findKey(['data solicitada', 'solicitada'])
+      const confirmadaKey = findKey(['entrega confirmada', 'confirmada', 'entrega'])
+      const obsKey = findKey(['obs', 'observac', 'observacoes', 'nota'])
+
+      const numPedido = String(r[pedidoKey || ''] || '').trim()
+      const cliente = String(r[clienteKey || ''] || '').trim()
+
+      if (!numPedido && !cliente) continue
+      // Pular linha se for o cabeçalho repetido
+      if (/^n[ºo]?\s*pedido$/i.test(numPedido) || /^cliente$/i.test(cliente)) continue
+
+      const envio = String(r[envioKey || ''] || '')
+        .trim()
+        .toUpperCase()
+      const rawSolicitada = String(r[solicitadaKey || ''] || '').trim()
+      const rawConfirmada = String(r[confirmadaKey || ''] || '').trim()
+      const obs = String(r[obsKey || ''] || '').trim()
+
+      const parsedSol = parseAtendimentoPedidosDate(rawSolicitada)
+      const parsedConf = parseAtendimentoPedidosDate(rawConfirmada)
+
+      items.push({
+        numeroPedido: numPedido,
+        cliente,
+        envio: envio.includes('FOB') ? 'FOB' : envio.includes('CIF') ? 'CIF' : envio,
+        dataSolicitada: parsedSol.isoDate,
+        dataSolicitadaRaw: parsedSol.raw,
+        entregaConfirmada: parsedConf.isoDate,
+        entregaConfirmadaRaw: parsedConf.raw,
+        observacoes: obs,
+        dataAmbigua: parsedSol.isAmbigua || parsedConf.isAmbigua,
+      })
+    }
+
+    if (items.length > 0) return items
+  }
+
+  // 2. Extração de texto tabular / PDF / OCR
+  const lines = (text || '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+
+  for (let idx = 0; idx < lines.length; idx++) {
+    const rawLine = lines[idx]
+    const cleanLine = rawLine.replace(/[\t]+/g, ' | ')
+
+    // Ignorar título ou cabeçalhos
+    const lower = cleanLine.toLowerCase()
+    if (
+      lower.includes('atendimento a pedidos') ||
+      lower.includes('atendimento pedidos') ||
+      (lower.includes('pedido') && lower.includes('cliente') && lower.includes('envio'))
+    ) {
+      continue
+    }
+
+    // Casos separados por pipe (|)
+    if (cleanLine.includes('|')) {
+      const parts = cleanLine.split('|').map((p) => p.trim())
+      if (parts.length >= 3) {
+        const numPedido = parts[0]
+        const cliente = parts[1]
+        const envio = parts[2].toUpperCase()
+        const rawSol = parts[3] || ''
+        const rawConf = parts[4] || ''
+        const obs = parts.slice(5).join(' ') || ''
+
+        if (numPedido && cliente) {
+          const parsedSol = parseAtendimentoPedidosDate(rawSol)
+          const parsedConf = parseAtendimentoPedidosDate(rawConf)
+          items.push({
+            numeroPedido: numPedido,
+            cliente,
+            envio: envio.includes('FOB') ? 'FOB' : envio.includes('CIF') ? 'CIF' : envio,
+            dataSolicitada: parsedSol.isoDate,
+            dataSolicitadaRaw: parsedSol.raw,
+            entregaConfirmada: parsedConf.isoDate,
+            entregaConfirmadaRaw: parsedConf.raw,
+            observacoes: obs,
+            dataAmbigua: parsedSol.isAmbigua || parsedConf.isAmbigua,
+          })
+          continue
+        }
+      }
+    }
+
+    // Casos em que as colunas vêm separadas por espaços múltiplos ou regex:
+    // Padrão: (Numero ou "Cotação") + (Razão Social) + (FOB|CIF) + (Data ou "Aguardando data") + ...
+    const rowMatch = cleanLine.match(/^(\d+|cota[cç][aã]o)\s+(.+?)\s+(FOB|CIF)\s+(.+)$/i)
+    if (rowMatch) {
+      const numPedido = rowMatch[1]
+      const cliente = rowMatch[2].trim()
+      const envio = rowMatch[3].toUpperCase()
+      const rest = rowMatch[4].trim()
+
+      // Tentar separar as duas datas e obs no resto da linha
+      // Datas podem ser: "28/08/2026", "Aguardando data", "09/102026", "10/15/2026"
+      const dateTokenRegex = /(\d{1,2}[/\-.]\d{1,2}[/\-.]?\d{2,4}|aguardando(?:\s+data)?)/gi
+      const dateTokens: string[] = []
+      let dMatch: RegExpExecArray | null
+      let lastIndex = 0
+
+      while ((dMatch = dateTokenRegex.exec(rest)) !== null) {
+        dateTokens.push(dMatch[0])
+        lastIndex = dMatch.index + dMatch[0].length
+      }
+
+      const rawSol = dateTokens[0] || ''
+      const rawConf = dateTokens[1] || ''
+      const obs = rest.substring(lastIndex).trim()
+
+      const parsedSol = parseAtendimentoPedidosDate(rawSol)
+      const parsedConf = parseAtendimentoPedidosDate(rawConf)
+
+      items.push({
+        numeroPedido: numPedido,
+        cliente,
+        envio: envio.includes('FOB') ? 'FOB' : 'CIF',
+        dataSolicitada: parsedSol.isoDate,
+        dataSolicitadaRaw: parsedSol.raw,
+        entregaConfirmada: parsedConf.isoDate,
+        entregaConfirmadaRaw: parsedConf.raw,
+        observacoes: obs,
+        dataAmbigua: parsedSol.isAmbigua || parsedConf.isAmbigua,
+      })
+    }
+  }
+
+  return items
 }

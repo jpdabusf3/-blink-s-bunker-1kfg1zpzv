@@ -6,6 +6,8 @@ import {
   parseMatrizVenda,
   parsePedidosCarteira,
   parseRelatorioVendasSemanal,
+  parseAtendimentoPedidos,
+  parseAtendimentoPedidosDate,
 } from './blink-pdf-parsers'
 
 describe('Blink PDF Parsers', () => {
@@ -117,5 +119,49 @@ RESULTADO SETEMBRO
     )
     expect(rodrigoItem).toBeDefined()
     expect(rodrigoItem?.vendedor_nome).toBe('Rodrigo Gardinal')
+  })
+
+  it('reconhece e extrai a tabela de Atendimento a pedidos (novo formato)', () => {
+    const sampleText = `
+Atendimento a pedidos - carteira Setembro/Outubro
+Nº Pedido | Cliente | Envio | Data Solicitada | Entrega Confirmada | Obs
+506 | Feedpro Science Nutrition Importadora e Exportadora Ltda | FOB | 28/08/2026 | 28/09/2026 | Avaliar possibil de novo pedido
+474 | Pet Food Solution Ind. Com. Imp. Expor. de Prod. e Artigos | CIF | 15/09/2026 | 25/09/2026 |
+510 | Brenntag Quimica Brasil Ltda | CIF | 30/09/2026 | 10/15/2026 |
+537 | Alibem Alimentos S.A. | CIF | 05/10/2026 | 10/05/2026 |
+542 | Alibem Alimentos S.A. | CIF | Aguardando data | Aguardando data |
+532 | Alibem Alimentos S.A. | CIF | 09/10/2026 | 09/10/2026 |
+396 | Manfrim Indl e Coml Ltda | CIF | 07/10/2026 | 07/10/2026 |
+561 | Adimax Industria e Comercio de Alimentos Ltda | CIF | 14/10/2026 | 14/10/2026 |
+475 | Pet Food Solution Ind. Com. Imp. Expor. de Prod. e Artigos | CIF | 16/10/2026 | 16/10/2026 |
+Cotação | Salus Comercio de Produtos de Saude e Nutrição Animal S.A | FOB | 23/09/2026 | 13/10/2026 | Validar dia 21/09 atend. Parcial
+`
+    expect(detectBlinkReportType(sampleText, 'status de pedido.png')).toBe('atendimento_pedidos')
+
+    const items = parseAtendimentoPedidos(sampleText)
+    expect(items.length).toBe(10)
+
+    // Linha 1: 506
+    expect(items[0].numeroPedido).toBe('506')
+    expect(items[0].envio).toBe('FOB')
+    expect(items[0].dataSolicitada).toBe('2026-08-28')
+    expect(items[0].entregaConfirmada).toBe('2026-09-28')
+    expect(items[0].observacoes).toBe('Avaliar possibil de novo pedido')
+
+    // Linha 3: 510 com 10/15/2026 -> 15 de Outubro (15/10/2026)
+    expect(items[2].numeroPedido).toBe('510')
+    expect(items[2].entregaConfirmada).toBe('2026-10-15')
+    expect(items[2].dataAmbigua).toBe(true)
+
+    // Linha 5: 542 com Aguardando data -> data vazia, não rejeitada
+    expect(items[4].numeroPedido).toBe('542')
+    expect(items[4].dataSolicitada).toBeUndefined()
+    expect(items[4].entregaConfirmada).toBeUndefined()
+    expect(items[4].dataSolicitadaRaw).toBe('Aguardando data')
+
+    // Linha 10: Cotação como texto
+    expect(items[9].numeroPedido).toBe('Cotação')
+    expect(items[9].envio).toBe('FOB')
+    expect(items[9].observacoes).toBe('Validar dia 21/09 atend. Parcial')
   })
 })

@@ -26,7 +26,9 @@ import {
   executeImportMatrizVenda,
   executeImportPedidosCarteira,
   executeImportRelatorioVendasSemanal,
+  executeImportAtendimentoPedidos,
 } from '@/services/maestro-analyze-service'
+import { type AtendimentoPedidoItem, parseAtendimentoPedidos } from '@/services/blink-pdf-parsers'
 import { normalizeNumberBR } from '@/lib/utils'
 
 export type DetectedFileType =
@@ -34,6 +36,7 @@ export type DetectedFileType =
   | 'pdf_matriz_venda'
   | 'pdf_pedidos_carteira'
   | 'pdf_relatorio_vendas_semanal'
+  | 'pdf_atendimento_pedidos'
   | 'document_table'
   | 'unknown'
 
@@ -51,6 +54,7 @@ export interface SmartImportParseResult {
     matrizVenda?: MatrizVendaItem[]
     pedidosCarteira?: PedidoCarteiraItem[]
     relatorioSemanal?: RelatorioSemanalMetaItem[]
+    atendimentoPedidos?: AtendimentoPedidoItem[]
   }
 }
 
@@ -456,9 +460,56 @@ export async function smartParseFile(file: File): Promise<SmartImportParseResult
       }
     }
 
-    // PDF comum que não é um dos 3 relatórios Blink
+    if (blinkType === 'atendimento_pedidos') {
+      const items = parseAtendimentoPedidos(pdfText)
+      if (items.length === 0) {
+        throw new Error(
+          'Identificamos um relatório de Atendimento a Pedidos da Blink, mas nenhum pedido pôde ser estruturado.',
+        )
+      }
+
+      const headers = [
+        'Nº Pedido',
+        'Cliente',
+        'Envio',
+        'Data Solicitada',
+        'Entrega Confirmada',
+        'Obs',
+      ]
+      const rows = items.map((it) => ({
+        'Nº Pedido': it.numeroPedido,
+        Cliente: it.cliente,
+        Envio: it.envio,
+        'Data Solicitada': it.dataSolicitada || it.dataSolicitadaRaw || 'Aguardando data',
+        'Entrega Confirmada': it.entregaConfirmada || it.entregaConfirmadaRaw || 'Aguardando data',
+        Obs: it.observacoes || '—',
+      }))
+
+      const suggested: Record<string, FaturamentoFieldKey | ''> = {
+        'Nº Pedido': 'numero_documento',
+        Cliente: 'cliente',
+        Envio: '',
+        'Data Solicitada': 'data',
+        'Entrega Confirmada': '',
+        Obs: '',
+      }
+
+      return {
+        detectedType: 'pdf_atendimento_pedidos',
+        headers,
+        rows,
+        suggestedMapping: suggested,
+        fileName,
+        fileSize,
+        totalRows: rows.length,
+        rawText: pdfText,
+        blinkData: { atendimentoPedidos: items },
+      }
+    }
+
+    // PDF comum que não é um dos relatórios Blink
     throw new Error(
-      'Não foi possível identificar dados tabulares neste documento. Use XLSX, CSV ou um relatório PDF da Blink (Matriz de venda, Pedidos em carteira ou Relatório de vendas semanal).',
+      'Não foi possível identificar dados tabulares neste documento. Use XLSX, CSV ou um relatório PDF da Blink (Atendimento a pedidos, Matriz de venda, Pedidos em carteira ou Relatório de vendas semanal).',
     )
   }
 
@@ -721,6 +772,25 @@ export async function executeSmartImport(params: ExecuteSmartImportOptions): Pro
     return {
       success: res.success,
       totalRead: parseResult.blinkData.relatorioSemanal.length,
+      imported: res.inserted || 0,
+      duplicatesIgnored: res.skippedDuplicates || 0,
+      errorsCount: res.errorsCount || 0,
+      errorDetails: res.errorDetails || [],
+      message: res.message,
+    }
+  }
+
+  if (
+    parseResult.detectedType === 'pdf_atendimento_pedidos' &&
+    parseResult.blinkData?.atendimentoPedidos
+  ) {
+    const res = await executeImportAtendimentoPedidos(
+      parseResult.blinkData.atendimentoPedidos,
+      parseResult.fileName,
+    )
+    return {
+      success: res.success,
+      totalRead: parseResult.blinkData.atendimentoPedidos.length,
       imported: res.inserted || 0,
       duplicatesIgnored: res.skippedDuplicates || 0,
       errorsCount: res.errorsCount || 0,

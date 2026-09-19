@@ -41,6 +41,7 @@ import {
   executeImportMatrizVenda,
   executeImportPedidosCarteira,
   executeImportRelatorioVendasSemanal,
+  executeImportAtendimentoPedidos,
   type MaestroAnalysisResult,
   type ExecutionResult,
 } from '@/services/maestro-analyze-service'
@@ -300,12 +301,23 @@ export default function Documents() {
                       if (
                         analysis.document_type !== 'matriz_venda' &&
                         analysis.document_type !== 'pedidos_carteira' &&
-                        analysis.document_type !== 'relatorio_vendas_semanal'
+                        analysis.document_type !== 'relatorio_vendas_semanal' &&
+                        analysis.document_type !== 'atendimento_pedidos'
                       ) {
                         toast({
                           title: 'Formato não identificado',
                           description:
-                            'Não foi possível ler o relatório. Verifique se o arquivo é a Matriz de Venda, Pedidos em Carteira ou Relatório Semanal e tente novamente.',
+                            'Nenhum pedido identificado no arquivo. Verifique se o formato corresponde ao Atendimento a pedidos, Matriz de Venda ou Relatório Semanal.',
+                          variant: 'destructive',
+                        })
+                      } else if (
+                        analysis.document_type === 'atendimento_pedidos' &&
+                        (!analysis.data.atendimento_pedidos ||
+                          analysis.data.atendimento_pedidos.length === 0)
+                      ) {
+                        toast({
+                          title: 'Arquivo Vazio',
+                          description: 'Nenhum pedido identificado no arquivo.',
                           variant: 'destructive',
                         })
                       } else {
@@ -336,8 +348,8 @@ export default function Documents() {
                         : 'Clique para selecionar o relatório PDF'}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    Aceita: Matriz de venda *.pdf, Pedidos em carteira *.pdf, Relatório de vendas
-                    semanal *.pdf
+                    Aceita: Atendimento a pedidos (carteira) *.pdf, Matriz de venda *.pdf, Pedidos
+                    em carteira *.pdf, Relatório de vendas semanal *.pdf
                   </span>
                 </label>
               </div>
@@ -363,6 +375,8 @@ export default function Documents() {
                       'Pedidos em Carteira Identificado'}
                     {analysisResult.document_type === 'relatorio_vendas_semanal' &&
                       'Relatório de Vendas Semanal Identificado'}
+                    {analysisResult.document_type === 'atendimento_pedidos' &&
+                      'Atendimento a Pedidos (Carteira) Identificado'}
                   </span>
                   <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
                     {Math.round(analysisResult.confidence * 100)}% confiança
@@ -371,8 +385,30 @@ export default function Documents() {
                 <p className="text-sm mt-1">{analysisResult.summary}</p>
               </div>
 
-              {/* Tabela de prévia (primeiras 5 linhas) */}
-              {analysisResult.preview_rows && analysisResult.preview_rows.length > 0 && (
+              {/* Avisos específicos para Atendimento a pedidos (ambiguidade de datas, etc.) */}
+              {analysisResult.document_type === 'atendimento_pedidos' &&
+                analysisResult.data.atendimento_pedidos && (
+                  <div className="text-xs text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 p-2.5 rounded border border-amber-200 dark:border-amber-800 space-y-1">
+                    <p className="font-semibold">Observações do Mapeamento:</p>
+                    <p>
+                      • Pedidos identificados:{' '}
+                      <strong>{analysisResult.data.atendimento_pedidos.length}</strong> no lote.
+                    </p>
+                    <p>
+                      • Linhas com &ldquo;Aguardando data&rdquo; serão cadastradas sem data e com
+                      status aguardando.
+                    </p>
+                    {analysisResult.data.atendimento_pedidos.some((p) => p.dataAmbigua) && (
+                      <p>
+                        • Formatos de data ambíguos (ex.: 10/15/2026 interpretado como 15 de
+                        Outubro) foram normalizados automaticamente.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+              {/* Tabela de prévia (primeiras linhas) */}
+              {analysisResult.preview_rows && analysisResult.preview_rows.length > 0 ? (
                 <div className="space-y-2">
                   <p className="text-xs font-semibold uppercase text-muted-foreground">
                     Prévia dos Primeiros Registros Extraídos
@@ -402,6 +438,10 @@ export default function Documents() {
                     </table>
                   </div>
                 </div>
+              ) : (
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  Nenhum pedido identificado no arquivo
+                </div>
               )}
 
               <div className="flex justify-end gap-2 pt-2">
@@ -430,9 +470,14 @@ export default function Documents() {
                           analysisResult.data.pedidos_carteira || [],
                           reportFile?.name,
                         )
-                      } else {
+                      } else if (analysisResult.document_type === 'relatorio_vendas_semanal') {
                         res = await executeImportRelatorioVendasSemanal(
                           analysisResult.data.relatorio_vendas_semanal || [],
+                          reportFile?.name,
+                        )
+                      } else {
+                        res = await executeImportAtendimentoPedidos(
+                          analysisResult.data.atendimento_pedidos || [],
                           reportFile?.name,
                         )
                       }

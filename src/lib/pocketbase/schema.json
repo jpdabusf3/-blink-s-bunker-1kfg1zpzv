@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-19T17:50:11.983Z",
+  "generatedAt": "2026-09-19T18:02:54.114Z",
   "collections": [
     {
       "name": "users",
@@ -3520,6 +3520,30 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "numeroPedido",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "envio",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "dataSolicitada",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "entregaConfirmada",
+          "type": "date",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -3528,7 +3552,8 @@
         "CREATE INDEX `idx_pedidos_clienteId` ON `pedidos` (clienteId)",
         "CREATE INDEX `idx_pedidos_produtoId` ON `pedidos` (produtoId)",
         "CREATE INDEX `idx_pedidos_status` ON `pedidos` (status)",
-        "CREATE INDEX `idx_pedidos_dataPedido` ON `pedidos` (dataPedido)"
+        "CREATE INDEX `idx_pedidos_dataPedido` ON `pedidos` (dataPedido)",
+        "CREATE INDEX `idx_pedidos_numeroPedido` ON `pedidos` (numeroPedido)"
       ]
     },
     {

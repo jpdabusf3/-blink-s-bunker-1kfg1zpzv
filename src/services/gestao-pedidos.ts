@@ -4,24 +4,37 @@ export type PedidoStatus = 'ABERTO' | 'FATURADO' | 'CANCELADO'
 
 export interface PedidoRecord {
   id: string
-  clienteId: string
-  produtoId: string
-  quantidade: number
-  valorUnitario: number
-  valorTotal: number
+  clienteId?: string
+  cliente_id?: string
+  cliente?: string
+  produtoId?: string
+  quantidade?: number
+  valorUnitario?: number
+  valorTotal?: number
   status: PedidoStatus
-  dataPedido: string // ISO date string (YYYY-MM-DD or full ISO)
+  dataPedido?: string
+  data_pedido?: string
   dataEntregaPrevista?: string
   nfNumero?: string
-  created?: string
-  updated?: string
+  numeroPedido?: string
+  envio?: string
+  dataSolicitada?: string
+  entregaConfirmada?: string
+  observacoes?: string
+  created: string
+  updated: string
   expand?: {
     clienteId?: {
       id: string
       name: string
       city?: string
       state?: string
-      cnpj?: string
+    }
+    cliente_id?: {
+      id: string
+      name: string
+      city?: string
+      state?: string
     }
     produtoId?: {
       id: string

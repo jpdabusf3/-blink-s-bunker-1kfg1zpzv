@@ -10,9 +10,11 @@ import {
   parseMatrizVenda,
   parsePedidosCarteira,
   parseRelatorioVendasSemanal,
+  parseAtendimentoPedidos,
   type MatrizVendaItem,
   type PedidoCarteiraItem,
   type RelatorioSemanalMetaItem,
+  type AtendimentoPedidoItem,
 } from '@/services/blink-pdf-parsers'
 
 export type DocumentType =
@@ -22,6 +24,7 @@ export type DocumentType =
   | 'matriz_venda'
   | 'pedidos_carteira'
   | 'relatorio_vendas_semanal'
+  | 'atendimento_pedidos'
   | 'unknown'
 
 export interface InvoiceItemExtracted {
@@ -86,6 +89,7 @@ export interface MaestroAnalysisResult {
     matriz_venda?: MatrizVendaItem[]
     pedidos_carteira?: PedidoCarteiraItem[]
     relatorio_vendas_semanal?: RelatorioSemanalMetaItem[]
+    atendimento_pedidos?: AtendimentoPedidoItem[]
   }
 }
 
@@ -273,6 +277,19 @@ export async function analyzeMaestroFile(params: {
       Planejado: `R$ ${p.planejado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
       Realizado: `R$ ${p.realizado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
       Atingimento: `${p.atingimento_pct}%`,
+    }))
+  } else if (finalDocType === 'atendimento_pedidos') {
+    const parsed = parseAtendimentoPedidos(params.extractedText || '', params.rows)
+    data.document_type = 'atendimento_pedidos'
+    data.data.atendimento_pedidos = parsed
+    data.summary = `${parsed.length} pedidos de atendimento em carteira identificados.`
+    data.preview_rows = parsed.slice(0, 5).map((p) => ({
+      'Nº Pedido': p.numeroPedido,
+      Cliente: p.cliente,
+      Envio: p.envio,
+      'Data Solicitada': p.dataSolicitada || p.dataSolicitadaRaw || 'Aguardando data',
+      'Entrega Confirmada': p.entregaConfirmada || p.entregaConfirmadaRaw || 'Aguardando data',
+      Obs: p.observacoes || '-',
     }))
   }
 
@@ -974,5 +991,244 @@ export async function executeImportRelatorioVendasSemanal(
     navigationTab: '/metas',
     navigationLabel: 'Ver Metas e Desempenho',
     message: `Relatório de Vendas Semanal importado: ${inserted} meta(s) inserida(s), ${skippedDuplicates} atualizada(s)/comparada(s).`,
+  }
+}
+
+/**
+ * Normaliza string para busca aproximada (remove acentos, pontuações e caixa baixa)
+ */
+function normalizeForComparison(str: string): string {
+  return (str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * Executa a tarefa de Importação de Atendimento a Pedidos (Carteira):
+ * - Resolve cliente contra factories existentes (por razão social / fantasia aproximada)
+ * - Deduplica por numeroPedido (+ cliente) contra a base existente e dentro do lote
+ * - Nunca sobrescreve ou deleta: apenas append
+ * - Salva em `pedidos` (com numeroPedido, envio, dataSolicitada, entregaConfirmada, cliente_id, cliente, observacoes)
+ * - Salva histórico em `import_history`
+ */
+export async function executeImportAtendimentoPedidos(
+  items: AtendimentoPedidoItem[],
+  originalFileName?: string,
+): Promise<ExecutionResult> {
+  let inserted = 0
+  let skippedDuplicates = 0
+  const errorsList: Array<{ row: number; reason: string }> = []
+
+  // 1. Carregar lista de clientes (factories) para resolução de razão social
+  const factories = await pb
+    .collection('factories')
+    .getFullList({ fields: 'id,name,razao_social,nome_fantasia' })
+    .catch(() => [])
+
+  const normalizedFactories = factories.map((f) => ({
+    id: f.id,
+    name: f.name || f.razao_social || f.nome_fantasia || '',
+    normName: normalizeForComparison(f.name || ''),
+    normRazao: normalizeForComparison(f.razao_social || ''),
+    normFantasia: normalizeForComparison(f.nome_fantasia || ''),
+  }))
+
+  const resolveCliente = (clientName: string) => {
+    const target = normalizeForComparison(clientName)
+    if (!target) return null
+
+    // Exact match
+    const exact = normalizedFactories.find(
+      (f) => f.normName === target || f.normRazao === target || f.normFantasia === target,
+    )
+    if (exact) return exact
+
+    // Substring / include match
+    const partial = normalizedFactories.find(
+      (f) =>
+        (f.normRazao && (target.includes(f.normRazao) || f.normRazao.includes(target))) ||
+        (f.normName && (target.includes(f.normName) || f.normName.includes(target))) ||
+        (f.normFantasia && (target.includes(f.normFantasia) || f.normFantasia.includes(target))),
+    )
+    if (partial) return partial
+
+    // Primeiras 2 palavras
+    const targetWords = target.split(' ').filter((w) => w.length > 2)
+    if (targetWords.length >= 2) {
+      const matchWords = normalizedFactories.find((f) => {
+        const full = `${f.normName} ${f.normRazao} ${f.normFantasia}`
+        return targetWords.slice(0, 2).every((w) => full.includes(w))
+      })
+      if (matchWords) return matchWords
+    }
+
+    return null
+  }
+
+  // 2. Carregar pedidos existentes para deduplicação
+  const existingPedidos = await pb
+    .collection('pedidos')
+    .getFullList({ fields: 'id,numeroPedido,cliente_id,cliente' })
+    .catch(() => [])
+
+  // Cria chave de deduplicação normalizada: "numPedido:clienteNorm"
+  const existingKeySet = new Set<string>()
+  for (const ep of existingPedidos) {
+    const num = String(ep.numeroPedido || '')
+      .trim()
+      .toLowerCase()
+    const cli = normalizeForComparison(ep.cliente || '')
+    if (num) {
+      existingKeySet.add(`${num}|${cli}`)
+      // Se tiver número específico, também registrar apenas o número para segurança
+      if (num !== 'cotacao' && num !== 'cotação') {
+        existingKeySet.add(`num:${num}`)
+      }
+    }
+  }
+
+  // Deduplicação interna ao lote
+  const batchSeenKeys = new Set<string>()
+
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i]
+    const rowNum = i + 1
+    const cleanNum = (it.numeroPedido || '').trim()
+    const cleanCli = (it.cliente || '').trim()
+
+    if (!cleanNum && !cleanCli) {
+      continue
+    }
+
+    const numKey = cleanNum.toLowerCase()
+    const cliKey = normalizeForComparison(cleanCli)
+    const compositeKey = `${numKey}|${cliKey}`
+    const singleNumKey = `num:${numKey}`
+
+    // Checar duplicatas (contra base existente e lote)
+    const isDupInBatch =
+      batchSeenKeys.has(compositeKey) ||
+      (numKey !== 'cotacao' && numKey !== 'cotação' && batchSeenKeys.has(singleNumKey))
+    const isDupInDb =
+      existingKeySet.has(compositeKey) ||
+      (numKey !== 'cotacao' && numKey !== 'cotação' && existingKeySet.has(singleNumKey))
+
+    if (isDupInBatch || isDupInDb) {
+      skippedDuplicates++
+      continue
+    }
+
+    batchSeenKeys.add(compositeKey)
+    if (numKey !== 'cotacao' && numKey !== 'cotação') {
+      batchSeenKeys.add(singleNumKey)
+    }
+
+    // Resolver cliente
+    const matched = resolveCliente(cleanCli)
+    const clienteId = matched?.id || null
+    const clienteNome = matched?.name || cleanCli
+
+    try {
+      // Status padrão do pedido
+      const isAguardando =
+        !it.dataSolicitada ||
+        /aguardando/i.test(it.dataSolicitadaRaw || '') ||
+        /aguardando/i.test(it.entregaConfirmadaRaw || '')
+
+      const status = isAguardando
+        ? 'aguardando'
+        : numKey.includes('cotac')
+          ? 'solicitado'
+          : 'aprovado'
+
+      await pb.collection('pedidos').create({
+        cliente_id: clienteId,
+        cliente: clienteNome,
+        numeroPedido: cleanNum,
+        envio: it.envio || 'CIF',
+        dataSolicitada: it.dataSolicitada || null,
+        entregaConfirmada: it.entregaConfirmada || null,
+        data_pedido: it.dataSolicitada || new Date().toISOString().slice(0, 10),
+        status,
+        observacoes: it.observacoes || '',
+        itens: [
+          {
+            descricao: `Atendimento a pedido ${cleanNum} (${it.envio || 'CIF'})`,
+            quantidade: 1,
+            unidade: 'UN',
+            observacao: it.observacoes || '',
+          },
+        ],
+      })
+
+      inserted++
+      existingKeySet.add(compositeKey)
+      if (numKey !== 'cotacao' && numKey !== 'cotação') {
+        existingKeySet.add(singleNumKey)
+      }
+    } catch (err) {
+      errorsList.push({
+        row: rowNum,
+        reason: `Pedido ${cleanNum} (${cleanCli}): ${(err as Error).message}`,
+      })
+    }
+  }
+
+  // Gravar no histórico de importação (import_history)
+  try {
+    const fName = originalFileName || 'atendimento_pedidos.pdf'
+    const parts = fName.split('.')
+    const fType = parts.length > 1 ? parts[parts.length - 1].toLowerCase() : 'pdf'
+    const statusVal = errorsList.length === 0 ? 'sucesso' : inserted > 0 ? 'parcial' : 'erro'
+    const detailsMsg =
+      errorsList.length > 0
+        ? errorsList
+            .map((e) => `Linha ${e.row}: ${e.reason}`)
+            .slice(0, 10)
+            .join('\n')
+        : `Importação concluída: ${inserted} pedidos importados, ${skippedDuplicates} duplicados ignorados.`
+
+    await pb.collection('import_history').create({
+      file_name: fName,
+      file_type: fType,
+      imported_at: new Date().toISOString(),
+      total_rows: items.length,
+      imported_rows: inserted,
+      error_rows: errorsList.length,
+      status: statusVal,
+      details: detailsMsg,
+    })
+  } catch (histErr) {
+    console.warn('Erro ao registrar histórico de importação:', histErr)
+  }
+
+  // Notificar sincronização em tempo real para telas do CRM (Gestão de Pedidos, Resumo, etc.)
+  if (typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'pedidos' } }))
+      window.dispatchEvent(
+        new CustomEvent('blink:datasync', { detail: { entity: 'pedidos_carteira' } }),
+      )
+      window.dispatchEvent(
+        new CustomEvent('blink:datasync', { detail: { entity: 'import_history' } }),
+      )
+    } catch {
+      /* intentionally ignored */
+    }
+  }
+
+  return {
+    success: inserted > 0 || skippedDuplicates > 0,
+    inserted,
+    skippedDuplicates,
+    errorsCount: errorsList.length,
+    errorDetails: errorsList,
+    navigationTab: '/gestao-pedidos',
+    navigationLabel: 'Ver Gestão de Pedidos',
+    message: `Importação concluída: ${inserted} pedidos importados, ${skippedDuplicates} duplicados ignorados.`,
   }
 }
