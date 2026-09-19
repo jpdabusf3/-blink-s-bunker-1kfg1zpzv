@@ -75,6 +75,8 @@ export function mapRecordToFactory(record: any): Factory {
     contato: record.contato,
     status_contato: record.status_contato,
     cnpj: record.cnpj,
+    telefone: record.telefone || record.contactPhone,
+    observacoes: record.observacoes || record.notes,
     lat: typeof record.lat === 'number' ? record.lat : record.lat ? Number(record.lat) : undefined,
     lng: typeof record.lng === 'number' ? record.lng : record.lng ? Number(record.lng) : undefined,
     geocode_precision: record.geocode_precision,

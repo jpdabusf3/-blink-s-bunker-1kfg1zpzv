@@ -49,6 +49,8 @@ import { factoryMatchesAnyVendedor } from '@/lib/vendedorFilterHelper'
 import { normalizeArray } from '@/lib/utils'
 import { FactoryForm, CANONICAL_SPECIES } from '@/components/FactoryForm'
 import { ClientsMapDialog } from '@/components/ClientsMapDialog'
+import { ClientesManager } from '@/components/ClientesManager'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ImportExcelDialog } from '@/components/ImportExcelDialog'
 import { MultiSelect } from '@/components/ui/multi-select'
 import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
@@ -1068,735 +1070,764 @@ export default function Cadastro() {
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-3">
-          <div className="bg-primary p-2 rounded-lg">
-            <Building2 className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Cadastro de Clientes</h1>
-            <p className="text-muted-foreground text-sm">Gerencie fábricas e vendedores.</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            className="gap-2"
-            disabled={csvExporting}
-            onClick={handleExportCSV}
-          >
-            {csvExporting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Download className="w-4 h-4" />
-            )}
-            {csvExporting ? 'Exportando...' : 'Exportar CSV'}
-          </Button>
-          <Button variant="outline" className="gap-2" onClick={handleOpenEnrichConfirm}>
-            <Sparkles className="w-4 h-4" />
-            Enriquecer Dados
-          </Button>
-          <Button variant="outline" className="gap-2" onClick={() => setMapModalOpen(true)}>
-            <MapPin className="w-4 h-4 text-primary" />
-            Mapa de Clientes
-          </Button>
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={() => setGlobalAuditOpen(true)}
-            title="Ver histórico geral de transferências e auditoria da carteira"
-          >
-            <ShieldCheck className="w-4 h-4 text-primary" />
-            Auditoria da Carteira
-          </Button>
-          <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
-            <Upload className="w-4 h-4" /> Importar
-          </Button>
-          <Button className="gap-2" onClick={handleNew}>
-            <Plus className="w-4 h-4" /> Nova Fábrica
-          </Button>
-        </div>
-      </div>
-
-      <Card className="shadow-subtle">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <Tabs defaultValue="clientes" className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-primary p-2 rounded-lg">
+              <Building2 className="w-6 h-6 text-primary-foreground" />
+            </div>
             <div>
-              <CardTitle>Fábricas Cadastradas</CardTitle>
-              <CardDescription>
-                {filtered.length} fábrica(s) encontrada(s)
-                {filtered.length > pageSize && (
-                  <>
-                    {' '}
-                    • Exibindo {(currentPage - 1) * pageSize + 1} a{' '}
-                    {Math.min(currentPage * pageSize, filtered.length)}
-                  </>
-                )}
-              </CardDescription>
-            </div>
-            {filtered.length > 0 && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>Itens por página:</span>
-                <select
-                  aria-label="Itens por página"
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value))
-                    setCurrentPage(1)
-                  }}
-                  className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                >
-                  {PAGE_SIZE_OPTIONS.map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-        </CardHeader>
-        {selectedIds.size > 0 && (
-          <div className="mx-6 mb-3 p-3 rounded-lg border bg-primary/5 border-primary/20 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Badge variant="default" className="gap-1 font-semibold">
-                  <CheckSquare className="w-3.5 h-3.5" />
-                  {selectedIds.size} selecionado(s)
-                </Badge>
-                <span className="text-xs text-muted-foreground hidden sm:inline">
-                  (da página ou filtrados)
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 text-xs"
-                  disabled={batchExporting || batchAssigning}
-                  onClick={() => setSelectedIds(new Set())}
-                >
-                  Limpar seleção
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs gap-1.5"
-                  disabled={batchExporting || batchAssigning}
-                  onClick={handleBatchExport}
-                >
-                  {batchExporting ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <FileArchive className="w-3.5 h-3.5" />
-                  )}
-                  Exportar PDFs (ZIP)
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs gap-1.5"
-                  disabled={batchExporting || batchAssigning}
-                  onClick={handleBatchGoogleDocsExport}
-                >
-                  {batchExporting ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <FilePlus2 className="w-3.5 h-3.5" />
-                  )}
-                  Google Docs
-                </Button>
-              </div>
-            </div>
-
-            {/* Barra de Rebalanceamento / Atribuição em Lote */}
-            <div className="pt-2 border-t border-primary/10 flex flex-wrap items-center gap-2.5">
-              <span className="text-xs font-semibold flex items-center gap-1.5 text-foreground shrink-0">
-                <Users className="w-4 h-4 text-primary" />
-                Atribuição em Lote:
-              </span>
-
-              {/* Seletor Vendedor */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">Vendedor:</span>
-                <select
-                  value={batchVendedorId}
-                  onChange={(e) => setBatchVendedorId(e.target.value)}
-                  disabled={batchAssigning}
-                  aria-label="Selecionar novo vendedor para lote"
-                  className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                >
-                  <option value="keep">-- Manter atual --</option>
-                  <option value="none">Nenhum / Desatribuir</option>
-                  {activeGestaoTecnica.map((m) => (
-                    <option key={`v-${m.id}`} value={m.id}>
-                      {m.nome} ({m.funcao || 'Membro'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <Button
-                size="sm"
-                className="h-8 text-xs gap-1.5 ml-auto"
-                disabled={batchAssigning || batchVendedorId === 'keep'}
-                onClick={() => setBatchConfirmOpen(true)}
-              >
-                {batchAssigning ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <UserCheck className="w-3.5 h-3.5" />
-                )}
-                Aplicar Atribuição ({selectedIds.size})
-              </Button>
-            </div>
-          </div>
-        )}
-        {exportProgress && (
-          <div className="px-6 pb-3 space-y-1">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span className="flex items-center gap-2">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                Gerando relatórios... {exportProgress.done}/{exportProgress.total} concluídos
-              </span>
-              <span>Modelo: {REPORT_TEMPLATE_LABEL[reportTemplateRef.current]}</span>
-            </div>
-            <Progress value={(exportProgress.done / exportProgress.total) * 100} className="h-2" />
-          </div>
-        )}
-        <CardContent className="space-y-4">
-          <div className="space-y-3 p-3 bg-muted/20 border rounded-lg">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                <Filter className="w-4 h-4 text-primary" />
-                Filtros Multi-Seleção
-              </div>
-              {hasActiveFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" /> Limpar Filtros
-                </Button>
-              )}
-            </div>
-
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome, cidade ou vendedor..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 bg-background"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Clientes
-                </label>
-                <MultiSelect
-                  options={dynamicFactoryOptions}
-                  value={selectedFactories}
-                  onChange={setSelectedFactories}
-                  placeholder="Todos os clientes"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Vendedor
-                </label>
-                <MultiSelect
-                  options={dynamicVendedoresOptions}
-                  value={selectedVendedores}
-                  onChange={setSelectedVendedores}
-                  placeholder="Todos os vendedores"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Estado
-                </label>
-                <MultiSelect
-                  options={dynamicStateOptions}
-                  value={selectedStates}
-                  onChange={setSelectedStates}
-                  placeholder="Todos os estados"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">País</label>
-                <MultiSelect
-                  options={dynamicCountryOptions}
-                  value={selectedCountries}
-                  onChange={setSelectedCountries}
-                  placeholder="Todos os países"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Perfil / Carteira
-                </label>
-                <MultiSelect
-                  options={profileOptionsWithCounts}
-                  value={selectedProfiles}
-                  onChange={setSelectedProfiles}
-                  placeholder="Todos os perfis"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Região
-                </label>
-                <MultiSelect
-                  options={dynamicRegionOptions}
-                  value={selectedRegions}
-                  onChange={setSelectedRegions}
-                  placeholder="Todas as regiões"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Espécie Animal
-                </label>
-                <MultiSelect
-                  options={dynamicSpeciesOptions}
-                  value={selectedSpecies}
-                  onChange={setSelectedSpecies}
-                  placeholder="Todas as espécies"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Status
-                </label>
-                <MultiSelect
-                  options={dynamicStatusOptions}
-                  value={selectedStatuses}
-                  onChange={setSelectedStatuses}
-                  placeholder="Todos os status"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Linha de Produtos
-                </label>
-                <MultiSelect
-                  options={dynamicProductLineOptions}
-                  value={selectedProductLines}
-                  onChange={setSelectedProductLines}
-                  placeholder="Todas as linhas"
-                />
-              </div>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center p-8">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-10">
-                      <Checkbox
-                        checked={
-                          paginatedFactories.length > 0 &&
-                          paginatedFactories.every((f) => selectedIds.has(f.id))
-                        }
-                        onCheckedChange={(checked) => {
-                          setSelectedIds((prev) => {
-                            const next = new Set(prev)
-                            if (checked) {
-                              paginatedFactories.forEach((f) => next.add(f.id))
-                            } else {
-                              paginatedFactories.forEach((f) => next.delete(f.id))
-                            }
-                            return next
-                          })
-                        }}
-                        aria-label="Selecionar todos da página"
-                      />
-                    </TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Cidade/UF</TableHead>
-                    <TableHead>Perfil/Carteira</TableHead>
-                    <TableHead>Espécie</TableHead>
-                    <TableHead>Funil</TableHead>
-                    <TableHead>Contato</TableHead>
-                    <TableHead>Status do Contato</TableHead>
-                    <TableHead>Vendedor</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={10} className="text-center text-muted-foreground h-16">
-                        Nenhuma fábrica encontrada.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginatedFactories.map((f) => {
-                      const profileItems = Array.from(
-                        new Set([
-                          ...normalizeArray(f.profile_type).filter(Boolean),
-                          ...(f.carteira?.trim() ? [f.carteira.trim()] : []),
-                        ]),
-                      )
-
-                      return (
-                        <TableRow key={f.id}>
-                          <TableCell className="w-10">
-                            <Checkbox
-                              checked={selectedIds.has(f.id)}
-                              onCheckedChange={(v) => {
-                                setSelectedIds((prev) => {
-                                  const next = new Set(prev)
-                                  if (v) next.add(f.id)
-                                  else next.delete(f.id)
-                                  return next
-                                })
-                              }}
-                              aria-label={`Selecionar ${f.name}`}
-                            />
-                          </TableCell>
-                          <TableCell className="font-medium">{f.name}</TableCell>
-                          <TableCell className="text-sm">
-                            {[f.city, f.state].filter(Boolean).join('/') || '-'}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {profileItems.length === 0 ? (
-                                <span className="text-muted-foreground">-</span>
-                              ) : (
-                                profileItems.map((item) => (
-                                  <Badge key={item} variant="secondary" className="text-xs">
-                                    {item}
-                                  </Badge>
-                                ))
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {normalizeArray(f.animalSpecies).length === 0 ? (
-                                <span className="text-muted-foreground">-</span>
-                              ) : (
-                                normalizeArray(f.animalSpecies).map((sp) => (
-                                  <Badge key={sp} variant="outline" className="text-xs">
-                                    {sp}
-                                  </Badge>
-                                ))
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-xs">{f.funnelStage}</TableCell>
-                          <TableCell className="text-sm">
-                            {f.contato || <span className="text-muted-foreground">-</span>}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {f.status_contato ? (
-                              <Badge variant="outline" className="text-xs">
-                                {f.status_contato}
-                              </Badge>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            <EditableMemberSelect
-                              currentId={f.vendedor_id}
-                              currentName={f.vendedor_name}
-                              members={activeGestaoTecnica}
-                              onSelect={(newId, newName) =>
-                                handleUpdateVendedor(f.id, newId, newName)
-                              }
-                              placeholder="Sem vendedor"
-                              searchPlaceholder="Buscar vendedor..."
-                            />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setHistoryFactory(f)}
-                              title="Histórico de atribuições (auditoria deste cliente)"
-                              className="hover:text-primary"
-                            >
-                              <History className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setAtribuicaoFactory(f)}
-                              title="Editar atribuição de vendedor"
-                              className="hover:text-primary"
-                            >
-                              <UserCheck className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(f)}
-                              title="Editar cadastro completo"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(f.id)}
-                              className="text-destructive"
-                              title="Excluir fábrica"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-
-          {/* Pagination Controls */}
-          {!loading && totalPages > 1 && (
-            <div className="pt-3 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3">
-              <p className="text-xs text-muted-foreground">
-                Página <span className="font-medium text-foreground">{currentPage}</span> de{' '}
-                <span className="font-medium text-foreground">{totalPages}</span> ({filtered.length}{' '}
-                fábricas no total)
+              <h1 className="text-2xl font-bold tracking-tight">Cadastro de Clientes</h1>
+              <p className="text-muted-foreground text-sm">
+                Gerencie clientes, fábricas e carteira comercial.
               </p>
+            </div>
+          </div>
+          <TabsList className="bg-muted p-1">
+            <TabsTrigger value="clientes" className="gap-2">
+              <Users className="w-4 h-4" />
+              Clientes (CRUD)
+            </TabsTrigger>
+            <TabsTrigger value="fabricas" className="gap-2">
+              <Building2 className="w-4 h-4" />
+              Fábricas & Operações
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-              <div className="flex items-center gap-1.5">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="h-8 px-2.5 text-xs gap-1"
-                >
-                  <ChevronLeft className="w-3.5 h-3.5" /> Anterior
-                </Button>
+        <TabsContent value="clientes" className="mt-0 focus-visible:outline-none">
+          <ClientesManager />
+        </TabsContent>
 
-                <div className="flex items-center gap-1 px-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter((p) => {
-                      // Show first, last, current, and neighbours
-                      return p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1
-                    })
-                    .reduce<number[]>((acc, p) => {
-                      // Insert placeholder logic by keeping unique sorted page numbers
-                      return [...acc, p]
-                    }, [])
-                    .map((p, idx, arr) => {
-                      const prev = arr[idx - 1]
-                      const showEllipsisBefore = prev && p - prev > 1
+        <TabsContent value="fabricas" className="mt-0 space-y-6 focus-visible:outline-none">
+          <div className="flex justify-end flex-wrap gap-2">
+            <Button
+              variant="outline"
+              className="gap-2"
+              disabled={csvExporting}
+              onClick={handleExportCSV}
+            >
+              {csvExporting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              {csvExporting ? 'Exportando...' : 'Exportar CSV'}
+            </Button>
+            <Button variant="outline" className="gap-2" onClick={handleOpenEnrichConfirm}>
+              <Sparkles className="w-4 h-4" />
+              Enriquecer Dados
+            </Button>
+            <Button variant="outline" className="gap-2" onClick={() => setMapModalOpen(true)}>
+              <MapPin className="w-4 h-4 text-primary" />
+              Mapa de Clientes
+            </Button>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => setGlobalAuditOpen(true)}
+              title="Ver histórico geral de transferências e auditoria da carteira"
+            >
+              <ShieldCheck className="w-4 h-4 text-primary" />
+              Auditoria da Carteira
+            </Button>
+            <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
+              <Upload className="w-4 h-4" /> Importar
+            </Button>
+            <Button className="gap-2" onClick={handleNew}>
+              <Plus className="w-4 h-4" /> Nova Fábrica
+            </Button>
+          </div>
 
-                      return (
-                        <div key={p} className="flex items-center">
-                          {showEllipsisBefore && (
-                            <span className="px-1 text-xs text-muted-foreground">...</span>
-                          )}
-                          <Button
-                            type="button"
-                            variant={p === currentPage ? 'default' : 'ghost'}
-                            size="sm"
-                            onClick={() => setCurrentPage(p)}
-                            className="h-8 w-8 p-0 text-xs font-medium"
-                          >
-                            {p}
-                          </Button>
-                        </div>
-                      )
-                    })}
+          <Card className="shadow-subtle">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <CardTitle>Fábricas Cadastradas</CardTitle>
+                  <CardDescription>
+                    {filtered.length} fábrica(s) encontrada(s)
+                    {filtered.length > pageSize && (
+                      <>
+                        {' '}
+                        • Exibindo {(currentPage - 1) * pageSize + 1} a{' '}
+                        {Math.min(currentPage * pageSize, filtered.length)}
+                      </>
+                    )}
+                  </CardDescription>
+                </div>
+                {filtered.length > 0 && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>Itens por página:</span>
+                    <select
+                      aria-label="Itens por página"
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value))
+                        setCurrentPage(1)
+                      }}
+                      className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    >
+                      {PAGE_SIZE_OPTIONS.map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            {selectedIds.size > 0 && (
+              <div className="mx-6 mb-3 p-3 rounded-lg border bg-primary/5 border-primary/20 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default" className="gap-1 font-semibold">
+                      <CheckSquare className="w-3.5 h-3.5" />
+                      {selectedIds.size} selecionado(s)
+                    </Badge>
+                    <span className="text-xs text-muted-foreground hidden sm:inline">
+                      (da página ou filtrados)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-xs"
+                      disabled={batchExporting || batchAssigning}
+                      onClick={() => setSelectedIds(new Set())}
+                    >
+                      Limpar seleção
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs gap-1.5"
+                      disabled={batchExporting || batchAssigning}
+                      onClick={handleBatchExport}
+                    >
+                      {batchExporting ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <FileArchive className="w-3.5 h-3.5" />
+                      )}
+                      Exportar PDFs (ZIP)
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs gap-1.5"
+                      disabled={batchExporting || batchAssigning}
+                      onClick={handleBatchGoogleDocsExport}
+                    >
+                      {batchExporting ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <FilePlus2 className="w-3.5 h-3.5" />
+                      )}
+                      Google Docs
+                    </Button>
+                  </div>
                 </div>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="h-8 px-2.5 text-xs gap-1"
-                >
-                  Próxima <ChevronRight className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                {/* Barra de Rebalanceamento / Atribuição em Lote */}
+                <div className="pt-2 border-t border-primary/10 flex flex-wrap items-center gap-2.5">
+                  <span className="text-xs font-semibold flex items-center gap-1.5 text-foreground shrink-0">
+                    <Users className="w-4 h-4 text-primary" />
+                    Atribuição em Lote:
+                  </span>
 
-      <Dialog
-        open={dialogOpen}
-        onOpenChange={(v) => {
-          setDialogOpen(v)
-          if (!v) setEditingFactory(undefined)
-        }}
-      >
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingFactory ? 'Editar Fábrica' : 'Nova Fábrica'}</DialogTitle>
-          </DialogHeader>
-          <FactoryForm
-            factory={editingFactory}
-            onSubmit={() => {
-              setDialogOpen(false)
-              setEditingFactory(undefined)
-              loadData()
+                  {/* Seletor Vendedor */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground">Vendedor:</span>
+                    <select
+                      value={batchVendedorId}
+                      onChange={(e) => setBatchVendedorId(e.target.value)}
+                      disabled={batchAssigning}
+                      aria-label="Selecionar novo vendedor para lote"
+                      className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    >
+                      <option value="keep">-- Manter atual --</option>
+                      <option value="none">Nenhum / Desatribuir</option>
+                      {activeGestaoTecnica.map((m) => (
+                        <option key={`v-${m.id}`} value={m.id}>
+                          {m.nome} ({m.funcao || 'Membro'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    className="h-8 text-xs gap-1.5 ml-auto"
+                    disabled={batchAssigning || batchVendedorId === 'keep'}
+                    onClick={() => setBatchConfirmOpen(true)}
+                  >
+                    {batchAssigning ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <UserCheck className="w-3.5 h-3.5" />
+                    )}
+                    Aplicar Atribuição ({selectedIds.size})
+                  </Button>
+                </div>
+              </div>
+            )}
+            {exportProgress && (
+              <div className="px-6 pb-3 space-y-1">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Gerando relatórios... {exportProgress.done}/{exportProgress.total} concluídos
+                  </span>
+                  <span>Modelo: {REPORT_TEMPLATE_LABEL[reportTemplateRef.current]}</span>
+                </div>
+                <Progress
+                  value={(exportProgress.done / exportProgress.total) * 100}
+                  className="h-2"
+                />
+              </div>
+            )}
+            <CardContent className="space-y-4">
+              <div className="space-y-3 p-3 bg-muted/20 border rounded-lg">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Filter className="w-4 h-4 text-primary" />
+                    Filtros Multi-Seleção
+                  </div>
+                  {hasActiveFilters && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearFilters}
+                      className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" /> Limpar Filtros
+                    </Button>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome, cidade ou vendedor..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-9 bg-background"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                      Clientes
+                    </label>
+                    <MultiSelect
+                      options={dynamicFactoryOptions}
+                      value={selectedFactories}
+                      onChange={setSelectedFactories}
+                      placeholder="Todos os clientes"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                      Vendedor
+                    </label>
+                    <MultiSelect
+                      options={dynamicVendedoresOptions}
+                      value={selectedVendedores}
+                      onChange={setSelectedVendedores}
+                      placeholder="Todos os vendedores"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                      Estado
+                    </label>
+                    <MultiSelect
+                      options={dynamicStateOptions}
+                      value={selectedStates}
+                      onChange={setSelectedStates}
+                      placeholder="Todos os estados"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                      País
+                    </label>
+                    <MultiSelect
+                      options={dynamicCountryOptions}
+                      value={selectedCountries}
+                      onChange={setSelectedCountries}
+                      placeholder="Todos os países"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                      Perfil / Carteira
+                    </label>
+                    <MultiSelect
+                      options={profileOptionsWithCounts}
+                      value={selectedProfiles}
+                      onChange={setSelectedProfiles}
+                      placeholder="Todos os perfis"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                      Região
+                    </label>
+                    <MultiSelect
+                      options={dynamicRegionOptions}
+                      value={selectedRegions}
+                      onChange={setSelectedRegions}
+                      placeholder="Todas as regiões"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                      Espécie Animal
+                    </label>
+                    <MultiSelect
+                      options={dynamicSpeciesOptions}
+                      value={selectedSpecies}
+                      onChange={setSelectedSpecies}
+                      placeholder="Todas as espécies"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                      Status
+                    </label>
+                    <MultiSelect
+                      options={dynamicStatusOptions}
+                      value={selectedStatuses}
+                      onChange={setSelectedStatuses}
+                      placeholder="Todos os status"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                      Linha de Produtos
+                    </label>
+                    <MultiSelect
+                      options={dynamicProductLineOptions}
+                      value={selectedProductLines}
+                      onChange={setSelectedProductLines}
+                      placeholder="Todas as linhas"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="flex justify-center p-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10">
+                          <Checkbox
+                            checked={
+                              paginatedFactories.length > 0 &&
+                              paginatedFactories.every((f) => selectedIds.has(f.id))
+                            }
+                            onCheckedChange={(checked) => {
+                              setSelectedIds((prev) => {
+                                const next = new Set(prev)
+                                if (checked) {
+                                  paginatedFactories.forEach((f) => next.add(f.id))
+                                } else {
+                                  paginatedFactories.forEach((f) => next.delete(f.id))
+                                }
+                                return next
+                              })
+                            }}
+                            aria-label="Selecionar todos da página"
+                          />
+                        </TableHead>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Cidade/UF</TableHead>
+                        <TableHead>Perfil/Carteira</TableHead>
+                        <TableHead>Espécie</TableHead>
+                        <TableHead>Funil</TableHead>
+                        <TableHead>Contato</TableHead>
+                        <TableHead>Status do Contato</TableHead>
+                        <TableHead>Vendedor</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filtered.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={10}
+                            className="text-center text-muted-foreground h-16"
+                          >
+                            Nenhuma fábrica encontrada.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        paginatedFactories.map((f) => {
+                          const profileItems = Array.from(
+                            new Set([
+                              ...normalizeArray(f.profile_type).filter(Boolean),
+                              ...(f.carteira?.trim() ? [f.carteira.trim()] : []),
+                            ]),
+                          )
+
+                          return (
+                            <TableRow key={f.id}>
+                              <TableCell className="w-10">
+                                <Checkbox
+                                  checked={selectedIds.has(f.id)}
+                                  onCheckedChange={(v) => {
+                                    setSelectedIds((prev) => {
+                                      const next = new Set(prev)
+                                      if (v) next.add(f.id)
+                                      else next.delete(f.id)
+                                      return next
+                                    })
+                                  }}
+                                  aria-label={`Selecionar ${f.name}`}
+                                />
+                              </TableCell>
+                              <TableCell className="font-medium">{f.name}</TableCell>
+                              <TableCell className="text-sm">
+                                {[f.city, f.state].filter(Boolean).join('/') || '-'}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-wrap gap-1">
+                                  {profileItems.length === 0 ? (
+                                    <span className="text-muted-foreground">-</span>
+                                  ) : (
+                                    profileItems.map((item) => (
+                                      <Badge key={item} variant="secondary" className="text-xs">
+                                        {item}
+                                      </Badge>
+                                    ))
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-wrap gap-1">
+                                  {normalizeArray(f.animalSpecies).length === 0 ? (
+                                    <span className="text-muted-foreground">-</span>
+                                  ) : (
+                                    normalizeArray(f.animalSpecies).map((sp) => (
+                                      <Badge key={sp} variant="outline" className="text-xs">
+                                        {sp}
+                                      </Badge>
+                                    ))
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-xs">{f.funnelStage}</TableCell>
+                              <TableCell className="text-sm">
+                                {f.contato || <span className="text-muted-foreground">-</span>}
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                {f.status_contato ? (
+                                  <Badge variant="outline" className="text-xs">
+                                    {f.status_contato}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                <EditableMemberSelect
+                                  currentId={f.vendedor_id}
+                                  currentName={f.vendedor_name}
+                                  members={activeGestaoTecnica}
+                                  onSelect={(newId, newName) =>
+                                    handleUpdateVendedor(f.id, newId, newName)
+                                  }
+                                  placeholder="Sem vendedor"
+                                  searchPlaceholder="Buscar vendedor..."
+                                />
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setHistoryFactory(f)}
+                                  title="Histórico de atribuições (auditoria deste cliente)"
+                                  className="hover:text-primary"
+                                >
+                                  <History className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setAtribuicaoFactory(f)}
+                                  title="Editar atribuição de vendedor"
+                                  className="hover:text-primary"
+                                >
+                                  <UserCheck className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleEdit(f)}
+                                  title="Editar cadastro completo"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDelete(f.id)}
+                                  className="text-destructive"
+                                  title="Excluir fábrica"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              {/* Pagination Controls */}
+              {!loading && totalPages > 1 && (
+                <div className="pt-3 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <p className="text-xs text-muted-foreground">
+                    Página <span className="font-medium text-foreground">{currentPage}</span> de{' '}
+                    <span className="font-medium text-foreground">{totalPages}</span> (
+                    {filtered.length} fábricas no total)
+                  </p>
+
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="h-8 px-2.5 text-xs gap-1"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" /> Anterior
+                    </Button>
+
+                    <div className="flex items-center gap-1 px-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter((p) => {
+                          // Show first, last, current, and neighbours
+                          return p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1
+                        })
+                        .reduce<number[]>((acc, p) => {
+                          // Insert placeholder logic by keeping unique sorted page numbers
+                          return [...acc, p]
+                        }, [])
+                        .map((p, idx, arr) => {
+                          const prev = arr[idx - 1]
+                          const showEllipsisBefore = prev && p - prev > 1
+
+                          return (
+                            <div key={p} className="flex items-center">
+                              {showEllipsisBefore && (
+                                <span className="px-1 text-xs text-muted-foreground">...</span>
+                              )}
+                              <Button
+                                type="button"
+                                variant={p === currentPage ? 'default' : 'ghost'}
+                                size="sm"
+                                onClick={() => setCurrentPage(p)}
+                                className="h-8 w-8 p-0 text-xs font-medium"
+                              >
+                                {p}
+                              </Button>
+                            </div>
+                          )
+                        })}
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="h-8 px-2.5 text-xs gap-1"
+                    >
+                      Próxima <ChevronRight className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Dialog
+            open={dialogOpen}
+            onOpenChange={(v) => {
+              setDialogOpen(v)
+              if (!v) setEditingFactory(undefined)
+            }}
+          >
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{editingFactory ? 'Editar Fábrica' : 'Nova Fábrica'}</DialogTitle>
+              </DialogHeader>
+              <FactoryForm
+                factory={editingFactory}
+                onSubmit={() => {
+                  setDialogOpen(false)
+                  setEditingFactory(undefined)
+                  loadData()
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+
+          <ImportExcelDialog open={importOpen} onOpenChange={setImportOpen} onImported={loadData} />
+
+          {/* Modal de Atribuição Rápida de Vendedor */}
+          <AtribuicaoDialog
+            open={!!atribuicaoFactory}
+            onOpenChange={(open) => {
+              if (!open) setAtribuicaoFactory(null)
+            }}
+            factory={atribuicaoFactory}
+            members={activeGestaoTecnica}
+            onSave={handleSaveModalAssignments}
+          />
+
+          {/* Modal de Histórico de Atribuições do Cliente Individual */}
+          <ClientAssignmentHistoryDialog
+            factory={historyFactory}
+            open={!!historyFactory}
+            onOpenChange={(open) => {
+              if (!open) setHistoryFactory(null)
             }}
           />
-        </DialogContent>
-      </Dialog>
 
-      <ImportExcelDialog open={importOpen} onOpenChange={setImportOpen} onImported={loadData} />
+          {/* Modal de Auditoria Geral da Carteira */}
+          <AssignmentAuditGlobalDialog open={globalAuditOpen} onOpenChange={setGlobalAuditOpen} />
 
-      {/* Modal de Atribuição Rápida de Vendedor */}
-      <AtribuicaoDialog
-        open={!!atribuicaoFactory}
-        onOpenChange={(open) => {
-          if (!open) setAtribuicaoFactory(null)
-        }}
-        factory={atribuicaoFactory}
-        members={activeGestaoTecnica}
-        onSave={handleSaveModalAssignments}
-      />
+          {/* Modal de Confirmação de Atribuição em Lote */}
+          <BatchAssignConfirmDialog
+            open={batchConfirmOpen}
+            onOpenChange={setBatchConfirmOpen}
+            selectedFactories={factories.filter((f) => selectedIds.has(f.id))}
+            applyVendedor={batchVendedorId !== 'keep'}
+            newVendedorName={
+              batchVendedorId === 'keep'
+                ? null
+                : batchVendedorId === 'none'
+                  ? null
+                  : activeGestaoTecnica.find((m) => m.id === batchVendedorId)?.nome || null
+            }
+            onConfirm={handleApplyBatchAssign}
+          />
 
-      {/* Modal de Histórico de Atribuições do Cliente Individual */}
-      <ClientAssignmentHistoryDialog
-        factory={historyFactory}
-        open={!!historyFactory}
-        onOpenChange={(open) => {
-          if (!open) setHistoryFactory(null)
-        }}
-      />
+          {/* Clients Map Dialog Modal */}
+          <ClientsMapDialog
+            open={mapModalOpen}
+            onOpenChange={setMapModalOpen}
+            factories={filtered}
+            loading={loading}
+            onReload={loadData}
+          />
 
-      {/* Modal de Auditoria Geral da Carteira */}
-      <AssignmentAuditGlobalDialog open={globalAuditOpen} onOpenChange={setGlobalAuditOpen} />
-
-      {/* Modal de Confirmação de Atribuição em Lote */}
-      <BatchAssignConfirmDialog
-        open={batchConfirmOpen}
-        onOpenChange={setBatchConfirmOpen}
-        selectedFactories={factories.filter((f) => selectedIds.has(f.id))}
-        applyVendedor={batchVendedorId !== 'keep'}
-        newVendedorName={
-          batchVendedorId === 'keep'
-            ? null
-            : batchVendedorId === 'none'
-              ? null
-              : activeGestaoTecnica.find((m) => m.id === batchVendedorId)?.nome || null
-        }
-        onConfirm={handleApplyBatchAssign}
-      />
-
-      {/* Clients Map Dialog Modal */}
-      <ClientsMapDialog
-        open={mapModalOpen}
-        onOpenChange={setMapModalOpen}
-        factories={filtered}
-        loading={loading}
-        onReload={loadData}
-      />
-
-      {/* Confirmation Dialog: Enriquecer Dados */}
-      <Dialog open={confirmEnrichOpen} onOpenChange={setConfirmEnrichOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Enriquecimento de Dados</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Sera feita a busca de CEP, padronizacao de enderecos e geocodificacao de todos os
-            clientes. Isso pode levar alguns minutos. Deseja continuar?
-          </p>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setConfirmEnrichOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleStartEnrichment} className="gap-2">
-              <Sparkles className="w-4 h-4" />
-              Iniciar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal 1 (Loading): Processando Enriquecimento */}
-      <Dialog open={enriching} onOpenChange={() => {}}>
-        <DialogContent
-          className="max-w-md text-center py-8 [&>button]:hidden"
-          onInteractOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
-        >
-          <div className="flex flex-col items-center justify-center space-y-4">
-            <div className="p-3 bg-primary/10 rounded-full">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold text-foreground">
-                Processando enriquecimento de dados...
-              </h3>
+          {/* Confirmation Dialog: Enriquecer Dados */}
+          <Dialog open={confirmEnrichOpen} onOpenChange={setConfirmEnrichOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Enriquecimento de Dados</DialogTitle>
+              </DialogHeader>
               <p className="text-sm text-muted-foreground">
-                Isso pode levar alguns minutos. Nao feche esta pagina.
+                Sera feita a busca de CEP, padronizacao de enderecos e geocodificacao de todos os
+                clientes. Isso pode levar alguns minutos. Deseja continuar?
               </p>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setConfirmEnrichOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleStartEnrichment} className="gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  Iniciar
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
 
-      {/* Modal 2 (Success): Resumo do Enriquecimento Concluido */}
-      <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Enriquecimento Concluido</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2 text-sm">
-            <div className="flex justify-between items-center py-1.5 border-b">
-              <span className="text-muted-foreground">Total processados:</span>
-              <span className="font-semibold text-foreground">
-                {enrichSummary?.total_processed ?? 0}
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-1.5 border-b">
-              <span className="text-muted-foreground">Total enriquecidos:</span>
-              <span className="font-semibold text-foreground">
-                {enrichSummary?.total_enriched ?? 0}
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-1.5 border-b">
-              <span className="text-muted-foreground">Total geocodificados:</span>
-              <span className="font-semibold text-foreground">
-                {enrichSummary?.total_geocoded ?? 0}
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-1.5 border-b">
-              <span className="text-muted-foreground">Total inconsistentes:</span>
-              <span className="font-semibold text-foreground">
-                {enrichSummary?.total_inconsistent ?? 0}
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-1.5 border-b">
-              <span className="text-muted-foreground">Total falhas:</span>
-              <span className="font-semibold text-foreground">
-                {enrichSummary?.total_failed ?? 0}
-              </span>
-            </div>
-          </div>
-          <div className="flex justify-end pt-2">
-            <Button onClick={() => setSummaryOpen(false)}>Fechar</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          {/* Modal 1 (Loading): Processando Enriquecimento */}
+          <Dialog open={enriching} onOpenChange={() => {}}>
+            <DialogContent
+              className="max-w-md text-center py-8 [&>button]:hidden"
+              onInteractOutside={(e) => e.preventDefault()}
+              onEscapeKeyDown={(e) => e.preventDefault()}
+            >
+              <div className="flex flex-col items-center justify-center space-y-4">
+                <div className="p-3 bg-primary/10 rounded-full">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-lg font-semibold text-foreground">
+                    Processando enriquecimento de dados...
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Isso pode levar alguns minutos. Nao feche esta pagina.
+                  </p>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Modal 2 (Success): Resumo do Enriquecimento Concluido */}
+          <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Enriquecimento Concluido</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 py-2 text-sm">
+                <div className="flex justify-between items-center py-1.5 border-b">
+                  <span className="text-muted-foreground">Total processados:</span>
+                  <span className="font-semibold text-foreground">
+                    {enrichSummary?.total_processed ?? 0}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1.5 border-b">
+                  <span className="text-muted-foreground">Total enriquecidos:</span>
+                  <span className="font-semibold text-foreground">
+                    {enrichSummary?.total_enriched ?? 0}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1.5 border-b">
+                  <span className="text-muted-foreground">Total geocodificados:</span>
+                  <span className="font-semibold text-foreground">
+                    {enrichSummary?.total_geocoded ?? 0}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1.5 border-b">
+                  <span className="text-muted-foreground">Total inconsistentes:</span>
+                  <span className="font-semibold text-foreground">
+                    {enrichSummary?.total_inconsistent ?? 0}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1.5 border-b">
+                  <span className="text-muted-foreground">Total falhas:</span>
+                  <span className="font-semibold text-foreground">
+                    {enrichSummary?.total_failed ?? 0}
+                  </span>
+                </div>
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button onClick={() => setSummaryOpen(false)}>Fechar</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

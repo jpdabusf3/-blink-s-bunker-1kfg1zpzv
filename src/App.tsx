@@ -143,6 +143,7 @@ const App = () => (
                           }
                         />
                         <Route path="/cadastro" element={<Cadastro />} />
+                        <Route path="/clientes" element={<Cadastro />} />
                         <Route path="/mapa" element={<MapaClientes />} />
                         <Route path="/funil" element={<Funil />} />
                         <Route path="/funil-vendas" element={<FunilVendas />} />
