@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-19T16:17:56.157Z",
+  "generatedAt": "2026-09-19T16:27:00.844Z",
   "collections": [
     {
       "name": "users",
@@ -2515,6 +2515,11 @@
           "required": false,
           "system": false,
           "selectValues": [
+            "MI-XS",
+            "MO-BE",
+            "MY-CO",
+            "MI-OR",
+            "MY-ST",
             "Mos/BetaLink",
             "Mycolink",
             "Minerais Orgânicos",

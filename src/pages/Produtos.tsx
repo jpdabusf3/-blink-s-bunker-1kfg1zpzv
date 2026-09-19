@@ -53,10 +53,13 @@ import { toast } from 'sonner'
 import { useProdutos } from '@/hooks/useProdutos'
 import {
   FAMILIAS_CATALOGO,
+  FAMILIA_ROTULOS,
+  formatarFamilia,
   derivarFamiliaPorCodigo,
   produtosService,
   type Produto,
   type ProdutoFormData,
+  type FamiliaCatalogo,
 } from '@/services/produtos-service'
 
 export function Produtos() {
@@ -107,9 +110,17 @@ export function Produtos() {
 
       // Filtro por Família
       if (familiaFilter !== 'all') {
-        const fam = (p.familia || derivarFamiliaPorCodigo(p.codigo)).toLowerCase().trim()
-        const filterFam = familiaFilter.toLowerCase().trim()
-        if (fam !== filterFam && !fam.includes(filterFam)) {
+        const famCode = derivarFamiliaPorCodigo(p.codigo) || p.familia || ''
+        const famCodeUpper = famCode.toUpperCase().trim()
+        const targetUpper = familiaFilter.toUpperCase().trim()
+        const rotulo = FAMILIA_ROTULOS[targetUpper as FamiliaCatalogo] || ''
+        const rotuloUpper = rotulo.toUpperCase().trim()
+
+        if (
+          famCodeUpper !== targetUpper &&
+          !famCodeUpper.includes(targetUpper) &&
+          (!rotuloUpper || !famCodeUpper.includes(rotuloUpper))
+        ) {
           return false
         }
       }
@@ -269,7 +280,7 @@ export function Produtos() {
                   <SelectItem value="all">Família: Todas</SelectItem>
                   {FAMILIAS_CATALOGO.map((fam) => (
                     <SelectItem key={fam} value={fam}>
-                      {fam}
+                      {fam} · {FAMILIA_ROTULOS[fam]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -417,7 +428,9 @@ export function Produtos() {
                   </TableHeader>
                   <TableBody>
                     {filteredProdutos.map((p) => {
-                      const fam = p.familia || derivarFamiliaPorCodigo(p.codigo) || '—'
+                      const famCode = derivarFamiliaPorCodigo(p.codigo) || p.familia || '—'
+                      const rotulo = FAMILIA_ROTULOS[famCode as FamiliaCatalogo]
+                      const famDisplay = rotulo ? `${famCode} · ${rotulo}` : famCode
                       return (
                         <TableRow key={p.id}>
                           <TableCell className="font-mono font-semibold text-foreground text-sm">
@@ -425,8 +438,13 @@ export function Produtos() {
                           </TableCell>
                           <TableCell className="font-medium text-foreground">{p.nome}</TableCell>
                           <TableCell>
-                            <Badge variant="secondary" className="font-medium text-xs">
-                              {fam}
+                            <Badge variant="secondary" className="font-medium text-xs gap-1">
+                              <span className="font-mono font-bold text-primary">{famCode}</span>
+                              {rotulo && (
+                                <span className="text-muted-foreground font-normal">
+                                  · {rotulo}
+                                </span>
+                              )}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
@@ -460,7 +478,8 @@ export function Produtos() {
               {/* VISUALIZAÇÃO RESPONSIVA MOBILE: CARDS (< 768px) */}
               <div className="md:hidden p-4 space-y-3">
                 {filteredProdutos.map((p) => {
-                  const fam = p.familia || derivarFamiliaPorCodigo(p.codigo) || '—'
+                  const famCode = derivarFamiliaPorCodigo(p.codigo) || p.familia || '—'
+                  const rotulo = FAMILIA_ROTULOS[famCode as FamiliaCatalogo]
                   return (
                     <div
                       key={p.id}
@@ -476,7 +495,8 @@ export function Produtos() {
                           </h4>
                         </div>
                         <Badge variant="secondary" className="text-xs font-semibold shrink-0">
-                          {fam}
+                          {famCode}
+                          {rotulo ? ` · ${rotulo}` : ''}
                         </Badge>
                       </div>
 
@@ -591,14 +611,17 @@ export function Produtos() {
                 </div>
                 <div className="p-3 rounded-lg border bg-muted/40 flex items-center justify-between">
                   <span className="text-sm font-medium text-foreground">
-                    {familiaDerivada || (
+                    {familiaDerivada ? (
+                      formatarFamilia(familiaDerivada)
+                    ) : (
                       <span className="text-muted-foreground text-xs italic">
-                        Informe o código com prefixo válido (BBMO, BBMY, BPMI, BPMY ou BBMI)
+                        Informe o código com prefixo válido (BBMI.XS, BBMO.BE, BBMY.CO, BPMI.OR,
+                        BPMY.ST)
                       </span>
                     )}
                   </span>
                   {familiaDerivada && (
-                    <Badge variant="outline" className="text-xs bg-background">
+                    <Badge variant="outline" className="text-xs bg-background font-mono">
                       {familiaDerivada}
                     </Badge>
                   )}

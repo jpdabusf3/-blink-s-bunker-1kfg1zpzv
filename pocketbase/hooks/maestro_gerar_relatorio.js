@@ -16,16 +16,33 @@ routerAdd(
     }
 
     // Resolução de Família de Produtos baseada no código do produto e família bruta
+    // Alinhado ao padrão canônico:
+    // BBMI.XS... → Blends (MI-XS)
+    // BBMO.BE... → Mos/BetaLink (MO-BE)
+    // BBMY.CO... → Mycolink (MY-CO)
+    // BPMI.OR... → Minerais Orgânicos (MI-OR)
+    // BPMY.ST... → Leveduras (MY-ST)
     var PREFIXO_FAMILIA_LOCAL = [
-      { prefixo: '1100', familia: 'Adsorventes de Micotoxinas' },
-      { prefixo: '1200', familia: 'Adsorventes de Micotoxinas' },
-      { prefixo: '1300', familia: 'Adsorventes de Micotoxinas' },
-      { prefixo: '1400', familia: 'Adsorventes de Micotoxinas' },
+      { prefixo: 'BBMI.XS', familia: 'Blends' },
+      { prefixo: 'BPMI.XS', familia: 'Blends' },
+      { prefixo: 'BBMO.BE', familia: 'Mos/BetaLink' },
+      { prefixo: 'BPMO.BE', familia: 'Mos/BetaLink' },
+      { prefixo: 'BBMY.CO', familia: 'Mycolink' },
+      { prefixo: 'BPMY.CO', familia: 'Mycolink' },
+      { prefixo: 'BPMI.OR', familia: 'Minerais Orgânicos' },
+      { prefixo: 'BBMI.OR', familia: 'Minerais Orgânicos' },
+      { prefixo: 'BPMY.ST', familia: 'Leveduras' },
+      { prefixo: 'BBMY.ST', familia: 'Leveduras' },
+      // Códigos numéricos de export ERP (legados mantidos por compatibilidade)
+      { prefixo: '1100', familia: 'Mycolink' },
+      { prefixo: '1200', familia: 'Mycolink' },
+      { prefixo: '1300', familia: 'Mycolink' },
+      { prefixo: '1400', familia: 'Mycolink' },
       { prefixo: '2100', familia: 'Antioxidantes' },
       { prefixo: '2200', familia: 'Antioxidantes' },
-      { prefixo: '3100', familia: 'Moduladores de Microbiota' },
-      { prefixo: '3200', familia: 'Moduladores de Microbiota' },
-      { prefixo: '3300', familia: 'Moduladores de Microbiota' },
+      { prefixo: '3100', familia: 'Mos/BetaLink' },
+      { prefixo: '3200', familia: 'Mos/BetaLink' },
+      { prefixo: '3300', familia: 'Mos/BetaLink' },
       { prefixo: '4100', familia: 'Nutracêuticos' },
       { prefixo: '4200', familia: 'Nutracêuticos' },
       { prefixo: '4300', familia: 'Nutracêuticos' },
@@ -39,12 +56,32 @@ routerAdd(
       { prefixo: '7100', familia: 'Pigmentantes Naturais' },
       { prefixo: '8100', familia: 'Palatabilizantes' },
       { prefixo: '8200', familia: 'Palatabilizantes' },
-      { prefixo: '9100', familia: 'Blend e Customizados' },
-      { prefixo: '9200', familia: 'Blend e Customizados' },
+      { prefixo: '9100', familia: 'Blends' },
+      { prefixo: '9200', familia: 'Blends' },
     ]
 
+    var CANONICAL_ROTULOS = {
+      'MI-XS': 'Blends',
+      'MO-BE': 'Mos/BetaLink',
+      'MY-CO': 'Mycolink',
+      'MI-OR': 'Minerais Orgânicos',
+      'MY-ST': 'Leveduras',
+      'MI.XS': 'Blends',
+      'MO.BE': 'Mos/BetaLink',
+      'MY.CO': 'Mycolink',
+      'MI.OR': 'Minerais Orgânicos',
+      'MY.ST': 'Leveduras',
+      ADSORVENTES: 'Mycolink',
+      ADITIVOS: 'Mos/BetaLink',
+      'MINERAIS ORGANICOS': 'Minerais Orgânicos',
+      'MINERAIS ORGÂNICOS': 'Minerais Orgânicos',
+      SUPLEMENTOS: 'Leveduras',
+    }
+
     function resolverFamiliaLocal(produtoCodigo, familiaBruta) {
-      var prodStr = String(produtoCodigo || '').trim()
+      var prodStr = String(produtoCodigo || '')
+        .trim()
+        .toUpperCase()
       for (var p = 0; p < PREFIXO_FAMILIA_LOCAL.length; p++) {
         var item = PREFIXO_FAMILIA_LOCAL[p]
         if (prodStr.indexOf(item.prefixo) === 0) {
@@ -54,6 +91,10 @@ routerAdd(
       var fb = String(familiaBruta || '').trim()
       if (!fb || fb === '\u2014' || fb === '-' || fb === '?') {
         return 'Não identificado'
+      }
+      var fbUpper = fb.toUpperCase()
+      if (CANONICAL_ROTULOS[fbUpper]) {
+        return CANONICAL_ROTULOS[fbUpper]
       }
       return fb
     }
