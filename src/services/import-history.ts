@@ -1,0 +1,97 @@
+import pb from '@/lib/pocketbase/client'
+
+export type ImportHistoryStatus = 'sucesso' | 'parcial' | 'erro'
+
+export interface ImportHistoryRecord {
+  id: string
+  file_name: string
+  file_type: string
+  imported_at: string
+  total_rows: number
+  imported_rows: number
+  error_rows: number
+  status: ImportHistoryStatus
+  details?: string
+  created: string
+  updated: string
+}
+
+export interface CreateImportHistoryInput {
+  file_name: string
+  file_type?: string
+  imported_at?: string
+  total_rows?: number
+  imported_rows?: number
+  error_rows?: number
+  status: ImportHistoryStatus
+  details?: string
+}
+
+/**
+ * Busca todo o histórico de importações ordenado da mais recente para a mais antiga.
+ */
+export async function getImportHistory(): Promise<ImportHistoryRecord[]> {
+  const records = await pb.collection('import_history').getFullList<ImportHistoryRecord>({
+    sort: '-imported_at,-created',
+  })
+
+  return records.map((r) => {
+    // Normalizar status para "sucesso" | "parcial" | "erro"
+    let status: ImportHistoryStatus = 'sucesso'
+    const rawStatus = (r.status || '').toLowerCase()
+    if (rawStatus === 'erro' || rawStatus.includes('erro')) {
+      status = 'erro'
+    } else if (rawStatus === 'parcial' || rawStatus.includes('parcial')) {
+      status = 'parcial'
+    } else {
+      status = 'sucesso'
+    }
+
+    return {
+      ...r,
+      status,
+      file_name: r.file_name || 'arquivo_importacao.xlsx',
+      file_type: r.file_type || 'xlsx',
+      imported_at: r.imported_at || r.created,
+      total_rows: typeof r.total_rows === 'number' ? r.total_rows : 0,
+      imported_rows: typeof r.imported_rows === 'number' ? r.imported_rows : 0,
+      error_rows: typeof r.error_rows === 'number' ? r.error_rows : 0,
+      details: r.details || '',
+    }
+  })
+}
+
+/**
+ * Cria um registro em import_history e emite evento de sincronização em tempo real.
+ */
+export async function createImportHistory(
+  input: CreateImportHistoryInput,
+): Promise<ImportHistoryRecord> {
+  const fileParts = (input.file_name || '').split('.')
+  const inferredType =
+    input.file_type ||
+    (fileParts.length > 1 ? fileParts[fileParts.length - 1].toLowerCase() : 'xlsx')
+
+  const record = await pb.collection('import_history').create<ImportHistoryRecord>({
+    file_name: input.file_name,
+    file_type: inferredType,
+    imported_at: input.imported_at || new Date().toISOString(),
+    total_rows: input.total_rows ?? 0,
+    imported_rows: input.imported_rows ?? 0,
+    error_rows: input.error_rows ?? 0,
+    status: input.status,
+    details: input.details ?? '',
+  })
+
+  if (typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(
+        new CustomEvent('blink:datasync', { detail: { entity: 'import_history' } }),
+      )
+    } catch {
+      // ignore
+    }
+  }
+
+  return record
+}

@@ -55,12 +55,8 @@ import {
   type FaturamentoFieldKey,
   type FaturamentoImportResult,
 } from '@/services/import-faturamento'
-import {
-  getFaturamentos,
-  getFaturamentoUploadHistory,
-  type FaturamentoRecord,
-  type UploadHistoryItem,
-} from '@/services/resumo-vendas'
+import { getFaturamentos, type FaturamentoRecord } from '@/services/resumo-vendas'
+import { getImportHistory, type ImportHistoryRecord } from '@/services/import-history'
 import { useRealtimeDataContext } from '@/hooks/useRealtimeData'
 import { FaturamentoUploadHistory } from '@/components/faturamento/FaturamentoUploadHistory'
 import { EditableFaturamentoTable } from '@/components/faturamento/EditableFaturamentoTable'
@@ -82,9 +78,10 @@ export default function ImportarFaturamento() {
   const [result, setResult] = useState<FaturamentoImportResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // Histórico de Uploads e Registros Editáveis
-  const [uploadHistory, setUploadHistory] = useState<UploadHistoryItem[]>([])
+  // Histórico de Importações e Registros Editáveis
+  const [uploadHistory, setUploadHistory] = useState<ImportHistoryRecord[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
+  const [historyError, setHistoryError] = useState<string | null>(null)
   const [faturamentoRecords, setFaturamentoRecords] = useState<FaturamentoRecord[]>([])
   const [loadingRecords, setLoadingRecords] = useState(false)
 
@@ -92,11 +89,12 @@ export default function ImportarFaturamento() {
 
   const loadUploadHistory = useCallback(async () => {
     setLoadingHistory(true)
+    setHistoryError(null)
     try {
-      const data = await getFaturamentoUploadHistory()
+      const data = await getImportHistory()
       setUploadHistory(data)
-    } catch {
-      // Falha silenciosa ou log
+    } catch (err) {
+      setHistoryError(err instanceof Error ? err.message : 'Não foi possível carregar o histórico')
     } finally {
       setLoadingHistory(false)
     }
@@ -125,14 +123,14 @@ export default function ImportarFaturamento() {
       (event) => {
         if (event.collection === 'faturamento') {
           loadFaturamentoRecords()
-        } else if (event.collection === 'activity_logs') {
+        } else if (event.collection === 'import_history' || event.collection === 'activity_logs') {
           loadUploadHistory()
         } else if (event.collection === 'historico_vendas' || event.collection === 'all') {
           loadUploadHistory()
           loadFaturamentoRecords()
         }
       },
-      ['faturamento', 'activity_logs', 'historico_vendas'],
+      ['faturamento', 'import_history', 'activity_logs', 'historico_vendas'],
     )
 
     return () => {
@@ -266,6 +264,7 @@ export default function ImportarFaturamento() {
         notifyDataChanged('faturamento')
         notifyDataChanged('historico_vendas')
         notifyDataChanged('factories')
+        notifyDataChanged('import_history')
         notifyDataChanged('activity_logs')
         loadUploadHistory()
         loadFaturamentoRecords()
@@ -342,7 +341,7 @@ export default function ImportarFaturamento() {
             </TabsTrigger>
             <TabsTrigger value="historico" className="gap-1.5 text-xs">
               <History className="w-3.5 h-3.5" />
-              <span>Histórico de Uploads</span>
+              <span>Histórico de Importações</span>
               {uploadHistory.length > 0 && (
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 ml-1">
                   {uploadHistory.length}
@@ -365,7 +364,7 @@ export default function ImportarFaturamento() {
           {activeTab === 'importar' && 'Upload e mapeamento de novas planilhas de pedidos.'}
           {activeTab === 'smart' &&
             'Importação inteligente multi-formato (XLSX, CSV, PDF da Blink ou DOCX) com prévia e deduplicação.'}
-          {activeTab === 'historico' && 'Auditoria de todos os uploads realizados no sistema.'}
+          {activeTab === 'historico' && 'Auditoria de todas as importações realizadas no sistema.'}
           {activeTab === 'registros' &&
             'Edição inline de células em tempo real (data, cliente, valor, vendedor, etc.).'}
         </div>
@@ -381,11 +380,12 @@ export default function ImportarFaturamento() {
         />
       )}
 
-      {/* CONTEÚDO DA ABA 2: HISTÓRICO DE UPLOADS */}
+      {/* CONTEÚDO DA ABA 2: HISTÓRICO DE IMPORTAÇÕES */}
       {activeTab === 'historico' && (
         <FaturamentoUploadHistory
           history={uploadHistory}
           loading={loadingHistory}
+          error={historyError}
           onRefresh={loadUploadHistory}
         />
       )}
@@ -1177,7 +1177,7 @@ export default function ImportarFaturamento() {
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold flex items-center gap-2">
               <History className="w-4 h-4 text-primary" />
-              Últimos Uploads de Faturamento
+              Últimas Importações de Faturamento
             </h3>
             <Button
               variant="link"
@@ -1191,6 +1191,7 @@ export default function ImportarFaturamento() {
           <FaturamentoUploadHistory
             history={uploadHistory.slice(0, 3)}
             loading={loadingHistory}
+            error={historyError}
             onRefresh={loadUploadHistory}
           />
         </div>

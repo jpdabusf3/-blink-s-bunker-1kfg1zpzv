@@ -128,6 +128,51 @@ export interface UploadHistoryItem {
 }
 
 export async function getFaturamentoUploadHistory(): Promise<UploadHistoryItem[]> {
+  // Primeiro tentar ler da nova collection oficial import_history
+  try {
+    const historyRecords = await pb.collection('import_history').getFullList<{
+      id: string
+      file_name: string
+      file_type: string
+      imported_at: string
+      total_rows: number
+      imported_rows: number
+      error_rows: number
+      status: string
+      details: string
+      created: string
+    }>({
+      sort: '-imported_at,-created',
+    })
+
+    if (historyRecords && historyRecords.length > 0) {
+      return historyRecords.map((r) => {
+        const rawStatus = (r.status || '').toLowerCase()
+        let status: 'concluido' | 'parcial' | 'erro' = 'concluido'
+        if (rawStatus === 'erro') status = 'erro'
+        else if (rawStatus === 'parcial') status = 'parcial'
+        else status = 'concluido'
+
+        return {
+          id: r.id,
+          created: r.imported_at || r.created,
+          fileName: r.file_name || 'arquivo_importacao.xlsx',
+          authorName: 'Sistema',
+          authorEmail: '',
+          importedCount: r.imported_rows ?? 0,
+          duplicatesCount: Math.max(
+            0,
+            (r.total_rows ?? 0) - (r.imported_rows ?? 0) - (r.error_rows ?? 0),
+          ),
+          status,
+          details: r.details || '',
+        }
+      })
+    }
+  } catch {
+    // fallback para activity_logs caso import_history falhe
+  }
+
   const logs = await pb.collection('activity_logs').getFullList({
     sort: '-created',
     filter: 'action ~ "Import" || target_collection = "faturamento"',

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-19T15:27:07.957Z",
+  "generatedAt": "2026-09-19T15:39:08.961Z",
   "collections": [
     {
       "name": "users",
@@ -4274,6 +4274,86 @@
       "indexes": [
         "CREATE INDEX idx_maestro_conversations_user ON maestro_conversations (user_id)",
         "CREATE INDEX idx_maestro_conversations_updated ON maestro_conversations (updated DESC)"
+      ]
+    },
+    {
+      "name": "import_history",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "file_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "file_type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "imported_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_rows",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "imported_rows",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "error_rows",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "details",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_import_history_created ON import_history (created DESC)",
+        "CREATE INDEX idx_import_history_imported_at ON import_history (imported_at DESC)",
+        "CREATE INDEX idx_import_history_status ON import_history (status)"
       ]
     }
   ]

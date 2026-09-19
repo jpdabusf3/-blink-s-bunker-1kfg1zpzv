@@ -766,19 +766,30 @@ export async function executeImportPedidosCarteira(
     }
   }
 
-  // Registrar auditoria
+  // Registrar em import_history
   try {
-    const userId = pb.authStore.model?.id
-    if (userId) {
-      await pb.collection('activity_logs').create({
-        user: userId,
-        action: 'Importação Maestro - Pedidos em Carteira',
-        details: `Importados ${inserted} pedidos em carteira (${skippedDuplicates} duplicatas ignoradas) de "${originalFileName || 'arquivo.pdf'}".`,
-        target_collection: 'pedidos_carteira',
-        origem: 'painel',
-        tipo: 'outro',
-      })
-    }
+    const fName = originalFileName || 'pedidos_em_carteira.pdf'
+    const parts = fName.split('.')
+    const fType = parts.length > 1 ? parts[parts.length - 1].toLowerCase() : 'pdf'
+    const statusVal = errorsList.length === 0 ? 'sucesso' : inserted > 0 ? 'parcial' : 'erro'
+    const errText =
+      errorsList.length > 0
+        ? errorsList
+            .map((e) => `Linha ${e.row}: ${e.reason}`)
+            .slice(0, 10)
+            .join('\n')
+        : `Importados ${inserted} pedidos em carteira (${skippedDuplicates} duplicatas ignoradas).`
+
+    await pb.collection('import_history').create({
+      file_name: fName,
+      file_type: fType,
+      imported_at: new Date().toISOString(),
+      total_rows: items.length,
+      imported_rows: inserted,
+      error_rows: errorsList.length,
+      status: statusVal,
+      details: errText,
+    })
   } catch {
     /* intentionally ignored */
   }
@@ -916,19 +927,30 @@ export async function executeImportRelatorioVendasSemanal(
     }
   }
 
-  // Registrar auditoria
+  // Registrar em import_history
   try {
-    const userId = pb.authStore.model?.id
-    if (userId) {
-      await pb.collection('activity_logs').create({
-        user: userId,
-        action: 'Importação Maestro - Relatório de Vendas Semanal (Metas)',
-        details: `Importadas metas e realizados (${inserted} novas metas, ${skippedDuplicates} atualizadas) de "${originalFileName || 'arquivo.pdf'}".`,
-        target_collection: 'metas',
-        origem: 'painel',
-        tipo: 'outro',
-      })
-    }
+    const fName = originalFileName || 'relatorio_vendas_semanal.pdf'
+    const parts = fName.split('.')
+    const fType = parts.length > 1 ? parts[parts.length - 1].toLowerCase() : 'pdf'
+    const statusVal = errorsList.length === 0 ? 'sucesso' : inserted > 0 ? 'parcial' : 'erro'
+    const errText =
+      errorsList.length > 0
+        ? errorsList
+            .map((e) => `Linha ${e.row}: ${e.reason}`)
+            .slice(0, 10)
+            .join('\n')
+        : `Importadas ${inserted} novas metas (${skippedDuplicates} atualizadas/duplicadas).`
+
+    await pb.collection('import_history').create({
+      file_name: fName,
+      file_type: fType,
+      imported_at: new Date().toISOString(),
+      total_rows: items.length,
+      imported_rows: inserted,
+      error_rows: errorsList.length,
+      status: statusVal,
+      details: errText,
+    })
   } catch {
     /* intentionally ignored */
   }

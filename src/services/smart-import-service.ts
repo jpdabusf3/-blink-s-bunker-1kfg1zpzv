@@ -704,6 +704,31 @@ export async function executeSmartImport(params: {
   }
 
   if (rowsToProcess.length === 0) {
+    // Registrar falha de importação em import_history
+    try {
+      const fName = parseResult.fileName || 'smart_import.xlsx'
+      const parts = fName.split('.')
+      const fType = parts.length > 1 ? parts[parts.length - 1].toLowerCase() : 'xlsx'
+      const errSummary =
+        validation.validationErrors
+          .map((e) => `Linha ${e.row}: ${e.reason}`)
+          .slice(0, 10)
+          .join('\n') || 'Nenhuma linha válida após validação de dados.'
+
+      await pb.collection('import_history').create({
+        file_name: fName,
+        file_type: fType,
+        imported_at: new Date().toISOString(),
+        total_rows: parseResult.rows.length,
+        imported_rows: 0,
+        error_rows: validation.invalidCount,
+        status: 'erro',
+        details: errSummary,
+      })
+    } catch {
+      /* intentionally ignored */
+    }
+
     return {
       success: false,
       totalRead: parseResult.rows.length,

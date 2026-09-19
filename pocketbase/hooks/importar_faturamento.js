@@ -1203,39 +1203,56 @@ routerAdd(
       var totalDuplicatesOverall =
         faturamentoDuplicatas > 0 ? faturamentoDuplicatas : duplicatasIgnoradas
       var importStatus =
-        erros.length === 0 ? 'concluido' : totalImportedOverall > 0 ? 'parcial' : 'erro'
+        erros.length + faturamentoErrosCount === 0
+          ? 'sucesso'
+          : totalImportedOverall > 0
+            ? 'parcial'
+            : 'erro'
 
-      // 5. REGISTRAR LOG DE ATIVIDADE CONSOLIDADO (1 SÓ LOG para toda a importação)
+      var totalErrorsCount = erros.length + faturamentoErrosCount
+      var errorSummary = ''
+      if (erros.length > 0) {
+        var errLines = []
+        for (var eIdx = 0; eIdx < Math.min(erros.length, 10); eIdx++) {
+          var errItem = erros[eIdx]
+          errLines.push(
+            'Linha ' + (errItem.linha || eIdx + 1) + ': ' + (errItem.erro || 'Falha de validação'),
+          )
+        }
+        if (erros.length > 10) {
+          errLines.push('... e mais ' + (erros.length - 10) + ' erro(s).')
+        }
+        errorSummary = errLines.join('\n')
+      }
+
+      // 5. REGISTRAR EM import_history (Collection Oficial de Histórico)
       try {
-        var actCol = $app.findCollectionByNameOrId('activity_logs')
-        var actRec = new Record(actCol)
-        actRec.set('user', userId)
-        actRec.set('action', 'Importação de Faturamento')
-        actRec.set(
+        var ihCol = $app.findCollectionByNameOrId('import_history')
+        var ihRec = new Record(ihCol)
+        var fileParts = (fileName || '').split('.')
+        var fType = fileParts.length > 1 ? fileParts[fileParts.length - 1].toLowerCase() : 'xlsx'
+
+        ihRec.set('file_name', fileName || 'faturamento_importacao.xlsx')
+        ihRec.set('file_type', fType)
+        ihRec.set('imported_at', new Date().toISOString())
+        ihRec.set('total_rows', rows.length)
+        ihRec.set('imported_rows', totalImportedOverall)
+        ihRec.set('error_rows', totalErrorsCount)
+        ihRec.set('status', importStatus)
+        ihRec.set(
           'details',
-          'Importação de faturamento [' +
-            fileName +
-            ']: ' +
-            totalImportedOverall +
-            ' registros importados, ' +
-            totalDuplicatesOverall +
-            ' duplicados ignorados (' +
-            criados +
-            ' pedidos criados em histórico, ' +
-            clientesCriados +
-            ' novos clientes cadastrados, ' +
-            totalClientesAtualizados +
-            ' atualizados no CRM). Status: ' +
-            importStatus +
-            '.',
+          errorSummary ||
+            'Importação concluída: ' +
+              totalImportedOverall +
+              ' registros gravados, ' +
+              totalDuplicatesOverall +
+              ' duplicados ignorados de ' +
+              rows.length +
+              ' linhas lidas.',
         )
-        actRec.set('target_collection', 'faturamento')
-        actRec.set('origem', 'painel')
-        actRec.set('tipo', 'outro')
-        actRec.set('proximo_passo', importStatus) // Status semântico do upload (concluido | parcial | erro)
-        $app.save(actRec)
-      } catch (logErr) {
-        $app.logger().warn('Erro ao gravar log consolidado: ' + String(logErr))
+        $app.save(ihRec)
+      } catch (ihErr) {
+        $app.logger().warn('Erro ao gravar em import_history: ' + String(ihErr))
       }
 
       // Registrar também no funnel_activity_log consolidado

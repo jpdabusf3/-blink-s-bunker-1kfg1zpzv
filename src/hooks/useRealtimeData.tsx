@@ -47,6 +47,7 @@ export type RealtimeCollection =
   | 'users'
   | 'invitations'
   | 'produtos'
+  | 'import_history'
   | 'all'
 
 /**
@@ -55,13 +56,13 @@ export type RealtimeCollection =
 export function normalizeCollectionName(name: string): string {
   if (name === 'clientes') return 'factories'
   if (name === 'invoices') return 'notas_fiscais'
-  if (name === 'import_history') return 'activity_logs'
   if (name === 'reports' || name === 'report_data') return 'historico_vendas'
   return name
 }
 
 // Lista canônica de coleções que o provedor assina no PocketBase
 export const WATCHED_COLLECTIONS: string[] = [
+  'import_history',
   'faturamento',
   'historico_vendas',
   'pedidos_carteira',
