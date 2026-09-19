@@ -744,9 +744,138 @@ export function formatCurrencyPreview(val: unknown, prefix = ''): string {
  * Sugere automaticamente o mapeamento de colunas da planilha para os campos do CRM
  * de forma resiliente a acentos, maiúsculas/minúsculas, espaços e pontuações.
  */
+/**
+ * Detecta se a lista de colunas corresponde ao Template Oficial Blink de Faturamento:
+ * Data Faturamento | Número NF | Cliente | CNPJ | Código Produto | Produto |
+ * Família de Produtos | País | Espécie | Quantidade | Valor Unitário USD |
+ * Valor Total (USD) | Valor Total (R$) | Vendedor | Unidade | Canal de Vendas | Status
+ */
+export function isBlinkOfficialTemplate(sheetHeaders: string[]): boolean {
+  if (!sheetHeaders || sheetHeaders.length < 5) return false
+
+  const normalized = sheetHeaders.map(normalizeKey)
+  // Cabeçalhos essenciais que definem o Template Oficial Blink
+  const requiredOfficialMarkers = [
+    'datafaturamento',
+    'numeronf',
+    'cliente',
+    'cnpj',
+    'codigoproduto',
+    'produto',
+    'familiadeprodutos',
+    'pais',
+    'especie',
+    'quantidade',
+    'valorunitariousd',
+    'valortotalusd',
+    'valortotalr',
+    'vendedor',
+    'unidade',
+    'canaldevendas',
+    'status',
+  ]
+
+  let matches = 0
+  requiredOfficialMarkers.forEach((marker) => {
+    if (normalized.includes(marker)) {
+      matches++
+    }
+  })
+
+  // Se mais da metade dos marcadores oficiais baterem (inclusive os campos core)
+  return matches >= 8 && normalized.includes('datafaturamento') && normalized.includes('numeronf')
+}
+
+/**
+ * Retorna o mapeamento automático exato para o Template Oficial Blink de Faturamento
+ */
+export function getOfficialTemplateMapping(
+  sheetHeaders: string[],
+): Record<string, FaturamentoFieldKey | ''> {
+  const mapping: Record<string, FaturamentoFieldKey | ''> = {}
+
+  sheetHeaders.forEach((header) => {
+    const norm = normalizeKey(header)
+    switch (norm) {
+      case 'datafaturamento':
+      case 'data':
+        mapping[header] = 'data'
+        break
+      case 'numeronf':
+      case 'nf':
+      case 'numnf':
+        mapping[header] = 'numero_documento'
+        break
+      case 'cliente':
+        mapping[header] = 'cliente'
+        break
+      case 'cnpj':
+        mapping[header] = 'cnpj'
+        break
+      case 'codigoproduto':
+      case 'codproduto':
+        mapping[header] = 'produto_codigo'
+        break
+      case 'produto':
+        mapping[header] = 'produto'
+        break
+      case 'familiadeprodutos':
+      case 'familiadeproduto':
+      case 'familiaproduto':
+        mapping[header] = 'familia_produto'
+        break
+      case 'pais':
+      case 'country':
+        mapping[header] = 'country'
+        break
+      case 'especie':
+      case 'segmento':
+        mapping[header] = 'especie'
+        break
+      case 'quantidade':
+      case 'qtd':
+        mapping[header] = 'quantidade'
+        break
+      case 'valorunitariousd':
+        mapping[header] = 'valor_unitario_usd'
+        break
+      case 'valortotalusd':
+        mapping[header] = 'valor_usd'
+        break
+      case 'valortotalr':
+      case 'valortotalrs':
+      case 'valortotalbrl':
+        mapping[header] = 'valor'
+        break
+      case 'vendedor':
+        mapping[header] = 'vendedor'
+        break
+      case 'unidade':
+        mapping[header] = 'unidade'
+        break
+      case 'canaldevendas':
+      case 'canalvendas':
+        mapping[header] = 'canal_vendas'
+        break
+      case 'status':
+        mapping[header] = 'status'
+        break
+      default:
+        mapping[header] = ''
+    }
+  })
+
+  return mapping
+}
+
 export function autoSuggestMapping(
   sheetHeaders: string[],
 ): Record<string, FaturamentoFieldKey | ''> {
+  // Se for detectado o Template Oficial Blink, aplica o mapeamento oficial direto
+  if (isBlinkOfficialTemplate(sheetHeaders)) {
+    return getOfficialTemplateMapping(sheetHeaders)
+  }
+
   const mapping: Record<string, FaturamentoFieldKey | ''> = {}
   const usedCRMFields = new Set<FaturamentoFieldKey>()
 
@@ -1200,6 +1329,17 @@ function selectBestWorksheet(workbook: XLSX.WorkBook): {
 } {
   if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
     throw new Error('A planilha enviada não contém nenhuma aba.')
+  }
+
+  // Se existir aba com nome 'Faturamento' (exatamente ou variação), priorizá-la
+  const faturamentoSheetName = workbook.SheetNames.find(
+    (name) => name.trim().toLowerCase() === 'faturamento',
+  )
+  if (faturamentoSheetName && workbook.Sheets[faturamentoSheetName]) {
+    return {
+      sheetName: faturamentoSheetName,
+      worksheet: workbook.Sheets[faturamentoSheetName],
+    }
   }
 
   let bestSheetName = workbook.SheetNames[0]

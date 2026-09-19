@@ -8,6 +8,7 @@ import {
   parseProductDesc,
   parseFaturamentoPreview,
   importFaturamento,
+  isBlinkOfficialTemplate,
   type FaturamentoFieldKey,
   type FaturamentoImportResult,
 } from '@/services/import-faturamento'
@@ -45,6 +46,7 @@ export interface SmartImportParseResult {
   fileSize: number
   totalRows: number
   rawText?: string
+  isBlinkOfficialTemplate?: boolean
   blinkData?: {
     matrizVenda?: MatrizVendaItem[]
     pedidosCarteira?: PedidoCarteiraItem[]
@@ -70,6 +72,7 @@ export interface SmartValidationSummary {
   validCount: number
   invalidCount: number
   duplicateCount: number
+  newCount?: number
   rowValidations: SmartRowValidation[]
   validationErrors: Array<{ row: number; reason: string }>
 }
@@ -97,11 +100,12 @@ export function buildDuplicateKey(
   const n = norm(numeroDoc)
   const p = norm(produto)
 
-  // Prioriza a chave da especificação: numeroNF + produto + data
+  // Deduplicação mandatória:
+  // Data Faturamento + Cliente + Produto (+ NF se houver)
   if (n) {
-    return `${n}__${p}__${d}`
+    return `${d}__${c}__${p}__${n}`
   }
-  return `${c}__${d}__${n}__${p}`
+  return `${d}__${c}__${p}`
 }
 
 /**
@@ -295,6 +299,7 @@ export async function smartParseFile(file: File): Promise<SmartImportParseResult
       )
     }
 
+    const isOfficial = isBlinkOfficialTemplate(headers)
     const suggested = autoSuggestMapping(headers)
 
     return {
@@ -305,6 +310,7 @@ export async function smartParseFile(file: File): Promise<SmartImportParseResult
       fileName,
       fileSize,
       totalRows: rows.length,
+      isBlinkOfficialTemplate: isOfficial,
     }
   }
 
@@ -513,12 +519,15 @@ export function validateSmartRows(
   const clienteHeader = crmToHeader.get('cliente')
   const docHeader = crmToHeader.get('numero_documento')
   const produtoHeader = crmToHeader.get('produto')
+  const produtoCodigoHeader = crmToHeader.get('produto_codigo')
+  const cnpjHeader = crmToHeader.get('cnpj')
   const valorBrlHeader = crmToHeader.get('valor')
   const valorUsdHeader = crmToHeader.get('valor_usd')
 
   let validCount = 0
   let invalidCount = 0
   let duplicateCount = 0
+  let newCount = 0
 
   rows.forEach((row, idx) => {
     const rowNumber = idx + 1
@@ -530,6 +539,11 @@ export function validateSmartRows(
     if (!clienteHeader || !cleanCliente || cleanCliente === '—') {
       errors.push('Cliente não informado ou vazio')
     }
+
+    // 1.1 Validar CNPJ se presente (apenas formato, sem bloquear)
+    const rawCnpj = cnpjHeader ? String(row[cnpjHeader] || '').trim() : ''
+    const cleanCnpjDigits = rawCnpj.replace(/\D/g, '')
+    const hasCnpj = cleanCnpjDigits.length === 14
 
     // 2. Validar Data
     const rawData = dataHeader ? row[dataHeader] : undefined
@@ -559,15 +573,27 @@ export function validateSmartRows(
     // 4. Checar duplicata
     const rawDoc = docHeader ? row[docHeader] : ''
     const rawProd = produtoHeader ? row[produtoHeader] : ''
-    const cleanProd = parseProductDesc(rawProd)
+    const rawProdCod = produtoCodigoHeader ? row[produtoCodigoHeader] : ''
+    const cleanProd = parseProductDesc(rawProd) || String(rawProdCod || '')
 
     const duplicateKey = buildDuplicateKey(cleanCliente, parsedData, rawDoc, cleanProd)
+    // Chave secundária por código de produto caso venha código e descrição separados
+    const altDuplicateKey = rawProdCod
+      ? buildDuplicateKey(cleanCliente, parsedData, rawDoc, rawProdCod)
+      : ''
+
     const isDuplicate =
       Boolean(duplicateKey) &&
-      (existingDuplicateKeys.has(duplicateKey) || seenBatchKeys.has(duplicateKey))
+      (existingDuplicateKeys.has(duplicateKey) ||
+        seenBatchKeys.has(duplicateKey) ||
+        (Boolean(altDuplicateKey) &&
+          (existingDuplicateKeys.has(altDuplicateKey) || seenBatchKeys.has(altDuplicateKey))))
 
     if (duplicateKey) {
       seenBatchKeys.add(duplicateKey)
+    }
+    if (altDuplicateKey) {
+      seenBatchKeys.add(altDuplicateKey)
     }
 
     const isValid = errors.length === 0
@@ -584,6 +610,8 @@ export function validateSmartRows(
 
     if (isDuplicate) {
       duplicateCount++
+    } else if (isValid) {
+      newCount++
     }
 
     rowValidations.push({
@@ -605,6 +633,7 @@ export function validateSmartRows(
     validCount,
     invalidCount,
     duplicateCount,
+    newCount,
     rowValidations,
     validationErrors,
   }

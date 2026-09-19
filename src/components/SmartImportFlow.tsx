@@ -51,11 +51,16 @@ import {
   Info,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { FATURAMENTO_FIELDS, type FaturamentoFieldKey } from '@/services/import-faturamento'
+import {
+  FATURAMENTO_FIELDS,
+  parseDateBR,
+  type FaturamentoFieldKey,
+} from '@/services/import-faturamento'
 import {
   smartParseFile,
   validateSmartRows,
   executeSmartImport,
+  buildDuplicateKey,
   type SmartImportParseResult,
 } from '@/services/smart-import-service'
 import { formatCurrency, formatCurrencyUSD } from '@/lib/utils'
@@ -172,11 +177,54 @@ export function SmartImportFlow({ onSuccess }: SmartImportFlowProps) {
     loadEntities()
   }, [])
 
+  // Carregar chaves existentes no banco para enriquecer a validação de duplicatas
+  const [dbDuplicateKeys, setDbDuplicateKeys] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    let isMounted = true
+    const fetchExistingFaturamento = async () => {
+      try {
+        const records = await pb.collection('faturamento').getList(1, 1000, {
+          fields: 'data_documento,cliente_codigo,cliente_nome,produto_codigo,nf_ano',
+          sort: '-created',
+        })
+        if (!isMounted) return
+        const keys = new Set<string>()
+        records.items.forEach((rec) => {
+          const dIso = String(rec.data_documento || '').slice(0, 10)
+          const dBr = parseDateBR(dIso)
+          const cliCod = String(rec.cliente_codigo || '').trim()
+          const cliNome = String(rec.cliente_nome || '').trim()
+          const prodCod = String(rec.produto_codigo || '').trim()
+          const nf = String(rec.nf_ano || '').trim()
+
+          if (dIso && prodCod) {
+            if (cliCod) {
+              keys.add(buildDuplicateKey(cliCod, dBr, nf, prodCod))
+              keys.add(buildDuplicateKey(cliCod, dIso, nf, prodCod))
+            }
+            if (cliNome) {
+              keys.add(buildDuplicateKey(cliNome, dBr, nf, prodCod))
+              keys.add(buildDuplicateKey(cliNome, dIso, nf, prodCod))
+            }
+          }
+        })
+        setDbDuplicateKeys(keys)
+      } catch {
+        // Ignorar
+      }
+    }
+    fetchExistingFaturamento()
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
   // Validação dinâmica das linhas com base no mapeamento atual
   const validationSummary = useMemo(() => {
     if (!parseResult || !parseResult.rows) return null
-    return validateSmartRows(parseResult.rows, mapping)
-  }, [parseResult, mapping])
+    return validateSmartRows(parseResult.rows, mapping, dbDuplicateKeys)
+  }, [parseResult, mapping, dbDuplicateKeys])
 
   // Campos obrigatórios ausentes
   const mappedFields = useMemo(() => {
@@ -240,10 +288,17 @@ export function SmartImportFlow({ onSuccess }: SmartImportFlowProps) {
     let valBrlH: string | undefined
     let valUsdH: string | undefined
 
+    let prodCodH: string | undefined
+    let docH: string | undefined
+    let dataH: string | undefined
+
     Object.entries(mapping).forEach(([h, field]) => {
       if (field === 'cliente') clienteH = h
       if (field === 'cnpj') cnpjh = h
       if (field === 'produto') prodH = h
+      if (field === 'produto_codigo') prodCodH = h
+      if (field === 'numero_documento') docH = h
+      if (field === 'data') dataH = h
       if (field === 'valor') valBrlH = h
       if (field === 'valor_usd') valUsdH = h
     })
@@ -262,6 +317,7 @@ export function SmartImportFlow({ onSuccess }: SmartImportFlowProps) {
       const isSyntaxInvalid = !rowVal?.isValid
       const isDuplicate = Boolean(rowVal?.isDuplicate)
 
+      // Clientes/produtos ausentes são apenas informativos / sinalizados, sem bloquear a importação
       const hasProblem = isClientMissing || isProductMissing || isSyntaxInvalid
 
       return {
@@ -293,7 +349,9 @@ export function SmartImportFlow({ onSuccess }: SmartImportFlowProps) {
 
     const problematic = new Set<number>()
     rowsAnalysis.forEach((r) => {
-      if (r.isClientMissing || r.isProductMissing || r.isSyntaxInvalid) {
+      // Apenas sintaxe inválida é pré-marcada para pular;
+      // Clientes/produtos não cadastrados são apenas sinalizados conforme especificação
+      if (r.isSyntaxInvalid) {
         problematic.add(r.idx)
       }
     })
@@ -308,6 +366,14 @@ export function SmartImportFlow({ onSuccess }: SmartImportFlowProps) {
 
   const problemRowsCount = useMemo(() => {
     return rowsAnalysis.filter((r) => r.hasProblem).length
+  }, [rowsAnalysis])
+
+  const duplicateRowsCount = useMemo(() => {
+    return rowsAnalysis.filter((r) => r.isDuplicate).length
+  }, [rowsAnalysis])
+
+  const newRowsCount = useMemo(() => {
+    return rowsAnalysis.filter((r) => !r.isDuplicate && !r.isSyntaxInvalid).length
   }, [rowsAnalysis])
 
   const missingClientsRows = useMemo(() => {
@@ -733,13 +799,28 @@ export function SmartImportFlow({ onSuccess }: SmartImportFlowProps) {
                     <FileSpreadsheet className="w-5 h-5" />
                   </div>
                   <div>
-                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2 flex-wrap">
                       <span>{parseResult.fileName}</span>
-                      <Badge variant="secondary" className="text-[10px] font-mono">
-                        Planilha Excel/CSV
-                      </Badge>
+                      {parseResult.isBlinkOfficialTemplate ? (
+                        <Badge
+                          variant="outline"
+                          className="text-[11px] font-semibold bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-700"
+                        >
+                          Template Oficial Blink de Faturamento
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-[10px] font-mono">
+                          Planilha Excel/CSV
+                        </Badge>
+                      )}
                     </CardTitle>
                     <CardDescription className="text-xs">
+                      {parseResult.isBlinkOfficialTemplate && (
+                        <span className="text-emerald-700 dark:text-emerald-400 font-medium block mb-0.5">
+                          Formato reconhecido nativamente: mapeamento oficial de colunas e famílias
+                          aplicado automaticamente.
+                        </span>
+                      )}
                       {parseResult.totalRows} linhas e {parseResult.headers.length} colunas lidas.
                     </CardDescription>
                   </div>
@@ -968,38 +1049,45 @@ export function SmartImportFlow({ onSuccess }: SmartImportFlowProps) {
           </Card>
 
           {/* Barra de Resumo da Importação */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <Card className="border-border shadow-subtle p-4 flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Total de Linhas</p>
                 <p className="text-2xl font-bold font-mono mt-1 text-foreground">
                   {totalRowsCount.toLocaleString('pt-BR')}
                 </p>
-                <span className="text-[11px] text-muted-foreground">
-                  {validRowsToImport.length} selecionadas para gravação
-                </span>
+                <span className="text-[11px] text-muted-foreground">Lidas no arquivo</span>
               </div>
               <div className="p-3 rounded-xl bg-primary/10 text-primary">
                 <Layers className="w-5 h-5" />
               </div>
             </Card>
 
-            <Card className="border-border shadow-subtle p-4 flex items-center justify-between">
+            <Card className="border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/20 dark:bg-emerald-950/10 shadow-subtle p-4 flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground font-medium">Valor Total Lido</p>
-                <p className="text-2xl font-bold font-mono mt-1 text-emerald-700 dark:text-emerald-400">
-                  R${' '}
-                  {totalValueBRL.toLocaleString('pt-BR', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
+                  Linhas Novas
                 </p>
-                <span className="text-[11px] text-muted-foreground">
-                  Soma de todas as linhas lidas
-                </span>
+                <p className="text-2xl font-bold font-mono mt-1 text-emerald-700 dark:text-emerald-400">
+                  {newRowsCount.toLocaleString('pt-BR')}
+                </p>
+                <span className="text-[11px] text-muted-foreground">Prontas para gravar</span>
               </div>
               <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-600">
-                <DollarSign className="w-5 h-5" />
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+            </Card>
+
+            <Card className="border-blue-200 dark:border-blue-900/40 bg-blue-50/20 dark:bg-blue-950/10 shadow-subtle p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-blue-700 dark:text-blue-400 font-medium">Duplicadas</p>
+                <p className="text-2xl font-bold font-mono mt-1 text-blue-700 dark:text-blue-400">
+                  {duplicateRowsCount.toLocaleString('pt-BR')}
+                </p>
+                <span className="text-[11px] text-muted-foreground">Já existem na base</span>
+              </div>
+              <div className="p-3 rounded-xl bg-blue-500/10 text-blue-600">
+                <Copy className="w-5 h-5" />
               </div>
             </Card>
 
@@ -1020,7 +1108,7 @@ export function SmartImportFlow({ onSuccess }: SmartImportFlowProps) {
                   {problemRowsCount.toLocaleString('pt-BR')}
                 </p>
                 <span className="text-[11px] text-muted-foreground">
-                  Cliente/produto não achado ou dado inválido
+                  Cliente/produto não achado
                 </span>
               </div>
               <div
@@ -1262,13 +1350,20 @@ export function SmartImportFlow({ onSuccess }: SmartImportFlowProps) {
                     salvamento definitivo.
                   </CardDescription>
                 </div>
-
-                <div className="flex items-center gap-2 text-xs">
+                <div className="flex items-center gap-2 text-xs flex-wrap">
                   <Badge
                     variant="outline"
                     className="bg-emerald-50 text-emerald-700 border-emerald-200"
                   >
-                    {validRowsToImport.length} para importar
+                    {newRowsCount} nova(s)
+                  </Badge>
+                  {duplicateRowsCount > 0 && (
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                      {duplicateRowsCount} duplicada(s)
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
+                    {validRowsToImport.length} para gravar
                   </Badge>
                   {skippedRowIndices.size > 0 && (
                     <Badge
@@ -1278,7 +1373,7 @@ export function SmartImportFlow({ onSuccess }: SmartImportFlowProps) {
                       {skippedRowIndices.size} ignorada(s)
                     </Badge>
                   )}
-                </div>
+                </div>{' '}
               </div>
             </CardHeader>
             <CardContent className="space-y-4">

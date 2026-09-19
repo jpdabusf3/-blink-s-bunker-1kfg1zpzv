@@ -69,6 +69,75 @@ routerAdd(
         'dezembro',
       ]
 
+      function mapearFamiliaParaCodigoCanonico(codigoProduto, familiaBruta) {
+        var cod = String(codigoProduto || '')
+          .trim()
+          .toUpperCase()
+        if (cod.indexOf('BBMI.XS') === 0 || cod.indexOf('BPMI.XS') === 0) return 'MI-XS'
+        if (cod.indexOf('BBMO.BE') === 0 || cod.indexOf('BPMO.BE') === 0) return 'MO-BE'
+        if (cod.indexOf('BBMY.CO') === 0 || cod.indexOf('BPMY.CO') === 0) return 'MY-CO'
+        if (cod.indexOf('BBMI.OR') === 0 || cod.indexOf('BPMI.OR') === 0) return 'MI-OR'
+        if (cod.indexOf('BBMY.ST') === 0 || cod.indexOf('BPMY.ST') === 0) return 'MY-ST'
+
+        var bruta = String(familiaBruta || '').trim()
+        if (!bruta) return ''
+        var upper = bruta.toUpperCase()
+        if (
+          upper === 'MI-OR' ||
+          upper === 'MI-XS' ||
+          upper === 'MO-BE' ||
+          upper === 'MY-CO' ||
+          upper === 'MY-ST'
+        )
+          return upper
+        if (upper === 'MI.OR') return 'MI-OR'
+        if (upper === 'MI.XS') return 'MI-XS'
+        if (upper === 'MO.BE') return 'MO-BE'
+        if (upper === 'MY.CO') return 'MY-CO'
+        if (upper === 'MY.ST') return 'MY-ST'
+
+        var norm = upper.normalize
+          ? upper
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/[^A-Z0-9]/g, '')
+          : upper.replace(/[^A-Z0-9]/g, '')
+        if (
+          norm.indexOf('MINERAISORGANICOS') !== -1 ||
+          norm.indexOf('MINERALORGANICO') !== -1 ||
+          norm.indexOf('MIOR') !== -1
+        )
+          return 'MI-OR'
+        if (
+          norm.indexOf('MIXIS') !== -1 ||
+          norm.indexOf('MIX') !== -1 ||
+          norm.indexOf('BLEND') !== -1
+        )
+          return 'MI-XS'
+        if (
+          norm.indexOf('MOSBETALINK') !== -1 ||
+          norm.indexOf('BETALINK') !== -1 ||
+          norm.indexOf('MOBE') !== -1 ||
+          norm.indexOf('MOS') !== -1
+        )
+          return 'MO-BE'
+        if (
+          norm.indexOf('MYCOLINK') !== -1 ||
+          norm.indexOf('MICOLINK') !== -1 ||
+          norm.indexOf('MYCO') !== -1 ||
+          norm.indexOf('ADSORVENT') !== -1
+        )
+          return 'MY-CO'
+        if (
+          norm.indexOf('LEVEDURA') !== -1 ||
+          norm.indexOf('MYST') !== -1 ||
+          norm.indexOf('YEAST') !== -1
+        )
+          return 'MY-ST'
+
+        return bruta
+      }
+
       function normalizeMonthStr(s) {
         return String(s || '')
           .toLowerCase()
@@ -961,9 +1030,11 @@ routerAdd(
                   '',
               ).trim()
               var fatFamilia =
-                typeof familiaCompleta === 'function'
-                  ? familiaCompleta(fatProdutoCodigo, fatFamiliaRaw)
-                  : fatFamiliaRaw || '—'
+                typeof mapearFamiliaParaCodigoCanonico === 'function'
+                  ? mapearFamiliaParaCodigoCanonico(fatProdutoCodigo, fatFamiliaRaw)
+                  : typeof familiaCompleta === 'function'
+                    ? familiaCompleta(fatProdutoCodigo, fatFamiliaRaw)
+                    : fatFamiliaRaw || '—'
 
               var fatValorUsd = parseNumber(
                 item.soma_de_vlr_total_usd !== undefined
@@ -982,51 +1053,82 @@ routerAdd(
                       : valorItem,
               )
 
-              // Dedupe por numeroNF + produto + data (se houver numeroDoc) ou data_documento + cliente_codigo + produto_codigo + valor_brl
-              var fatDedupeKey = numeroDoc
+              // Dedupe estrito por:
+              // 1) data_documento + cliente_codigo + produto_codigo (sempre comparado)
+              // 2) data_documento + cliente_nome + produto_codigo
+              // 3) idx_faturamento_dedupe: semana_iso + cliente_codigo + produto_codigo
+              // 4) Se houver numeroDoc: numeroDoc + fatProdutoCodigo + dataFaturamento
+              var fatDedupeKey =
+                dataFaturamento +
+                '__' +
+                (fatClienteCodigo || fatClienteNome) +
+                '__' +
+                fatProdutoCodigo
+              var fatDedupeKeyDoc = numeroDoc
                 ? numeroDoc + '__' + fatProdutoCodigo + '__' + dataFaturamento
-                : dataFaturamento +
-                  '__' +
-                  fatClienteCodigo +
-                  '__' +
-                  fatProdutoCodigo +
-                  '__' +
-                  fatValorBrl
+                : ''
 
-              if (faturamentoBatchDedupeKeys[fatDedupeKey]) {
+              if (
+                faturamentoBatchDedupeKeys[fatDedupeKey] ||
+                (fatDedupeKeyDoc && faturamentoBatchDedupeKeys[fatDedupeKeyDoc])
+              ) {
                 faturamentoDuplicatas++
                 duplicatasIgnoradas++
               } else {
                 faturamentoBatchDedupeKeys[fatDedupeKey] = true
+                if (fatDedupeKeyDoc) faturamentoBatchDedupeKeys[fatDedupeKeyDoc] = true
 
-                // Dedupe no banco: pular se já existir registro com a mesma chave (idempotente)
+                // Dedupe no banco: pular se já existir registro com a mesma chave (idempotente, nunca sobrescrever)
                 var alreadyFat = null
                 try {
-                  if (numeroDoc) {
-                    // Se numeroDoc for número/ano ou código de nota
-                    var docNumVal = parseInt(numeroDoc, 10)
-                    var filterDoc =
-                      "data_documento ~ '" +
-                      dataFaturamento +
-                      "' && produto_codigo = '" +
-                      fatProdutoCodigo.replace(/'/g, "\\'") +
-                      "'"
-                    if (!isNaN(docNumVal) && docNumVal > 0) {
-                      filterDoc += ' && nf_ano = ' + docNumVal
-                    }
-                    alreadyFat = $app.findFirstRecordByFilter('faturamento', filterDoc)
-                  }
-                  if (!alreadyFat) {
-                    var filterFatDedupe =
+                  // Checagem 1: data_documento + cliente (codigo ou nome) + produto_codigo
+                  if (fatClienteCodigo && fatProdutoCodigo) {
+                    var filterCliCod =
                       "data_documento ~ '" +
                       dataFaturamento +
                       "' && cliente_codigo = '" +
                       fatClienteCodigo.replace(/'/g, "\\'") +
                       "' && produto_codigo = '" +
                       fatProdutoCodigo.replace(/'/g, "\\'") +
-                      "' && valor_brl = " +
-                      fatValorBrl
-                    alreadyFat = $app.findFirstRecordByFilter('faturamento', filterFatDedupe)
+                      "'"
+                    alreadyFat = $app.findFirstRecordByFilter('faturamento', filterCliCod)
+                  }
+                  if (!alreadyFat && fatClienteNome && fatProdutoCodigo) {
+                    var filterCliNome =
+                      "data_documento ~ '" +
+                      dataFaturamento +
+                      "' && cliente_nome = '" +
+                      fatClienteNome.replace(/'/g, "\\'") +
+                      "' && produto_codigo = '" +
+                      fatProdutoCodigo.replace(/'/g, "\\'") +
+                      "'"
+                    alreadyFat = $app.findFirstRecordByFilter('faturamento', filterCliNome)
+                  }
+                  // Checagem 2: idx_faturamento_dedupe (semana_iso + cliente_codigo + produto_codigo)
+                  if (!alreadyFat && fatSemanaIso && fatClienteCodigo && fatProdutoCodigo) {
+                    var filterSemana =
+                      "semana_iso = '" +
+                      fatSemanaIso.replace(/'/g, "\\'") +
+                      "' && cliente_codigo = '" +
+                      fatClienteCodigo.replace(/'/g, "\\'") +
+                      "' && produto_codigo = '" +
+                      fatProdutoCodigo.replace(/'/g, "\\'") +
+                      "'"
+                    alreadyFat = $app.findFirstRecordByFilter('faturamento', filterSemana)
+                  }
+                  // Checagem 3: se houver numeroDoc
+                  if (!alreadyFat && numeroDoc && fatProdutoCodigo) {
+                    var docNumVal = parseInt(numeroDoc, 10)
+                    if (!isNaN(docNumVal) && docNumVal > 0) {
+                      var filterDoc =
+                        "data_documento ~ '" +
+                        dataFaturamento +
+                        "' && produto_codigo = '" +
+                        fatProdutoCodigo.replace(/'/g, "\\'") +
+                        "' && nf_ano = " +
+                        docNumVal
+                      alreadyFat = $app.findFirstRecordByFilter('faturamento', filterDoc)
+                    }
                   }
                 } catch (_) {}
 

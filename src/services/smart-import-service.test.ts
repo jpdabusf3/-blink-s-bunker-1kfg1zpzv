@@ -8,6 +8,49 @@ import { autoSuggestMapping, parseDateBR } from './import-faturamento'
 import { normalizeNumberBR } from '@/lib/utils'
 
 describe('Smart Import Service - Unit Tests', () => {
+  describe('Template Oficial Blink de Faturamento', () => {
+    it('reconhece nativamente o cabeçalho oficial de 17 colunas', () => {
+      const officialHeaders = [
+        'Data Faturamento',
+        'Número NF',
+        'Cliente',
+        'CNPJ',
+        'Código Produto',
+        'Produto',
+        'Família de Produtos',
+        'País',
+        'Espécie',
+        'Quantidade',
+        'Valor Unitário USD',
+        'Valor Total (USD)',
+        'Valor Total (R$)',
+        'Vendedor',
+        'Unidade',
+        'Canal de Vendas',
+        'Status',
+      ]
+
+      const mapping = autoSuggestMapping(officialHeaders)
+      expect(mapping['Data Faturamento']).toBe('data')
+      expect(mapping['Número NF']).toBe('numero_documento')
+      expect(mapping['Cliente']).toBe('cliente')
+      expect(mapping['CNPJ']).toBe('cnpj')
+      expect(mapping['Código Produto']).toBe('produto_codigo')
+      expect(mapping['Produto']).toBe('produto')
+      expect(mapping['Família de Produtos']).toBe('familia_produto')
+      expect(mapping['País']).toBe('country')
+      expect(mapping['Espécie']).toBe('especie')
+      expect(mapping['Quantidade']).toBe('quantidade')
+      expect(mapping['Valor Unitário USD']).toBe('valor_unitario_usd')
+      expect(mapping['Valor Total (USD)']).toBe('valor_usd')
+      expect(mapping['Valor Total (R$)']).toBe('valor')
+      expect(mapping['Vendedor']).toBe('vendedor')
+      expect(mapping['Unidade']).toBe('unidade')
+      expect(mapping['Canal de Vendas']).toBe('canal_vendas')
+      expect(mapping['Status']).toBe('status')
+    })
+  })
+
   describe('Fuzzy / Auto-Suggest Mapping', () => {
     it('reconhece cabeçalhos comuns em português e inglês com acentos ou maiúsculas', () => {
       const headers = [

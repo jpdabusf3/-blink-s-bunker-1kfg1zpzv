@@ -52,6 +52,7 @@ import {
   parseFaturamentoPreview,
   importFaturamento,
   downloadFaturamentoTemplate,
+  isBlinkOfficialTemplate,
   type FaturamentoFieldKey,
   type FaturamentoImportResult,
 } from '@/services/import-faturamento'
@@ -74,6 +75,7 @@ export default function ImportarFaturamento() {
   const [autoCreateClients, setAutoCreateClients] = useState(true)
 
   const [loadingFile, setLoadingFile] = useState(false)
+  const [isOfficialTemplate, setIsOfficialTemplate] = useState(false)
   const [importing, setImporting] = useState(false)
   const [result, setResult] = useState<FaturamentoImportResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -182,19 +184,29 @@ export default function ImportarFaturamento() {
       setSheetHeaders(headers)
       setPreviewRows(rows)
 
+      const isOfficial = isBlinkOfficialTemplate(headers)
+      setIsOfficialTemplate(isOfficial)
+
       // Sugestão automática resiliente
       const suggested = autoSuggestMapping(headers)
       setMapping(suggested)
 
-      toast.success(
-        `Arquivo lido com sucesso! ${headers.length} colunas identificadas. Mapeamento sugerido aplicado.`,
-      )
+      if (isOfficial) {
+        toast.success(
+          'Template Oficial Blink de Faturamento reconhecido! Mapeamento oficial aplicado automaticamente.',
+        )
+      } else {
+        toast.success(
+          `Arquivo lido com sucesso! ${headers.length} colunas identificadas. Mapeamento sugerido aplicado.`,
+        )
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Falha ao processar arquivo'
       setError(msg)
       toast.error(msg)
       setSheetHeaders([])
       setPreviewRows([])
+      setIsOfficialTemplate(false)
     } finally {
       setLoadingFile(false)
     }
@@ -261,8 +273,11 @@ export default function ImportarFaturamento() {
       setResult(res)
 
       if (res.success) {
+        const importados = res.faturamentoImportados ?? res.criados ?? 0
+        const ignorados =
+          (res.faturamentoDuplicatas ?? res.duplicatasIgnoradas ?? 0) + (res.skipped_zero ?? 0)
         toast.success(
-          `Importação concluída com sucesso! ${res.criados} pedidos gravados e ${res.clientesAtualizadosNoCRM} clientes atualizados.`,
+          `Importação concluída: ${importados} registros importados, ${ignorados} ignorados.`,
         )
         // Notifica central de sincronização e atualiza listas imediatamente
         notifyDataChanged('faturamento')
@@ -464,21 +479,39 @@ export default function ImportarFaturamento() {
               <CardHeader className="pb-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <CardTitle className="text-base flex items-center gap-2">
+                    <CardTitle className="text-base flex items-center gap-2 flex-wrap">
                       <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
                         2
                       </span>
                       Mapeamento de Colunas da Planilha para o CRM
+                      {isOfficialTemplate && (
+                        <Badge
+                          variant="outline"
+                          className="text-xs bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-700 font-semibold"
+                        >
+                          Template Oficial Blink de Faturamento
+                        </Badge>
+                      )}
                     </CardTitle>
                     <CardDescription>
-                      Associe cada coluna detectada na sua planilha ao campo correspondente do CRM.
-                      Campos com marcação de estrela são obrigatórios.
+                      {isOfficialTemplate ? (
+                        <span className="text-emerald-700 dark:text-emerald-400 font-medium">
+                          Template oficial reconhecido nativamente: todos os campos foram
+                          pré-mapeados e validados automaticamente.
+                        </span>
+                      ) : (
+                        'Associe cada coluna detectada na sua planilha ao campo correspondente do CRM. Campos com marcação de estrela são obrigatórios.'
+                      )}
                     </CardDescription>
                   </div>
 
                   <div className="flex items-center gap-2 bg-muted/50 p-1.5 rounded-lg border text-xs">
                     <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
-                    <span className="text-muted-foreground">Auto-sugestão inteligente ativa</span>
+                    <span className="text-muted-foreground">
+                      {isOfficialTemplate
+                        ? 'Mapeamento oficial aplicado'
+                        : 'Auto-sugestão inteligente ativa'}
+                    </span>
                   </div>
                 </div>
               </CardHeader>

@@ -33,6 +33,73 @@ export const CODIGO_CANONICO_ROTULO: Record<string, string> = {
   'MY-ST': 'Leveduras',
 }
 
+/**
+ * Converte o nome ou código de família recebido para o código canônico Blink:
+ * MI-XS (Blends), MO-BE (Mos/BetaLink), MY-CO (Mycolink), MI-OR (Minerais Orgânicos), MY-ST (Leveduras)
+ */
+export function mapearFamiliaParaCodigoCanonico(
+  codigoProduto?: string | null,
+  familiaBruta?: string | null,
+): string {
+  const cod = String(codigoProduto || '')
+    .trim()
+    .toUpperCase()
+  // 1) Pelo prefixo do código do produto (ex: BPMI.OR035 -> MI-OR)
+  for (const [prefixo, codCanonico] of Object.entries(PREFIXO_CODIGO_CANONICO)) {
+    if (cod.startsWith(prefixo)) return codCanonico
+  }
+
+  const bruta = String(familiaBruta || '').trim()
+  if (!bruta) return ''
+
+  const upper = bruta.toUpperCase()
+  if (['MI-OR', 'MI-XS', 'MO-BE', 'MY-CO', 'MY-ST'].includes(upper)) {
+    return upper
+  }
+  if (upper === 'MI.OR') return 'MI-OR'
+  if (upper === 'MI.XS') return 'MI-XS'
+  if (upper === 'MO.BE') return 'MO-BE'
+  if (upper === 'MY.CO') return 'MY-CO'
+  if (upper === 'MY.ST') return 'MY-ST'
+
+  const norm = upper
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Z0-9]/g, '')
+
+  if (
+    norm.includes('MINERAISORGANICOS') ||
+    norm.includes('MINERALORGANICO') ||
+    norm.includes('MIOR')
+  ) {
+    return 'MI-OR'
+  }
+  if (norm.includes('MIXIS') || norm.includes('MIX') || norm.includes('BLEND')) {
+    return 'MI-XS'
+  }
+  if (
+    norm.includes('MOSBETALINK') ||
+    norm.includes('BETALINK') ||
+    norm.includes('MOBE') ||
+    norm.includes('MOS')
+  ) {
+    return 'MO-BE'
+  }
+  if (
+    norm.includes('MYCOLINK') ||
+    norm.includes('MICOLINK') ||
+    norm.includes('MYCO') ||
+    norm.includes('ADSORVENT')
+  ) {
+    return 'MY-CO'
+  }
+  if (norm.includes('LEVEDURA') || norm.includes('MYST') || norm.includes('YEAST')) {
+    return 'MY-ST'
+  }
+
+  return bruta
+}
+
 // Prefixo do código do produto para o código canônico
 export const PREFIXO_CODIGO_CANONICO: Record<string, string> = {
   'BBMI.XS': 'MI-XS',
