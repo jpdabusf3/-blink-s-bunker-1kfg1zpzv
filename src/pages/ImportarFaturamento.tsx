@@ -64,10 +64,13 @@ import {
 import { useRealtimeDataContext } from '@/hooks/useRealtimeData'
 import { FaturamentoUploadHistory } from '@/components/faturamento/FaturamentoUploadHistory'
 import { EditableFaturamentoTable } from '@/components/faturamento/EditableFaturamentoTable'
+import { SmartImportFlow } from '@/components/SmartImportFlow'
 
 export default function ImportarFaturamento() {
   const { notifyDataChanged, subscribe } = useRealtimeDataContext()
-  const [activeTab, setActiveTab] = useState<'importar' | 'historico' | 'registros'>('importar')
+  const [activeTab, setActiveTab] = useState<'importar' | 'smart' | 'historico' | 'registros'>(
+    'importar',
+  )
   const [file, setFile] = useState<File | null>(null)
   const [sheetHeaders, setSheetHeaders] = useState<string[]>([])
   const [previewRows, setPreviewRows] = useState<Record<string, unknown>[]>([])
@@ -313,17 +316,29 @@ export default function ImportarFaturamento() {
         </div>
       </div>
 
-      {/* Navegação entre Visualizações: Nova Importação | Histórico de Uploads | Base de Registros Editáveis */}
+      {/* Navegação entre Visualizações: Nova Importação | Histórico de Uploads | Base de Registros Editáveis | Importação Inteligente */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-muted/30 p-2 rounded-xl border">
         <Tabs
           value={activeTab}
-          onValueChange={(val) => setActiveTab(val as 'importar' | 'historico' | 'registros')}
+          onValueChange={(val) =>
+            setActiveTab(val as 'importar' | 'smart' | 'historico' | 'registros')
+          }
           className="w-full sm:w-auto"
         >
-          <TabsList className="grid grid-cols-3 w-full sm:w-auto">
+          <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full sm:w-auto">
             <TabsTrigger value="importar" className="gap-1.5 text-xs">
               <Upload className="w-3.5 h-3.5" />
               <span>Importar Planilha</span>
+            </TabsTrigger>
+            <TabsTrigger value="smart" className="gap-1.5 text-xs">
+              <Sparkles className="w-3.5 h-3.5 text-primary" />
+              <span>Importação Inteligente</span>
+              <Badge
+                variant="secondary"
+                className="text-[9px] px-1 py-0 h-3.5 ml-1 bg-primary/10 text-primary border-primary/20"
+              >
+                IA
+              </Badge>
             </TabsTrigger>
             <TabsTrigger value="historico" className="gap-1.5 text-xs">
               <History className="w-3.5 h-3.5" />
@@ -348,11 +363,23 @@ export default function ImportarFaturamento() {
 
         <div className="text-xs text-muted-foreground px-2 hidden md:block">
           {activeTab === 'importar' && 'Upload e mapeamento de novas planilhas de pedidos.'}
+          {activeTab === 'smart' &&
+            'Importação inteligente multi-formato (XLSX, CSV, PDF da Blink ou DOCX) com prévia e deduplicação.'}
           {activeTab === 'historico' && 'Auditoria de todos os uploads realizados no sistema.'}
           {activeTab === 'registros' &&
             'Edição inline de células em tempo real (data, cliente, valor, vendedor, etc.).'}
         </div>
       </div>
+
+      {/* CONTEÚDO DA QUARTA SEÇÃO: IMPORTAÇÃO INTELIGENTE */}
+      {activeTab === 'smart' && (
+        <SmartImportFlow
+          onSuccess={() => {
+            loadUploadHistory()
+            loadFaturamentoRecords()
+          }}
+        />
+      )}
 
       {/* CONTEÚDO DA ABA 2: HISTÓRICO DE UPLOADS */}
       {activeTab === 'historico' && (
