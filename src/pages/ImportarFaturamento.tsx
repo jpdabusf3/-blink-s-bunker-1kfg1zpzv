@@ -159,12 +159,16 @@ export default function ImportarFaturamento() {
     if (!selected) return
 
     const ext = selected.name.split('.').pop()?.toLowerCase()
-    if (ext !== 'xlsx' && ext !== 'xls' && ext !== 'csv') {
-      toast.error('Apenas arquivos .xlsx, .xls ou .csv são suportados')
+    if (ext !== 'xlsx' && ext !== 'csv') {
+      const msg = 'Formato não suportado. Envie .xlsx ou .csv.'
+      setError(msg)
+      toast.error(msg)
       return
     }
-    if (selected.size > 20 * 1024 * 1024) {
-      toast.error('Arquivo muito grande (máximo 20MB)')
+    if (selected.size > 10 * 1024 * 1024) {
+      const msg = 'Arquivo maior que 10MB.'
+      setError(msg)
+      toast.error(msg)
       return
     }
 
@@ -427,12 +431,12 @@ export default function ImportarFaturamento() {
                   {file ? file.name : 'Clique ou arraste a planilha aqui para enviar'}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Compatível com .xlsx, .xls ou .csv (sem limites de colunas ou posições fixas)
+                  Compatível com .xlsx e .csv (até 10MB)
                 </p>
                 <input
                   ref={inputRef}
                   type="file"
-                  accept=".xlsx,.xls,.csv"
+                  accept=".xlsx,.csv"
                   onChange={handleFileSelect}
                   className="hidden"
                 />

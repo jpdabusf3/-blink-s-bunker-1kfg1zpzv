@@ -10,6 +10,9 @@ export interface ImportHistoryRecord {
   total_rows: number
   imported_rows: number
   error_rows: number
+  total_value?: number
+  skipped_rows?: number
+  duplicate_rows?: number
   status: ImportHistoryStatus
   details?: string
   created: string
@@ -23,6 +26,9 @@ export interface CreateImportHistoryInput {
   total_rows?: number
   imported_rows?: number
   error_rows?: number
+  total_value?: number
+  skipped_rows?: number
+  duplicate_rows?: number
   status: ImportHistoryStatus
   details?: string
 }
@@ -56,6 +62,9 @@ export async function getImportHistory(): Promise<ImportHistoryRecord[]> {
       total_rows: typeof r.total_rows === 'number' ? r.total_rows : 0,
       imported_rows: typeof r.imported_rows === 'number' ? r.imported_rows : 0,
       error_rows: typeof r.error_rows === 'number' ? r.error_rows : 0,
+      total_value: typeof r.total_value === 'number' ? r.total_value : 0,
+      skipped_rows: typeof r.skipped_rows === 'number' ? r.skipped_rows : 0,
+      duplicate_rows: typeof r.duplicate_rows === 'number' ? r.duplicate_rows : 0,
       details: r.details || '',
     }
   })
@@ -79,6 +88,9 @@ export async function createImportHistory(
     total_rows: input.total_rows ?? 0,
     imported_rows: input.imported_rows ?? 0,
     error_rows: input.error_rows ?? 0,
+    total_value: input.total_value ?? 0,
+    skipped_rows: input.skipped_rows ?? 0,
+    duplicate_rows: input.duplicate_rows ?? 0,
     status: input.status,
     details: input.details ?? '',
   })

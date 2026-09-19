@@ -35,9 +35,9 @@ export interface FieldDefinition {
 export const FATURAMENTO_FIELDS: FieldDefinition[] = [
   {
     key: 'data',
-    label: 'Data (Mês/Ano ou Faturamento)',
+    label: 'Data',
     required: true,
-    description: 'Mês/Ano ou data de faturamento (ex: Jan/2025, 01/2025, 10/01/2025)',
+    description: 'Data do faturamento ou documento (ex: 15/08/2026, 2026-08-15)',
     aliases: [
       'data',
       'dt',
@@ -80,9 +80,9 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
   },
   {
     key: 'cliente',
-    label: 'Cliente (Código & Razão Social)',
+    label: 'Cliente (Nome ou CNPJ)',
     required: true,
-    description: 'Nome e/ou código cadastral do cliente (ex: 1234 - Master Premix Nutrição Ltda)',
+    description: 'Nome, razão social ou CNPJ do cliente',
     aliases: [
       'cliente',
       'nome',
@@ -143,9 +143,9 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
   },
   {
     key: 'numero_documento',
-    label: 'NF / Número do Documento',
+    label: 'Número da NF (numeroNF)',
     required: false,
-    description: 'Número da nota fiscal ou pedido (usado para idempotência/evitar duplicatas)',
+    description: 'Número da nota fiscal (numeroNF)',
     aliases: [
       'nf',
       'nota',
@@ -230,9 +230,9 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
   },
   {
     key: 'valor',
-    label: 'Valor Total (R$)',
+    label: 'Valor Total (valorTotal)',
     required: false,
-    description: 'Valor total faturado em Real brasileiro (R$)',
+    description: 'Valor total faturado (R$ ou USD)',
     aliases: [
       'valor',
       'valor_brl',
@@ -308,9 +308,9 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
   },
   {
     key: 'produto',
-    label: 'Produto / Descrição',
+    label: 'Produto (Código ou Nome)',
     required: false,
-    description: 'Descrição do produto vendido (ex: Blink Zinc 22)',
+    description: 'Código ou nome do produto vendido',
     aliases: [
       'produto',
       'descricao',
@@ -402,9 +402,9 @@ export const FATURAMENTO_FIELDS: FieldDefinition[] = [
   },
   {
     key: 'valor_unitario',
-    label: 'Valor Unitário (R$)',
+    label: 'Valor Unitário (valorUnitario)',
     required: false,
-    description: 'Preço unitário por kg ou saca',
+    description: 'Preço unitário por produto ou unidade',
     aliases: [
       'unitario',
       'valor_unitario',
@@ -1043,6 +1043,8 @@ export interface FaturamentoImportResult {
   faturamentoImportados?: number
   faturamentoDuplicatas?: number
   faturamentoErrosCount?: number
+  totalValorImportadoBrl?: number
+  total_value?: number
   erros: FaturamentoImportError[]
 }
 

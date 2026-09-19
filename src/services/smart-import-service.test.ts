@@ -96,8 +96,9 @@ describe('Smart Import Service - Unit Tests', () => {
         'blink zinc 22',
       )
 
-      expect(key1).toContain('cooperativaagroindustrial')
-      expect(key2).toContain('cooperativaagroindustrial')
+      expect(key1).toBe(key2)
+      expect(key1).toContain('nf1234')
+      expect(key1).toContain('blinkzinc22')
       expect(key1).toContain('15082026')
     })
 

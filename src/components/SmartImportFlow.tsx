@@ -124,6 +124,22 @@ export function SmartImportFlow({ onSuccess }: SmartImportFlowProps) {
     const selected = e.target.files?.[0]
     if (!selected) return
 
+    const ext = selected.name.split('.').pop()?.toLowerCase()
+    if (ext !== 'xlsx' && ext !== 'csv') {
+      const msg = 'Formato não suportado. Envie .xlsx ou .csv.'
+      setErrorMessage(msg)
+      setStep('ERROR')
+      toast.error(msg)
+      return
+    }
+    if (selected.size > 10 * 1024 * 1024) {
+      const msg = 'Arquivo maior que 10MB.'
+      setErrorMessage(msg)
+      setStep('ERROR')
+      toast.error(msg)
+      return
+    }
+
     setFile(selected)
     setStep('LOADING')
     setErrorMessage(null)
@@ -250,7 +266,7 @@ export function SmartImportFlow({ onSuccess }: SmartImportFlowProps) {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".xlsx,.xls,.csv,.pdf,.doc,.docx"
+                accept=".xlsx,.csv"
                 onChange={handleFileChange}
                 className="hidden"
               />

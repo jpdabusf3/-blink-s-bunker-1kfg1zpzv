@@ -483,6 +483,7 @@ routerAdd(
       var faturamentoDuplicatas = 0
       var faturamentoErrosCount = 0
       var faturamentoBatchDedupeKeys = {}
+      var totalValorImportadoBrl = 0
 
       // Rastrear pedidos importados por factory para atualização cirúrgica posterior
       var factoriesAfetadas = {}
@@ -981,15 +982,16 @@ routerAdd(
                       : valorItem,
               )
 
-              // Dedupe por chave única: data_documento + cliente_codigo + produto_codigo + valor_brl
-              var fatDedupeKey =
-                dataFaturamento +
-                '__' +
-                fatClienteCodigo +
-                '__' +
-                fatProdutoCodigo +
-                '__' +
-                fatValorBrl
+              // Dedupe por numeroNF + produto + data (se houver numeroDoc) ou data_documento + cliente_codigo + produto_codigo + valor_brl
+              var fatDedupeKey = numeroDoc
+                ? numeroDoc + '__' + fatProdutoCodigo + '__' + dataFaturamento
+                : dataFaturamento +
+                  '__' +
+                  fatClienteCodigo +
+                  '__' +
+                  fatProdutoCodigo +
+                  '__' +
+                  fatValorBrl
 
               if (faturamentoBatchDedupeKeys[fatDedupeKey]) {
                 faturamentoDuplicatas++
@@ -998,19 +1000,34 @@ routerAdd(
                 faturamentoBatchDedupeKeys[fatDedupeKey] = true
 
                 // Dedupe no banco: pular se já existir registro com a mesma chave (idempotente)
-                var filterFatDedupe =
-                  "data_documento ~ '" +
-                  dataFaturamento +
-                  "' && cliente_codigo = '" +
-                  fatClienteCodigo.replace(/'/g, "\\'") +
-                  "' && produto_codigo = '" +
-                  fatProdutoCodigo.replace(/'/g, "\\'") +
-                  "' && valor_brl = " +
-                  fatValorBrl
-
                 var alreadyFat = null
                 try {
-                  alreadyFat = $app.findFirstRecordByFilter('faturamento', filterFatDedupe)
+                  if (numeroDoc) {
+                    // Se numeroDoc for número/ano ou código de nota
+                    var docNumVal = parseInt(numeroDoc, 10)
+                    var filterDoc =
+                      "data_documento ~ '" +
+                      dataFaturamento +
+                      "' && produto_codigo = '" +
+                      fatProdutoCodigo.replace(/'/g, "\\'") +
+                      "'"
+                    if (!isNaN(docNumVal) && docNumVal > 0) {
+                      filterDoc += ' && nf_ano = ' + docNumVal
+                    }
+                    alreadyFat = $app.findFirstRecordByFilter('faturamento', filterDoc)
+                  }
+                  if (!alreadyFat) {
+                    var filterFatDedupe =
+                      "data_documento ~ '" +
+                      dataFaturamento +
+                      "' && cliente_codigo = '" +
+                      fatClienteCodigo.replace(/'/g, "\\'") +
+                      "' && produto_codigo = '" +
+                      fatProdutoCodigo.replace(/'/g, "\\'") +
+                      "' && valor_brl = " +
+                      fatValorBrl
+                    alreadyFat = $app.findFirstRecordByFilter('faturamento', filterFatDedupe)
+                  }
                 } catch (_) {}
 
                 if (alreadyFat) {
@@ -1052,6 +1069,7 @@ routerAdd(
                   try {
                     $app.save(recFat)
                     faturamentoImportados++
+                    totalValorImportadoBrl += fatValorBrl || 0
                   } catch (uniqueConstraintErr) {
                     var strErr = String(uniqueConstraintErr || '').toLowerCase()
                     if (strErr.indexOf('unique') !== -1 || strErr.indexOf('constraint') !== -1) {
@@ -1202,6 +1220,7 @@ routerAdd(
       var totalImportedOverall = faturamentoImportados > 0 ? faturamentoImportados : criados
       var totalDuplicatesOverall =
         faturamentoDuplicatas > 0 ? faturamentoDuplicatas : duplicatasIgnoradas
+      var totalSkippedOverall = totalDuplicatesOverall + skippedZero
       var importStatus =
         erros.length + faturamentoErrosCount === 0
           ? 'sucesso'
@@ -1239,16 +1258,19 @@ routerAdd(
         ihRec.set('imported_rows', totalImportedOverall)
         ihRec.set('error_rows', totalErrorsCount)
         ihRec.set('status', importStatus)
+        ihRec.set('total_value', totalValorImportadoBrl)
+        ihRec.set('skipped_rows', totalSkippedOverall)
+        ihRec.set('duplicate_rows', totalDuplicatesOverall)
         ihRec.set(
           'details',
           errorSummary ||
             'Importação concluída: ' +
               totalImportedOverall +
-              ' registros gravados, ' +
+              ' registros importados, ' +
               totalDuplicatesOverall +
-              ' duplicados ignorados de ' +
-              rows.length +
-              ' linhas lidas.',
+              ' duplicados ignorados, ' +
+              totalSkippedOverall +
+              ' ignorados no total.',
         )
         $app.save(ihRec)
       } catch (ihErr) {
@@ -1298,6 +1320,8 @@ routerAdd(
         faturamentoImportados: faturamentoImportados,
         faturamentoDuplicatas: faturamentoDuplicatas,
         faturamentoErrosCount: faturamentoErrosCount,
+        totalValorImportadoBrl: totalValorImportadoBrl,
+        total_value: totalValorImportadoBrl,
         total: rows.length,
         totalLinhas: rows.length,
         erros: erros,

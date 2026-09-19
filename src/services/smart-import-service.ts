@@ -97,6 +97,10 @@ export function buildDuplicateKey(
   const n = norm(numeroDoc)
   const p = norm(produto)
 
+  // Prioriza a chave da especificação: numeroNF + produto + data
+  if (n) {
+    return `${n}__${p}__${d}`
+  }
   return `${c}__${d}__${n}__${p}`
 }
 
@@ -623,6 +627,8 @@ export async function executeSmartImport(params: {
   imported: number
   duplicatesIgnored: number
   errorsCount: number
+  totalValue?: number
+  skippedRows?: number
   errorDetails: Array<{ row: number; reason: string }>
   message: string
 }> {
@@ -735,6 +741,8 @@ export async function executeSmartImport(params: {
       imported: 0,
       duplicatesIgnored: ignoreDuplicates ? validation.duplicateCount : 0,
       errorsCount: validation.invalidCount,
+      skippedRows: ignoreDuplicates ? validation.duplicateCount : 0,
+      totalValue: 0,
       errorDetails: validation.validationErrors,
       message:
         'Nenhuma linha válida restante para importação após validação de dados e duplicatas.',
@@ -764,6 +772,8 @@ export async function executeSmartImport(params: {
   const dupCount =
     (importRes.faturamentoDuplicatas ?? importRes.duplicatasIgnoradas ?? 0) +
     (ignoreDuplicates ? validation.duplicateCount : 0)
+  const totalValue = importRes.totalValorImportadoBrl ?? importRes.total_value ?? 0
+  const skippedCount = dupCount + (importRes.skipped_zero ?? 0)
 
   return {
     success: importRes.success,
@@ -771,6 +781,8 @@ export async function executeSmartImport(params: {
     imported: importedCount,
     duplicatesIgnored: dupCount,
     errorsCount: errorDetails.length,
+    totalValue,
+    skippedRows: skippedCount,
     errorDetails,
     message: `Importação concluída com sucesso: ${importedCount} registros gravados, ${dupCount} duplicata(s) ignoradas e ${errorDetails.length} linha(s) com erro.`,
   }

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-19T16:36:50.847Z",
+  "generatedAt": "2026-09-19T16:42:37.762Z",
   "collections": [
     {
       "name": "users",
@@ -4430,6 +4430,24 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "total_value",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "skipped_rows",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "duplicate_rows",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
