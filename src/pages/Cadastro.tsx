@@ -346,6 +346,22 @@ export default function Cadastro() {
   useRealtime('factories', handleFactoriesRealtime)
   useRealtime('gestao_tecnica', handleGestaoRealtime)
 
+  // Responde também ao evento global de sincronização (botão Sincronizar agora / GlobalDataProvider)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handleGlobalSync = (e: Event) => {
+      const customEvent = e as CustomEvent<{ entity?: string; collection?: string }>
+      const col = customEvent.detail?.collection || customEvent.detail?.entity || 'all'
+      if (col === 'all' || col === 'factories' || col === 'clientes' || col === 'gestao_tecnica') {
+        void loadData()
+      }
+    }
+    window.addEventListener('blink:datasync', handleGlobalSync)
+    return () => {
+      window.removeEventListener('blink:datasync', handleGlobalSync)
+    }
+  }, [loadData])
+
   // Opções dinâmicas para os filtros baseadas nos dados cadastrados
   // Opções dinâmicas para os filtros baseadas estritamente nos dados cadastrados (distintas, ordenadas e sem vazios)
   const dynamicFactoryOptions = useMemo(() => {

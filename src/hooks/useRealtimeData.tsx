@@ -660,4 +660,5 @@ export const DataSyncProvider = RealtimeDataProvider
 export const useDataSyncContext = useRealtimeDataContext
 export const useDataSync = useRealtimeData
 export const useRealtime = useRealtimeData
+export { GlobalDataProvider, useGlobalData } from '@/store/GlobalDataProvider'
 export default useRealtimeData

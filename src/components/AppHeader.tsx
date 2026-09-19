@@ -30,13 +30,27 @@ import { useTheme } from 'next-themes'
 import { getNotifications, evaluateTargets, markNotificationAsRead } from '@/services/notifications'
 import { AppNotification } from '@/types'
 import { useRealtimeData, useRealtimeDataContext } from '@/hooks/useRealtimeData'
+import { useGlobalData } from '@/store/GlobalDataProvider'
 import { useLogoUrl } from '@/hooks/use-logo-url'
 import { useNavigate } from 'react-router-dom'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, CheckCircle2 as SyncOkIcon } from 'lucide-react'
+
+function formatSyncTimestamp(timestamp: number | null): string {
+  if (!timestamp) return ''
+  const d = new Date(timestamp)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const dd = pad(d.getDate())
+  const mm = pad(d.getMonth() + 1)
+  const yyyy = d.getFullYear()
+  const hh = pad(d.getHours())
+  const min = pad(d.getMinutes())
+  return `Atualizado em ${dd}/${mm}/${yyyy} ${hh}:${min}`
+}
 
 export function AppHeader() {
   const { factories, tasks, isOnline } = useAppContext()
   const { isReconnecting } = useRealtimeDataContext()
+  const { lastSyncTime, isSyncing, syncStatus, syncError, syncAll } = useGlobalData()
   const { t: tr } = useI18n()
   const [open, setOpen] = useState(false)
   const [dbNotifications, setDbNotifications] = useState<AppNotification[]>([])
@@ -209,9 +223,63 @@ export function AppHeader() {
             <span>Reconectando...</span>
           </div>
         )}
+
+        {/* Global Data Sync Indicator + Sincronizar agora Button */}
+        <div className="hidden xl:flex items-center gap-2 text-xs text-muted-foreground ml-3 border-l border-border/60 pl-3">
+          {/* 4 STATES: LOADING, EMPTY, ERROR, SUCCESS */}
+          {isSyncing ? (
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <RefreshCw className="w-3 h-3 animate-spin text-primary shrink-0" />
+              <span>Sincronizando dados...</span>
+            </div>
+          ) : syncStatus === 'error' || syncError ? (
+            <div className="flex items-center gap-1.5 text-destructive font-medium">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              <span>Falha ao sincronizar. Tente novamente.</span>
+            </div>
+          ) : !lastSyncTime ? (
+            <span className="text-muted-foreground italic">Nenhum dado sincronizado ainda</span>
+          ) : (
+            <span className="text-muted-foreground font-normal">
+              {formatSyncTimestamp(lastSyncTime)}
+            </span>
+          )}
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void syncAll()}
+            disabled={isSyncing}
+            className="h-7 px-2.5 text-xs gap-1.5 shadow-none border-border/70 hover:bg-muted font-normal"
+            title="Sincronizar todos os dados do banco"
+          >
+            <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin text-primary' : ''}`} />
+            <span>{syncStatus === 'error' ? 'Tentar novamente' : 'Sincronizar agora'}</span>
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 lg:gap-4">
+        {/* Sync button for smaller screens (md-lg) where full text indicator is hidden */}
+        <div className="xl:hidden flex items-center">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => void syncAll()}
+            disabled={isSyncing}
+            className="h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+            title={
+              lastSyncTime
+                ? `${formatSyncTimestamp(lastSyncTime)} — Clique para sincronizar agora`
+                : 'Sincronizar agora'
+            }
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-primary' : ''}`} />
+            <span className="hidden sm:inline text-[11px]">Sincronizar</span>
+          </Button>
+        </div>
         <LanguageSelector />
         <Button
           variant="ghost"

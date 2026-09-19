@@ -110,6 +110,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   useRealtime('factories', refreshFactories, isAuthenticated && !authLoading)
 
+  // Ouve evento global de datasync (disparado pelo GlobalDataProvider/syncNow) para revalidar fábricas
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handleGlobalDataSync = (e: Event) => {
+      const customEvent = e as CustomEvent<{ entity?: string; collection?: string }>
+      const col = customEvent.detail?.collection || customEvent.detail?.entity || 'all'
+      if (col === 'all' || col === 'factories' || col === 'clientes') {
+        refreshFactories()
+      }
+    }
+    window.addEventListener('blink:datasync', handleGlobalDataSync)
+    return () => {
+      window.removeEventListener('blink:datasync', handleGlobalDataSync)
+    }
+  }, [refreshFactories])
+
   const addFactory = (data: Partial<Factory>) => {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'factories' } }))
