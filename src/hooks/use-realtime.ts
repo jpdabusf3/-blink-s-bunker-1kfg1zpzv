@@ -40,35 +40,10 @@ export function useRealtime<TRecord extends RecordModel = RecordModel>(
       })
       .catch(() => {})
 
-    // Ouve também o barramento global de sincronização para responder a mutações manuais ou sync geral
-    const handleGlobalSync = (e: Event) => {
-      if (cancelled) return
-      const customEvent = e as CustomEvent<{ entity?: string; collection?: string }>
-      const col = customEvent.detail?.collection || customEvent.detail?.entity || 'all'
-      if (col === 'all' || col === collectionName) {
-        // Dispara o callback com um payload sintético de sincronização
-        try {
-          callbackRef.current({
-            action: 'update',
-            record: {} as TRecord,
-          })
-        } catch {
-          // ignore
-        }
-      }
-    }
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('blink:datasync', handleGlobalSync)
-    }
-
     return () => {
       cancelled = true
       if (unsubscribeFn) {
         unsubscribeFn().catch(() => {})
-      }
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('blink:datasync', handleGlobalSync)
       }
     }
   }, [collectionName, enabled])
