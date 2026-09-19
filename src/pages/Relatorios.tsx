@@ -61,7 +61,21 @@ import {
   saveReportTemplatePreference,
 } from '@/services/report-template-preferences'
 import { exportBatchClientReportsZip, logBatchReportExport } from '@/lib/batchReportExport'
-import { FilePlus2 } from 'lucide-react'
+import { FilePlus2, Sparkles, AlertCircle, RotateCcw } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { SalesReportGeneratorBar } from '@/components/SalesReportGeneratorBar'
+import { SalesReportDisplay } from '@/components/SalesReportDisplay'
+import { SalesReportHistoryList } from '@/components/SalesReportHistoryList'
+import {
+  type SalesReportFilters,
+  type GeneratedSalesReportData,
+  type SalesReportHistoryItem,
+  generateSalesReport,
+  persistSalesReport,
+  listSalesReportHistory,
+} from '@/services/sales-report-generator'
+import { BRAZILIAN_UFS } from '@/lib/cnpj'
+import { CODIGO_CANONICO_ROTULO } from '@/constants/familiaProdutos'
 
 const STATE_REGIONS = [
   'Sul',
@@ -100,6 +114,206 @@ export default function Relatorios() {
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set())
   const [batchExporting, setBatchExporting] = useState(false)
   const [batchDocsExporting, setBatchDocsExporting] = useState(false)
+
+  // --- Gerador de Relatório de Vendas (Novo Recurso) ---
+  const [reportFilters, setReportFilters] = useState<SalesReportFilters>({
+    dataInicio: '',
+    dataFim: '',
+    segmentos: [],
+    clienteId: 'all',
+    familiaProduto: 'all',
+    uf: 'all',
+  })
+
+  // 4 Estados: 'idle' | 'loading' | 'empty' | 'error' | 'success'
+  const [reportState, setReportState] = useState<
+    'idle' | 'loading' | 'empty' | 'error' | 'success'
+  >('idle')
+  const [generatedReport, setGeneratedReport] = useState<GeneratedSalesReportData | null>(null)
+  const [reportHistory, setReportHistory] = useState<SalesReportHistoryItem[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
+  const [activeHistoryId, setActiveHistoryId] = useState<string | undefined>(undefined)
+
+  // Opções para dropdowns de filtros
+  const [clienteDropdownOptions, setClienteDropdownOptions] = useState<
+    { id: string; nome: string }[]
+  >([])
+  const [familiaDropdownOptions, setFamiliaDropdownOptions] = useState<string[]>([])
+  const [ufDropdownOptions, setUfDropdownOptions] = useState<string[]>([])
+
+  const loadReportHistory = useCallback(async () => {
+    setHistoryLoading(true)
+    try {
+      const hist = await listSalesReportHistory()
+      setReportHistory(hist)
+    } catch {
+      setReportHistory([])
+    } finally {
+      setHistoryLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadReportHistory()
+  }, [loadReportHistory])
+
+  // Carrega opções de clientes, famílias e UFs existentes nas collections
+  useEffect(() => {
+    const loadFilterOptions = async () => {
+      // 1. Clientes
+      const clientMap = new Map<string, string>()
+      factories.forEach((f) => {
+        if (f.name) clientMap.set(f.name.trim(), f.name.trim())
+      })
+
+      // 2. Famílias a partir das constantes canônicas e produtos cadastrados
+      const famSet = new Set<string>(Object.values(CODIGO_CANONICO_ROTULO))
+      try {
+        const prods = await pb.collection('produtos').getFullList({ fields: 'familia,nome,linha' })
+        prods.forEach((p) => {
+          if (p.familia && p.familia !== '—') famSet.add(p.familia)
+        })
+      } catch {
+        /* intentionally ignored */
+      }
+
+      // 3. UFs a partir de BRAZILIAN_UFS e fábricas
+      const ufSet = new Set<string>(BRAZILIAN_UFS)
+      factories.forEach((f) => {
+        if (f.state && f.state.trim().length === 2) ufSet.add(f.state.trim().toUpperCase())
+      })
+
+      // Também buscar clientes distintos da tabela faturamento
+      try {
+        const fatItems = await pb.collection('faturamento').getList(1, 100, {
+          fields: 'cliente_nome,familia_produto,country',
+          sort: '-created',
+        })
+        fatItems.items.forEach((item) => {
+          if (item.cliente_nome) clientMap.set(item.cliente_nome.trim(), item.cliente_nome.trim())
+          if (item.familia_produto && item.familia_produto !== '—') famSet.add(item.familia_produto)
+        })
+      } catch {
+        /* intentionally ignored */
+      }
+
+      const sortedClients = Array.from(clientMap.keys())
+        .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+        .map((nome) => ({ id: nome, nome }))
+      setClienteDropdownOptions(sortedClients)
+
+      const sortedFamilias = Array.from(famSet).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      setFamiliaDropdownOptions(sortedFamilias)
+
+      const sortedUfs = Array.from(ufSet).sort()
+      setUfDropdownOptions(sortedUfs)
+    }
+
+    loadFilterOptions()
+  }, [factories])
+
+  // Handler para disparar a geração do relatório
+  const handleGenerateReport = async () => {
+    setReportState('loading')
+    setActiveHistoryId(undefined)
+
+    try {
+      const data = await generateSalesReport(reportFilters, factories)
+
+      if (data.totalRegistros === 0 || data.totalFaturado === 0) {
+        setGeneratedReport(data)
+        setReportState('empty')
+      } else {
+        setGeneratedReport(data)
+        setReportState('success')
+        toast({
+          title: 'Relatório gerado com sucesso.',
+          description: `Total de ${data.totalRegistros} lançamentos faturados no período.`,
+        })
+
+        // Persiste relatório em segundo plano para histórico e documentos
+        persistSalesReport(data).then((res) => {
+          if (res.success && res.documentId) {
+            setActiveHistoryId(res.documentId)
+            loadReportHistory()
+          }
+        })
+      }
+    } catch (err) {
+      console.error('[sales-report] Falha ao gerar:', err)
+      setReportState('error')
+      toast({
+        title: 'Não foi possível gerar o relatório',
+        description: 'Tente novamente em instantes ou ajuste os filtros.',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  // Handler para reabrir relatório do histórico
+  const handleSelectHistoryReport = async (
+    item: GeneratedSalesReportData | SalesReportHistoryItem,
+  ) => {
+    // Se o item já tiver o payload carregado
+    if (
+      'totalFaturado' in item &&
+      'mesAMes' in item &&
+      (item as GeneratedSalesReportData).mesAMes
+    ) {
+      const rep = item as GeneratedSalesReportData
+      setGeneratedReport(rep)
+      setReportFilters(rep.filtros || reportFilters)
+      setReportState(rep.totalRegistros > 0 ? 'success' : 'empty')
+      setActiveHistoryId(rep.id)
+      setShowHistory(false)
+      window.scrollTo({ top: 400, behavior: 'smooth' })
+      toast({
+        title: 'Relatório reaberto',
+        description: 'Dados restaurados a partir do histórico de relatórios.',
+      })
+      return
+    }
+
+    const histItem = item as SalesReportHistoryItem
+    setActiveHistoryId(histItem.id)
+
+    // Se possui dataPayload armazenado
+    if (histItem.dataPayload) {
+      setGeneratedReport(histItem.dataPayload)
+      setReportFilters(histItem.dataPayload.filtros || reportFilters)
+      setReportState(histItem.dataPayload.totalRegistros > 0 ? 'success' : 'empty')
+      setShowHistory(false)
+      window.scrollTo({ top: 400, behavior: 'smooth' })
+      toast({
+        title: 'Relatório reaberto',
+        description: `Visualizando ${histItem.title}.`,
+      })
+      return
+    }
+
+    // Caso não tenha payload, re-executa a geração com o período do item
+    if (histItem.periodoInicio || histItem.periodoFim) {
+      const newF = {
+        ...reportFilters,
+        dataInicio: histItem.periodoInicio || '',
+        dataFim: histItem.periodoFim || '',
+      }
+      setReportFilters(newF)
+      setReportState('loading')
+      setShowHistory(false)
+      try {
+        const data = await generateSalesReport(newF, factories)
+        setGeneratedReport(data)
+        setReportState(data.totalRegistros > 0 ? 'success' : 'empty')
+        toast({
+          title: 'Relatório gerado com sucesso.',
+        })
+      } catch {
+        setReportState('error')
+      }
+    }
+  }
 
   useEffect(() => {
     getReportTemplatePreference()
@@ -343,11 +557,143 @@ export default function Relatorios() {
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
+      {/* =========================================================================
+          NOVO RECURSO: GERADOR DE RELATÓRIO DE VENDAS
+          Botão proeminente, filtros completos, 4 estados e exportações executivas
+         ========================================================================= */}
+      <section className="space-y-4">
+        <SalesReportGeneratorBar
+          filters={reportFilters}
+          onFiltersChange={setReportFilters}
+          onGenerate={handleGenerateReport}
+          loading={reportState === 'loading'}
+          clienteOptions={clienteDropdownOptions}
+          familiaOptions={familiaDropdownOptions}
+          ufOptions={ufDropdownOptions}
+          onToggleHistory={() => setShowHistory((prev) => !prev)}
+          showHistory={showHistory}
+          historyCount={reportHistory.length}
+        />
+
+        {/* Histórico Desdobrável de Relatórios Salvos */}
+        {showHistory && (
+          <div className="animate-fade-in">
+            <SalesReportHistoryList
+              history={reportHistory}
+              loading={historyLoading}
+              onSelectReport={handleSelectHistoryReport}
+              activeReportId={activeHistoryId}
+            />
+          </div>
+        )}
+
+        {/* 4 ESTADOS DO GERADOR */}
+        {/* 1. LOADING: Skeleton completo */}
+        {reportState === 'loading' && (
+          <div className="space-y-6 p-6 rounded-xl border bg-card animate-pulse">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-6 w-48" />
+              <div className="flex gap-2">
+                <Skeleton className="h-9 w-28" />
+                <Skeleton className="h-9 w-28" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Skeleton className="h-28 w-full rounded-lg" />
+              <Skeleton className="h-28 w-full rounded-lg" />
+              <Skeleton className="h-28 w-full rounded-lg" />
+              <Skeleton className="h-28 w-full rounded-lg" />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Skeleton className="h-64 w-full rounded-lg" />
+              <Skeleton className="h-64 w-full rounded-lg" />
+            </div>
+            <Skeleton className="h-72 w-full rounded-lg" />
+          </div>
+        )}
+
+        {/* 2. EMPTY: Mensagem sugerindo outro período */}
+        {reportState === 'empty' && (
+          <Card className="border border-dashed shadow-subtle bg-muted/10 text-center py-10 px-4">
+            <CardContent className="max-w-md mx-auto space-y-3">
+              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-bold text-foreground">
+                Nenhum dado no período selecionado
+              </h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Não encontramos notas fiscais ou vendas faturadas com os filtros atuais. Sugerimos
+                ampliar o intervalo de datas ou selecionar outros segmentos e clientes.
+              </p>
+              <div className="pt-2 flex justify-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setReportFilters((prev) => ({
+                      ...prev,
+                      dataInicio: '',
+                      dataFim: '',
+                      segmentos: [],
+                      clienteId: 'all',
+                      familiaProduto: 'all',
+                      uf: 'all',
+                    }))
+                    handleGenerateReport()
+                  }}
+                  className="text-xs gap-1.5"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Limpar e Buscar Tudo
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 3. ERROR: Mensagem de erro e botão de tentar novamente */}
+        {reportState === 'error' && (
+          <Card className="border-rose-200 bg-rose-50/50 dark:bg-rose-950/20 shadow-subtle text-center py-8 px-4">
+            <CardContent className="max-w-md mx-auto space-y-3">
+              <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 dark:bg-rose-900/50 flex items-center justify-center mx-auto">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-bold text-rose-950 dark:text-rose-200">
+                Não foi possível gerar o relatório
+              </h3>
+              <p className="text-xs text-rose-700 dark:text-rose-300">
+                Ocorreu uma instabilidade na consulta de faturamento e vendas.
+              </p>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleGenerateReport}
+                className="gap-2 text-xs"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Tentar novamente
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 4. SUCCESS: Relatório completo com animação e cards */}
+        {reportState === 'success' && generatedReport && (
+          <SalesReportDisplay report={generatedReport} />
+        )}
+      </section>
+
+      {/* Separador e título da visão analítica complementar existente */}
+      <div className="pt-4 border-t" />
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Relatórios de Vendas</h1>
-          <p className="text-muted-foreground text-sm">
-            Analise volumes e performance por diversos recortes.
+          <h2 className="text-xl font-bold tracking-tight">
+            Visão Analítica de Carteira & Pedidos
+          </h2>
+          <p className="text-muted-foreground text-xs">
+            Acompanhamento detalhado por canais de venda e exportações operacionais por cliente.
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
