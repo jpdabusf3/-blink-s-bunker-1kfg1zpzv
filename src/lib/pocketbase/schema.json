@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-19T18:13:24.194Z",
+  "generatedAt": "2026-09-20T16:11:21.127Z",
   "collections": [
     {
       "name": "users",
@@ -4511,6 +4511,103 @@
         "CREATE INDEX idx_import_history_created ON import_history (created DESC)",
         "CREATE INDEX idx_import_history_imported_at ON import_history (imported_at DESC)",
         "CREATE INDEX idx_import_history_status ON import_history (status)"
+      ]
+    },
+    {
+      "name": "agenda_tasks",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && user_id = @request.auth.id",
+        "view": "@request.auth.id != '' && user_id = @request.auth.id",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != '' && user_id = @request.auth.id",
+        "delete": "@request.auth.id != '' && user_id = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "user_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "task_type",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["reuniao", "visita", "evento", "ligacao", "outro"]
+        },
+        {
+          "name": "client_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "deal_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "factories"
+        },
+        {
+          "name": "task_date",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "start_time",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "end_time",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["agendada", "concluida", "cancelada"]
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_agenda_tasks_user_id ON agenda_tasks (user_id)",
+        "CREATE INDEX idx_agenda_tasks_task_date ON agenda_tasks (task_date)",
+        "CREATE INDEX idx_agenda_tasks_deal_id ON agenda_tasks (deal_id)",
+        "CREATE INDEX idx_agenda_tasks_status ON agenda_tasks (status)"
       ]
     }
   ]
