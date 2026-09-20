@@ -62,6 +62,7 @@ import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 import { MetasVendedorSegmentoSection } from '@/components/MetasVendedorSegmentoSection'
 import { AlertasCarteiraSection } from '@/components/dashboard/AlertasCarteiraSection'
 import { TodayTasksWidget } from '@/components/dashboard/TodayTasksWidget'
+import { WeeklyAgendaCard } from '@/components/dashboard/WeeklyAgendaCard'
 import { CODIGO_CANONICO_ROTULO } from '@/constants/familiaProdutos'
 export type PeriodType = 'mes' | 'trimestre' | 'ano' | 'personalizado'
 
@@ -1003,6 +1004,11 @@ export default function Resumo() {
             <TodayTasksWidget />
           </div>
 
+          {/* WeeklyAgendaCard: abaixo do TodayTasksWidget, largura total */}
+          <div className="w-full">
+            <WeeklyAgendaCard />
+          </div>
+
           {/* Seção 0: Alertas de Carteira (Topo do Resumo, antes de todas as seções) */}
           <AlertasCarteiraSection
             pedidosCarteira={pedidosCarteira}
@@ -1619,6 +1625,22 @@ function DashboardSkeleton() {
           <div className="pt-3 border-t border-border/30">
             <Skeleton className="h-[6px] w-full rounded-full" />
           </div>
+        </Card>
+      </div>
+
+      {/* WeeklyAgendaCard Skeleton */}
+      <div className="w-full">
+        <Card className="glass-card shadow-card p-[20px] space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-border/40">
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-8 w-32" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Skeleton className="h-20 w-full rounded-lg" />
+            <Skeleton className="h-20 w-full rounded-lg" />
+            <Skeleton className="h-20 w-full rounded-lg" />
+          </div>
+          <Skeleton className="h-3 w-full rounded-full" />
         </Card>
       </div>
 
