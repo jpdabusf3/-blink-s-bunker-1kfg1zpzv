@@ -27,6 +27,7 @@ import {
   Package,
   MapPin,
   Sparkles,
+  Calendar,
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
@@ -56,6 +57,7 @@ export function AppSidebar() {
     { name: 'Histórico de Vendas', path: '/historico-vendas', icon: TrendingUp },
     { name: t('nav.swot'), path: '/swot', icon: Target },
     { name: t('nav.prioridade'), path: '/matriz', icon: Grid },
+    { name: 'Agenda', path: '/agenda', icon: Calendar },
     { name: t('nav.metas'), path: '/metas', icon: Target },
     { name: t('nav.relatorios'), path: '/relatorios', icon: BarChart2 },
     { name: 'Relatórios Automáticos', path: '/relatorios-automaticos', icon: FileText },

@@ -45,6 +45,7 @@ const HistoricoFunil = lazy(() => import('./pages/HistoricoFunil'))
 const Produtos = lazy(() => import('./pages/Produtos'))
 const Resumo = lazy(() => import('./pages/Resumo'))
 const Maestro = lazy(() => import('./pages/Maestro'))
+const AgendaSemanal = lazy(() => import('./pages/AgendaSemanal'))
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -150,6 +151,14 @@ const App = () => (
                         <Route path="/funil-vendas" element={<FunilVendas />} />
                         <Route path="/swot" element={<SWOT />} />
                         <Route path="/matriz" element={<Matriz />} />
+                        <Route
+                          path="/agenda"
+                          element={
+                            <Suspense fallback={<PageSkeleton />}>
+                              <AgendaSemanal />
+                            </Suspense>
+                          }
+                        />
                         <Route
                           path="/historico"
                           element={
