@@ -30,6 +30,8 @@ export interface AgendaTask {
       id: string
       name: string
       funnelStage?: string
+      city?: string
+      state?: string
     }
   }
 }
