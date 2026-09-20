@@ -28,6 +28,7 @@ import type { Factory } from '@/types'
 import { getReportTemplatePreference } from '@/services/report-template-preferences'
 import { REPORT_TEMPLATE_LABEL } from '@/lib/reportTemplates'
 import { PlanoAcaoPanel } from '@/components/PlanoAcaoPanel'
+import { DealUpcomingActivities } from '@/components/DealUpcomingActivities'
 import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
 
 interface ClientHistoryDialogProps {
@@ -447,7 +448,8 @@ export function ClientHistoryDialog({
         </ScrollArea>
 
         {factory && (
-          <div className="border-t pt-3">
+          <div className="border-t pt-3 space-y-3">
+            <DealUpcomingActivities dealId={factory.id} />
             <PlanoAcaoPanel
               clienteId={factory.id}
               periodoInicio={periodoInicio}

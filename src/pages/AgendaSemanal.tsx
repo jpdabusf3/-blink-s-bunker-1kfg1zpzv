@@ -7,10 +7,17 @@ import {
   type AgendaTaskType,
   type DealOption,
   TASK_TYPE_LABELS,
+  buildActivityTextCreated,
+  buildActivityTextCompleted,
+  buildActivityTextCancelled,
+  getNextFunnelStage,
 } from '@/services/agenda-service'
+import { recordDealActivity } from '@/services/deal-activities'
+import { updateFactoryPB } from '@/services/factories'
 import { AgendaTaskCard } from '@/components/agenda/AgendaTaskCard'
 import { AgendaTaskModal } from '@/components/agenda/AgendaTaskModal'
 import { DeleteTaskDialog } from '@/components/agenda/DeleteTaskDialog'
+import { AgendaFunnelConfirmDialog } from '@/components/agenda/AgendaFunnelConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -103,6 +110,10 @@ export default function AgendaSemanal() {
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [taskToDelete, setTaskToDelete] = useState<AgendaTask | null>(null)
+
+  // Funnel confirmation dialog state (Regra 2)
+  const [funnelConfirmOpen, setFunnelConfirmOpen] = useState(false)
+  const [taskForFunnelConfirm, setTaskForFunnelConfirm] = useState<AgendaTask | null>(null)
 
   // Calculate 7 days of the week [Mon -> Sun]
   const weekDays = useMemo(() => {
@@ -230,6 +241,7 @@ export default function AgendaSemanal() {
   const handleSaveTask = async (payload: AgendaTaskInput, taskId?: string) => {
     try {
       if (taskId) {
+        // Regra 3: quando uma tarefa com deal vinculado é editada, nenhuma ação no funil
         const updated = await agendaService.updateTask(taskId, payload)
         setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)))
         toast({
@@ -237,12 +249,30 @@ export default function AgendaSemanal() {
           description: 'Tarefa atualizada',
         })
       } else {
+        // Regra 1: quando criada com deal vinculado, NÃO alterar a etapa do negócio.
+        // Apenas registrar a atividade (Regra 5).
         const created = await agendaService.createTask(payload)
         setTasks((prev) => [...prev, created])
         toast({
           title: 'Sucesso',
           description: 'Tarefa criada',
         })
+
+        if (created.deal_id) {
+          try {
+            const text = buildActivityTextCreated(
+              created.task_type,
+              created.title,
+              created.task_date,
+            )
+            await recordDealActivity({
+              dealId: created.deal_id,
+              activityText: text,
+            })
+          } catch (actErr) {
+            console.error('Erro isolado ao registrar atividade no negócio:', actErr)
+          }
+        }
       }
     } catch (err) {
       console.error('Erro ao salvar tarefa:', err)
@@ -265,6 +295,24 @@ export default function AgendaSemanal() {
         title: 'Sucesso',
         description: newStatus === 'concluida' ? 'Tarefa concluída' : 'Tarefa atualizada',
       })
+
+      // Se foi concluída e tem deal vinculado
+      if (newStatus === 'concluida' && updated.deal_id) {
+        // Regra 5: registrar atividade de conclusão isoladamente
+        try {
+          const text = buildActivityTextCompleted(updated.task_type, updated.title)
+          await recordDealActivity({
+            dealId: updated.deal_id,
+            activityText: text,
+          })
+        } catch (actErr) {
+          console.error('Erro isolado ao registrar atividade de conclusão:', actErr)
+        }
+
+        // Regra 2: abrir diálogo de confirmação perguntando "Atualizar o negócio no funil?"
+        setTaskForFunnelConfirm(updated)
+        setFunnelConfirmOpen(true)
+      }
     } catch (err) {
       console.error('Erro ao atualizar status da tarefa:', err)
       toast({
@@ -278,12 +326,26 @@ export default function AgendaSemanal() {
   const handleCancelTask = async (task: AgendaTask, e: React.MouseEvent) => {
     e.stopPropagation()
     try {
+      // Regra 4: nenhuma ação no funil. O negócio mantém sua etapa atual.
       const updated = await agendaService.updateStatus(task.id, 'cancelada')
       setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)))
       toast({
         title: 'Sucesso',
         description: 'Tarefa atualizada',
       })
+
+      // Regra 5: registrar atividade de cancelamento
+      if (updated.deal_id) {
+        try {
+          const text = buildActivityTextCancelled(updated.task_type, updated.title)
+          await recordDealActivity({
+            dealId: updated.deal_id,
+            activityText: text,
+          })
+        } catch (actErr) {
+          console.error('Erro isolado ao registrar cancelamento no negócio:', actErr)
+        }
+      }
     } catch (err) {
       console.error('Erro ao cancelar tarefa:', err)
       toast({
@@ -291,6 +353,75 @@ export default function AgendaSemanal() {
         title: 'Erro',
         description: 'Não foi possível atualizar a tarefa',
       })
+    }
+  }
+
+  // Ações do diálogo de confirmação do funil (Regra 2)
+  const handleFunnelConfirmKeep = () => {
+    // Manter etapa atual: não faz nada no funil e fecha o diálogo
+    setFunnelConfirmOpen(false)
+    setTaskForFunnelConfirm(null)
+  }
+
+  const handleFunnelConfirmMove = async () => {
+    if (!taskForFunnelConfirm || !taskForFunnelConfirm.deal_id) return
+    const currentDeal = deals.find((d) => d.id === taskForFunnelConfirm.deal_id)
+    const currentStage =
+      currentDeal?.funnelStage || taskForFunnelConfirm.expand?.deal_id?.funnelStage || 'Lead'
+    const nextStage = getNextFunnelStage(currentStage)
+
+    if (!nextStage) return
+
+    try {
+      await updateFactoryPB(taskForFunnelConfirm.deal_id, {
+        funnelStage: nextStage,
+      } as any)
+
+      // Atualiza o deal na lista local
+      setDeals((prev) =>
+        prev.map((d) =>
+          d.id === taskForFunnelConfirm.deal_id ? { ...d, funnelStage: nextStage } : d,
+        ),
+      )
+
+      toast({
+        title: 'Sucesso',
+        description: `Negócio avançado para a etapa ${nextStage}`,
+      })
+    } catch (dealErr) {
+      console.error('Erro ao atualizar etapa do funil:', dealErr)
+      // Tratamento de erros verbatim: "Tarefa concluída, mas não foi possível atualizar o funil. Tente novamente pelo negócio."
+      toast({
+        variant: 'destructive',
+        title: 'Aviso',
+        description:
+          'Tarefa concluída, mas não foi possível atualizar o funil. Tente novamente pelo negócio.',
+      })
+    } finally {
+      setFunnelConfirmOpen(false)
+      setTaskForFunnelConfirm(null)
+    }
+  }
+
+  const handleFunnelConfirmRevert = async () => {
+    if (!taskForFunnelConfirm) return
+    try {
+      const reverted = await agendaService.updateStatus(taskForFunnelConfirm.id, 'agendada')
+      setTasks((prev) => prev.map((t) => (t.id === reverted.id ? reverted : t)))
+      toast({
+        title: 'Sucesso',
+        description: 'Tarefa revertida para agendada',
+      })
+    } catch (revErr) {
+      console.error('Erro ao reverter tarefa:', revErr)
+      toast({
+        variant: 'destructive',
+        title: 'Erro',
+        description: 'Não foi possível reverter a tarefa',
+      })
+    } finally {
+      setFunnelConfirmOpen(false)
+      setTaskForFunnelConfirm(null)
     }
   }
 
@@ -703,6 +834,23 @@ export default function AgendaSemanal() {
         onOpenChange={setDeleteDialogOpen}
         task={taskToDelete}
         onConfirm={handleConfirmDelete}
+      />
+
+      {/* Funnel Confirmation Dialog (Regra 2) */}
+      <AgendaFunnelConfirmDialog
+        open={funnelConfirmOpen}
+        onOpenChange={(v) => {
+          setFunnelConfirmOpen(v)
+          if (!v) setTaskForFunnelConfirm(null)
+        }}
+        task={taskForFunnelConfirm}
+        dealStage={
+          deals.find((d) => d.id === taskForFunnelConfirm?.deal_id)?.funnelStage ||
+          taskForFunnelConfirm?.expand?.deal_id?.funnelStage
+        }
+        onKeepStage={handleFunnelConfirmKeep}
+        onMoveToNextStage={handleFunnelConfirmMove}
+        onCancelTask={handleFunnelConfirmRevert}
       />
     </div>
   )

@@ -17,6 +17,7 @@ import {
   XCircle,
   Building2,
   AlertTriangle,
+  Link as LinkIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -114,6 +115,16 @@ export function AgendaTaskCard({
               className="text-[9px] px-1.5 py-0 font-medium text-muted-foreground border-muted-foreground/30 bg-muted/30"
             >
               Cancelada
+            </Badge>
+          )}
+
+          {Boolean(task.deal_id) && (
+            <Badge
+              variant="secondary"
+              className="text-[9px] px-1 py-0 gap-0.5 text-primary bg-primary/10 border-primary/20"
+              title="Tarefa conectada a um negócio no funil"
+            >
+              <LinkIcon className="w-2.5 h-2.5" />
             </Badge>
           )}
         </div>

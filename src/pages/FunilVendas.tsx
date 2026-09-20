@@ -33,6 +33,7 @@ import {
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { ImportFunilDialog } from '@/components/ImportFunilDialog'
 import { ClientHistoryDialog } from '@/components/ClientHistoryDialog'
+import { DealUpcomingActivities } from '@/components/DealUpcomingActivities'
 import {
   Upload,
   Filter,
@@ -830,6 +831,11 @@ export default function FunilVendas() {
                   onChange={(e) => setPanelForm((p) => ({ ...p, acao: e.target.value }))}
                   placeholder="Descreva a ação..."
                 />
+              </div>
+
+              {/* Seção Próximas atividades (Regra 6) */}
+              <div className="pt-2">
+                <DealUpcomingActivities dealId={selectedFactory.id} />
               </div>
             </div>
           )}

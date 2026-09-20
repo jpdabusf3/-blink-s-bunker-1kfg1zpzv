@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-20T16:14:23.849Z",
+  "generatedAt": "2026-09-20T16:21:11.009Z",
   "collections": [
     {
       "name": "users",
@@ -4608,6 +4608,64 @@
         "CREATE INDEX idx_agenda_tasks_task_date ON agenda_tasks (task_date)",
         "CREATE INDEX idx_agenda_tasks_deal_id ON agenda_tasks (deal_id)",
         "CREATE INDEX idx_agenda_tasks_status ON agenda_tasks (status)"
+      ]
+    },
+    {
+      "name": "deal_activities",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "deal_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "factories"
+        },
+        {
+          "name": "user_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "activity_text",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "created_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_deal_activities_deal_id ON deal_activities (deal_id)",
+        "CREATE INDEX idx_deal_activities_user_id ON deal_activities (user_id)",
+        "CREATE INDEX idx_deal_activities_created ON deal_activities (created DESC)"
       ]
     }
   ]

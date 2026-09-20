@@ -8,6 +8,7 @@ export interface DealOption {
   name: string
   city?: string
   state?: string
+  funnelStage?: string
 }
 
 export interface AgendaTask {
@@ -28,6 +29,7 @@ export interface AgendaTask {
     deal_id?: {
       id: string
       name: string
+      funnelStage?: string
     }
   }
 }
@@ -56,6 +58,107 @@ export const TASK_STATUS_LABELS: Record<AgendaTaskStatus, string> = {
   agendada: 'Agendada',
   concluida: 'Concluída',
   cancelada: 'Cancelada',
+}
+
+/**
+ * Nomes amigáveis em português para montagem de textos de atividades (Regra 5).
+ * reuniao -> Reunião
+ * visita -> Visita
+ * evento -> Evento
+ * ligacao -> Ligação
+ * outro -> Tarefa
+ */
+export const TASK_TYPE_ACTIVITY_NAMES: Record<AgendaTaskType, string> = {
+  reuniao: 'Reunião',
+  visita: 'Visita',
+  evento: 'Evento',
+  ligacao: 'Ligação',
+  outro: 'Tarefa',
+}
+
+/** Formata data para o padrão DD/MM/YYYY */
+export function formatBRDateOnly(dateStr?: string): string {
+  if (!dateStr) return ''
+  const clean = dateStr.split(' ')[0].split('T')[0]
+  const parts = clean.split('-')
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`
+  }
+  return dateStr
+}
+
+/**
+ * Ordem canônica das etapas do funil de vendas (stages de factories).
+ */
+export const FUNNEL_STAGES_ORDER: string[] = [
+  'Lead',
+  'Primeiro Contato',
+  'Diagnóstico Técnico',
+  'Apresentação',
+  'Teste/Trial',
+  'Proposta',
+  'Negociação',
+  'Fechamento',
+  'Pós-venda',
+  'Perda',
+]
+
+/**
+ * Retorna a próxima etapa do funil com base na etapa atual.
+ * Se já for a última etapa ou Perda, retorna null.
+ */
+export function getNextFunnelStage(currentStage?: string | null): string | null {
+  if (!currentStage) return FUNNEL_STAGES_ORDER[0]
+  const idx = FUNNEL_STAGES_ORDER.indexOf(currentStage)
+  if (idx === -1) {
+    // Se não encontrada, assume que pode começar em Lead
+    return FUNNEL_STAGES_ORDER[0]
+  }
+  if (idx >= FUNNEL_STAGES_ORDER.length - 1) {
+    return null // Já na última etapa
+  }
+  return FUNNEL_STAGES_ORDER[idx + 1]
+}
+
+/**
+ * Verifica se o estágio atual é o último do funil.
+ */
+export function isLastFunnelStage(currentStage?: string | null): boolean {
+  if (!currentStage) return false
+  const idx = FUNNEL_STAGES_ORDER.indexOf(currentStage)
+  return idx !== -1 && idx >= FUNNEL_STAGES_ORDER.length - 1
+}
+
+/**
+ * Gera texto de atividade para criação de tarefa (Regra 5)
+ * Ex: "Reunião agendada: [título da tarefa] em [data]"
+ */
+export function buildActivityTextCreated(
+  taskType: AgendaTaskType,
+  title: string,
+  taskDate: string,
+): string {
+  const typeName = TASK_TYPE_ACTIVITY_NAMES[taskType] || 'Tarefa'
+  const dateFormatted = formatBRDateOnly(taskDate)
+  return `${typeName} agendada: ${title} em ${dateFormatted}`
+}
+
+/**
+ * Gera texto de atividade para conclusão de tarefa (Regra 5)
+ * Ex: "Visita concluída: [título da tarefa]"
+ */
+export function buildActivityTextCompleted(taskType: AgendaTaskType, title: string): string {
+  const typeName = TASK_TYPE_ACTIVITY_NAMES[taskType] || 'Tarefa'
+  return `${typeName} concluída: ${title}`
+}
+
+/**
+ * Gera texto de atividade para cancelamento de tarefa (Regra 5)
+ * Ex: "Tarefa cancelada: [título da tarefa]"
+ */
+export function buildActivityTextCancelled(taskType: AgendaTaskType, title: string): string {
+  const typeName = TASK_TYPE_ACTIVITY_NAMES[taskType] || 'Tarefa'
+  return `${typeName} cancelada: ${title}`
 }
 
 export const agendaService = {
@@ -100,7 +203,7 @@ export const agendaService = {
   async listDeals(): Promise<DealOption[]> {
     try {
       const records = await pb.collection('factories').getFullList<DealOption>({
-        fields: 'id,name,city,state',
+        fields: 'id,name,city,state,funnelStage',
         sort: 'name',
       })
       return records
