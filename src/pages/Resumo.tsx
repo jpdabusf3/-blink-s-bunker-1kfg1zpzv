@@ -61,6 +61,7 @@ import { gestaoPedidosService, type PedidoRecord } from '@/services/gestao-pedid
 import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 import { MetasVendedorSegmentoSection } from '@/components/MetasVendedorSegmentoSection'
 import { AlertasCarteiraSection } from '@/components/dashboard/AlertasCarteiraSection'
+import { TodayTasksWidget } from '@/components/dashboard/TodayTasksWidget'
 import { CODIGO_CANONICO_ROTULO } from '@/constants/familiaProdutos'
 export type PeriodType = 'mes' | 'trimestre' | 'ano' | 'personalizado'
 
@@ -997,6 +998,11 @@ export default function Resumo() {
       {/* 4. ESTADO SUCCESS (Content fades in) */}
       {!loading && !isEmpty && (
         <div className="space-y-8 animate-fade-in">
+          {/* Grid de topo: TodayTasksWidget como primeiro card (full width mobile, half width desktop) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <TodayTasksWidget />
+          </div>
+
           {/* Seção 0: Alertas de Carteira (Topo do Resumo, antes de todas as seções) */}
           <AlertasCarteiraSection
             pedidosCarteira={pedidosCarteira}
@@ -1598,6 +1604,24 @@ function CustomChartTooltip({
 function DashboardSkeleton() {
   return (
     <div className="space-y-8 animate-shimmer">
+      {/* TodayTasksWidget Skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="glass-card shadow-card p-[20px]">
+          <div className="flex items-center justify-between pb-3 border-b border-border/40">
+            <Skeleton className="h-6 w-36" />
+            <Skeleton className="h-5 w-16 rounded-full" />
+          </div>
+          <div className="py-4 space-y-3">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+          </div>
+          <div className="pt-3 border-t border-border/30">
+            <Skeleton className="h-[6px] w-full rounded-full" />
+          </div>
+        </Card>
+      </div>
+
       {/* 5 KPI Cards Skeleton */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
         {Array.from({ length: 5 }).map((_, i) => (

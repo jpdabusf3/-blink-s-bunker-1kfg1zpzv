@@ -67,10 +67,20 @@ const WEEKDAY_NAMES = [
 
 const WEEKDAY_NAMES_SHORT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 
+import { useSearchParams } from 'react-router-dom'
+
 export default function AgendaSemanal() {
+  const [searchParams] = useSearchParams()
   const { toast } = useToast()
   const { user } = useAuth()
   const { users } = useUsers()
+
+  const initialFilter =
+    searchParams.get('filter') || searchParams.get('data') || searchParams.get('dia')
+  const isTodayRequested =
+    initialFilter === 'hoje' ||
+    initialFilter === 'today' ||
+    initialFilter === formatDateISO(new Date())
 
   // Week navigation state (Monday of current week)
   const [currentMonday, setCurrentMonday] = useState<Date>(() => getMonday(new Date()))
@@ -85,10 +95,18 @@ export default function AgendaSemanal() {
   const [typeFilter, setTypeFilter] = useState<string>('todas')
   const [statusFilter, setStatusFilter] = useState<string>('todas')
   const [vendorFilter, setVendorFilter] = useState<string>('todos')
-  const [selectedDayStr, setSelectedDayStr] = useState<string>('todas')
+  const [selectedDayStr, setSelectedDayStr] = useState<string>(() =>
+    isTodayRequested ? formatDateISO(new Date()) : 'todas',
+  )
 
   // Mobile selected day index (0 to 6)
-  const [selectedDayIndexMobile, setSelectedDayIndexMobile] = useState<number>(0)
+  const [selectedDayIndexMobile, setSelectedDayIndexMobile] = useState<number>(() => {
+    if (isTodayRequested) {
+      const nowDay = new Date().getDay()
+      return nowDay === 0 ? 6 : nowDay - 1
+    }
+    return 0
+  })
 
   // Modals state
   const [modalOpen, setModalOpen] = useState(false)
