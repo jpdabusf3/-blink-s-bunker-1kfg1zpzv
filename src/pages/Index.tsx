@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatCompactCurrency, normalizeArray } from '@/lib/utils'
 import { deriveFunilVendasStatus } from '@/lib/funnel-status'
+import { matchesProfileCategory } from '@/constants/clientCategories'
 import { Download, GripVertical, Filter, Globe, MapPin, Compass } from 'lucide-react'
 import {
   Select,
@@ -177,6 +178,15 @@ export default function Index() {
     })
   }, [factories, effectiveRegionFilter, salesOwnerFilter, stateFilter, speciesFilter])
 
+  const fabricasCount = useMemo(() => {
+    return filteredFactories.filter((f) => matchesProfileCategory(f.profile_type, 'Indústria'))
+      .length
+  }, [filteredFactories])
+
+  const outrosClientesCount = useMemo(() => {
+    return filteredFactories.length - fabricasCount
+  }, [filteredFactories, fabricasCount])
+
   const metrics = useMemo(
     () => ({
       revenue: filteredFactories.reduce((s, f) => s + f.potentialValue, 0),
@@ -265,13 +275,21 @@ export default function Index() {
         return <GestorTecnicoComparisonCard />
       case 'metrics':
         return (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-4 print:gap-4 print:mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 print:grid-cols-5 print:gap-4 print:mb-8">
             <Card className="glass-card hover-lift text-center flex flex-col justify-center items-center p-5 print:border-none print:shadow-none print:bg-muted/10">
               <h3 className="uppercase tracking-[0.08em] font-semibold text-[12px] text-muted-foreground mb-1 leading-tight">
                 Fábricas Mapeadas
               </h3>
               <div className="text-[28px] font-extrabold tabular-nums tracking-tight">
-                {filteredFactories.length}
+                {fabricasCount}
+              </div>
+            </Card>
+            <Card className="glass-card hover-lift text-center flex flex-col justify-center items-center p-5 print:border-none print:shadow-none print:bg-muted/10">
+              <h3 className="uppercase tracking-[0.08em] font-semibold text-[12px] text-muted-foreground mb-1 leading-tight">
+                Outros Clientes
+              </h3>
+              <div className="text-[28px] font-extrabold tabular-nums tracking-tight">
+                {outrosClientesCount}
               </div>
             </Card>
             <Card className="glass-card hover-lift text-center flex flex-col justify-center items-center p-5 print:border-none print:shadow-none print:bg-muted/10">

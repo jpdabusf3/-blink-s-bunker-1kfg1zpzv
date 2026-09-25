@@ -45,6 +45,7 @@ import { toast } from 'sonner'
 import { getAllFactories, deleteFactoryPB } from '@/services/factories'
 import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { useAuth } from '@/hooks/use-auth'
+import { useUsers } from '@/hooks/use-users'
 import { getScopedFactories } from '@/lib/user-scope'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useAppContext } from '@/store/AppContext'
@@ -52,10 +53,16 @@ import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
 import { logActivity } from '@/services/activity-logs'
 import { ClienteFormDialog } from '@/components/ClienteFormDialog'
 import { formatCNPJ, cleanDigits, BRAZILIAN_UFS, CLIENT_SEGMENTOS } from '@/lib/cnpj'
+import {
+  buildUnifiedVendedoresList,
+  factoryMatchesVendedor,
+  type UnifiedVendedorOption,
+} from '@/lib/vendedorFilterHelper'
 import type { Factory } from '@/types'
 
 export function ClientesManager() {
   const { user } = useAuth()
+  const { users } = useUsers()
   const { deleteFactory: deleteFactoryStore } = useAppContext()
   const { logAction } = useFunnelActivityLog()
 
@@ -71,6 +78,7 @@ export function ClientesManager() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [segmentoFilter, setSegmentoFilter] = useState<string>('all')
   const [ufFilter, setUfFilter] = useState<string>('all')
+  const [vendedorFilter, setVendedorFilter] = useState<string>('all')
 
   // Modal de criação / edição
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -136,6 +144,11 @@ export function ClientesManager() {
     }
   }, [loadData])
 
+  // Lista unificada de opções de vendedores
+  const vendedorOptions = useMemo<UnifiedVendedorOption[]>(() => {
+    return buildUnifiedVendedoresList(gestaoTecnicaList, users)
+  }, [gestaoTecnicaList, users])
+
   // Mapa de IDs de vendedor para nome
   const vendedorMap = useMemo(() => {
     const map = new Map<string, string>()
@@ -177,9 +190,16 @@ export function ClientesManager() {
         }
       }
 
+      // Filtro por Vendedor
+      if (vendedorFilter !== 'all') {
+        if (!factoryMatchesVendedor(c, vendedorFilter, vendedorOptions)) {
+          return false
+        }
+      }
+
       return true
     })
-  }, [clientes, debouncedSearch, segmentoFilter, ufFilter])
+  }, [clientes, debouncedSearch, segmentoFilter, ufFilter, vendedorFilter, vendedorOptions])
 
   // Abertura do formulário
   const handleOpenNew = () => {
@@ -264,7 +284,7 @@ export function ClientesManager() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
             {/* Input de busca por nome ou CNPJ com debounce */}
-            <div className="md:col-span-6 relative">
+            <div className="md:col-span-3 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por Razão Social ou CNPJ..."
@@ -302,6 +322,23 @@ export function ClientesManager() {
                   {BRAZILIAN_UFS.map((uf) => (
                     <SelectItem key={uf} value={uf}>
                       {uf}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Dropdown de filtro por Vendedor */}
+            <div className="md:col-span-3">
+              <Select value={vendedorFilter} onValueChange={setVendedorFilter}>
+                <SelectTrigger aria-label="Filtrar por Vendedor">
+                  <SelectValue placeholder="Todos os vendedores" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="all">Todos os vendedores</SelectItem>
+                  {vendedorOptions.map((v) => (
+                    <SelectItem key={v.value} value={v.value}>
+                      {v.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -424,7 +461,10 @@ export function ClientesManager() {
             <span>
               {filteredClientes.length} cliente(s) encontrado(s) de um total de {clientes.length}
             </span>
-            {(searchTerm || segmentoFilter !== 'all' || ufFilter !== 'all') && (
+            {(searchTerm ||
+              segmentoFilter !== 'all' ||
+              ufFilter !== 'all' ||
+              vendedorFilter !== 'all') && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -433,6 +473,7 @@ export function ClientesManager() {
                   setSearchTerm('')
                   setSegmentoFilter('all')
                   setUfFilter('all')
+                  setVendedorFilter('all')
                 }}
               >
                 <RotateCcw className="w-3 h-3" /> Limpar filtros

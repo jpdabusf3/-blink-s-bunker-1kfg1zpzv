@@ -10,11 +10,11 @@ import {
 } from 'lucide-react'
 import type { RecordSubscription } from 'pocketbase'
 import pb from '@/lib/pocketbase/client'
-import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 import { TaskBadge } from '@/components/agenda/TaskBadge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 
 export interface TodayTaskItem {
@@ -28,6 +28,20 @@ export interface TodayTaskItem {
   end_time?: string
   status: 'agendada' | 'concluida' | 'cancelada'
   notes?: string
+  expand?: {
+    user_id?: {
+      id?: string
+      name?: string
+      email?: string
+    }
+  }
+}
+
+function getInitials(name?: string): string {
+  if (!name) return 'VD'
+  const parts = name.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
 function getTodayISODate(): string {
@@ -39,7 +53,6 @@ function getTodayISODate(): string {
 }
 
 export function TodayTasksWidget() {
-  const { user } = useAuth()
   const { toast } = useToast()
 
   const [tasks, setTasks] = useState<TodayTaskItem[]>([])
@@ -47,30 +60,21 @@ export function TodayTasksWidget() {
   const [isError, setIsError] = useState<boolean>(false)
   const [mounted, setMounted] = useState<boolean>(false)
 
-  // Use a ref to keep current user id for realtime callback comparisons
-  const userIdRef = useRef<string | undefined>(user?.id)
-  userIdRef.current = user?.id
-
   const loadTodayTasks = useCallback(async () => {
-    const currentUserId = user?.id || pb.authStore.record?.id
-    if (!currentUserId) {
-      setTasks([])
-      setLoading(false)
-      return
-    }
-
     setLoading(true)
     setIsError(false)
 
     try {
       const today = getTodayISODate()
-      // Filter by task_date starting with today AND user_id = current logged user
-      const filter = `user_id = "${currentUserId}" && task_date >= "${today} 00:00:00" && task_date <= "${today} 23:59:59"`
+      // Filter by task_date starting with today (global view for all users)
+      const filter = `task_date >= "${today} 00:00:00" && task_date <= "${today} 23:59:59"`
 
       const records = await pb.collection('agenda_tasks').getFullList<TodayTaskItem>({
         filter,
         sort: 'start_time,created',
-        fields: 'id,user_id,title,task_type,client_name,task_date,start_time,end_time,status,notes',
+        expand: 'user_id',
+        fields:
+          'id,user_id,title,task_type,client_name,task_date,start_time,end_time,status,notes,expand.user_id.id,expand.user_id.name,expand.user_id.email',
       })
 
       // Sort client-side by start_time ascending (timed tasks first, empty times at end)
@@ -87,29 +91,21 @@ export function TodayTasksWidget() {
     } finally {
       setLoading(false)
     }
-  }, [user?.id])
+  }, [])
 
   useEffect(() => {
     loadTodayTasks()
   }, [loadTodayTasks])
 
-  // Realtime subscription to agenda_tasks
+  // Realtime subscription to agenda_tasks (global: all users tasks today)
   useEffect(() => {
-    const currentUserId = user?.id || pb.authStore.record?.id
-    if (!currentUserId) return
-
     let unsubscribeFn: (() => Promise<void>) | undefined
     let isCancelled = false
 
     const today = getTodayISODate()
 
-    const handleRealtimeEvent = (e: RecordSubscription<TodayTaskItem>) => {
+    const handleRealtimeEvent = async (e: RecordSubscription<TodayTaskItem>) => {
       const item = e.record
-      // Check if relevant to this user
-      if (item.user_id && item.user_id !== userIdRef.current) {
-        return
-      }
-
       const itemDateOnly = item.task_date ? item.task_date.split(' ')[0].split('T')[0] : ''
 
       if (e.action === 'delete') {
@@ -123,14 +119,28 @@ export function TodayTasksWidget() {
         return
       }
 
+      // If expand.user_id is not present on realtime event, fetch or populate
+      let fullItem = item
+      if (!fullItem.expand?.user_id && fullItem.user_id) {
+        try {
+          fullItem = await pb.collection('agenda_tasks').getOne<TodayTaskItem>(item.id, {
+            expand: 'user_id',
+            fields:
+              'id,user_id,title,task_type,client_name,task_date,start_time,end_time,status,notes,expand.user_id.id,expand.user_id.name,expand.user_id.email',
+          })
+        } catch (_) {
+          // If fetch fails, keep raw item
+        }
+      }
+
       // Add or update task in list
       setTasks((prev) => {
-        const exists = prev.some((t) => t.id === item.id)
+        const exists = prev.some((t) => t.id === fullItem.id)
         let nextList: TodayTaskItem[]
         if (exists) {
-          nextList = prev.map((t) => (t.id === item.id ? item : t))
+          nextList = prev.map((t) => (t.id === fullItem.id ? fullItem : t))
         } else {
-          nextList = [...prev, item]
+          nextList = [...prev, fullItem]
         }
         return nextList.sort((a, b) => {
           const timeA = a.start_time?.trim() || '99:99'
@@ -141,7 +151,7 @@ export function TodayTasksWidget() {
     }
 
     pb.collection<TodayTaskItem>('agenda_tasks')
-      .subscribe('*', handleRealtimeEvent)
+      .subscribe('*', handleRealtimeEvent, { expand: 'user_id' })
       .then((unsub) => {
         if (isCancelled) {
           unsub().catch(() => {})
@@ -164,7 +174,7 @@ export function TodayTasksWidget() {
         unsubscribeFn().catch(() => {})
       }
     }
-  }, [user?.id, toast])
+  }, [toast])
 
   // Trigger smooth progress bar animation on load
   useEffect(() => {
@@ -301,28 +311,56 @@ export function TodayTasksWidget() {
                   key={task.id}
                   className="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between gap-3 text-sm group"
                 >
-                  {/* Left: TaskBadge + Title + Client Name */}
+                  {/* Left: TaskBadge + Vendor Avatar + Title + Client Name */}
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <TaskBadge type={task.task_type} notes={task.notes} />
 
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className={cn(
-                          'font-medium text-xs sm:text-sm text-foreground truncate',
-                          (isConcluida || isCancelada) && 'line-through text-muted-foreground',
-                        )}
-                        title={task.title}
-                      >
-                        {task.title}
-                      </p>
-                      {task.client_name && (
-                        <p
-                          className="text-[11px] text-muted-foreground truncate"
-                          title={task.client_name}
+                    {/* Vendedor responsável: avatar com iniciais e tooltip com nome */}
+                    {(() => {
+                      const vendorName =
+                        task.expand?.user_id?.name || task.expand?.user_id?.email || 'Vendedor'
+                      return (
+                        <Avatar
+                          className="w-6 h-6 shrink-0 text-[10px] font-bold border border-border"
+                          title={`Responsável: ${vendorName}`}
                         >
-                          {task.client_name}
+                          <AvatarFallback className="bg-primary/10 text-primary">
+                            {getInitials(vendorName)}
+                          </AvatarFallback>
+                        </Avatar>
+                      )
+                    })()}
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <p
+                          className={cn(
+                            'font-medium text-xs sm:text-sm text-foreground truncate',
+                            (isConcluida || isCancelada) && 'line-through text-muted-foreground',
+                          )}
+                          title={task.title}
+                        >
+                          {task.title}
                         </p>
-                      )}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground truncate">
+                        {task.client_name && (
+                          <span className="truncate" title={task.client_name}>
+                            {task.client_name}
+                          </span>
+                        )}
+                        {task.client_name && task.expand?.user_id?.name && (
+                          <span className="text-muted-foreground/40">•</span>
+                        )}
+                        {task.expand?.user_id?.name && (
+                          <span
+                            className="truncate text-muted-foreground/80 font-medium"
+                            title={`Responsável: ${task.expand.user_id.name}`}
+                          >
+                            {task.expand.user_id.name}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
