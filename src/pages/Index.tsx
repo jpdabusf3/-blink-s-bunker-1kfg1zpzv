@@ -412,7 +412,7 @@ export default function Index() {
             {isLeader && viewMode === 'geographic'
               ? 'Visão Geográfica'
               : isLeader && viewMode === 'global'
-                ? 'Visão Global MT'
+                ? 'Visão Global'
                 : `Visão Regional - ${effectiveRegionFilter}`}
             {lastAutomationPeriod && (
               <span className="text-xs font-normal text-muted-foreground ml-2">
