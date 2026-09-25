@@ -36,6 +36,7 @@ import { DashboardCustomizer } from '@/components/dashboard/DashboardCustomizer'
 import { useDashboardPreferences } from '@/hooks/use-dashboard-preferences'
 import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { UserFilter } from '@/components/UserFilter'
+import { factoryMatchesVendedor, type UnifiedVendedorOption } from '@/lib/vendedorFilterHelper'
 import { testIntegration } from '@/services/integration-test'
 import { toast } from 'sonner'
 import { SyncErrorBanner } from '@/components/SyncErrorBanner'
@@ -132,6 +133,7 @@ export default function Index() {
   const [regionFilter, setRegionFilter] = useState('Todas as Regiões')
   const [viewMode, setViewMode] = useState<'global' | 'regional' | 'geographic'>('global')
   const [salesOwnerFilter, setSalesOwnerFilter] = useState('all')
+  const [vendedorOptions, setVendedorOptions] = useState<UnifiedVendedorOption[]>([])
   const [stateFilter, setStateFilter] = useState('all')
   const [speciesFilter, setSpeciesFilter] = useState('all')
   const [integrationLoading, setIntegrationLoading] = useState(false)
@@ -170,13 +172,21 @@ export default function Index() {
         effectiveRegionFilter === 'Todas as Regiões' ||
         normalizeArray(f.region).includes(effectiveRegionFilter) ||
         f.stateRegion === effectiveRegionFilter
-      const ownerMatch = salesOwnerFilter === 'all' || f.salesOwner === salesOwnerFilter
+      const ownerMatch =
+        salesOwnerFilter === 'all' || factoryMatchesVendedor(f, salesOwnerFilter, vendedorOptions)
       const stateMatch = stateFilter === 'all' || f.state === stateFilter
       const speciesMatch =
         speciesFilter === 'all' || normalizeArray(f.animalSpecies).includes(speciesFilter)
       return regionMatch && ownerMatch && stateMatch && speciesMatch
     })
-  }, [factories, effectiveRegionFilter, salesOwnerFilter, stateFilter, speciesFilter])
+  }, [
+    factories,
+    effectiveRegionFilter,
+    salesOwnerFilter,
+    vendedorOptions,
+    stateFilter,
+    speciesFilter,
+  ])
 
   const fabricasCount = useMemo(() => {
     return filteredFactories.filter((f) => matchesProfileCategory(f.profile_type, 'Indústria'))
@@ -458,6 +468,7 @@ export default function Index() {
             <UserFilter
               value={salesOwnerFilter}
               onChange={setSalesOwnerFilter}
+              onOptionsLoaded={setVendedorOptions}
               className="w-[180px] h-9"
             />
           )}

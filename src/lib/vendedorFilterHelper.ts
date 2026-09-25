@@ -254,7 +254,7 @@ export function getFactorySellerMatches(factory: Factory): {
   const ids = new Set<string>()
   const names = new Set<string>()
 
-  // 1. vendedor_id e vendedor_name diretos
+  // 1. vendedor_id, vendedor_name e vendedor textual diretos
   if (
     factory.vendedor_id &&
     typeof factory.vendedor_id === 'string' &&
@@ -267,26 +267,50 @@ export function getFactorySellerMatches(factory: Factory): {
     typeof factory.vendedor_name === 'string' &&
     factory.vendedor_name.trim()
   ) {
-    names.add(factory.vendedor_name.trim())
+    names.add(normalizeSellerName(factory.vendedor_name.trim()))
+  }
+
+  // Campo alternativo/textual "vendedor" (presente em importações ou schemas flexíveis)
+  const factoryRaw = factory as any
+  if (
+    factoryRaw.vendedor &&
+    typeof factoryRaw.vendedor === 'string' &&
+    factoryRaw.vendedor.trim()
+  ) {
+    // Se parecer um ID alfanumérico simples de PocketBase (ex: 15 chars minúsculos/números sem espaço)
+    const rawVend = factoryRaw.vendedor.trim()
+    if (/^[a-z0-9]{15}$/.test(rawVend)) {
+      ids.add(rawVend)
+    } else {
+      names.add(normalizeSellerName(rawVend))
+    }
   }
 
   // Se vendedor_id for um objeto populado em tempo de execução
   const rawVendIdObj = factory.vendedor_id as any
   if (rawVendIdObj && typeof rawVendIdObj === 'object') {
     if (rawVendIdObj.id) ids.add(rawVendIdObj.id)
-    if (rawVendIdObj.nome) names.add(rawVendIdObj.nome)
+    if (rawVendIdObj.nome) names.add(normalizeSellerName(rawVendIdObj.nome))
+  }
+
+  // Se vendedor for um objeto populado em tempo de execução
+  if (factoryRaw.vendedor && typeof factoryRaw.vendedor === 'object') {
+    if (factoryRaw.vendedor.id) ids.add(factoryRaw.vendedor.id)
+    if (factoryRaw.vendedor.nome) names.add(normalizeSellerName(factoryRaw.vendedor.nome))
+    if (factoryRaw.vendedor.name) names.add(normalizeSellerName(factoryRaw.vendedor.name))
   }
 
   // 2. Expansões diretas do vendedor
   const expandVendId = factory.expand?.vendedor_id
   if (expandVendId) {
     if (expandVendId.id) ids.add(expandVendId.id)
-    if (expandVendId.nome) names.add(expandVendId.nome)
+    if (expandVendId.nome) names.add(normalizeSellerName(expandVendId.nome))
   }
   const expandVend = (factory.expand as any)?.vendedor
   if (expandVend) {
     if (expandVend.id) ids.add(expandVend.id)
-    if (expandVend.nome) names.add(expandVend.nome)
+    if (expandVend.nome) names.add(normalizeSellerName(expandVend.nome))
+    if (expandVend.name) names.add(normalizeSellerName(expandVend.name))
   }
 
   // 3. salesOwner (ID de usuário e expansões)
