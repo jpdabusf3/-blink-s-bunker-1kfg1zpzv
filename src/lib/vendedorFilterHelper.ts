@@ -22,6 +22,19 @@ export const RODRIGO_USER_IDS = ['i3jvhfdwufuwfe1', 'gee3174a0a6c6qx']
 export const RODRIGO_NAMES = ['rodrigo gardinal', 'rodrigo garginal']
 
 /**
+ * Normaliza o nome do vendedor para o padrão canônico final.
+ * "João Pedro" -> "João Figueiredo"
+ */
+export function normalizeSellerName(name?: string | null): string {
+  if (!name) return ''
+  const norm = normalizeStr(name)
+  if (norm === 'joao pedro' || norm === 'joao figueiredo') {
+    return 'João Figueiredo'
+  }
+  return name.trim()
+}
+
+/**
  * Verifica se um usuário/membro corresponde a Fernanda Franco.
  * Fernanda Franco NÃO recebe auto-vínculo comercial.
  */
@@ -75,12 +88,13 @@ export function buildUnifiedVendedoresList(
   // 1. Processar membros de gestao_tecnica
   for (const gt of gestaoList) {
     if (gt.ativo === false) continue
-    const key = normalizeStr(gt.nome)
+    const canonicalLabel = normalizeSellerName(gt.nome)
+    const key = normalizeStr(canonicalLabel)
     if (!key) continue
 
     optionsMap.set(key, {
       value: gt.id,
-      label: gt.nome,
+      label: canonicalLabel,
       gestaoTecnicaId: gt.id,
       userIds: [],
       emails: [],
@@ -91,7 +105,8 @@ export function buildUnifiedVendedoresList(
   // 2. Cruzar com a lista de users
   for (const u of usersList) {
     if (u.deactivated) continue
-    const userName = u.name || u.email
+    const canonicalUserName = normalizeSellerName(u.name || u.email)
+    const userName = canonicalUserName
     const key = normalizeStr(userName)
     const email = (u.email || '').toLowerCase()
 
@@ -210,6 +225,20 @@ export function resolveVendedorIdentity(
     RODRIGO_USER_IDS.forEach((u) => ids.add(u))
     RODRIGO_NAMES.forEach((n) => names.add(normalizeStr(n)))
     emails.add('rodrigo.gardinal@blinkbiotech.com')
+  }
+
+  // 4. Aliases para João Pedro / João Figueiredo (mesma pessoa, canônico: João Figueiredo)
+  const isJoao =
+    normTarget === 'joao pedro' ||
+    normTarget === 'joao figueiredo' ||
+    raw === '4urt19q2phjs7fn' ||
+    raw === 'rxo1gz5ovha70lu'
+
+  if (isJoao) {
+    ids.add('4urt19q2phjs7fn')
+    ids.add('rxo1gz5ovha70lu')
+    names.add('joao pedro')
+    names.add('joao figueiredo')
   }
 
   return { ids, names, emails }

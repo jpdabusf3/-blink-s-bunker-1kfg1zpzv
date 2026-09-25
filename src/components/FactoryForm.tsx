@@ -22,6 +22,7 @@ import { logActivity } from '@/services/activity-logs'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 import { normalizeArray } from '@/lib/utils'
 import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
+import { normalizeSellerName } from '@/lib/vendedorFilterHelper'
 import { UserCog } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -202,10 +203,12 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
     let finalVendedorId: string | undefined =
       vendedorId && vendedorId !== 'none' ? vendedorId : undefined
     let finalVendedorName: string | undefined = selectedMember?.nome
+      ? normalizeSellerName(selectedMember.nome)
+      : undefined
 
     // Se não encontrou em teamMembers mas vendedorId foi setado (ex: id direto de gestao_tecnica)
     if (!finalVendedorName && finalVendedorId && user?.gestao_tecnica_id === finalVendedorId) {
-      finalVendedorName = user.name || user.email
+      finalVendedorName = normalizeSellerName(user.name || user.email)
     }
 
     // Se for um novo cadastro e o usuário logado NÃO for Fernanda Franco, garantir fallback de auto-vínculo

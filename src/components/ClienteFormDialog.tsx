@@ -33,6 +33,23 @@ import { useAppContext } from '@/store/AppContext'
 import { useAuth } from '@/hooks/use-auth'
 import { logActivity } from '@/services/activity-logs'
 import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
+import {
+  CLIENT_PROFILE_CATEGORIES,
+  toCanonicalCategory,
+  normalizeProfileList,
+  type ClientProfileCategory,
+} from '@/constants/clientCategories'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { normalizeSellerName } from '@/lib/vendedorFilterHelper'
 import type { Factory, GestaoTecnica } from '@/types'
 
 export interface ClienteFormDialogProps {
@@ -62,12 +79,18 @@ export function ClienteFormDialog({
   const [cidade, setCidade] = useState('')
   const [uf, setUf] = useState('')
   const [segmento, setSegmento] = useState<string>('none')
+  const [categoria, setCategoria] = useState<string>('none')
+  const [categoriaTouched, setCategoriaTouched] = useState(false)
   const [vendedorId, setVendedorId] = useState<string>('none')
   const [vendedorTouched, setVendedorTouched] = useState(false)
   const [observacoes, setObservacoes] = useState('')
 
-  const [errors, setErrors] = useState<{ razaoSocial?: string; cnpj?: string }>({})
+  const [errors, setErrors] = useState<{ razaoSocial?: string; cnpj?: string; categoria?: string }>(
+    {},
+  )
   const [submitting, setSubmitting] = useState(false)
+  const [confirmProfileDialogOpen, setConfirmProfileDialogOpen] = useState(false)
+  const [pendingSavePayload, setPendingSavePayload] = useState<Partial<Factory> | null>(null)
 
   // Membros ativos da equipe para vendedor
   const activeSellers = React.useMemo(() => {
@@ -93,6 +116,13 @@ export function ClienteFormDialog({
       setUf(cliente.state ? cliente.state.trim().toUpperCase() : '')
       const seg = cliente.carteira?.trim().toUpperCase()
       setSegmento(seg && (CLIENT_SEGMENTOS as readonly string[]).includes(seg) ? seg : 'none')
+
+      // Categoria / Perfil
+      const normProfiles = normalizeProfileList(cliente.profile_type)
+      const canonicalMatch = normProfiles.length > 0 ? toCanonicalCategory(normProfiles[0]) : null
+      setCategoria(canonicalMatch || (normProfiles.length > 0 ? normProfiles[0] : 'none'))
+      setCategoriaTouched(false)
+
       setVendedorId(cliente.vendedor_id || 'none')
       setObservacoes(cliente.observacoes || cliente.notes || cliente.suggested_approach || '')
     } else {
@@ -105,6 +135,8 @@ export function ClienteFormDialog({
       setCidade('')
       setUf('')
       setSegmento('none')
+      setCategoria('Indústria')
+      setCategoriaTouched(false)
       setObservacoes('')
 
       // Auto-vínculo comercial por autoria (EXCETO Fernanda Franco)
@@ -155,10 +187,79 @@ export function ClienteFormDialog({
     setTelefone(formatTelefone(raw))
   }
 
+  const executeSave = async (payloadToSave: Partial<Factory>) => {
+    setSubmitting(true)
+    const cleanName = (payloadToSave.name || '').trim()
+    const digitsCnpj = (payloadToSave.cnpj || '').trim()
+    const cleanUf = payloadToSave.state
+    const cleanSeg = payloadToSave.carteira
+    const finalVendedorName = payloadToSave.vendedor_name
+
+    try {
+      if (cliente) {
+        // Atualizar
+        await updateFactoryPB(cliente.id, payloadToSave)
+        updateFactory(cliente.id, payloadToSave)
+
+        logActivity(
+          `Cliente atualizado: ${cleanName}`,
+          `CNPJ: ${formatCNPJ(digitsCnpj)}, Cidade: ${payloadToSave.city || '-'}/${cleanUf || '-'}, Segmento: ${cleanSeg || '-'}, Categoria: ${Array.isArray(payloadToSave.profile_type) ? payloadToSave.profile_type.join(', ') : '-'}, Vendedor: ${finalVendedorName || 'Não atribuído'}`,
+          cliente.id,
+          'factories',
+        ).catch(() => {})
+
+        logAction({
+          action_type: 'update',
+          entity_type: 'client',
+          entity_id: cliente.id,
+          entity_name: cleanName,
+          description: `Atualizou cliente ${cleanName}`,
+        })
+
+        toast.success('Cliente salvo com sucesso.')
+      } else {
+        // Criar
+        const created = await createFactoryPB(payloadToSave)
+        addFactory({ ...payloadToSave, id: created.id })
+
+        logActivity(
+          `Novo cliente cadastrado: ${cleanName}`,
+          `CNPJ: ${formatCNPJ(digitsCnpj)}, Cidade: ${payloadToSave.city || '-'}/${cleanUf || '-'}, Segmento: ${cleanSeg || '-'}, Categoria: ${Array.isArray(payloadToSave.profile_type) ? payloadToSave.profile_type.join(', ') : '-'}, Vendedor: ${finalVendedorName || 'Não atribuído'}`,
+          created.id,
+          'factories',
+        ).catch(() => {})
+
+        logAction({
+          action_type: 'create',
+          entity_type: 'client',
+          entity_id: created.id,
+          entity_name: cleanName,
+          description: `Cadastrou cliente ${cleanName}`,
+        })
+
+        toast.success('Cliente salvo com sucesso.')
+      }
+
+      onOpenChange(false)
+      onSuccess()
+    } catch (err: any) {
+      console.error('[ClienteFormDialog] Erro ao salvar:', err)
+      const msg = err?.message || 'Não foi possível salvar o cliente.'
+      if (msg.toLowerCase().includes('cnpj') || msg.toLowerCase().includes('unique')) {
+        setErrors({ cnpj: 'Já existe um cliente com este CNPJ.' })
+      } else {
+        toast.error('Não foi possível salvar o cliente. Tente novamente.')
+      }
+    } finally {
+      setSubmitting(false)
+      setPendingSavePayload(null)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    const newErrors: { razaoSocial?: string; cnpj?: string } = {}
+    const newErrors: { razaoSocial?: string; cnpj?: string; categoria?: string } = {}
 
     // Validação inline obrigatória
     const cleanName = razaoSocial.trim()
@@ -206,6 +307,19 @@ export function ClienteFormDialog({
       const cleanUf = uf ? uf.trim().toUpperCase().slice(0, 2) : undefined
       const cleanSeg = segmento !== 'none' ? segmento : undefined
 
+      // Validação/Confirmação de Categoria Canônica
+      // Se estiver editando um cliente e a categoria estiver vazia ('none') ou fora do padrão,
+      // pedir confirmação ao usuário antes de salvar.
+      const canonicalCategory = categoria !== 'none' ? toCanonicalCategory(categoria) : null
+      const isCategoryValid = !!canonicalCategory
+
+      // Formato padronizado gravado no PocketBase (array com categoria canônica, ex: ['Indústria'])
+      const finalProfileType = canonicalCategory
+        ? ([canonicalCategory] as unknown as Factory['profile_type'])
+        : categoria !== 'none'
+          ? ([categoria] as unknown as Factory['profile_type'])
+          : (['Indústria'] as unknown as Factory['profile_type'])
+
       const payload: Partial<Factory> = {
         name: cleanName,
         cnpj: digitsCnpj, // salva formato limpo (padrão 14 dígitos)
@@ -217,69 +331,27 @@ export function ClienteFormDialog({
         city: cidade.trim() || (cliente?.city ?? ''),
         state: cleanUf || cliente?.state,
         carteira: cleanSeg || cliente?.carteira,
+        profile_type: finalProfileType,
         vendedor_id: finalVendedorId,
-        vendedor_name: finalVendedorName,
+        vendedor_name: finalVendedorName ? normalizeSellerName(finalVendedorName) : undefined,
         observacoes: observacoes.trim() || undefined,
         notes: observacoes.trim() || undefined,
         suggested_approach: observacoes.trim() || cliente?.suggested_approach,
         salesOwner: cliente?.salesOwner || (user?.id ? user.id : undefined),
       }
 
-      if (cliente) {
-        // Atualizar
-        await updateFactoryPB(cliente.id, payload)
-        updateFactory(cliente.id, payload)
-
-        logActivity(
-          `Cliente atualizado: ${cleanName}`,
-          `CNPJ: ${formatCNPJ(digitsCnpj)}, Cidade: ${cidade}/${cleanUf || '-'}, Segmento: ${cleanSeg || '-'}, Vendedor: ${finalVendedorName || 'Não atribuído'}`,
-          cliente.id,
-          'factories',
-        ).catch(() => {})
-
-        logAction({
-          action_type: 'update',
-          entity_type: 'client',
-          entity_id: cliente.id,
-          entity_name: cleanName,
-          description: `Atualizou cliente ${cleanName}`,
-        })
-
-        toast.success('Cliente salvo com sucesso.')
-      } else {
-        // Criar
-        const created = await createFactoryPB(payload)
-        addFactory({ ...payload, id: created.id })
-
-        logActivity(
-          `Novo cliente cadastrado: ${cleanName}`,
-          `CNPJ: ${formatCNPJ(digitsCnpj)}, Cidade: ${cidade}/${cleanUf || '-'}, Segmento: ${cleanSeg || '-'}, Vendedor: ${finalVendedorName || 'Não atribuído'}`,
-          created.id,
-          'factories',
-        ).catch(() => {})
-
-        logAction({
-          action_type: 'create',
-          entity_type: 'client',
-          entity_id: created.id,
-          entity_name: cleanName,
-          description: `Cadastrou cliente ${cleanName}`,
-        })
-
-        toast.success('Cliente salvo com sucesso.')
+      // Se estiver editando e a categoria estiver vazia ou inválida, interrompe e pede confirmação
+      if (cliente && (!isCategoryValid || categoria === 'none')) {
+        setPendingSavePayload(payload)
+        setConfirmProfileDialogOpen(true)
+        setSubmitting(false)
+        return
       }
 
-      onOpenChange(false)
-      onSuccess()
+      await executeSave(payload)
     } catch (err: any) {
-      console.error('[ClienteFormDialog] Erro ao salvar:', err)
-      const msg = err?.message || 'Não foi possível salvar o cliente.'
-      if (msg.toLowerCase().includes('cnpj') || msg.toLowerCase().includes('unique')) {
-        setErrors({ cnpj: 'Já existe um cliente com este CNPJ.' })
-      } else {
-        toast.error('Não foi possível salvar o cliente. Tente novamente.')
-      }
-    } finally {
+      console.error('[ClienteFormDialog] Erro na validação prévia:', err)
+      toast.error('Ocorreu um erro ao preparar os dados do cliente.')
       setSubmitting(false)
     }
   }
@@ -410,10 +482,44 @@ export function ClienteFormDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Perfil / Categoria Canônica */}
+            <div className="space-y-1.5">
+              <Label htmlFor="cli-categoria">
+                Categoria / Perfil <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={categoria}
+                onValueChange={(val) => {
+                  setCategoriaTouched(true)
+                  setCategoria(val)
+                }}
+              >
+                <SelectTrigger id="cli-categoria">
+                  <SelectValue placeholder="Selecione a categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Não informada (pendente)</SelectItem>
+                  {CLIENT_PROFILE_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                  {/* Se houver uma categoria legada/outros não vazia */}
+                  {categoria !== 'none' &&
+                    !CLIENT_PROFILE_CATEGORIES.includes(categoria as ClientProfileCategory) && (
+                      <SelectItem value={categoria}>Outra: {categoria}</SelectItem>
+                    )}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                Padrão uniforme para segmentação de carteira
+              </p>
+            </div>
+
             {/* Segmento */}
             <div className="space-y-1.5">
-              <Label htmlFor="cli-segmento">Segmento</Label>
+              <Label htmlFor="cli-segmento">Segmento (Espécie)</Label>
               <Select value={segmento} onValueChange={setSegmento}>
                 <SelectTrigger id="cli-segmento">
                   <SelectValue placeholder="Selecione o segmento" />
@@ -446,7 +552,7 @@ export function ClienteFormDialog({
                   <SelectItem value="none">Nenhum / Não atribuído</SelectItem>
                   {activeSellers.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
-                      {s.nome}
+                      {normalizeSellerName(s.nome)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -490,6 +596,79 @@ export function ClienteFormDialog({
           </div>
         </form>
       </DialogContent>
+
+      {/* Diálogo de confirmação de categoria/perfil ao editar */}
+      <AlertDialog
+        open={confirmProfileDialogOpen}
+        onOpenChange={(v) => {
+          if (!v) {
+            setConfirmProfileDialogOpen(false)
+            setPendingSavePayload(null)
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirme a categoria do cliente antes de salvar</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2 text-sm">
+              <p>
+                Este cliente não possui uma categoria padronizada no catálogo oficial. Para manter a
+                base uniforme e garantir relatórios consistentes, selecione ou confirme a categoria:
+              </p>
+              <div className="pt-2">
+                <Label htmlFor="cli-confirm-cat" className="text-xs font-semibold text-foreground">
+                  Selecione a categoria canônica:
+                </Label>
+                <div className="mt-1.5">
+                  <Select
+                    value={categoria === 'none' ? 'Indústria' : categoria}
+                    onValueChange={(val) => setCategoria(val)}
+                  >
+                    <SelectTrigger id="cli-confirm-cat">
+                      <SelectValue placeholder="Selecione a categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CLIENT_PROFILE_CATEGORIES.map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setConfirmProfileDialogOpen(false)
+                setPendingSavePayload(null)
+              }}
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                const chosenCat =
+                  categoria === 'none' ? 'Indústria' : toCanonicalCategory(categoria) || categoria
+                setCategoria(chosenCat)
+                setConfirmProfileDialogOpen(false)
+                if (pendingSavePayload) {
+                  const updatedPayload = {
+                    ...pendingSavePayload,
+                    profile_type: [chosenCat] as unknown as Factory['profile_type'],
+                  }
+                  void executeSave(updatedPayload)
+                }
+              }}
+            >
+              Confirmar e Salvar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   )
 }

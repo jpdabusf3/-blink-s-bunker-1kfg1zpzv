@@ -56,8 +56,10 @@ import { formatCNPJ, cleanDigits, BRAZILIAN_UFS, CLIENT_SEGMENTOS } from '@/lib/
 import {
   buildUnifiedVendedoresList,
   factoryMatchesVendedor,
+  normalizeSellerName,
   type UnifiedVendedorOption,
 } from '@/lib/vendedorFilterHelper'
+import { normalizeProfileList } from '@/constants/clientCategories'
 import type { Factory } from '@/types'
 
 export function ClientesManager() {
@@ -247,13 +249,21 @@ export function ClientesManager() {
   }
 
   const getVendedorDisplay = (c: Factory): string => {
-    if (c.vendedor_name && c.vendedor_name.trim()) return c.vendedor_name
-    if (c.vendedor_id && vendedorMap.has(c.vendedor_id)) {
-      return vendedorMap.get(c.vendedor_id)!
+    let raw = ''
+    if (c.vendedor_name && c.vendedor_name.trim()) raw = c.vendedor_name
+    else if (c.vendedor_id && vendedorMap.has(c.vendedor_id)) {
+      raw = vendedorMap.get(c.vendedor_id)!
+    } else if (c.expand?.vendedor_id?.nome) raw = c.expand.vendedor_id.nome
+    else if (c.expand?.vendedor?.nome) raw = c.expand.vendedor.nome
+    if (raw) {
+      return normalizeSellerName(raw)
     }
-    if (c.expand?.vendedor_id?.nome) return c.expand.vendedor_id.nome
-    if (c.expand?.vendedor?.nome) return c.expand.vendedor.nome
     return 'Não atribuído'
+  }
+
+  const getPerfilDisplay = (c: Factory): string => {
+    const profiles = normalizeProfileList(c.profile_type)
+    return profiles.length > 0 ? profiles.join(', ') : 'Não informado'
   }
 
   const getCidadeUfDisplay = (c: Factory): string => {
@@ -385,6 +395,7 @@ export function ClientesManager() {
                   <TableHead>Razão Social</TableHead>
                   <TableHead>CNPJ</TableHead>
                   <TableHead>Cidade/UF</TableHead>
+                  <TableHead>Perfil / Categoria</TableHead>
                   <TableHead>Segmento</TableHead>
                   <TableHead>Vendedor</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -401,6 +412,9 @@ export function ClientesManager() {
                     </TableCell>
                     <TableCell>
                       <Skeleton className="h-4 w-24" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-6 w-24 rounded-full" />
                     </TableCell>
                     <TableCell>
                       <Skeleton className="h-6 w-20 rounded-full" />
@@ -495,6 +509,7 @@ export function ClientesManager() {
                       <TableHead>Razão Social</TableHead>
                       <TableHead>CNPJ</TableHead>
                       <TableHead>Cidade/UF</TableHead>
+                      <TableHead>Perfil / Categoria</TableHead>
                       <TableHead>Segmento</TableHead>
                       <TableHead>Vendedor</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
@@ -519,6 +534,11 @@ export function ClientesManager() {
                             {formatCNPJ(c.cnpj) || <span className="text-muted-foreground">-</span>}
                           </TableCell>
                           <TableCell className="text-sm">{getCidadeUfDisplay(c)}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="font-normal text-xs">
+                              {getPerfilDisplay(c)}
+                            </Badge>
+                          </TableCell>
                           <TableCell>
                             {seg ? (
                               <Badge variant="secondary" className="font-semibold text-xs">
@@ -592,6 +612,10 @@ export function ClientesManager() {
                         <div className="flex items-center gap-1.5">
                           <Users className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                           <span>Vendedor: {getVendedorDisplay(c)}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          <span>Perfil: {getPerfilDisplay(c)}</span>
                         </div>
                         {c.contato && (
                           <div className="text-xs text-muted-foreground">
