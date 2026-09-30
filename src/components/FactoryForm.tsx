@@ -19,7 +19,7 @@ import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { COUNTRIES } from '@/lib/countries'
 import { createFactoryPB, updateFactoryPB } from '@/services/factories'
 import { logActivity } from '@/services/activity-logs'
-import { getErrorMessage } from '@/lib/pocketbase/errors'
+import { extractFieldErrors, getErrorMessage } from '@/lib/pocketbase/errors'
 import { normalizeArray } from '@/lib/utils'
 import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
 import { normalizeSellerName } from '@/lib/vendedorFilterHelper'
@@ -364,7 +364,18 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
       }
       onSubmit()
     } catch (err) {
-      toast.error(getErrorMessage(err))
+      console.error('[FactoryForm] Erro ao salvar:', err)
+      const fieldErrs = extractFieldErrors(err)
+      const fieldKeys = Object.keys(fieldErrs)
+
+      if (fieldKeys.length > 0) {
+        setFieldErrors((prev) => ({ ...prev, ...fieldErrs }))
+        const descriptions = Object.entries(fieldErrs).map(([f, m]) => `${f} (${m})`)
+        toast.error(`Não foi possível salvar: campo(s) inválido(s): ${descriptions.join(', ')}`)
+      } else {
+        const errorMsg = getErrorMessage(err)
+        toast.error(`Não foi possível salvar: ${errorMsg}`)
+      }
     } finally {
       setSubmitting(false)
     }

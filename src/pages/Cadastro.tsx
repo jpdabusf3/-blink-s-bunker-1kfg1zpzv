@@ -35,6 +35,7 @@ import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
 import { getAllFactories, deleteFactoryPB, updateFactoryPB } from '@/services/factories'
+import { extractFieldErrors, getErrorMessage } from '@/lib/pocketbase/errors'
 import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { EditableMemberSelect } from '@/components/EditableMemberSelect'
 import { AtribuicaoDialog } from '@/components/AtribuicaoDialog'
@@ -688,9 +689,9 @@ export default function Cadastro() {
     const newName = vendedorNome || 'Não atribuído'
 
     try {
-      // Grava no backend PocketBase: apenas o campo vendedor_id
+      // Grava no backend PocketBase: apenas o campo vendedor_id (sanitizado por toPBData para null se vazio)
       await updateFactoryPB(factoryId, {
-        vendedor_id: vendedorId || '',
+        vendedor_id: vendedorId || null,
       } as any)
 
       // Atualiza estado local de factories imediatamente em memória
@@ -765,9 +766,9 @@ export default function Cadastro() {
     const newName = gestorNome || 'Não atribuído'
 
     try {
-      // Grava no backend PocketBase: apenas o campo gestor_tecnico_id
+      // Grava no backend PocketBase: apenas o campo gestor_tecnico_id (sanitizado por toPBData para null se vazio)
       await updateFactoryPB(factoryId, {
-        gestor_tecnico_id: gestorId || '',
+        gestor_tecnico_id: gestorId || null,
       } as any)
 
       // Atualiza estado local de factories imediatamente em memória
@@ -849,8 +850,8 @@ export default function Cadastro() {
 
     try {
       await updateFactoryPB(factoryId, {
-        vendedor_id: assignments.vendedor_id || '',
-        gestor_tecnico_id: assignments.gestor_tecnico_id || '',
+        vendedor_id: assignments.vendedor_id || null,
+        gestor_tecnico_id: assignments.gestor_tecnico_id || null,
       } as any)
 
       setFactories((prev) =>
@@ -952,6 +953,7 @@ export default function Cadastro() {
     setBatchAssigning(true)
     let successCount = 0
     let failCount = 0
+    const failedClientDetails: Array<{ name: string; reason: string }> = []
     const auditEntries: Array<{
       action: string
       details: string
@@ -962,6 +964,8 @@ export default function Cadastro() {
       status_novo: string
       origem: string
     }> = []
+
+    const successfulClientIds = new Set<string>()
 
     try {
       for (const client of selectedClients) {
@@ -982,6 +986,7 @@ export default function Cadastro() {
         try {
           await updateFactoryPB(client.id, payload as any)
           successCount++
+          successfulClientIds.add(client.id)
 
           // Auditoria se houve mudança efetiva
           if (clientChanges.length > 0) {
@@ -996,45 +1001,56 @@ export default function Cadastro() {
               origem: 'manual',
             })
           }
-        } catch (itemErr) {
+        } catch (itemErr: any) {
           console.error('[batchAssign] falha no cliente', client.name, itemErr)
           failCount++
+          const fieldErrs = extractFieldErrors(itemErr)
+          const fieldErrsList = Object.entries(fieldErrs).map(([f, m]) => `${f}: ${m}`)
+          const reason =
+            fieldErrsList.length > 0 ? fieldErrsList.join(', ') : getErrorMessage(itemErr)
+          failedClientDetails.push({ name: client.name, reason })
         }
       }
 
-      // Atualiza estado local de factories em memória
-      setFactories((prev) =>
-        prev.map((f) => {
-          if (!selectedIds.has(f.id)) return f
-          const nextVendedorId = applyVendedor ? targetVendedorId || undefined : f.vendedor_id
-          const nextVendedorName = applyVendedor ? targetVendedorName || undefined : f.vendedor_name
+      // Atualiza estado local de factories em memória apenas para os que tiveram sucesso
+      if (successfulClientIds.size > 0) {
+        setFactories((prev) =>
+          prev.map((f) => {
+            if (!successfulClientIds.has(f.id)) return f
+            const nextVendedorId = applyVendedor ? targetVendedorId || undefined : f.vendedor_id
+            const nextVendedorName = applyVendedor
+              ? targetVendedorName || undefined
+              : f.vendedor_name
 
-          return {
-            ...f,
-            vendedor_id: nextVendedorId,
-            vendedor_name: nextVendedorName,
-            expand: {
-              ...f.expand,
-              vendedor_id: nextVendedorId
-                ? { id: nextVendedorId, nome: nextVendedorName || '' }
-                : undefined,
-              vendedor: nextVendedorId
-                ? { id: nextVendedorId, nome: nextVendedorName || '' }
-                : undefined,
-            },
-          }
-        }),
-      )
+            return {
+              ...f,
+              vendedor_id: nextVendedorId,
+              vendedor_name: nextVendedorName,
+              expand: {
+                ...f.expand,
+                vendedor_id: nextVendedorId
+                  ? { id: nextVendedorId, nome: nextVendedorName || '' }
+                  : undefined,
+                vendedor: nextVendedorId
+                  ? { id: nextVendedorId, nome: nextVendedorName || '' }
+                  : undefined,
+              },
+            }
+          }),
+        )
 
-      // Atualiza store global AppContext para cada cliente afetado
-      selectedClients.forEach((client) => {
-        const patch: Partial<Factory> = {}
-        if (applyVendedor) {
-          patch.vendedor_id = targetVendedorId || undefined
-          patch.vendedor_name = targetVendedorName || undefined
-        }
-        updateFactory(client.id, patch)
-      })
+        // Atualiza store global AppContext para cada cliente com sucesso
+        selectedClients
+          .filter((client) => successfulClientIds.has(client.id))
+          .forEach((client) => {
+            const patch: Partial<Factory> = {}
+            if (applyVendedor) {
+              patch.vendedor_id = targetVendedorId || undefined
+              patch.vendedor_name = targetVendedorName || undefined
+            }
+            updateFactory(client.id, patch)
+          })
+      }
 
       // Grava logs de auditoria no backend (batch ou um por um)
       if (auditEntries.length > 0) {
@@ -1057,7 +1073,15 @@ export default function Cadastro() {
           `${successCount} cliente(s) atualizado(s) com sucesso! Histórico de auditoria registrado.`,
         )
       } else {
-        toast.warning(`${successCount} cliente(s) atualizados, ${failCount} falharam.`)
+        const sampleFailures = failedClientDetails
+          .slice(0, 3)
+          .map((f) => `${f.name} (${f.reason})`)
+          .join('; ')
+        const more = failedClientDetails.length > 3 ? ` (+${failedClientDetails.length - 3})` : ''
+        toast.warning(
+          `${successCount} cliente(s) atualizados com sucesso, ${failCount} falharam. Detalhes: ${sampleFailures}${more}`,
+          { duration: 8000 },
+        )
       }
 
       // Limpa seleções de lote

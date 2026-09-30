@@ -13,8 +13,108 @@ const PB_EXCLUDED = [
   'deadline',
 ]
 
-function toPBData(data: Partial<Factory>): Record<string, any> {
-  return Object.fromEntries(Object.entries(data).filter(([k]) => !PB_EXCLUDED.includes(k)))
+// Allowed values for strict single-select fields in PocketBase 'factories' collection
+const ALLOWED_SELECT_VALUES: Record<string, readonly string[]> = {
+  carteira: ['AVES', 'PETS', 'RUMINANTES', 'SUINOS', 'AQUA'],
+  tipo: ['Cliente', 'Prospecto'],
+  status_funil: ['Inativo', 'Mensal', 'Ativo'],
+  stateRegion: [
+    'Sul',
+    'Norte',
+    'Oeste',
+    'Leste',
+    'Nordeste',
+    'Noroeste',
+    'Sudeste',
+    'Sudoeste',
+    'Centro',
+  ],
+  ultima_edicao_origem: ['manual', 'audio', 'excel'],
+  region: ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul'],
+  status_contato: ['Champion', 'Stakeholder', 'Decisor', 'Influenciador', 'Gatekeepers'],
+  geocode_precision: ['exact', 'street', 'city', 'failed'],
+  address_status: ['complete', 'partial', 'inconsistent', 'enriched', 'failed'],
+  salesChannel: ['Direct', 'Indirect'],
+  indirectChannelType: [
+    'Representantes',
+    'Distribuidores',
+    'Revendas',
+    'Cooperativas',
+    'Indústrias',
+  ],
+}
+
+// Relation fields pointing to other collections (users, gestao_tecnica)
+const RELATION_FIELDS = new Set([
+  'vendedor_id',
+  'gestor_tecnico_id',
+  'salesOwner',
+  'technicalManager',
+])
+
+// Fields that may be sent as arrays or multi-selects in the app
+const MULTI_SELECT_FIELDS = new Set([
+  'profile_type',
+  'animalSpecies',
+  'productLineAffinity',
+  'region',
+  'status',
+  'priority',
+])
+
+export function toPBData(data: Partial<Factory>): Record<string, any> {
+  const result: Record<string, any> = {}
+
+  for (const [key, rawValue] of Object.entries(data)) {
+    if (PB_EXCLUDED.includes(key)) continue
+    if (rawValue === undefined) continue
+
+    // 1. Relations: "" or "none" must be sent as null so PocketBase clears the relation without 400
+    if (RELATION_FIELDS.has(key)) {
+      if (rawValue === '' || rawValue === 'none' || rawValue === null) {
+        result[key] = null
+      } else {
+        result[key] = String(rawValue).trim()
+      }
+      continue
+    }
+
+    // 2. Strict Selects: "" or "none" or unlisted value must be null
+    if (key in ALLOWED_SELECT_VALUES) {
+      if (rawValue === '' || rawValue === 'none' || rawValue === null) {
+        result[key] = null
+        continue
+      }
+      const strVal = String(rawValue).trim()
+      const allowed = ALLOWED_SELECT_VALUES[key]
+      const match = allowed.find((v) => v.toLowerCase() === strVal.toLowerCase())
+      result[key] = match ? match : null
+      continue
+    }
+
+    // 3. Multiselects: clean array of non-empty strings (no '', no 'none')
+    if (MULTI_SELECT_FIELDS.has(key)) {
+      if (Array.isArray(rawValue)) {
+        const cleaned = rawValue
+          .map((v) => (typeof v === 'string' ? v.trim() : String(v).trim()))
+          .filter((v) => v !== '' && v.toLowerCase() !== 'none')
+        result[key] = cleaned
+      } else if (rawValue === '' || rawValue === 'none' || rawValue === null) {
+        result[key] = []
+      } else if (typeof rawValue === 'string') {
+        const trimmed = rawValue.trim()
+        result[key] = trimmed && trimmed.toLowerCase() !== 'none' ? [trimmed] : []
+      } else {
+        result[key] = rawValue
+      }
+      continue
+    }
+
+    // Default handling for other fields
+    result[key] = rawValue
+  }
+
+  return result
 }
 
 export function mapRecordToFactory(record: any): Factory {

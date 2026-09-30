@@ -33,6 +33,7 @@ import { useAppContext } from '@/store/AppContext'
 import { useAuth } from '@/hooks/use-auth'
 import { logActivity } from '@/services/activity-logs'
 import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
+import { extractFieldErrors, getErrorMessage } from '@/lib/pocketbase/errors'
 import {
   CLIENT_PROFILE_CATEGORIES,
   toCanonicalCategory,
@@ -85,9 +86,7 @@ export function ClienteFormDialog({
   const [vendedorTouched, setVendedorTouched] = useState(false)
   const [observacoes, setObservacoes] = useState('')
 
-  const [errors, setErrors] = useState<{ razaoSocial?: string; cnpj?: string; categoria?: string }>(
-    {},
-  )
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [confirmProfileDialogOpen, setConfirmProfileDialogOpen] = useState(false)
   const [pendingSavePayload, setPendingSavePayload] = useState<Partial<Factory> | null>(null)
@@ -244,11 +243,48 @@ export function ClienteFormDialog({
       onSuccess()
     } catch (err: any) {
       console.error('[ClienteFormDialog] Erro ao salvar:', err)
-      const msg = err?.message || 'Não foi possível salvar o cliente.'
-      if (msg.toLowerCase().includes('cnpj') || msg.toLowerCase().includes('unique')) {
-        setErrors({ cnpj: 'Já existe um cliente com este CNPJ.' })
+      const fieldErrors = extractFieldErrors(err)
+      const fieldErrorKeys = Object.keys(fieldErrors)
+
+      if (fieldErrorKeys.length > 0) {
+        // Mapeia erros do PocketBase para campos do formulário
+        const mappedErrors: Record<string, string> = {}
+        const errorDescriptions: string[] = []
+
+        for (const [field, message] of Object.entries(fieldErrors)) {
+          if (field === 'name') {
+            mappedErrors.razaoSocial = message
+            errorDescriptions.push(`Razão Social (${message})`)
+          } else if (field === 'cnpj') {
+            mappedErrors.cnpj = message
+            errorDescriptions.push(`CNPJ (${message})`)
+          } else if (field === 'profile_type') {
+            mappedErrors.categoria = message
+            errorDescriptions.push(`Categoria (${message})`)
+          } else if (field === 'carteira') {
+            mappedErrors.segmento = message
+            errorDescriptions.push(`Segmento/Carteira (${message})`)
+          } else if (field === 'vendedor_id') {
+            mappedErrors.vendedor = message
+            errorDescriptions.push(`Vendedor (${message})`)
+          } else {
+            mappedErrors[field] = message
+            errorDescriptions.push(`${field} (${message})`)
+          }
+        }
+
+        setErrors((prev) => ({ ...prev, ...mappedErrors }))
+        toast.error(
+          `Não foi possível salvar: campo(s) inválido(s): ${errorDescriptions.join(', ')}`,
+        )
       } else {
-        toast.error('Não foi possível salvar o cliente. Tente novamente.')
+        const msg = getErrorMessage(err)
+        if (msg.toLowerCase().includes('cnpj') || msg.toLowerCase().includes('unique')) {
+          setErrors((prev) => ({ ...prev, cnpj: 'Já existe um cliente com este CNPJ.' }))
+          toast.error('Não foi possível salvar: Já existe um cliente com este CNPJ.')
+        } else {
+          toast.error(`Não foi possível salvar: ${msg}`)
+        }
       }
     } finally {
       setSubmitting(false)
@@ -493,9 +529,15 @@ export function ClienteFormDialog({
                 onValueChange={(val) => {
                   setCategoriaTouched(true)
                   setCategoria(val)
+                  if (errors.categoria) {
+                    setErrors((prev) => ({ ...prev, categoria: undefined }))
+                  }
                 }}
               >
-                <SelectTrigger id="cli-categoria">
+                <SelectTrigger
+                  id="cli-categoria"
+                  className={errors.categoria ? 'border-destructive' : ''}
+                >
                   <SelectValue placeholder="Selecione a categoria" />
                 </SelectTrigger>
                 <SelectContent>
@@ -512,6 +554,9 @@ export function ClienteFormDialog({
                     )}
                 </SelectContent>
               </Select>
+              {errors.categoria && (
+                <p className="text-xs text-destructive font-medium">{errors.categoria}</p>
+              )}
               <p className="text-[11px] text-muted-foreground">
                 Padrão uniforme para segmentação de carteira
               </p>
@@ -520,8 +565,19 @@ export function ClienteFormDialog({
             {/* Segmento */}
             <div className="space-y-1.5">
               <Label htmlFor="cli-segmento">Segmento (Espécie)</Label>
-              <Select value={segmento} onValueChange={setSegmento}>
-                <SelectTrigger id="cli-segmento">
+              <Select
+                value={segmento}
+                onValueChange={(val) => {
+                  setSegmento(val)
+                  if (errors.segmento) {
+                    setErrors((prev) => ({ ...prev, segmento: undefined }))
+                  }
+                }}
+              >
+                <SelectTrigger
+                  id="cli-segmento"
+                  className={errors.segmento ? 'border-destructive' : ''}
+                >
                   <SelectValue placeholder="Selecione o segmento" />
                 </SelectTrigger>
                 <SelectContent>
@@ -533,6 +589,9 @@ export function ClienteFormDialog({
                   ))}
                 </SelectContent>
               </Select>
+              {errors.segmento && (
+                <p className="text-xs text-destructive font-medium">{errors.segmento}</p>
+              )}
             </div>
 
             {/* Vendedor */}
@@ -543,9 +602,15 @@ export function ClienteFormDialog({
                 onValueChange={(val) => {
                   setVendedorTouched(true)
                   setVendedorId(val)
+                  if (errors.vendedor) {
+                    setErrors((prev) => ({ ...prev, vendedor: undefined }))
+                  }
                 }}
               >
-                <SelectTrigger id="cli-vendedor">
+                <SelectTrigger
+                  id="cli-vendedor"
+                  className={errors.vendedor ? 'border-destructive' : ''}
+                >
                   <SelectValue placeholder="Selecione o vendedor" />
                 </SelectTrigger>
                 <SelectContent className="max-h-60">
@@ -557,6 +622,9 @@ export function ClienteFormDialog({
                   ))}
                 </SelectContent>
               </Select>
+              {errors.vendedor && (
+                <p className="text-xs text-destructive font-medium">{errors.vendedor}</p>
+              )}
             </div>
           </div>
 
