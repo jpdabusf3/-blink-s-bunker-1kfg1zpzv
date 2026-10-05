@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { getUsers, getUserReport, type UserListItem, type UserReport } from '@/services/users'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -22,6 +23,7 @@ import {
   TrendingUp,
   FileSpreadsheet,
   FileText,
+  Database,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
