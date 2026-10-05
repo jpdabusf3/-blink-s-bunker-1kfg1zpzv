@@ -31,6 +31,26 @@ import {
 } from '@/services/maestro-service'
 import { fetchResumoVendas, type ResumoVendasResponse } from '@/services/resumo-vendas'
 import { MaestroReportView } from '@/components/MaestroReportView'
+import {
+  MAESTRO_ACTION_CATALOG,
+  parseMaestroActionIntent,
+  executeMaestroAction,
+  type MaestroActionIntent,
+  type MaestroActionResult,
+} from '@/services/maestro-actions'
+import {
+  Play,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  ArrowRight,
+  Database,
+  Building2,
+  Package,
+  CalendarCheck,
+  ShoppingCart,
+  FileCheck2,
+} from 'lucide-react'
 
 export interface MaestroChatMessage {
   id: string
@@ -39,6 +59,9 @@ export interface MaestroChatMessage {
   timestamp: Date
   isTyping?: boolean
   reportConfig?: MaestroReportConfig | null
+  actionIntent?: MaestroActionIntent | null
+  actionStatus?: 'pending_confirmation' | 'executing' | 'confirmed' | 'cancelled'
+  actionResult?: MaestroActionResult | null
 }
 
 interface MaestroChatPanelProps {
@@ -89,6 +112,327 @@ export function MaestroChatPanel({ open, onOpenChange, initialPeriodInfo }: Maes
     }
   }, [messages, isTyping, open, scrollToBottom])
 
+  // Executar ação confirmada pelo usuário
+  const handleConfirmAction = async (messageId: string, intent: MaestroActionIntent) => {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === messageId ? { ...m, actionStatus: 'executing' } : m)),
+    )
+
+    try {
+      const result = await executeMaestroAction(intent)
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId
+            ? {
+                ...m,
+                actionStatus: 'confirmed',
+                actionResult: result,
+              }
+            : m,
+        ),
+      )
+
+      if (result.success) {
+        toast.success(result.message)
+      } else {
+        toast.error(result.message || 'Erro durante a execução da ação.')
+      }
+
+      // Se a ação for geração de relatório oficial, engatar no fluxo visual de relatório
+      if (intent.action === 'generate_report') {
+        const config = intent.payload as unknown as MaestroReportConfig
+        await handleProcessGeneratedReport(config)
+      }
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err)
+      toast.error(`Falha ao executar ação: ${errMsg}`)
+
+      const failResult: MaestroActionResult = {
+        success: false,
+        message: `Falha na execução: ${errMsg}`,
+        createdCount: 0,
+        updatedCount: 0,
+        skippedCount: 0,
+        errorsCount: 1,
+        errors: [{ reason: errMsg }],
+      }
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId
+            ? {
+                ...m,
+                actionStatus: 'confirmed',
+                actionResult: failResult,
+              }
+            : m,
+        ),
+      )
+    }
+  }
+
+  // Cancelar ação
+  const handleCancelAction = (messageId: string) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId
+          ? {
+              ...m,
+              actionStatus: 'cancelled',
+            }
+          : m,
+      ),
+    )
+    toast.info('Ação cancelada pelo usuário.')
+  }
+
+  // Renderiza ícone específico para cada ação
+  const getActionIcon = (actionType: string) => {
+    switch (actionType) {
+      case 'import_billing':
+        return <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+      case 'import_clients':
+        return <Building2 className="w-4 h-4 text-blue-500" />
+      case 'create_client':
+      case 'update_client':
+        return <Building2 className="w-4 h-4 text-indigo-500" />
+      case 'create_product':
+      case 'update_product':
+        return <Package className="w-4 h-4 text-amber-500" />
+      case 'create_task':
+        return <CalendarCheck className="w-4 h-4 text-violet-500" />
+      case 'create_order':
+        return <ShoppingCart className="w-4 h-4 text-emerald-500" />
+      case 'generate_report':
+        return <FileCheck2 className="w-4 h-4 text-primary" />
+      default:
+        return <Database className="w-4 h-4 text-primary" />
+    }
+  }
+
+  // Renderizar o cartão de confirmação ou resultado da ação
+  const renderActionCard = (msg: MaestroChatMessage) => {
+    const intent = msg.actionIntent
+    if (!intent) return null
+
+    const catalogEntry = MAESTRO_ACTION_CATALOG[intent.action]
+    const confirmationText = catalogEntry
+      ? catalogEntry.formatConfirmation(intent.payload)
+      : 'Confirma a execução desta ação no sistema?'
+    const actionLabel = catalogEntry?.label || intent.action
+    const status = msg.actionStatus || 'pending_confirmation'
+
+    // Estado 1: Executando
+    if (status === 'executing') {
+      return (
+        <div className="rounded-xl border border-primary/40 bg-primary/5 p-3.5 space-y-2 animate-fade-in">
+          <div className="flex items-center gap-2 text-primary font-semibold text-xs sm:text-sm">
+            <RefreshCw className="w-4 h-4 animate-spin" />
+            <span>Executando ação no sistema...</span>
+          </div>
+          <p className="text-xs text-muted-foreground">{confirmationText}</p>
+        </div>
+      )
+    }
+
+    // Estado 2: Concluído (Sucesso ou Erro) com detalhamento
+    if (status === 'confirmed' && msg.actionResult) {
+      const res = msg.actionResult
+      return (
+        <div
+          className={cn(
+            'rounded-xl border p-3.5 space-y-2.5 animate-fade-in text-xs sm:text-sm',
+            res.success
+              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-950 dark:text-emerald-100'
+              : 'border-destructive/40 bg-destructive/10 text-destructive-foreground',
+          )}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 font-semibold">
+              {res.success ? (
+                <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 text-destructive" />
+              )}
+              <span>
+                {res.success ? 'Ação executada com sucesso' : 'Resultado com pendências ou erro'}
+              </span>
+            </div>
+            <Badge
+              variant="outline"
+              className={cn(
+                'text-[10px] font-bold uppercase',
+                res.success
+                  ? 'border-emerald-500/50 text-emerald-700 dark:text-emerald-300'
+                  : 'border-destructive/50 text-destructive',
+              )}
+            >
+              {actionLabel}
+            </Badge>
+          </div>
+
+          <p className="text-xs leading-relaxed text-foreground/90">{res.message}</p>
+
+          {/* Métricas do resultado em português */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-border/50 text-center">
+            <div className="bg-background/60 p-2 rounded-lg border border-border/40">
+              <span className="text-[10px] text-muted-foreground block uppercase font-medium">
+                Criados
+              </span>
+              <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                {res.createdCount}
+              </span>
+            </div>
+            <div className="bg-background/60 p-2 rounded-lg border border-border/40">
+              <span className="text-[10px] text-muted-foreground block uppercase font-medium">
+                Atualizados
+              </span>
+              <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                {res.updatedCount}
+              </span>
+            </div>
+            <div className="bg-background/60 p-2 rounded-lg border border-border/40">
+              <span className="text-[10px] text-muted-foreground block uppercase font-medium">
+                Ignorados
+              </span>
+              <span className="text-sm font-bold text-amber-600 dark:text-amber-400">
+                {res.skippedCount}
+              </span>
+            </div>
+            <div className="bg-background/60 p-2 rounded-lg border border-border/40">
+              <span className="text-[10px] text-muted-foreground block uppercase font-medium">
+                Erros
+              </span>
+              <span
+                className={cn(
+                  'text-sm font-bold',
+                  res.errorsCount > 0 ? 'text-destructive' : 'text-muted-foreground',
+                )}
+              >
+                {res.errorsCount}
+              </span>
+            </div>
+          </div>
+
+          {/* Lista de erros com número da linha da planilha se houver */}
+          {res.errors && res.errors.length > 0 && (
+            <div className="pt-2 space-y-1 border-t border-border/40">
+              <span className="text-[11px] font-semibold text-destructive flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5" /> Detalhes dos erros encontrados:
+              </span>
+              <div className="max-h-28 overflow-y-auto space-y-1 text-[11px] bg-background/80 p-2 rounded border border-border/40">
+                {res.errors.map((err, idx) => (
+                  <div key={idx} className="text-muted-foreground">
+                    {err.row !== undefined ? (
+                      <span className="font-semibold text-foreground">Linha {err.row}: </span>
+                    ) : null}
+                    <span>{err.reason}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    // Estado 3: Cancelado
+    if (status === 'cancelled') {
+      return (
+        <div className="rounded-xl border border-muted bg-muted/40 p-3 space-y-1 animate-fade-in text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5 font-medium">
+            <XCircle className="w-3.5 h-3.5" />
+            <span>Ação cancelada pelo usuário.</span>
+          </div>
+          <p className="text-[11px]">{actionLabel} não foi executada no banco de dados.</p>
+        </div>
+      )
+    }
+
+    // Estado 4: Pendente de Confirmação (Padrão)
+    // Mostra o cartão com dados da ação, resumo em português e botões Confirmar / Cancelar
+    const payloadEntries = Object.entries(intent.payload).filter(
+      ([k, v]) => v !== undefined && v !== null && v !== '' && !['rows', 'file_id'].includes(k),
+    )
+
+    return (
+      <div className="rounded-xl border border-primary/30 bg-card/95 shadow-md p-3.5 sm:p-4 space-y-3 animate-fade-in text-xs sm:text-sm">
+        {/* Cabeçalho da Intenção */}
+        <div className="flex items-center justify-between gap-2 border-b border-border/60 pb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md bg-primary/15 flex items-center justify-center shrink-0">
+              {getActionIcon(intent.action)}
+            </div>
+            <div>
+              <span className="font-bold text-foreground text-xs sm:text-sm block leading-tight">
+                {actionLabel}
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                Confirmação obrigatória antes de gravar
+              </span>
+            </div>
+          </div>
+          <Badge
+            variant="outline"
+            className="text-[10px] bg-primary/10 border-primary/30 text-primary"
+          >
+            Ação Proposta
+          </Badge>
+        </div>
+
+        {/* Resumo em Português */}
+        <div className="bg-primary/5 rounded-lg p-2.5 border border-primary/15 text-xs text-foreground/90 leading-relaxed font-medium">
+          {confirmationText}
+        </div>
+
+        {/* Campos identificados na intenção */}
+        {payloadEntries.length > 0 && (
+          <div className="space-y-1.5 pt-1">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
+              Campos detectados:
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
+              {payloadEntries.map(([key, val]) => (
+                <div
+                  key={key}
+                  className="bg-muted/50 px-2 py-1 rounded border border-border/40 flex justify-between gap-2"
+                >
+                  <span className="text-muted-foreground font-medium truncate">{key}:</span>
+                  <span className="text-foreground font-semibold truncate max-w-[65%] text-right">
+                    {typeof val === 'object' ? JSON.stringify(val) : String(val)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Botões de Ação: Confirmar e Cancelar */}
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleCancelAction(msg.id)}
+            className="h-8 text-xs border-border/80 hover:bg-muted text-muted-foreground hover:text-foreground"
+          >
+            <XCircle className="w-3.5 h-3.5 mr-1" />
+            Cancelar
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={() => handleConfirmAction(msg.id, intent)}
+            className="h-8 text-xs bg-primary text-primary-foreground font-semibold hover:bg-primary/90 gap-1.5 shadow-sm"
+          >
+            <CheckCircle className="w-3.5 h-3.5" />
+            Confirmar e Executar
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   // Resetar ao reabrir se necessário, preservando a conversa ativa
   const handleResetChat = () => {
     if (abortControllerRef.current) {
@@ -99,7 +443,8 @@ export function MaestroChatPanel({ open, onOpenChange, initialPeriodInfo }: Maes
       {
         id: `greeting-${Date.now()}`,
         role: 'assistant',
-        content: 'Olá! Vou montar seu relatório de vendas. Como você gostaria de personalizá-lo?',
+        content:
+          'Olá! Sou o MAESTRO. Posso consultar dados, gerar relatórios de vendas, importar planilhas e cadastrar ou atualizar clientes, produtos, pedidos e tarefas. O que você gostaria de fazer?',
         timestamp: new Date(),
       },
     ])
@@ -219,6 +564,7 @@ export function MaestroChatPanel({ open, onOpenChange, initialPeriodInfo }: Maes
 
       const finalContent = result.content || streamedContent
       const extractedConfig = extractReportConfigFromText(finalContent)
+      const actionIntent = parseMaestroActionIntent(finalContent)
 
       setMessages((prev) =>
         prev.map((m) =>
@@ -228,12 +574,15 @@ export function MaestroChatPanel({ open, onOpenChange, initialPeriodInfo }: Maes
                 content: finalContent,
                 isTyping: false,
                 reportConfig: extractedConfig,
+                actionIntent: actionIntent,
+                actionStatus: actionIntent ? 'pending_confirmation' : undefined,
               }
             : m,
         ),
       )
 
-      if (extractedConfig) {
+      // Se for configuração legada e não uma intenção de ação aguardando confirmação
+      if (extractedConfig && !actionIntent) {
         await handleProcessGeneratedReport(extractedConfig)
       }
     } catch (streamErr: unknown) {
@@ -247,6 +596,7 @@ export function MaestroChatPanel({ open, onOpenChange, initialPeriodInfo }: Maes
 
         const finalContent = syncResult.content
         const extractedConfig = extractReportConfigFromText(finalContent)
+        const actionIntent = parseMaestroActionIntent(finalContent)
 
         setMessages((prev) =>
           prev.map((m) =>
@@ -256,12 +606,14 @@ export function MaestroChatPanel({ open, onOpenChange, initialPeriodInfo }: Maes
                   content: finalContent,
                   isTyping: false,
                   reportConfig: extractedConfig,
+                  actionIntent: actionIntent,
+                  actionStatus: actionIntent ? 'pending_confirmation' : undefined,
                 }
               : m,
           ),
         )
 
-        if (extractedConfig) {
+        if (extractedConfig && !actionIntent) {
           await handleProcessGeneratedReport(extractedConfig)
         }
       } catch (fallbackErr: unknown) {
@@ -313,7 +665,7 @@ export function MaestroChatPanel({ open, onOpenChange, initialPeriodInfo }: Maes
                 </Badge>
               </div>
               <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                Assistente inteligente para criação de relatórios de vendas customizados
+                Inteligência Comercial & Execução Operacional Blink Bunker
               </DialogDescription>
             </div>
           </div>
@@ -361,6 +713,13 @@ export function MaestroChatPanel({ open, onOpenChange, initialPeriodInfo }: Maes
                   <div className="whitespace-pre-wrap leading-relaxed text-xs sm:text-sm">
                     {msg.role === 'assistant' ? formatAssistantContent(msg.content) : msg.content}
                   </div>
+
+                  {/* CARTÃO DE CONFIRMAÇÃO DE AÇÃO DO MAESTRO */}
+                  {msg.role === 'assistant' && msg.actionIntent && (
+                    <div className="mt-3 pt-3 border-t border-border/60">
+                      {renderActionCard(msg)}
+                    </div>
+                  )}
 
                   {/* Indicador de typing no balão se estiver em progresso */}
                   {msg.isTyping && (
@@ -480,27 +839,43 @@ export function MaestroChatPanel({ open, onOpenChange, initialPeriodInfo }: Maes
             <span className="shrink-0 font-medium text-foreground/70">Sugestões rápidas:</span>
             <button
               type="button"
-              onClick={() => handleSendMessage('Quero o mês atual')}
+              onClick={() =>
+                handleSendMessage(
+                  'Quero cadastrar o cliente Agroaves Campinas para o vendedor João Figueiredo na carteira AVES',
+                )
+              }
               disabled={isTyping}
               className="px-2 py-0.5 rounded-md bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 transition-colors"
             >
-              Mês atual
+              Cadastrar cliente
             </button>
             <button
               type="button"
-              onClick={() => handleSendMessage('Todos os filtros e resumo na tela')}
+              onClick={() =>
+                handleSendMessage('Cadastre o produto BLK-500 Adsorvente Premium 25kg no catálogo')
+              }
               disabled={isTyping}
               className="px-2 py-0.5 rounded-md bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 transition-colors"
             >
-              Visão geral
+              Cadastrar produto
             </button>
             <button
               type="button"
-              onClick={() => handleSendMessage('Sim, pode gerar o relatório!')}
+              onClick={() =>
+                handleSendMessage('Agende uma tarefa de follow-up de proposta para sexta-feira')
+              }
+              disabled={isTyping}
+              className="px-2 py-0.5 rounded-md bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+            >
+              Criar tarefa
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSendMessage('Gere o relatório de vendas do mês atual')}
               disabled={isTyping}
               className="px-2 py-0.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary shrink-0 transition-colors font-medium"
             >
-              Confirmar geração
+              Gerar relatório
             </button>
           </div>
         </div>
