@@ -13,6 +13,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   Loader2,
@@ -30,6 +31,7 @@ import {
   MapPin,
   ChevronLeft,
   ChevronRight,
+  AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
@@ -98,6 +100,7 @@ export default function Cadastro() {
   }, [user])
   const [factories, setFactories] = useState<Factory[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [search, setSearch] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
@@ -262,6 +265,7 @@ export default function Cadastro() {
 
   const loadData = useCallback(async () => {
     setLoading(true)
+    setLoadError(false)
     try {
       const [all, gestao] = await Promise.all([
         getAllFactories(),
@@ -271,6 +275,7 @@ export default function Cadastro() {
       setGestaoTecnicaList(gestao)
     } catch {
       setFactories([])
+      setLoadError(true)
     } finally {
       setLoading(false)
     }
@@ -663,7 +668,7 @@ export default function Cadastro() {
     if (!confirm('Excluir esta fábrica?')) return
     try {
       await deleteFactoryPB(id)
-      toast.success('Fábrica excluída')
+      toast.success('Cliente excluído com sucesso.')
       // Funnel activity log: client deleted
       logAction({
         action_type: 'delete',
@@ -674,7 +679,7 @@ export default function Cadastro() {
       })
       loadData()
     } catch {
-      toast.error('Erro ao excluir')
+      toast.error('Erro ao excluir cliente. Tente novamente.')
     }
   }
 
@@ -1444,34 +1449,38 @@ export default function Cadastro() {
                 </div>
               </div>
 
-              {loading ? (
-                <div className="flex justify-center p-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              {loadError && !loading && (
+                <div className="border border-destructive/30 bg-destructive/5 rounded-xl p-8 text-center space-y-3">
+                  <div className="p-3 bg-destructive/10 rounded-full text-destructive inline-block">
+                    <AlertTriangle className="w-8 h-8 mx-auto" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-base font-semibold text-foreground">
+                      Não foi possível carregar os clientes
+                    </h3>
+                    <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                      Ocorreu uma falha na comunicação com o banco de dados. Verifique sua conexão e
+                      tente novamente.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => loadData()}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 mt-2"
+                  >
+                    <RotateCcw className="w-4 h-4" /> Tentar novamente
+                  </Button>
                 </div>
-              ) : (
+              )}
+
+              {loading ? (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-10">
-                          <Checkbox
-                            checked={
-                              paginatedFactories.length > 0 &&
-                              paginatedFactories.every((f) => selectedIds.has(f.id))
-                            }
-                            onCheckedChange={(checked) => {
-                              setSelectedIds((prev) => {
-                                const next = new Set(prev)
-                                if (checked) {
-                                  paginatedFactories.forEach((f) => next.add(f.id))
-                                } else {
-                                  paginatedFactories.forEach((f) => next.delete(f.id))
-                                }
-                                return next
-                              })
-                            }}
-                            aria-label="Selecionar todos da página"
-                          />
+                          <Skeleton className="h-4 w-4" />
                         </TableHead>
                         <TableHead>Nome</TableHead>
                         <TableHead>Cidade/UF</TableHead>
@@ -1485,139 +1494,247 @@ export default function Cadastro() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filtered.length === 0 ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={10}
-                            className="text-center text-muted-foreground h-16"
-                          >
-                            Nenhuma fábrica encontrada.
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell className="w-10">
+                            <Skeleton className="h-4 w-4" />
+                          </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-4 w-40" />
+                          </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-4 w-24" />
+                          </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-5 w-20 rounded-full" />
+                          </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-5 w-16 rounded-full" />
+                          </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-4 w-16" />
+                          </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-4 w-24" />
+                          </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-5 w-20 rounded-full" />
+                          </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-6 w-28 rounded-md" />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Skeleton className="h-8 w-8 rounded-md" />
+                              <Skeleton className="h-8 w-8 rounded-md" />
+                            </div>
                           </TableCell>
                         </TableRow>
-                      ) : (
-                        paginatedFactories.map((f) => {
-                          const profileItems = Array.from(
-                            new Set([
-                              ...normalizeArray(f.profile_type).filter(Boolean),
-                              ...(f.carteira?.trim() ? [f.carteira.trim()] : []),
-                            ]),
-                          )
-
-                          return (
-                            <TableRow key={f.id}>
-                              <TableCell className="w-10">
-                                <Checkbox
-                                  checked={selectedIds.has(f.id)}
-                                  onCheckedChange={(v) => {
-                                    setSelectedIds((prev) => {
-                                      const next = new Set(prev)
-                                      if (v) next.add(f.id)
-                                      else next.delete(f.id)
-                                      return next
-                                    })
-                                  }}
-                                  aria-label={`Selecionar ${f.name}`}
-                                />
-                              </TableCell>
-                              <TableCell className="font-medium">{f.name}</TableCell>
-                              <TableCell className="text-sm">
-                                {[f.city, f.state].filter(Boolean).join('/') || '-'}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex flex-wrap gap-1">
-                                  {profileItems.length === 0 ? (
-                                    <span className="text-muted-foreground">-</span>
-                                  ) : (
-                                    profileItems.map((item) => (
-                                      <Badge key={item} variant="secondary" className="text-xs">
-                                        {item}
-                                      </Badge>
-                                    ))
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex flex-wrap gap-1">
-                                  {normalizeArray(f.animalSpecies).length === 0 ? (
-                                    <span className="text-muted-foreground">-</span>
-                                  ) : (
-                                    normalizeArray(f.animalSpecies).map((sp) => (
-                                      <Badge key={sp} variant="outline" className="text-xs">
-                                        {sp}
-                                      </Badge>
-                                    ))
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-xs">{f.funnelStage}</TableCell>
-                              <TableCell className="text-sm">
-                                {f.contato || <span className="text-muted-foreground">-</span>}
-                              </TableCell>
-                              <TableCell className="text-sm">
-                                {f.status_contato ? (
-                                  <Badge variant="outline" className="text-xs">
-                                    {f.status_contato}
-                                  </Badge>
-                                ) : (
-                                  <span className="text-muted-foreground">-</span>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-sm">
-                                <EditableMemberSelect
-                                  currentId={f.vendedor_id}
-                                  currentName={f.vendedor_name}
-                                  members={activeGestaoTecnica}
-                                  onSelect={(newId, newName) =>
-                                    handleUpdateVendedor(f.id, newId, newName)
-                                  }
-                                  placeholder="Sem vendedor"
-                                  searchPlaceholder="Buscar vendedor..."
-                                />
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => setHistoryFactory(f)}
-                                  title="Histórico de atribuições (auditoria deste cliente)"
-                                  className="hover:text-primary"
-                                >
-                                  <History className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => setAtribuicaoFactory(f)}
-                                  title="Editar atribuição de vendedor"
-                                  className="hover:text-primary"
-                                >
-                                  <UserCheck className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleEdit(f)}
-                                  title="Editar cadastro completo"
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleDelete(f.id)}
-                                  className="text-destructive"
-                                  title="Excluir fábrica"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          )
-                        })
-                      )}
+                      ))}
                     </TableBody>
                   </Table>
                 </div>
+              ) : (
+                !loadError && (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-10">
+                            <Checkbox
+                              checked={
+                                paginatedFactories.length > 0 &&
+                                paginatedFactories.every((f) => selectedIds.has(f.id))
+                              }
+                              onCheckedChange={(checked) => {
+                                setSelectedIds((prev) => {
+                                  const next = new Set(prev)
+                                  if (checked) {
+                                    paginatedFactories.forEach((f) => next.add(f.id))
+                                  } else {
+                                    paginatedFactories.forEach((f) => next.delete(f.id))
+                                  }
+                                  return next
+                                })
+                              }}
+                              aria-label="Selecionar todos da página"
+                            />
+                          </TableHead>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>Cidade/UF</TableHead>
+                          <TableHead>Perfil/Carteira</TableHead>
+                          <TableHead>Espécie</TableHead>
+                          <TableHead>Funil</TableHead>
+                          <TableHead>Contato</TableHead>
+                          <TableHead>Status do Contato</TableHead>
+                          <TableHead>Vendedor</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filtered.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={10} className="p-8 text-center">
+                              <div className="flex flex-col items-center justify-center space-y-3 py-4 text-center">
+                                <div className="p-3 bg-primary/10 rounded-full text-primary">
+                                  <Building2 className="w-8 h-8" />
+                                </div>
+                                <h4 className="text-base font-semibold text-foreground">
+                                  {hasActiveFilters
+                                    ? 'Nenhum cliente atende aos filtros selecionados'
+                                    : 'Nenhum cliente cadastrado'}
+                                </h4>
+                                <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                                  {hasActiveFilters
+                                    ? 'Tente ajustar ou limpar os filtros de busca para visualizar os registros.'
+                                    : 'Cadastre o primeiro cliente da sua carteira para gerenciar contatos e vendas.'}
+                                </p>
+                                {hasActiveFilters ? (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={clearFilters}
+                                    className="gap-1.5 text-xs mt-2"
+                                  >
+                                    <RotateCcw className="w-3.5 h-3.5" /> Limpar filtros
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    onClick={handleNew}
+                                    className="gap-1.5 text-xs mt-2"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" /> Cadastrar cliente
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          paginatedFactories.map((f) => {
+                            const profileItems = Array.from(
+                              new Set([
+                                ...normalizeArray(f.profile_type).filter(Boolean),
+                                ...(f.carteira?.trim() ? [f.carteira.trim()] : []),
+                              ]),
+                            )
+
+                            return (
+                              <TableRow key={f.id}>
+                                <TableCell className="w-10">
+                                  <Checkbox
+                                    checked={selectedIds.has(f.id)}
+                                    onCheckedChange={(v) => {
+                                      setSelectedIds((prev) => {
+                                        const next = new Set(prev)
+                                        if (v) next.add(f.id)
+                                        else next.delete(f.id)
+                                        return next
+                                      })
+                                    }}
+                                    aria-label={`Selecionar ${f.name}`}
+                                  />
+                                </TableCell>
+                                <TableCell className="font-medium">{f.name}</TableCell>
+                                <TableCell className="text-sm">
+                                  {[f.city, f.state].filter(Boolean).join('/') || '-'}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex flex-wrap gap-1">
+                                    {profileItems.length === 0 ? (
+                                      <span className="text-muted-foreground">-</span>
+                                    ) : (
+                                      profileItems.map((item) => (
+                                        <Badge key={item} variant="secondary" className="text-xs">
+                                          {item}
+                                        </Badge>
+                                      ))
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex flex-wrap gap-1">
+                                    {normalizeArray(f.animalSpecies).length === 0 ? (
+                                      <span className="text-muted-foreground">-</span>
+                                    ) : (
+                                      normalizeArray(f.animalSpecies).map((sp) => (
+                                        <Badge key={sp} variant="outline" className="text-xs">
+                                          {sp}
+                                        </Badge>
+                                      ))
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-xs">{f.funnelStage}</TableCell>
+                                <TableCell className="text-sm">
+                                  {f.contato || <span className="text-muted-foreground">-</span>}
+                                </TableCell>
+                                <TableCell className="text-sm">
+                                  {f.status_contato ? (
+                                    <Badge variant="outline" className="text-xs">
+                                      {f.status_contato}
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-sm">
+                                  <EditableMemberSelect
+                                    currentId={f.vendedor_id}
+                                    currentName={f.vendedor_name}
+                                    members={activeGestaoTecnica}
+                                    onSelect={(newId, newName) =>
+                                      handleUpdateVendedor(f.id, newId, newName)
+                                    }
+                                    placeholder="Sem vendedor"
+                                    searchPlaceholder="Buscar vendedor..."
+                                  />
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setHistoryFactory(f)}
+                                    title="Histórico de atribuições (auditoria deste cliente)"
+                                    className="hover:text-primary"
+                                  >
+                                    <History className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setAtribuicaoFactory(f)}
+                                    title="Editar atribuição de vendedor"
+                                    className="hover:text-primary"
+                                  >
+                                    <UserCheck className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleEdit(f)}
+                                    title="Editar cadastro completo"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleDelete(f.id)}
+                                    className="text-destructive"
+                                    title="Excluir fábrica"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )
               )}
 
               {/* Pagination Controls */}

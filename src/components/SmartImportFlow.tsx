@@ -1263,11 +1263,18 @@ export function SmartImportFlow({ onSuccess }: SmartImportFlowProps) {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Copy className="w-4 h-4 text-primary" />
-                Prevenção de Duplicidades (NF + Produto + Data)
+                Configurações da Importação (Duplicatas e Clientes)
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-5">
+              {/* Opção 1: Tratamento de Duplicatas de NF */}
               <div className="space-y-2">
+                <div className="text-xs font-semibold text-foreground flex items-center justify-between">
+                  <span>Tratamento de Duplicatas de NF</span>
+                  <span className="text-[11px] text-muted-foreground font-normal">
+                    {ignoreDuplicates ? 'Modo seguro ativo' : 'Atualizar / Substituir permitido'}
+                  </span>
+                </div>
                 <RadioGroup
                   value={ignoreDuplicates ? 'ignore' : 'allow'}
                   onValueChange={(val) => setIgnoreDuplicates(val === 'ignore')}
@@ -1276,17 +1283,19 @@ export function SmartImportFlow({ onSuccess }: SmartImportFlowProps) {
                   <div
                     onClick={() => setIgnoreDuplicates(true)}
                     className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                      ignoreDuplicates ? 'bg-primary/5 border-primary' : 'bg-muted/10 border-border'
+                      ignoreDuplicates
+                        ? 'bg-primary/5 border-primary ring-1 ring-primary'
+                        : 'bg-muted/10 border-border'
                     }`}
                   >
                     <RadioGroupItem value="ignore" id="dup-ignore" className="mt-0.5" />
                     <div>
                       <Label htmlFor="dup-ignore" className="text-xs font-semibold cursor-pointer">
-                        Ignorar duplicatas (padrão)
+                        Ignorar duplicatas de NF (Recomendado)
                       </Label>
                       <p className="text-[11px] text-muted-foreground mt-0.5">
-                        Registros com mesma NF + produto + data serão pulados e contabilizados como
-                        duplicados.
+                        Registros com mesma NF + produto + data serão ignorados e mantidos intactos
+                        no banco.
                       </p>
                     </div>
                   </div>
@@ -1295,41 +1304,83 @@ export function SmartImportFlow({ onSuccess }: SmartImportFlowProps) {
                     onClick={() => setIgnoreDuplicates(false)}
                     className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
                       !ignoreDuplicates
-                        ? 'bg-primary/5 border-primary'
+                        ? 'bg-primary/5 border-primary ring-1 ring-primary'
                         : 'bg-muted/10 border-border'
                     }`}
                   >
                     <RadioGroupItem value="allow" id="dup-allow" className="mt-0.5" />
                     <div>
                       <Label htmlFor="dup-allow" className="text-xs font-semibold cursor-pointer">
-                        Importar duplicatas mesmo assim
+                        Atualizar / Importar duplicatas de NF
                       </Label>
                       <p className="text-[11px] text-muted-foreground mt-0.5">
-                        Permite duplicar registros caso haja re-emissão intencional.
+                        Atualiza os valores ou insere novos lançamentos caso haja re-emissão de
+                        notas fiscais.
                       </p>
                     </div>
                   </div>
                 </RadioGroup>
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t">
-                <div className="space-y-0.5">
-                  <Label
-                    htmlFor="auto-create-smart"
-                    className="text-xs font-semibold cursor-pointer"
-                  >
-                    Criar clientes automaticamente no CRM durante o salvamento
-                  </Label>
-                  <p className="text-[11px] text-muted-foreground">
-                    Quando ativado, clientes inexistentes serão inseridos de forma transparente
-                    durante o lote.
-                  </p>
+              {/* Opção 2: Tratamento de Clientes Não Encontrados */}
+              <div className="space-y-2 pt-3 border-t">
+                <div className="text-xs font-semibold text-foreground flex items-center justify-between">
+                  <span>Tratamento de Clientes Não Encontrados</span>
+                  <Badge variant="outline" className="text-[10px]">
+                    {autoCreateClients ? 'Criação Automática' : 'Marcar Pendente'}
+                  </Badge>
                 </div>
-                <Switch
-                  id="auto-create-smart"
-                  checked={autoCreateClients}
-                  onCheckedChange={setAutoCreateClients}
-                />
+                <RadioGroup
+                  value={autoCreateClients ? 'create' : 'pending'}
+                  onValueChange={(val) => setAutoCreateClients(val === 'create')}
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+                >
+                  <div
+                    onClick={() => setAutoCreateClients(true)}
+                    className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                      autoCreateClients
+                        ? 'bg-primary/5 border-primary ring-1 ring-primary'
+                        : 'bg-muted/10 border-border'
+                    }`}
+                  >
+                    <RadioGroupItem value="create" id="client-create" className="mt-0.5" />
+                    <div>
+                      <Label
+                        htmlFor="client-create"
+                        className="text-xs font-semibold cursor-pointer"
+                      >
+                        Criar cliente automaticamente
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Cadastra novos clientes no CRM durante a gravação com dados obtidos da
+                        nota/planilha.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    onClick={() => setAutoCreateClients(false)}
+                    className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                      !autoCreateClients
+                        ? 'bg-primary/5 border-primary ring-1 ring-primary'
+                        : 'bg-muted/10 border-border'
+                    }`}
+                  >
+                    <RadioGroupItem value="pending" id="client-pending" className="mt-0.5" />
+                    <div>
+                      <Label
+                        htmlFor="client-pending"
+                        className="text-xs font-semibold cursor-pointer"
+                      >
+                        Marcar cliente como pendente
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Registra o faturamento com pendência de revisão cadastral sem criar cliente
+                        no CRM.
+                      </p>
+                    </div>
+                  </div>
+                </RadioGroup>
               </div>
             </CardContent>
           </Card>

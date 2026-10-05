@@ -90,6 +90,7 @@ export default function ImportarFaturamento() {
   const [historyError, setHistoryError] = useState<string | null>(null)
   const [faturamentoRecords, setFaturamentoRecords] = useState<FaturamentoRecord[]>([])
   const [loadingRecords, setLoadingRecords] = useState(false)
+  const [recordsError, setRecordsError] = useState(false)
   const [templateSaved, setTemplateSaved] = useState(false)
 
   const inputRef = useRef<HTMLInputElement>(null)
@@ -109,11 +110,12 @@ export default function ImportarFaturamento() {
 
   const loadFaturamentoRecords = useCallback(async () => {
     setLoadingRecords(true)
+    setRecordsError(false)
     try {
       const data = await getFaturamentos()
       setFaturamentoRecords(data)
     } catch {
-      // Falha silenciosa ou log
+      setRecordsError(true)
     } finally {
       setLoadingRecords(false)
     }
@@ -451,6 +453,7 @@ export default function ImportarFaturamento() {
         <EditableFaturamentoTable
           records={faturamentoRecords}
           loading={loadingRecords}
+          error={recordsError}
           onRecordUpdated={handleRecordUpdated}
           onRefresh={loadFaturamentoRecords}
         />
@@ -1313,11 +1316,12 @@ export default function ImportarFaturamento() {
             </Button>
           </div>
           <EditableFaturamentoTable
-            records={faturamentoRecords.slice(0, 15)}
+            records={faturamentoRecords}
             loading={loadingRecords}
+            error={recordsError}
             onRecordUpdated={handleRecordUpdated}
             onRefresh={loadFaturamentoRecords}
-          />
+          />{' '}
         </div>
       )}
     </div>

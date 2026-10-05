@@ -434,7 +434,7 @@ export function ClientesManager() {
         description: `Excluiu cliente ${deletingCliente.name || deletingCliente.id}`,
       })
 
-      toast.success('Cliente excluído.')
+      toast.success('Cliente excluído com sucesso.')
       setDeletingCliente(null)
     } catch (err: any) {
       console.error('[ClientesManager] Erro ao excluir cliente:', err)

@@ -43,6 +43,7 @@ import { FAMILIAS_PRODUTO_OPTIONS } from '@/services/historico-vendas'
 interface EditableFaturamentoTableProps {
   records: FaturamentoRecord[]
   loading: boolean
+  error?: boolean
   onRecordUpdated?: (updated: FaturamentoRecord) => void
   onRefresh: () => void
 }
@@ -67,6 +68,7 @@ interface ActiveCell {
 export function EditableFaturamentoTable({
   records,
   loading,
+  error,
   onRecordUpdated,
   onRefresh,
 }: EditableFaturamentoTableProps) {
@@ -394,25 +396,117 @@ export function EditableFaturamentoTable({
       </CardHeader>
 
       <CardContent className="space-y-3">
-        {loading && records.length === 0 ? (
-          <div className="space-y-2 py-4">
-            <div className="h-9 w-full bg-muted/60 animate-pulse rounded" />
-            <div className="h-9 w-full bg-muted/40 animate-pulse rounded" />
-            <div className="h-9 w-full bg-muted/30 animate-pulse rounded" />
-            <div className="h-9 w-full bg-muted/20 animate-pulse rounded" />
+        {error && !loading ? (
+          <div className="border border-destructive/30 bg-destructive/5 rounded-xl p-8 text-center space-y-3">
+            <div className="p-3 bg-destructive/10 rounded-full text-destructive inline-block">
+              <AlertCircle className="w-8 h-8 mx-auto" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-semibold text-foreground">
+                Não foi possível carregar os dados de faturamento
+              </h3>
+              <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                Ocorreu uma falha na comunicação com o banco de dados. Verifique sua conexão e tente
+                novamente.
+              </p>
+            </div>
+            <Button onClick={onRefresh} variant="outline" size="sm" className="gap-2 mt-2">
+              <RotateCcw className="w-4 h-4" /> Tentar novamente
+            </Button>
+          </div>
+        ) : loading && records.length === 0 ? (
+          <div className="rounded-lg border overflow-x-auto">
+            <Table className="min-w-[1000px]">
+              <TableHeader className="bg-muted/50">
+                <TableRow>
+                  <TableHead className="w-12 text-center text-xs">#</TableHead>
+                  <TableHead className="w-[110px] text-xs font-semibold">Data</TableHead>
+                  <TableHead className="w-[85px] text-xs font-semibold">NF</TableHead>
+                  <TableHead className="min-w-[170px] text-xs font-semibold">Cliente</TableHead>
+                  <TableHead className="min-w-[160px] text-xs font-semibold">Produto</TableHead>
+                  <TableHead className="w-[140px] text-xs font-semibold">Família</TableHead>
+                  <TableHead className="w-[85px] text-right text-xs font-semibold">Qtd</TableHead>
+                  <TableHead className="w-[120px] text-right text-xs font-semibold">
+                    USD ($)
+                  </TableHead>
+                  <TableHead className="w-[120px] text-right text-xs font-semibold">
+                    BRL (R$)
+                  </TableHead>
+                  <TableHead className="w-[130px] text-xs font-semibold">Vendedor</TableHead>
+                  <TableHead className="w-[70px] text-center text-xs font-semibold">País</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="text-center">
+                      <div className="h-4 w-4 bg-muted/60 animate-pulse rounded mx-auto" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="h-4 w-20 bg-muted/60 animate-pulse rounded" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="h-4 w-14 bg-muted/60 animate-pulse rounded" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="h-4 w-36 bg-muted/60 animate-pulse rounded" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="h-4 w-32 bg-muted/60 animate-pulse rounded" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="h-5 w-24 bg-muted/60 animate-pulse rounded-full" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="h-4 w-12 bg-muted/60 animate-pulse rounded ml-auto" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="h-4 w-20 bg-muted/60 animate-pulse rounded ml-auto" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="h-4 w-20 bg-muted/60 animate-pulse rounded ml-auto" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="h-4 w-24 bg-muted/60 animate-pulse rounded" />
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="h-4 w-8 bg-muted/60 animate-pulse rounded mx-auto" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         ) : filteredRecords.length === 0 ? (
-          <div className="border border-dashed rounded-xl p-8 text-center bg-muted/10">
-            <TableIcon className="w-10 h-10 mx-auto text-muted-foreground/60 mb-2" />
-            <p className="text-sm font-medium text-foreground">
-              {searchTerm || selectedFamilia !== 'all'
-                ? 'Nenhum registro encontrado para estes filtros.'
-                : 'Nenhum registro de faturamento cadastrado ainda.'}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-              Importe sua planilha de faturamento acima para visualizar e editar os dados nesta
-              grade interativa.
-            </p>
+          <div className="border border-dashed rounded-xl p-8 text-center bg-muted/10 space-y-3">
+            <div className="p-3 bg-primary/10 rounded-full text-primary inline-block">
+              <TableIcon className="w-8 h-8 mx-auto" />
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-base font-semibold text-foreground">
+                {searchTerm || selectedFamilia !== 'all'
+                  ? 'Nenhum registro encontrado para estes filtros'
+                  : 'Nenhum registro de faturamento cadastrado ainda'}
+              </h4>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                {searchTerm || selectedFamilia !== 'all'
+                  ? 'Tente alterar os termos da busca ou selecionar outra família de produto.'
+                  : 'Importe sua planilha de faturamento acima para visualizar e editar os dados nesta grade interativa.'}
+              </p>
+            </div>
+            {searchTerm || selectedFamilia !== 'all' ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchTerm('')
+                  setSelectedFamilia('all')
+                }}
+                className="gap-1.5 text-xs mt-2"
+              >
+                <RotateCcw className="w-3.5 h-3.5" /> Limpar filtros
+              </Button>
+            ) : null}
           </div>
         ) : (
           <div className="rounded-lg border overflow-x-auto">

@@ -1,5 +1,5 @@
 import pb from '@/lib/pocketbase/client'
-import { normalizeName } from '@/lib/vendedorFilterHelper'
+import { normalizeSellerName } from '@/lib/vendedorFilterHelper'
 
 export interface IntegrityCheckResult {
   canDelete: boolean
@@ -14,19 +14,7 @@ export interface IntegrityCheckResult {
  */
 export function normalizeCanonicalSellerName(name?: string | null): string {
   if (!name) return ''
-  const trimmed = name.trim()
-  const lower = trimmed.toLowerCase()
-  if (
-    lower === 'joão pedro' ||
-    lower === 'joao pedro' ||
-    lower === 'joão figueiredo' ||
-    lower === 'joao figueiredo' ||
-    lower.startsWith('joão pedro ') ||
-    lower.startsWith('joao pedro ')
-  ) {
-    return 'João Figueiredo'
-  }
-  return trimmed
+  return normalizeSellerName(name)
 }
 
 /**

@@ -254,7 +254,7 @@ export function Produtos() {
     setDeletePending(true)
     try {
       await deleteProduto(deletingProduto.id)
-      toast.success('Produto excluído.')
+      toast.success('Produto excluído com sucesso.')
       setDeletingProduto(null)
     } catch (err: any) {
       console.error('[Produtos] Erro ao excluir produto:', err)

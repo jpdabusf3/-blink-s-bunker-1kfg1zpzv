@@ -83,6 +83,7 @@ export default function MapaClientes() {
   const [funnelStatusFilter, setFunnelStatusFilter] = useState<string>('all')
   const [precisionFilter, setPrecisionFilter] = useState<string>('all')
   const [profileFilter, setProfileFilter] = useState('all')
+  const [accuracyMode, setAccuracyMode] = useState<'modo1' | 'modo2' | 'modo3'>('modo2')
   const [showBlinkLocations, setShowBlinkLocations] = useState(true)
   const [selectedClient, setSelectedClient] = useState<Factory | null>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -346,10 +347,20 @@ export default function MapaClientes() {
     })
   }, [clientsWithoutCoords, search, vendedorFilter, funnelStatusFilter, profileFilter])
 
-  // Aplicação do offset determinístico suave para clientes com as mesmas coordenadas
+  // Aplicação do nível de precisão / dispersão selecionado (Modos 1, 2 e 3)
   const plottedClientsWithOffset = useMemo(() => {
+    if (accuracyMode === 'modo3') {
+      // Modo 3: Endereço exato sem dispersão artificial adicional
+      return filteredClientsWithCoords.map((c) => ({
+        ...c,
+        displayLat: c.latitude ?? c.lat ?? 0,
+        displayLng: c.longitude ?? c.lng ?? 0,
+        hasOffset: false,
+      }))
+    }
+    // Modo 1 (Cidade) e Modo 2 (Dispersão raio 1-3km com offset determinístico)
     return applyDeterministicCoordinateOffset(filteredClientsWithCoords)
-  }, [filteredClientsWithCoords])
+  }, [filteredClientsWithCoords, accuracyMode])
 
   // Invalidação de tamanho ao alternar tela cheia
   useEffect(() => {
@@ -923,6 +934,32 @@ export default function MapaClientes() {
                 </Select>
               </div>
 
+              {/* Seletor de Nível de Precisão do Mapa (Modos 1, 2 e 3) */}
+              <div className="w-full sm:w-[260px]">
+                <Select
+                  value={accuracyMode}
+                  onValueChange={(val: 'modo1' | 'modo2' | 'modo3') => setAccuracyMode(val)}
+                >
+                  <SelectTrigger
+                    className="h-9 text-xs font-medium"
+                    aria-label="Nível de precisão do mapa"
+                  >
+                    <SelectValue placeholder="Nível de precisão do mapa" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="modo1" className="text-xs">
+                      Modo 1 · Nível Cidade (Centroide)
+                    </SelectItem>
+                    <SelectItem value="modo2" className="text-xs">
+                      Modo 2 · Dispersão (Raio 1–3 km)
+                    </SelectItem>
+                    <SelectItem value="modo3" className="text-xs">
+                      Modo 3 · Endereço Completo
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {hasFilters && (
                 <Button
                   variant="ghost"
@@ -935,6 +972,17 @@ export default function MapaClientes() {
               )}
             </div>
           </div>
+
+          {/* Aviso visível quando Modos 1 ou 2 estiverem ativos */}
+          {(accuracyMode === 'modo1' || accuracyMode === 'modo2') && (
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <span>
+                Posição aproximada no nível de município — não representa o endereço exato do
+                cliente.
+              </span>
+            </div>
+          )}
 
           {/* Toggle de Pontos de Referência Blink */}
           <div className="pt-2 border-t border-border flex flex-wrap items-center justify-between gap-3 text-xs">

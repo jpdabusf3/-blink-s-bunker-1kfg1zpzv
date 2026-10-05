@@ -323,7 +323,6 @@ export async function softDeleteFactoryPB(id: string, name?: string) {
     const { recordFactoryChangeLog } = await import('./factory-change-logs')
     await recordFactoryChangeLog({
       factory_id: id,
-      factory_name: name || 'Cliente',
       change_summary: `Cliente ${name || id} excluído logicamente (soft delete)`,
       field: 'is_deleted',
       old_value: 'false',
@@ -345,7 +344,6 @@ export async function deactivateFactoryPB(id: string, name?: string) {
     const { recordFactoryChangeLog } = await import('./factory-change-logs')
     await recordFactoryChangeLog({
       factory_id: id,
-      factory_name: name || 'Cliente',
       change_summary: `Cliente ${name || id} desativado`,
       field: 'status_funil',
       old_value: 'Ativo',
