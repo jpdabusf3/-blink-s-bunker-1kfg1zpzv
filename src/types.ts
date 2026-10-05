@@ -73,6 +73,8 @@ export interface Target {
 
 export interface Order {
   id: string
+  user_id?: string
+  client_name?: string
   factoryId: string
   country?: string
   product: string
@@ -81,6 +83,13 @@ export interface Order {
   unitValue: number
   totalValue: number
   orderDate: string
+  status?: string
+  notes?: string
+  unit_value?: number
+  total_value?: number
+  order_date?: string
+  created?: string
+  updated?: string
 }
 
 export type TaskType = 'Enviar amostra' | 'Ligar para Follow-up' | 'Outra'
@@ -88,21 +97,36 @@ export type TaskPriority = 'Baixa' | 'Média' | 'Alta'
 
 export interface Task {
   id: string
+  user_id?: string
+  title?: string
   factoryId: string
+  related_factory_id?: string
   description: string
   type: TaskType
   dueDate?: string
+  due_date?: string
   completed: boolean
+  status?: string
   priority: TaskPriority
   createdAt: string
+  created?: string
+  updated?: string
 }
 
 export interface Visit {
   id: string
+  user_id?: string
   factoryId: string
+  factory_id?: string
   date: string
+  visit_date?: string
   summary: string
+  notes?: string
   potentialValue: number
+  potential_value?: number
+  outcome?: string
+  created?: string
+  updated?: string
 }
 
 export interface ActivityLog {

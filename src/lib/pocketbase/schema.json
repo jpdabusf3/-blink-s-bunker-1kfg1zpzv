@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-05T11:51:05.350Z",
+  "generatedAt": "2026-10-05T13:11:59.194Z",
   "collections": [
     {
       "name": "users",
@@ -609,9 +609,52 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "user_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "client_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "unit_value",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_value",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "order_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX `idx_orders_order_date` ON `orders` (order_date)"]
     },
     {
       "name": "targets",
@@ -4742,6 +4785,147 @@
         "CREATE INDEX idx_factory_change_logs_factory_id ON factory_change_logs (factory_id)",
         "CREATE INDEX idx_factory_change_logs_created ON factory_change_logs (created DESC)"
       ]
+    },
+    {
+      "name": "tasks",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "user_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "due_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "priority",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "related_factory_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "factories"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_tasks_due_date ON tasks (due_date)",
+        "CREATE INDEX idx_tasks_status ON tasks (status)"
+      ]
+    },
+    {
+      "name": "visits",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "user_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "factory_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "factories"
+        },
+        {
+          "name": "visit_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "potential_value",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "outcome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_visits_visit_date ON visits (visit_date)"]
     }
   ]
 }
