@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useScopedFactories } from '@/hooks/use-scoped-data'
 import { useAppContext } from '@/store/AppContext'
+import { useGlobalData } from '@/store/GlobalDataProvider'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -68,6 +69,7 @@ const STAGES: FunnelStage[] = [
 export default function Funil() {
   const allFactories = useScopedFactories()
   const { updateFactory } = useAppContext()
+  const { agenda_tasks: globalAgendaTasks } = useGlobalData()
   const { user } = useAuth()
   const canReview = isManager(user)
   const [reviewMode, setReviewMode] = useState(false)
@@ -75,6 +77,7 @@ export default function Funil() {
   const [vendedorOptions, setVendedorOptions] = useState<UnifiedVendedorOption[]>([])
   const [stateFilter, setStateFilter] = useState('all')
   const [speciesFilter, setSpeciesFilter] = useState('all')
+  const [overdueOnlyFilter, setOverdueOnlyFilter] = useState(false)
 
   const { toast } = useToast()
   const isMobile = useIsMobile()
@@ -94,12 +97,31 @@ export default function Funil() {
   const touchStartCoord = useRef<{ x: number; y: number } | null>(null)
   const isTouchDragging = useRef<boolean>(false)
 
+  // Mapa de clientes com follow-up atrasado (agenda_tasks com data no passado e status !== 'concluida')
+  // Comparações feitas contra início do dia de hoje para identificar tarefas vencidas
+  const overdueClientIds = new Set<string>()
+  const todayDateStr = new Date().toISOString().split('T')[0]
+
+  if (globalAgendaTasks && globalAgendaTasks.length > 0) {
+    for (const task of globalAgendaTasks) {
+      if (!task.deal_id) continue
+      // Se já concluída ou cancelada, não conta como atrasada
+      if (task.status === 'concluida' || task.status === 'cancelada') continue
+
+      const cleanDate = (task.task_date || '').split(' ')[0].split('T')[0]
+      if (cleanDate && cleanDate < todayDateStr) {
+        overdueClientIds.add(task.deal_id)
+      }
+    }
+  }
+
   const factories = allFactories.filter(
     (f) =>
       (salesOwnerFilter === 'all' ||
         factoryMatchesVendedor(f, salesOwnerFilter, vendedorOptions)) &&
       (stateFilter === 'all' || f.state === stateFilter) &&
-      (speciesFilter === 'all' || f.animalSpecies === speciesFilter),
+      (speciesFilter === 'all' || f.animalSpecies === speciesFilter) &&
+      (!overdueOnlyFilter || overdueClientIds.has(f.id)),
   )
   const uniqueStates = Array.from(
     new Set(allFactories.map((f) => f.state).filter(Boolean) as string[]),
@@ -367,6 +389,29 @@ export default function Funil() {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            variant={overdueOnlyFilter ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setOverdueOnlyFilter(!overdueOnlyFilter)}
+            className={`gap-1.5 shadow-sm h-9 ${
+              overdueOnlyFilter
+                ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                : 'hover:border-destructive/50'
+            }`}
+            aria-pressed={overdueOnlyFilter}
+            title="Filtrar oportunidades com tarefas ou follow-ups atrasados"
+          >
+            <span className="w-2 h-2 rounded-full bg-destructive shrink-0 inline-block" />
+            Follow-ups atrasados
+            {overdueClientIds.size > 0 && (
+              <Badge
+                variant={overdueOnlyFilter ? 'secondary' : 'outline'}
+                className="ml-1 px-1.5 py-0 text-[10px] h-4 font-mono"
+              >
+                {overdueClientIds.size}
+              </Badge>
+            )}
+          </Button>
           {canReview && (
             <Button
               variant={reviewMode ? 'default' : 'outline'}
@@ -493,9 +538,19 @@ export default function Funil() {
                             } ${isBeingDragged ? 'opacity-40 scale-[0.98]' : ''}`}
                           >
                             <div className="flex justify-between items-start gap-1">
-                              <div>
-                                <div className="font-bold text-sm leading-tight line-clamp-2">
-                                  {f.name}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-bold text-sm leading-tight line-clamp-2">
+                                    {f.name}
+                                  </span>
+                                  {overdueClientIds.has(f.id) && (
+                                    <span
+                                      className="inline-block w-2.5 h-2.5 rounded-full bg-destructive shrink-0 animate-pulse"
+                                      role="status"
+                                      aria-label="Follow-up atrasado neste cliente"
+                                      title="Follow-up atrasado na agenda"
+                                    />
+                                  )}
                                 </div>
                                 <div className="text-[11px] text-muted-foreground mt-0.5">
                                   {[f.city, f.profile_type].filter(Boolean).join(' • ')}

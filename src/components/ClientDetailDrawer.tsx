@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import pb from '@/lib/pocketbase/client'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/hooks/use-auth'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -40,6 +41,7 @@ import {
   type ClientInteractionActivity,
   type CallOutcome,
 } from '@/services/client-interactions'
+import { getNextFunnelStage } from '@/services/agenda-service'
 import { formatDateTime, cn } from '@/lib/utils'
 import {
   type FunilVendasStatus,
@@ -75,6 +77,52 @@ const CALL_OUTCOMES: readonly CallOutcome[] = [
   'Reagendou',
   'Não interessou',
 ] as const
+
+interface StageSuggestion {
+  actionText: string
+  daysOffset: number
+}
+
+function getSuggestedActionForStage(stage: string): StageSuggestion | null {
+  switch (stage) {
+    case 'Lead':
+    case 'Novo lead':
+      return {
+        actionText: 'Fazer primeiro contato em 48h',
+        daysOffset: 2,
+      }
+    case 'Primeiro Contato':
+    case 'Contato feito':
+    case 'Diagnóstico Técnico':
+      return {
+        actionText: 'Enviar proposta',
+        daysOffset: 2,
+      }
+    case 'Apresentação':
+    case 'Teste/Trial':
+      return {
+        actionText: 'Enviar proposta',
+        daysOffset: 2,
+      }
+    case 'Proposta':
+    case 'Proposta enviada':
+    case 'Negociação':
+      return {
+        actionText: 'Fazer follow-up em 3 dias',
+        daysOffset: 3,
+      }
+    case 'Fechamento':
+    case 'Fechado':
+    case 'Pós-venda':
+      return {
+        actionText: 'Agendar revisão em 30 dias',
+        daysOffset: 30,
+      }
+    case 'Perda':
+    default:
+      return null
+  }
+}
 
 export interface ClientDetailDrawerProps {
   clientId: string | null
@@ -136,6 +184,14 @@ export function ClientDetailDrawer({
   })
   const [followUpNote, setFollowUpNote] = useState<string>('')
 
+  // Automação: Sugestão de Próximo Passo
+  const [dismissedSuggestionStage, setDismissedSuggestionStage] = useState<string | null>(null)
+  const [isSchedulingSuggestion, setIsSchedulingSuggestion] = useState<boolean>(false)
+
+  // Automação: Avançar após ligação "Interessado"
+  const [interestedAdvanceStage, setInterestedAdvanceStage] = useState<FunnelStage | null>(null)
+  const [isAdvancingInterested, setIsAdvancingInterested] = useState<boolean>(false)
+
   // Status / Estágio no funil
   const [currentStatus, setCurrentStatus] = useState<FunilVendasStatus>('Ativo')
   const [currentStage, setCurrentStage] = useState<FunnelStage>('Lead')
@@ -181,6 +237,8 @@ export function ClientDetailDrawer({
       setNoteText('')
       setNoteError('')
       setFollowUpNote('')
+      setDismissedSuggestionStage(null)
+      setInterestedAdvanceStage(null)
       loadData()
     }
   }, [open, clientId, loadData])
@@ -239,6 +297,7 @@ export function ClientDetailDrawer({
           funnelStage: newStage,
         } as any)
 
+        // Log de auditoria geral
         await logActivity(
           `Estágio Funil: ${oldStage} → ${newStage}`,
           `Cliente: ${client.name}`,
@@ -251,6 +310,23 @@ export function ClientDetailDrawer({
             origem: origin,
           },
         )
+
+        // Automação: registrar no histórico do cliente "Status alterado para [stage name]"
+        try {
+          await pb.collection('activity_logs').create({
+            user: user?.id || null,
+            action: `Status alterado para ${newStage}`,
+            details: `Mudança de estágio do funil de "${oldStage}" para "${newStage}".`,
+            recordId: clientId,
+            target_collection: 'factories',
+            tipo: 'status',
+            origem: origin,
+          })
+          const refreshedActs = await fetchClientInteractions(clientId)
+          setActivities(refreshedActs)
+        } catch (logErr) {
+          console.warn('[ClientDetailDrawer] Falha ao gravar log de automação de status:', logErr)
+        }
 
         logAction({
           action_type: 'status_change',
@@ -305,6 +381,7 @@ export function ClientDetailDrawer({
           funnelStage: newStage,
         } as any)
 
+        // Log de auditoria geral
         await logActivity(
           `Status Funil de Vendas: ${oldStatus} → ${newStatus} (${newStage})`,
           `Cliente: ${client.name}`,
@@ -317,6 +394,23 @@ export function ClientDetailDrawer({
             origem: origin,
           },
         )
+
+        // Automação: registrar no histórico do cliente "Status alterado para [stage name]"
+        try {
+          await pb.collection('activity_logs').create({
+            user: user?.id || null,
+            action: `Status alterado para ${newStatus}`,
+            details: `Mudança de status no funil de vendas de "${oldStatus}" para "${newStatus}".`,
+            recordId: clientId,
+            target_collection: 'factories',
+            tipo: 'status',
+            origem: origin,
+          })
+          const refreshedActs = await fetchClientInteractions(clientId)
+          setActivities(refreshedActs)
+        } catch (logErr) {
+          console.warn('[ClientDetailDrawer] Falha ao gravar log de automação de status:', logErr)
+        }
 
         logAction({
           action_type: 'status_change',
@@ -396,6 +490,18 @@ export function ClientDetailDrawer({
       const updatedClient = { ...client, lastInteraction: nowIso }
       setClient(updatedClient)
       onClientUpdated?.(updatedClient)
+
+      // Se o resultado foi "Interessado", calcula próximo estágio e exibe botão de avanço
+      if (callOutcome === 'Interessado') {
+        const nextStg = getNextFunnelStage(currentStage) as FunnelStage | null
+        if (nextStg && nextStg !== currentStage && nextStg !== 'Perda') {
+          setInterestedAdvanceStage(nextStg)
+        } else {
+          setInterestedAdvanceStage(null)
+        }
+      } else {
+        setInterestedAdvanceStage(null)
+      }
     } catch (err) {
       console.error('[ClientDetailDrawer] Falha ao salvar ligação:', err)
       toast({
@@ -520,6 +626,80 @@ export function ClientDetailDrawer({
     }
   }
 
+  // Automação: Agendar Próximo Passo Sugerido em 1 clique
+  const handleScheduleSuggestion = async () => {
+    if (!client || !clientId) return
+    const stageForMapping = (mode === 'funil' ? currentStage : currentStatus) || 'Lead'
+    const suggestion = getSuggestedActionForStage(stageForMapping)
+    if (!suggestion) return
+
+    setIsSchedulingSuggestion(true)
+    try {
+      const targetDate = new Date()
+      targetDate.setDate(targetDate.getDate() + suggestion.daysOffset)
+      const followUpDateStr = targetDate.toISOString().split('T')[0]
+
+      await scheduleFollowUpInteraction({
+        clientId,
+        clientName: client.name,
+        followUpDate: followUpDateStr,
+        note: suggestion.actionText,
+        userId: user?.id,
+        origem: origin,
+      })
+
+      logAction({
+        action_type: 'create',
+        entity_type: 'action_plan',
+        entity_id: clientId,
+        entity_name: client.name,
+        description: `Agendou follow-up sugerido "${suggestion.actionText}" para ${followUpDateStr}`,
+      })
+
+      toast({
+        title: 'Follow-up agendado com sucesso',
+        description: `${suggestion.actionText} agendado para ${followUpDateStr.split('-').reverse().join('/')}.`,
+      })
+
+      // Oculta a sugestão deste estágio após agendar
+      setDismissedSuggestionStage(stageForMapping)
+      const refreshedActivities = await fetchClientInteractions(clientId)
+      setActivities(refreshedActivities)
+    } catch (err) {
+      console.error('[ClientDetailDrawer] Falha ao agendar sugestão:', err)
+      toast({
+        title: 'Não foi possível registrar a automação',
+        description: 'Ocorreu uma falha ao agendar o follow-up sugerido.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSchedulingSuggestion(false)
+    }
+  }
+
+  // Automação: Avançar estágio após ligação "Interessado"
+  const handleAdvanceInterested = async () => {
+    if (!interestedAdvanceStage || !clientId || !client) return
+    setIsAdvancingInterested(true)
+    try {
+      await handleFunnelStageChange(interestedAdvanceStage)
+      toast({
+        title: 'Estágio avançado com sucesso',
+        description: `Cliente avançado para ${interestedAdvanceStage}.`,
+      })
+      setInterestedAdvanceStage(null)
+    } catch (err) {
+      console.error('[ClientDetailDrawer] Erro ao avançar estágio:', err)
+      toast({
+        title: 'Não foi possível registrar a automação',
+        description: 'Falha ao avançar estágio do cliente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsAdvancingInterested(false)
+    }
+  }
+
   // Ações de contato externo (WhatsApp e E-mail)
   const handleOpenWhatsApp = () => {
     if (!client) return
@@ -560,6 +740,16 @@ export function ClientDetailDrawer({
   const phone = client?.telefone || client?.contactPhone || '—'
   const email = client?.contact_email || '—'
   const company = client?.name || 'Cliente'
+
+  // Mapeamento da sugestão para o estágio atual
+  const activeStageKey = (mode === 'funil' ? currentStage : currentStatus) || 'Lead'
+  const currentSuggestion = getSuggestedActionForStage(activeStageKey)
+  const showSuggestionCard =
+    !loading &&
+    !hasError &&
+    !!client &&
+    !!currentSuggestion &&
+    dismissedSuggestionStage !== activeStageKey
 
   return (
     <div
@@ -798,6 +988,124 @@ export function ClientDetailDrawer({
                   </div>
                 </div>
               </div>
+
+              {/* Automação: Botão de Avanço de Estágio após ligação "Interessado" */}
+              {interestedAdvanceStage && (
+                <div
+                  className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3.5 shadow-sm space-y-2 animate-in fade-in slide-in-from-top-1"
+                  role="region"
+                  aria-label="Avançar estágio do cliente"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                      <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                      Cliente interessado na conversa
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                      onClick={() => setInterestedAdvanceStage(null)}
+                      aria-label="Dispensar sugestão de avanço"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    A conversa indicou interesse. Deseja avançar este cliente no funil?
+                  </p>
+                  <div className="flex justify-end gap-2 pt-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs"
+                      onClick={() => setInterestedAdvanceStage(null)}
+                      disabled={isAdvancingInterested}
+                    >
+                      Depois
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="h-8 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                      onClick={handleAdvanceInterested}
+                      disabled={isAdvancingInterested}
+                    >
+                      {isAdvancingInterested ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <RotateCw className="w-3.5 h-3.5" />
+                      )}
+                      Avançar para {interestedAdvanceStage}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Automação: Card "Próximo passo sugerido" */}
+              {showSuggestionCard && currentSuggestion && (
+                <div
+                  className="rounded-xl border border-primary/30 bg-primary/5 p-3.5 shadow-sm space-y-2 animate-in fade-in slide-in-from-top-1"
+                  role="region"
+                  aria-label="Próximo passo sugerido"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="flex h-2 w-2 rounded-full bg-primary" />
+                      <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                        Próximo passo sugerido
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-foreground -mt-1 -mr-1"
+                      onClick={() => setDismissedSuggestionStage(activeStageKey)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          setDismissedSuggestionStage(activeStageKey)
+                        }
+                      }}
+                      aria-label="Dispensar sugestão de próximo passo"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+
+                  <p className="text-xs text-foreground font-medium flex items-center gap-1.5">
+                    {currentSuggestion.actionText}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Recomendado para o estágio{' '}
+                    <strong className="font-semibold text-foreground">{activeStageKey}</strong>.
+                  </p>
+
+                  <div className="flex justify-end gap-2 pt-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs"
+                      onClick={() => setDismissedSuggestionStage(activeStageKey)}
+                      disabled={isSchedulingSuggestion}
+                    >
+                      Dispensar
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="h-8 text-xs gap-1.5"
+                      onClick={handleScheduleSuggestion}
+                      disabled={isSchedulingSuggestion}
+                    >
+                      {isSchedulingSuggestion ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <CalendarIcon className="w-3.5 h-3.5" />
+                      )}
+                      Agendar
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {/* Seção de Ações Rápidas */}
               <div className="space-y-3">
