@@ -29,6 +29,7 @@ import {
   Sparkles,
   Calendar,
   Database,
+  MessageSquare,
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
@@ -44,6 +45,7 @@ export function AppSidebar() {
   const showMasterOrCeo = isMasterOrCeo(user)
   const menu = [
     { name: t('nav.dashboard'), path: '/', icon: Home },
+    { name: 'Mensagens', path: '/mensagens', icon: MessageSquare },
     { name: 'Maestro', path: '/maestro', icon: Sparkles, badge: 'IA' },
     { name: t('nav.cadastro'), path: '/cadastro', icon: Building2 },
     { name: 'Mapa de Clientes', path: '/mapa', icon: MapPin },

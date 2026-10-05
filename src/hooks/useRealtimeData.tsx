@@ -66,6 +66,9 @@ export type RealtimeCollection =
   | 'entity_change_logs'
   | 'tasks'
   | 'visits'
+  | 'conversas'
+  | 'mensagens'
+  | 'leituras_mensagens'
   | 'all'
 
 /**
@@ -128,6 +131,9 @@ export const WATCHED_COLLECTIONS: string[] = [
   'entity_change_logs',
   'tasks',
   'visits',
+  'conversas',
+  'mensagens',
+  'leituras_mensagens',
 ]
 
 /**
@@ -570,7 +576,7 @@ export interface UseRealtimeDataQueryResult<T> {
  *   })
  */
 export function useRealtimeData<T = unknown>(
-  optionsOrCollection: UseRealtimeDataQueryOptions<T> | string,
+  optionsOrCollection: UseRealtimeDataQueryOptions<T> | string | string[],
   maybeCallback?: (e: RealtimeEvent) => void,
   maybeEnabled: boolean = true,
 ): UseRealtimeDataQueryResult<T> {
@@ -672,15 +678,17 @@ export function useRealtimeData<T = unknown>(
       return unsubscribe
     } else {
       // Listener mode: invoca o callback passando o evento (INSERT, UPDATE, DELETE, etc.)
-      const collectionName = typeof optionsOrCollection === 'string' ? optionsOrCollection : 'all'
-      const unsubscribe = context.subscribe(
-        (event) => {
-          if (listenerCallbackRef.current) {
-            listenerCallbackRef.current(event)
-          }
-        },
-        [collectionName],
-      )
+      const collectionsToListen = Array.isArray(optionsOrCollection)
+        ? optionsOrCollection
+        : typeof optionsOrCollection === 'string'
+          ? [optionsOrCollection]
+          : ['all']
+
+      const unsubscribe = context.subscribe((event) => {
+        if (listenerCallbackRef.current) {
+          listenerCallbackRef.current(event)
+        }
+      }, collectionsToListen)
       return unsubscribe
     }
   }, [context, enabled, isQueryMode, entities, optionsOrCollection, performFetch])

@@ -48,6 +48,7 @@ const Resumo = lazy(() => import('./pages/Resumo'))
 const Maestro = lazy(() => import('./pages/Maestro'))
 const AgendaSemanal = lazy(() => import('./pages/AgendaSemanal'))
 const Migracao = lazy(() => import('./pages/Migracao'))
+const Mensagens = lazy(() => import('./pages/Mensagens'))
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -138,6 +139,14 @@ const App = () => (
                         />
 
                         <Route path="/" element={<Index />} />
+                        <Route
+                          path="/mensagens"
+                          element={
+                            <Suspense fallback={<PageSkeleton />}>
+                              <Mensagens />
+                            </Suspense>
+                          }
+                        />
                         <Route
                           path="/maestro"
                           element={

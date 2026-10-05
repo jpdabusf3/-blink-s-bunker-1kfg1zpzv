@@ -55,6 +55,98 @@ export interface AppNotification {
   targetId?: string
   milestone?: string
   region?: string
+  context_type?: string
+  context_id?: string
+  context_link?: string
+  created: string
+  updated: string
+}
+
+export type ChatContextType =
+  | 'cliente'
+  | 'pedido'
+  | 'funil'
+  | 'funil-vendas'
+  | 'faturamento'
+  | 'relatorio-vendas'
+  | 'resumo'
+  | 'mapa'
+  | 'produtos'
+  | 'equipe'
+  | 'usuarios'
+  | 'outro'
+
+export interface ChatContextPayload {
+  context_type?: ChatContextType | string
+  context_id?: string
+  context_titulo?: string
+  context_link?: string
+  context_extra?: Record<string, unknown>
+}
+
+export interface ChatConversa {
+  id: string
+  tipo: 'direta' | 'grupo'
+  titulo?: string
+  participantes?: string[]
+  criador_id?: string
+  ultima_mensagem_texto?: string
+  ultima_mensagem_data?: string
+  context_type?: string
+  context_id?: string
+  context_titulo?: string
+  context_link?: string
+  created: string
+  updated: string
+  expand?: {
+    participantes?: Array<{
+      id: string
+      name?: string
+      email?: string
+      avatar?: string
+      job_title?: string
+    }>
+    criador_id?: {
+      id: string
+      name?: string
+      email?: string
+      avatar?: string
+    }
+  }
+}
+
+export interface ChatMensagem {
+  id: string
+  conversa_id: string
+  autor_id: string
+  autor_nome?: string
+  texto: string
+  context_type?: string
+  context_id?: string
+  context_titulo?: string
+  context_link?: string
+  context_extra?: Record<string, unknown>
+  created: string
+  updated: string
+  isReadByMe?: boolean
+  readCount?: number
+  expand?: {
+    autor_id?: {
+      id: string
+      name?: string
+      email?: string
+      avatar?: string
+      job_title?: string
+    }
+  }
+}
+
+export interface ChatLeituraMensagem {
+  id: string
+  mensagem_id: string
+  conversa_id: string
+  user_id: string
+  lida_em: string
   created: string
   updated: string
 }

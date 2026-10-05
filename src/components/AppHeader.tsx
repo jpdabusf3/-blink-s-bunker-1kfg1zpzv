@@ -8,6 +8,9 @@ import {
   Moon,
   Sun,
   Check,
+  CheckCheck,
+  MessageSquare,
+  ExternalLink,
 } from 'lucide-react'
 import { Button } from './ui/button'
 import { useAppContext } from '@/store/AppContext'
@@ -28,12 +31,16 @@ import { SidebarTrigger } from './ui/sidebar'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { useTheme } from 'next-themes'
 import { getNotifications, evaluateTargets, markNotificationAsRead } from '@/services/notifications'
+import { chatService } from '@/services/chat-service'
 import { AppNotification } from '@/types'
 import { useRealtimeData, useRealtimeDataContext } from '@/hooks/useRealtimeData'
 import { useGlobalData } from '@/store/GlobalDataProvider'
 import { useLogoUrl } from '@/hooks/use-logo-url'
+import { useCallback } from 'react'
+import { useAuth } from '@/hooks/use-auth'
 import { useNavigate } from 'react-router-dom'
 import { RefreshCw, CheckCircle2 as SyncOkIcon } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 
 function formatSyncTimeHHMMSS(timestamp: number | null): string {
   if (!timestamp) return ''
@@ -50,17 +57,21 @@ export function AppHeader() {
   const { isReconnecting } = useRealtimeDataContext()
   const { lastSyncTime, isSyncing, syncStatus, syncError, syncAll } = useGlobalData()
   const { t: tr } = useI18n()
+  const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const [dbNotifications, setDbNotifications] = useState<AppNotification[]>([])
+  const [unreadChatCount, setUnreadChatCount] = useState<number>(0)
+  const [isMarkingAll, setIsMarkingAll] = useState(false)
   const { theme, setTheme } = useTheme()
   const { logoUrl, isLoading, hasError } = useLogoUrl()
   const [imgError, setImgError] = useState(false)
   const navigate = useNavigate()
 
+  const currentUserId = user?.id || ''
   const showFallback = hasError || imgError
   const goHome = () => navigate('/')
 
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     try {
       await evaluateTargets()
       const data = await getNotifications()
@@ -68,17 +79,32 @@ export function AppHeader() {
     } catch (e) {
       console.error(e)
     }
-  }
-
-  useEffect(() => {
-    loadNotifications()
   }, [])
 
+  const loadUnreadChatCount = useCallback(async () => {
+    if (!currentUserId) return
+    try {
+      const count = await chatService.getUnreadCount(currentUserId)
+      setUnreadChatCount(count)
+    } catch (err) {
+      console.warn('[AppHeader] Erro ao carregar contagem de chat não lido:', err)
+    }
+  }, [currentUserId])
+
+  useEffect(() => {
+    void loadNotifications()
+    void loadUnreadChatCount()
+  }, [loadNotifications, loadUnreadChatCount])
+
   useRealtimeData('orders', () => {
-    loadNotifications()
+    void loadNotifications()
   })
   useRealtimeData('notifications', () => {
-    loadNotifications()
+    void loadNotifications()
+  })
+  useRealtimeData(['mensagens', 'leituras_mensagens', 'conversas'], () => {
+    void loadUnreadChatCount()
+    void loadNotifications()
   })
 
   const handleMarkAsRead = async (id: string) => {
@@ -87,6 +113,40 @@ export function AppHeader() {
       setDbNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)))
     } catch (e) {
       console.error(e)
+    }
+  }
+
+  const handleMarkAllAsRead = async () => {
+    if (isMarkingAll) return
+    setIsMarkingAll(true)
+    try {
+      if (currentUserId) {
+        await chatService.markAllNotificationsAsRead(currentUserId)
+      }
+      setDbNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
+    } catch (err) {
+      console.error('[AppHeader] Falha ao marcar todas como lidas:', err)
+    } finally {
+      setIsMarkingAll(false)
+    }
+  }
+
+  const handleNotificationClick = async (n: {
+    id: string
+    isDb: boolean
+    context_link?: string
+    context_type?: string
+    context_id?: string
+  }) => {
+    if (n.isDb) {
+      void handleMarkAsRead(n.id)
+    }
+    if (n.context_link) {
+      navigate(n.context_link)
+    } else if (n.context_type === 'cliente' && n.context_id) {
+      navigate(`/cadastro?highlight=${n.context_id}`)
+    } else if (n.context_type === 'pedido' && n.context_id) {
+      navigate(`/gestao-pedidos?highlight=${n.context_id}`)
     }
   }
 
@@ -162,11 +222,21 @@ export function AppHeader() {
       id: n.id,
       isDb: true,
       type: n.type === 'success' ? 'success' : n.type === 'warning' ? 'warning' : 'info',
-      icon: n.type === 'success' ? CheckCircle2 : AlertTriangle,
+      icon: n.type === 'success' ? CheckCircle2 : n.type === 'info' ? MessageSquare : AlertTriangle,
       title: n.title,
       message: n.message,
+      context_link: n.context_link,
+      context_type: n.context_type,
+      context_id: n.context_id,
     })),
-    ...notifications.map((n) => ({ ...n, isDb: false, title: tr('notif.warning') })),
+    ...notifications.map((n) => ({
+      ...n,
+      isDb: false,
+      title: tr('notif.warning'),
+      context_link: undefined,
+      context_type: undefined,
+      context_id: undefined,
+    })),
   ]
 
   const notifCount = allNotifications.length
@@ -293,6 +363,24 @@ export function AppHeader() {
           <span className="sr-only">{tr('hdr.theme')}</span>
         </Button>
 
+        {/* Acesso direto ao Chat / Mensagens com Badge de não lidas */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate('/mensagens')}
+          className="relative w-11 h-11 md:w-10 md:h-10 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground"
+          title="Mensagens internas da equipe"
+        >
+          <MessageSquare className="w-5 h-5" />
+          {unreadChatCount > 0 && (
+            <span className="absolute top-1 right-1 bg-primary text-primary-foreground text-[10px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center border-2 border-card shadow-sm animate-pulse">
+              {unreadChatCount > 99 ? '99+' : unreadChatCount}
+            </span>
+          )}
+          <span className="sr-only">Mensagens da equipe</span>
+        </Button>
+
+        {/* Sininho de Notificações com Badge e Botão Marcar todas como lidas */}
         <Popover>
           <PopoverTrigger asChild>
             <div
@@ -301,48 +389,106 @@ export function AppHeader() {
             >
               <Bell className="w-6 h-6 md:w-5 md:h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
               {notifCount > 0 && (
-                <span className="absolute top-1 right-1 bg-destructive text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-card">
-                  {notifCount}
+                <span className="absolute top-1 right-1 bg-destructive text-white text-[10px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center border-2 border-card shadow-sm">
+                  {notifCount > 99 ? '99+' : notifCount}
                 </span>
               )}
             </div>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-80 p-4">
-            <h3 className="font-semibold mb-3 text-sm flex items-center gap-2">
-              <Bell className="w-4 h-4" /> {tr('hdr.notifications')}
-            </h3>
-            <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+          <PopoverContent align="end" className="w-88 sm:w-96 p-4">
+            <div className="flex items-center justify-between pb-3 mb-2 border-b border-border">
+              <h3 className="font-semibold text-sm flex items-center gap-2 text-foreground">
+                <Bell className="w-4 h-4 text-primary" /> {tr('hdr.notifications')}
+                {notifCount > 0 && (
+                  <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-mono">
+                    {notifCount}
+                  </Badge>
+                )}
+              </h3>
+              {unreadDbNotifications.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleMarkAllAsRead}
+                  disabled={isMarkingAll}
+                  className="h-7 text-xs text-primary hover:text-primary/80 gap-1 px-2 font-normal"
+                  title="Marcar todas as notificações como lidas"
+                >
+                  <CheckCheck className="w-3.5 h-3.5" />
+                  <span>Marcar todas como lidas</span>
+                </Button>
+              )}
+            </div>
+
+            <div className="space-y-2 max-h-[340px] overflow-y-auto custom-scrollbar pr-1">
               {allNotifications.length === 0 ? (
-                <p className="text-sm text-muted-foreground p-2">{tr('hdr.noNotif')}</p>
+                <div className="p-6 text-center space-y-1">
+                  <Bell className="w-6 h-6 mx-auto text-muted-foreground/40 mb-2" />
+                  <p className="text-sm font-medium text-foreground">Nenhuma notificação</p>
+                  <p className="text-xs text-muted-foreground">{tr('hdr.noNotif')}</p>
+                </div>
               ) : (
                 allNotifications.map((n) => (
                   <div
                     key={n.id}
-                    className="p-3 border rounded-lg text-sm bg-muted/30 flex flex-col gap-1 relative group"
+                    onClick={() => handleNotificationClick(n)}
+                    className="p-3 border rounded-lg text-sm bg-muted/30 hover:bg-muted/70 transition-all flex flex-col gap-1 relative group cursor-pointer"
                   >
                     <div className="flex items-start gap-3">
                       <n.icon
-                        className={`w-4 h-4 shrink-0 mt-0.5 ${n.type === 'destructive' ? 'text-destructive' : n.type === 'warning' ? 'text-orange-500' : n.type === 'success' ? 'text-green-500' : 'text-primary'}`}
+                        className={`w-4 h-4 shrink-0 mt-0.5 ${
+                          n.type === 'destructive'
+                            ? 'text-destructive'
+                            : n.type === 'warning'
+                              ? 'text-orange-500'
+                              : n.type === 'success'
+                                ? 'text-green-500'
+                                : 'text-primary'
+                        }`}
                       />
-                      <div className="flex-1">
-                        <strong className="block text-xs mb-0.5">{n.title}</strong>
-                        <span className="leading-tight text-muted-foreground">{n.message}</span>
+                      <div className="flex-1 min-w-0 pr-6">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <strong className="block text-xs font-semibold text-foreground truncate">
+                            {n.title}
+                          </strong>
+                          {n.context_link && (
+                            <ExternalLink className="w-3 h-3 text-primary shrink-0 opacity-70" />
+                          )}
+                        </div>
+                        <span className="leading-tight text-xs text-muted-foreground line-clamp-2">
+                          {n.message}
+                        </span>
                       </div>
                       {n.isDb && (
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity absolute top-2 right-2"
-                          onClick={() => handleMarkAsRead(n.id)}
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleMarkAsRead(n.id)
+                          }}
                           title={tr('hdr.markRead')}
                         >
-                          <Check className="h-3 w-3" />
+                          <Check className="h-3.5 h-3.5" />
                         </Button>
                       )}
                     </div>
                   </div>
                 ))
               )}
+            </div>
+
+            <div className="pt-3 mt-2 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
+              <span>Atualizado em tempo real</span>
+              <Button
+                variant="link"
+                size="sm"
+                onClick={() => navigate('/mensagens')}
+                className="h-auto p-0 text-xs text-primary font-medium"
+              >
+                Abrir Chat da Equipe →
+              </Button>
             </div>
           </PopoverContent>
         </Popover>

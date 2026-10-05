@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-05T20:09:40.384Z",
+  "generatedAt": "2026-10-05T20:27:53.265Z",
   "collections": [
     {
       "name": "users",
@@ -955,6 +955,24 @@
         {
           "name": "isRead",
           "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "context_type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "context_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "context_link",
+          "type": "text",
           "required": false,
           "system": false
         }
@@ -5230,6 +5248,245 @@
       ],
       "indexes": [
         "CREATE INDEX idx_relatorios_gerados_user_created ON relatorios_gerados (user_id, created DESC)"
+      ]
+    },
+    {
+      "name": "conversas",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "tipo",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["direta", "grupo"]
+        },
+        {
+          "name": "titulo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "participantes",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "criador_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "ultima_mensagem_texto",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ultima_mensagem_data",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "context_type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "context_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "context_titulo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "context_link",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_conversas_ultima_msg ON conversas (ultima_mensagem_data DESC)",
+        "CREATE INDEX idx_conversas_created ON conversas (created DESC)"
+      ]
+    },
+    {
+      "name": "mensagens",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "conversa_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "conversas"
+        },
+        {
+          "name": "autor_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "autor_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "texto",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "context_type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "context_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "context_titulo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "context_link",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "context_extra",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_mensagens_conversa_created ON mensagens (conversa_id, created ASC)",
+        "CREATE INDEX idx_mensagens_autor ON mensagens (autor_id)"
+      ]
+    },
+    {
+      "name": "leituras_mensagens",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "mensagem_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "mensagens"
+        },
+        {
+          "name": "conversa_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "conversas"
+        },
+        {
+          "name": "user_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "lida_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_leituras_msg_user ON leituras_mensagens (mensagem_id, user_id)",
+        "CREATE INDEX idx_leituras_conversa_user ON leituras_mensagens (conversa_id, user_id)"
       ]
     }
   ]

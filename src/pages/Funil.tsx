@@ -58,9 +58,13 @@ const STAGES: FunnelStage[] = [
   'Perda',
 ]
 
+import { useSearchParams } from 'react-router-dom'
+import { highlightElement } from '@/lib/contextNavigation'
+
 export default function Funil() {
   const allFactories = useScopedFactories()
   const { updateFactory } = useAppContext()
+  const [searchParams] = useSearchParams()
   const { agenda_tasks: globalAgendaTasks } = useGlobalData()
   const { user } = useAuth()
   const canReview = isManager(user)
@@ -247,6 +251,25 @@ export default function Funil() {
     },
     [draggingFactoryId, allFactories, updateFactory, toast],
   )
+
+  // Abertura ou destaque contextual de cliente no Funil (?cliente=ID ou ?highlight=ID)
+  useEffect(() => {
+    const targetId =
+      searchParams.get('cliente') || searchParams.get('highlight') || searchParams.get('id')
+    if (!targetId || allFactories.length === 0) return
+
+    const timer = setTimeout(() => {
+      const match = allFactories.find(
+        (f) => f.id === targetId || f.name.toLowerCase() === targetId.toLowerCase(),
+      )
+      if (match) {
+        setDrawerClientId(match.id)
+        highlightElement(`funnel-card-${match.id}`)
+      }
+    }, 450)
+
+    return () => clearTimeout(timer)
+  }, [searchParams, allFactories])
 
   // Atalhos de ação
   const handleOpenWhatsApp = useCallback(

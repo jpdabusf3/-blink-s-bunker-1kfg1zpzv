@@ -63,8 +63,12 @@ import {
 type SortField = 'dataPedido' | 'valorTotal'
 type SortOrder = 'asc' | 'desc'
 
+import { useSearchParams } from 'react-router-dom'
+import { highlightElement } from '@/lib/contextNavigation'
+
 export default function GestaoPedidos() {
   const { toast } = useToast()
+  const [searchParams] = useSearchParams()
 
   // Modal de cadastro/edição
   const [modalOpen, setModalOpen] = useState(false)
@@ -137,6 +141,22 @@ export default function GestaoPedidos() {
       return await gestaoPedidosService.listPedidos()
     },
   })
+
+  // Destaque ou seleção contextual de pedido (?pedido=ID ou ?highlight=ID)
+  useEffect(() => {
+    const targetId =
+      searchParams.get('pedido') || searchParams.get('highlight') || searchParams.get('id')
+    if (!targetId || isLoading || !pedidosList || pedidosList.length === 0) return
+
+    const timer = setTimeout(() => {
+      const target = pedidosList.find((p) => p.id === targetId || p.numeroPedido === targetId)
+      if (target) {
+        highlightElement(`pedido-${target.id}`)
+      }
+    }, 450)
+
+    return () => clearTimeout(timer)
+  }, [searchParams, isLoading, pedidosList])
 
   // Ações de salvamento (criar ou atualizar)
   const handleSavePedido = async (data: PedidoInput) => {
@@ -617,7 +637,12 @@ export default function GestaoPedidos() {
                     </TableHeader>
                     <TableBody>
                       {filteredPedidos.map((pedido) => (
-                        <TableRow key={pedido.id} className="hover:bg-muted/40 transition-colors">
+                        <TableRow
+                          key={pedido.id}
+                          id={`pedido-${pedido.id}`}
+                          data-highlight-id={pedido.id}
+                          className="hover:bg-muted/40 transition-colors"
+                        >
                           <TableCell className="font-medium">
                             <span
                               className="block max-w-[200px] truncate"
@@ -712,7 +737,12 @@ export default function GestaoPedidos() {
           {/* Versão Mobile (< 768px): Cards Responsivos */}
           <div className="block md:hidden space-y-3">
             {filteredPedidos.map((pedido) => (
-              <Card key={pedido.id} className="shadow-subtle p-4 space-y-3">
+              <Card
+                key={pedido.id}
+                id={`pedido-card-${pedido.id}`}
+                data-highlight-id={pedido.id}
+                className="shadow-subtle p-4 space-y-3"
+              >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-foreground truncate text-base">

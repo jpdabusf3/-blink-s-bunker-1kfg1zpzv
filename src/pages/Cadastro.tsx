@@ -92,8 +92,12 @@ const PRODUCT_LINE_OPTIONS = [
 
 const PAGE_SIZE_OPTIONS = [15, 30, 50, 100]
 
+import { useSearchParams } from 'react-router-dom'
+import { highlightElement } from '@/lib/contextNavigation'
+
 export default function Cadastro() {
   const { user } = useAuth()
+  const [searchParams] = useSearchParams()
   const userRef = useRef(user)
   useEffect(() => {
     userRef.current = user
@@ -289,6 +293,25 @@ export default function Cadastro() {
   useEffect(() => {
     loadData()
   }, [loadData, userId, userRole, userArea, userCountry])
+
+  // Trata destaque ou abertura contextual via query param (?highlight=ID ou ?cliente=ID)
+  useEffect(() => {
+    const targetId =
+      searchParams.get('highlight') || searchParams.get('cliente') || searchParams.get('id')
+    if (!targetId || loading || factories.length === 0) return
+
+    const timer = setTimeout(() => {
+      const found = factories.find(
+        (f) => f.id === targetId || f.name.toLowerCase() === targetId.toLowerCase(),
+      )
+      if (found) {
+        // Se houver busca ou página, ajusta para encontrar
+        highlightElement(`cliente-${found.id}`)
+      }
+    }, 400)
+
+    return () => clearTimeout(timer)
+  }, [searchParams, loading, factories])
 
   // Ref para pausar/ignorar eventos realtime durante enriquecimento em lote
   const isEnrichingRef = useRef(getIsEnrichmentInProgress())
@@ -1620,7 +1643,7 @@ export default function Cadastro() {
                             )
 
                             return (
-                              <TableRow key={f.id}>
+                              <TableRow key={f.id} id={`cliente-${f.id}`} data-highlight-id={f.id}>
                                 <TableCell className="w-10">
                                   <Checkbox
                                     checked={selectedIds.has(f.id)}
