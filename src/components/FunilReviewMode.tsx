@@ -21,18 +21,11 @@ import { Save, UserCheck, Search, Filter } from 'lucide-react'
 import { UserFilter } from '@/components/UserFilter'
 import type { Factory } from '@/types'
 import { factoryMatchesVendedor, type UnifiedVendedorOption } from '@/lib/vendedorFilterHelper'
+import {
+  buildSpeciesSegmentOptions,
+  factoryMatchesSpeciesSegment,
+} from '@/lib/funnelSpeciesSegmentFilter'
 
-const SPECIES = [
-  'Bovinos',
-  'Suínos',
-  'Aves',
-  'Aqua',
-  'PET',
-  'Equinos',
-  'Caprinos',
-  'Ovinos',
-  'Multiespécie',
-]
 const STATUSES = ['Atendido', 'Não atendido', 'Prospeção']
 const STAGES = [
   'Lead',
@@ -79,7 +72,7 @@ export function FunilReviewMode() {
   const [batchOwner, setBatchOwner] = useState('')
 
   const [filters, setFilters] = useState({
-    species: 'all',
+    speciesSegment: 'all',
     status: 'all',
     stage: 'all',
     country: 'all',
@@ -117,6 +110,8 @@ export function FunilReviewMode() {
     [users],
   )
 
+  const speciesSegmentOptions = useMemo(() => buildSpeciesSegmentOptions(factories), [factories])
+
   const countries = useMemo(
     () => Array.from(new Set(factories.map((f) => f.country).filter(Boolean))),
     [factories],
@@ -132,7 +127,11 @@ export function FunilReviewMode() {
           const ownerMatch = f.salesOwnerName?.toLowerCase().includes(q)
           if (!nameMatch && !cityMatch && !ownerMatch) return false
         }
-        if (filters.species !== 'all' && f.animalSpecies !== filters.species) return false
+        if (
+          filters.speciesSegment !== 'all' &&
+          !factoryMatchesSpeciesSegment(f, filters.speciesSegment)
+        )
+          return false
         if (filters.status !== 'all' && f.status !== filters.status) return false
         if (filters.stage !== 'all' && f.funnelStage !== filters.stage) return false
         if (filters.country !== 'all' && f.country !== filters.country) return false
@@ -297,12 +296,22 @@ export function FunilReviewMode() {
             className="pl-8 text-xs h-9"
           />
         </div>
-        <FSelect
-          label="Espécie"
-          value={filters.species}
-          onChange={(v) => setFilters((p) => ({ ...p, species: v }))}
-          options={SPECIES}
-        />
+        <Select
+          value={filters.speciesSegment}
+          onValueChange={(v) => setFilters((p) => ({ ...p, speciesSegment: v }))}
+        >
+          <SelectTrigger className="w-full md:w-[170px] bg-background text-xs">
+            <SelectValue placeholder="Espécie / Segmento" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as Espécies / Segmentos</SelectItem>
+            {speciesSegmentOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <FSelect
           label="Perfil"
           value={filters.profile}

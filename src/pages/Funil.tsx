@@ -32,6 +32,10 @@ import { useAuth } from '@/hooks/use-auth'
 import { Link } from 'react-router-dom'
 import { ClientDetailDrawer } from '@/components/ClientDetailDrawer'
 import { factoryMatchesVendedor, type UnifiedVendedorOption } from '@/lib/vendedorFilterHelper'
+import {
+  buildSpeciesSegmentOptions,
+  factoryMatchesSpeciesSegment,
+} from '@/lib/funnelSpeciesSegmentFilter'
 import { useToast } from '@/hooks/use-toast'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { updateFactoryPB } from '@/services/factories'
@@ -40,18 +44,6 @@ import { notifyDataChanged } from '@/hooks/useRealtimeData'
 import { FunnelCardActionBar } from '@/components/funil/FunnelCardActionBar'
 import { FunnelCardContextMenuWrapper } from '@/components/funil/FunnelCardContextMenuWrapper'
 import { QuickCallDialog } from '@/components/funil/QuickCallDialog'
-
-const ANIMAL_SPECIES = [
-  'Bovinos',
-  'Suínos',
-  'Aves',
-  'Aqua',
-  'PET',
-  'Equinos',
-  'Caprinos',
-  'Ovinos',
-  'Multiespécie',
-]
 
 const STAGES: FunnelStage[] = [
   'Lead',
@@ -76,7 +68,7 @@ export default function Funil() {
   const [salesOwnerFilter, setSalesOwnerFilter] = useState('all')
   const [vendedorOptions, setVendedorOptions] = useState<UnifiedVendedorOption[]>([])
   const [stateFilter, setStateFilter] = useState('all')
-  const [speciesFilter, setSpeciesFilter] = useState('all')
+  const [speciesSegmentFilter, setSpeciesSegmentFilter] = useState('all')
   const [overdueOnlyFilter, setOverdueOnlyFilter] = useState(false)
 
   const { toast } = useToast()
@@ -115,12 +107,14 @@ export default function Funil() {
     }
   }
 
+  const speciesSegmentOptions = buildSpeciesSegmentOptions(allFactories)
+
   const factories = allFactories.filter(
     (f) =>
       (salesOwnerFilter === 'all' ||
         factoryMatchesVendedor(f, salesOwnerFilter, vendedorOptions)) &&
       (stateFilter === 'all' || f.state === stateFilter) &&
-      (speciesFilter === 'all' || f.animalSpecies === speciesFilter) &&
+      (speciesSegmentFilter === 'all' || factoryMatchesSpeciesSegment(f, speciesSegmentFilter)) &&
       (!overdueOnlyFilter || overdueClientIds.has(f.id)),
   )
   const uniqueStates = Array.from(
@@ -376,15 +370,15 @@ export default function Funil() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={speciesFilter} onValueChange={setSpeciesFilter}>
-            <SelectTrigger className="w-[150px] h-9">
-              <SelectValue placeholder="Espécie" />
+          <Select value={speciesSegmentFilter} onValueChange={setSpeciesSegmentFilter}>
+            <SelectTrigger className="w-[170px] h-9" aria-label="Espécie ou Segmento">
+              <SelectValue placeholder="Espécie / Segmento" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas as Espécies</SelectItem>
-              {ANIMAL_SPECIES.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
+              <SelectItem value="all">Todas as Espécies / Segmentos</SelectItem>
+              {speciesSegmentOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
                 </SelectItem>
               ))}
             </SelectContent>
