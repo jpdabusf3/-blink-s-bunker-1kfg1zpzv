@@ -123,6 +123,7 @@ export async function registerCallInteraction(params: {
   outcome: CallOutcome
   dateStr?: string // YYYY-MM-DD
   userId?: string
+  origem?: string
 }): Promise<void> {
   const currentUserId = params.userId || pb.authStore.record?.id
   const actionText = `Ligação (${params.outcome}): ${params.summary.trim()}`
@@ -138,7 +139,7 @@ export async function registerCallInteraction(params: {
     recordId: params.clientId,
     target_collection: 'factories',
     tipo: 'acao',
-    origem: 'funil_vendas',
+    origem: params.origem || 'funil_vendas',
   })
 
   // 2. Grava no deal_activities
@@ -179,6 +180,7 @@ export async function addNoteInteraction(params: {
   clientName: string
   note: string
   userId?: string
+  origem?: string
 }): Promise<void> {
   const currentUserId = params.userId || pb.authStore.record?.id
   const actionText = `Nota: ${params.note.trim()}`
@@ -192,7 +194,7 @@ export async function addNoteInteraction(params: {
     recordId: params.clientId,
     target_collection: 'factories',
     tipo: 'nota',
-    origem: 'funil_vendas',
+    origem: params.origem || 'funil_vendas',
   })
 
   // 2. Grava no deal_activities
@@ -233,6 +235,7 @@ export async function scheduleFollowUpInteraction(params: {
   followUpDate: string // YYYY-MM-DD
   note?: string
   userId?: string
+  origem?: string
 }): Promise<void> {
   const currentUserId = params.userId || pb.authStore.record?.id
   if (!currentUserId) {
@@ -270,7 +273,7 @@ export async function scheduleFollowUpInteraction(params: {
       target_collection: 'factories',
       tipo: 'proximo_passo',
       proximo_passo: `Follow-up em ${dateFormatted}`,
-      origem: 'funil_vendas',
+      origem: params.origem || 'funil_vendas',
     })
   } catch (err) {
     console.warn('[scheduleFollowUpInteraction] Falha ao gravar activity_logs:', err)

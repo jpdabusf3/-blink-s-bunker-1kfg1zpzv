@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useScopedFactories } from '@/hooks/use-scoped-data'
+import { useAppContext } from '@/store/AppContext'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -28,7 +29,7 @@ import { UserFilter } from '@/components/UserFilter'
 import { isManager } from '@/lib/user-scope'
 import { useAuth } from '@/hooks/use-auth'
 import { Link } from 'react-router-dom'
-import { ClientHistoryDialog } from '@/components/ClientHistoryDialog'
+import { ClientDetailDrawer } from '@/components/ClientDetailDrawer'
 import { factoryMatchesVendedor, type UnifiedVendedorOption } from '@/lib/vendedorFilterHelper'
 
 const ANIMAL_SPECIES = [
@@ -58,6 +59,7 @@ const STAGES: FunnelStage[] = [
 
 export default function Funil() {
   const allFactories = useScopedFactories()
+  const { updateFactory } = useAppContext()
   const { user } = useAuth()
   const canReview = isManager(user)
   const [reviewMode, setReviewMode] = useState(false)
@@ -65,8 +67,11 @@ export default function Funil() {
   const [vendedorOptions, setVendedorOptions] = useState<UnifiedVendedorOption[]>([])
   const [stateFilter, setStateFilter] = useState('all')
   const [speciesFilter, setSpeciesFilter] = useState('all')
-  const [historyFactory, setHistoryFactory] = useState<Factory | null>(null)
-  const [historyOpen, setHistoryOpen] = useState(false)
+
+  // Drawer de detalhes e histórico do cliente
+  const [drawerClientId, setDrawerClientId] = useState<string | null>(null)
+  const clickedCardRef = useRef<HTMLElement | null>(null)
+
   const factories = allFactories.filter(
     (f) =>
       (salesOwnerFilter === 'all' ||
@@ -81,6 +86,25 @@ export default function Funil() {
   const handleExport = () => {
     exportExecutiveMacroReport(factories)
   }
+
+  const openDrawer = useCallback((factoryId: string, eventTarget?: HTMLElement | null) => {
+    if (eventTarget) {
+      clickedCardRef.current =
+        (eventTarget.closest('[data-client-card]') as HTMLElement) || eventTarget
+    }
+    setDrawerClientId(factoryId)
+  }, [])
+
+  const closeDrawer = useCallback(() => {
+    setDrawerClientId(null)
+  }, [])
+
+  const handleClientUpdated = useCallback(
+    (updated: Factory) => {
+      updateFactory(updated.id, updated)
+    },
+    [updateFactory],
+  )
 
   return (
     <div className="flex flex-col h-full animate-fade-in space-y-4">
@@ -180,11 +204,18 @@ export default function Funil() {
                       return (
                         <Card
                           key={f.id}
-                          onClick={() => {
-                            setHistoryFactory(f)
-                            setHistoryOpen(true)
+                          data-client-card={f.id}
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`Abrir detalhes de ${f.name}`}
+                          onClick={(e) => openDrawer(f.id, e.currentTarget)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              openDrawer(f.id, e.currentTarget)
+                            }
                           }}
-                          className={`p-3 shadow-subtle hover:shadow-md transition-all cursor-pointer border-l-4 ${
+                          className={`p-3 shadow-subtle hover:shadow-md transition-all duration-300 ease-in-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary border-l-4 ${
                             f.priority === 'High'
                               ? 'border-l-emerald-500'
                               : f.priority === 'Low'
@@ -279,10 +310,15 @@ export default function Funil() {
         </div>
       )}
 
-      <ClientHistoryDialog
-        factory={historyFactory}
-        open={historyOpen}
-        onOpenChange={setHistoryOpen}
+      {/* Drawer unificado de interação com cliente e histórico de ações */}
+      <ClientDetailDrawer
+        clientId={drawerClientId}
+        initialClient={allFactories.find((f) => f.id === drawerClientId) || null}
+        open={!!drawerClientId}
+        onClose={closeDrawer}
+        onClientUpdated={handleClientUpdated}
+        triggerRef={clickedCardRef}
+        mode="funil"
         origin="funil"
       />
     </div>

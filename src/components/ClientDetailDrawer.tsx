@@ -48,12 +48,25 @@ import {
 } from '@/lib/funnel-status'
 import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
 import { logActivity } from '@/services/activity-logs'
-import type { Factory } from '@/types'
+import type { Factory, FunnelStage } from '@/types'
 
 const STATUS_COLUMNS: readonly FunilVendasStatus[] = [
   'Ativo',
   'Inativo',
   'Negociações Encerradas',
+] as const
+
+const FUNIL_STAGES: readonly FunnelStage[] = [
+  'Lead',
+  'Primeiro Contato',
+  'Diagnóstico Técnico',
+  'Apresentação',
+  'Teste/Trial',
+  'Proposta',
+  'Negociação',
+  'Fechamento',
+  'Pós-venda',
+  'Perda',
 ] as const
 
 const CALL_OUTCOMES: readonly CallOutcome[] = [
@@ -63,7 +76,7 @@ const CALL_OUTCOMES: readonly CallOutcome[] = [
   'Não interessou',
 ] as const
 
-interface ClientDetailDrawerProps {
+export interface ClientDetailDrawerProps {
   clientId: string | null
   initialClient?: Factory | null
   open: boolean
@@ -71,6 +84,10 @@ interface ClientDetailDrawerProps {
   onClientUpdated?: (updated: Factory) => void
   /** Elemento ou seletor de retorno de foco ao fechar (acessibilidade) */
   triggerRef?: React.RefObject<HTMLElement | null>
+  /** Modo do funil: 'funil_vendas' (status_funil: Ativo/Inativo/Negociações Encerradas) ou 'funil' (funnelStage: Lead...Perda) */
+  mode?: 'funil_vendas' | 'funil'
+  /** Identificador de origem para os logs de auditoria ('funil' | 'funil_vendas') */
+  origin?: 'funil' | 'funil_vendas'
 }
 
 export function ClientDetailDrawer({
@@ -80,6 +97,8 @@ export function ClientDetailDrawer({
   onClose,
   onClientUpdated,
   triggerRef,
+  mode = 'funil_vendas',
+  origin = 'funil_vendas',
 }: ClientDetailDrawerProps) {
   const { toast } = useToast()
   const { user } = useAuth()
@@ -117,8 +136,9 @@ export function ClientDetailDrawer({
   })
   const [followUpNote, setFollowUpNote] = useState<string>('')
 
-  // Status no funil
+  // Status / Estágio no funil
   const [currentStatus, setCurrentStatus] = useState<FunilVendasStatus>('Ativo')
+  const [currentStage, setCurrentStage] = useState<FunnelStage>('Lead')
   const [isUpdatingStatus, setIsUpdatingStatus] = useState<boolean>(false)
 
   // Carrega dados completos do cliente e histórico
@@ -144,6 +164,7 @@ export function ClientDetailDrawer({
         (fetchedClient.status_funil as FunilVendasStatus) ||
         'Ativo'
       setCurrentStatus(statusVal)
+      setCurrentStage(fetchedClient.funnelStage || 'Lead')
     } catch (err) {
       console.error('[ClientDetailDrawer] Erro ao carregar dados:', err)
       setHasError(true)
@@ -196,71 +217,138 @@ export function ClientDetailDrawer({
   }
 
   // Manipulação de mudança de status no funil
-  const handleFunnelStageChange = async (newStatus: FunilVendasStatus) => {
-    if (!client || !clientId || newStatus === currentStatus || isUpdatingStatus) return
-    const oldStatus = currentStatus
-    const oldStage = client.funnelStage || STATUS_TO_FUNNEL_STAGE[oldStatus]
-    const newStage = STATUS_TO_FUNNEL_STAGE[newStatus]
+  const handleFunnelStageChange = async (newValue: string) => {
+    if (!client || !clientId || isUpdatingStatus) return
 
-    setIsUpdatingStatus(true)
-    setCurrentStatus(newStatus)
-    const updatedClient: Factory = {
-      ...client,
-      status_funil: newStatus as any,
-      funnelStage: newStage as any,
-    }
-    setClient(updatedClient)
-    onClientUpdated?.(updatedClient)
+    if (mode === 'funil') {
+      const newStage = newValue as FunnelStage
+      if (newStage === currentStage) return
+      const oldStage = currentStage
 
-    try {
-      await updateFactoryPB(clientId, {
-        status_funil: newStatus,
-        funnelStage: newStage,
-      } as any)
-
-      await logActivity(
-        `Status Funil de Vendas: ${oldStatus} → ${newStatus} (${newStage})`,
-        `Cliente: ${client.name}`,
-        clientId,
-        'factories',
-        {
-          tipo: 'status',
-          status_anterior: oldStatus,
-          status_novo: newStatus,
-          origem: 'funil_vendas',
-        },
-      )
-
-      logAction({
-        action_type: 'status_change',
-        entity_type: 'deal',
-        entity_id: clientId,
-        entity_name: client.name,
-        old_value: oldStatus,
-        new_value: newStatus,
-        description: `Moveu ${client.name} de ${oldStatus} para ${newStatus} (${newStage})`,
-      })
-
-      toast({
-        title: 'Status atualizado',
-        description: `Cliente movido para ${newStatus}.`,
-      })
-    } catch (err) {
-      console.error('[ClientDetailDrawer] Falha ao atualizar status:', err)
-      // Reverter
-      setCurrentStatus(oldStatus)
-      setClient({
+      setIsUpdatingStatus(true)
+      setCurrentStage(newStage)
+      const updatedClient: Factory = {
         ...client,
-        status_funil: oldStatus as any,
-        funnelStage: oldStage as any,
-      })
-      toast({
-        title: 'Erro ao atualizar status',
-        description: 'Não foi possível salvar o novo status no servidor.',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsUpdatingStatus(false)
+        funnelStage: newStage,
+      }
+      setClient(updatedClient)
+      onClientUpdated?.(updatedClient)
+
+      try {
+        await updateFactoryPB(clientId, {
+          funnelStage: newStage,
+        } as any)
+
+        await logActivity(
+          `Estágio Funil: ${oldStage} → ${newStage}`,
+          `Cliente: ${client.name}`,
+          clientId,
+          'factories',
+          {
+            tipo: 'status',
+            status_anterior: oldStage,
+            status_novo: newStage,
+            origem: origin,
+          },
+        )
+
+        logAction({
+          action_type: 'status_change',
+          entity_type: 'deal',
+          entity_id: clientId,
+          entity_name: client.name,
+          old_value: oldStage,
+          new_value: newStage,
+          description: `Moveu ${client.name} de ${oldStage} para ${newStage}`,
+        })
+
+        toast({
+          title: 'Status atualizado',
+          description: `Cliente movido para ${newStage}.`,
+        })
+      } catch (err) {
+        console.error('[ClientDetailDrawer] Falha ao atualizar estágio no funil:', err)
+        // Reverter
+        setCurrentStage(oldStage)
+        setClient({
+          ...client,
+          funnelStage: oldStage,
+        })
+        toast({
+          title: 'Erro ao atualizar status',
+          description: 'Não foi possível salvar o novo status no servidor.',
+          variant: 'destructive',
+        })
+      } finally {
+        setIsUpdatingStatus(false)
+      }
+    } else {
+      const newStatus = newValue as FunilVendasStatus
+      if (newStatus === currentStatus) return
+      const oldStatus = currentStatus
+      const oldStage = client.funnelStage || STATUS_TO_FUNNEL_STAGE[oldStatus]
+      const newStage = STATUS_TO_FUNNEL_STAGE[newStatus]
+
+      setIsUpdatingStatus(true)
+      setCurrentStatus(newStatus)
+      const updatedClient: Factory = {
+        ...client,
+        status_funil: newStatus as any,
+        funnelStage: newStage as any,
+      }
+      setClient(updatedClient)
+      onClientUpdated?.(updatedClient)
+
+      try {
+        await updateFactoryPB(clientId, {
+          status_funil: newStatus,
+          funnelStage: newStage,
+        } as any)
+
+        await logActivity(
+          `Status Funil de Vendas: ${oldStatus} → ${newStatus} (${newStage})`,
+          `Cliente: ${client.name}`,
+          clientId,
+          'factories',
+          {
+            tipo: 'status',
+            status_anterior: oldStatus,
+            status_novo: newStatus,
+            origem: origin,
+          },
+        )
+
+        logAction({
+          action_type: 'status_change',
+          entity_type: 'deal',
+          entity_id: clientId,
+          entity_name: client.name,
+          old_value: oldStatus,
+          new_value: newStatus,
+          description: `Moveu ${client.name} de ${oldStatus} para ${newStatus} (${newStage})`,
+        })
+
+        toast({
+          title: 'Status atualizado',
+          description: `Cliente movido para ${newStatus}.`,
+        })
+      } catch (err) {
+        console.error('[ClientDetailDrawer] Falha ao atualizar status:', err)
+        // Reverter
+        setCurrentStatus(oldStatus)
+        setClient({
+          ...client,
+          status_funil: oldStatus as any,
+          funnelStage: oldStage as any,
+        })
+        toast({
+          title: 'Erro ao atualizar status',
+          description: 'Não foi possível salvar o novo status no servidor.',
+          variant: 'destructive',
+        })
+      } finally {
+        setIsUpdatingStatus(false)
+      }
     }
   }
 
@@ -282,6 +370,7 @@ export function ClientDetailDrawer({
         outcome: callOutcome,
         dateStr: callDate,
         userId: user?.id,
+        origem: origin,
       })
 
       logAction({
@@ -335,6 +424,7 @@ export function ClientDetailDrawer({
         clientName: client.name,
         note: trimmed,
         userId: user?.id,
+        origem: origin,
       })
 
       logAction({
@@ -398,6 +488,7 @@ export function ClientDetailDrawer({
         followUpDate,
         note: cleanNote,
         userId: user?.id,
+        origem: origin,
       })
 
       logAction({
@@ -509,23 +600,48 @@ export function ClientDetailDrawer({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="text-xs text-muted-foreground font-medium">Status no funil:</span>
-              <div className="w-48">
-                <Select
-                  value={currentStatus}
-                  onValueChange={(val) => handleFunnelStageChange(val as FunilVendasStatus)}
-                  disabled={loading || hasError || isUpdatingStatus}
-                >
-                  <SelectTrigger className="h-8 text-xs font-semibold" aria-label="Status no funil">
-                    <SelectValue placeholder="Selecione o status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_COLUMNS.map((status) => (
-                      <SelectItem key={status} value={status} className="text-xs">
-                        {status}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className={mode === 'funil' ? 'w-56' : 'w-48'}>
+                {mode === 'funil' ? (
+                  <Select
+                    value={currentStage}
+                    onValueChange={(val) => handleFunnelStageChange(val)}
+                    disabled={loading || hasError || isUpdatingStatus}
+                  >
+                    <SelectTrigger
+                      className="h-8 text-xs font-semibold"
+                      aria-label="Status no funil"
+                    >
+                      <SelectValue placeholder="Selecione o estágio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FUNIL_STAGES.map((stage) => (
+                        <SelectItem key={stage} value={stage} className="text-xs">
+                          {stage}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Select
+                    value={currentStatus}
+                    onValueChange={(val) => handleFunnelStageChange(val)}
+                    disabled={loading || hasError || isUpdatingStatus}
+                  >
+                    <SelectTrigger
+                      className="h-8 text-xs font-semibold"
+                      aria-label="Status no funil"
+                    >
+                      <SelectValue placeholder="Selecione o status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUS_COLUMNS.map((status) => (
+                        <SelectItem key={status} value={status} className="text-xs">
+                          {status}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               {isUpdatingStatus && <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />}
             </div>
@@ -664,7 +780,9 @@ export function ClientDetailDrawer({
                     </span>
                     <span className="font-medium text-foreground mt-0.5 inline-block">
                       <Badge variant="outline" className="text-[11px]">
-                        {client.funnelStage || currentStatus}
+                        {mode === 'funil'
+                          ? client.funnelStage || currentStage
+                          : client.funnelStage || currentStatus}
                       </Badge>
                     </span>
                   </div>
