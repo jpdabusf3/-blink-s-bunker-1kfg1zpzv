@@ -27,12 +27,26 @@ export function normalizeCityUfKey(city?: string | null, state?: string | null):
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
+      // Remove anotações comuns tipo "(matriz)", "- filial", etc.
+      .replace(/\(.*?\)/g, ' ')
       .replace(/[^a-z0-9]/g, ' ')
       .trim()
       .replace(/\s+/g, ' ')
 
-  const c = clean(city)
+  let c = clean(city)
   let s = clean(state)
+
+  // Se a cidade veio no formato "Maringá - PR" ou "Maringá/PR" e o estado estava em branco
+  if (c && !s) {
+    const parts = c.split(' ')
+    if (parts.length > 1) {
+      const lastPart = parts[parts.length - 1]
+      if (lastPart.length === 2) {
+        s = lastPart
+        c = parts.slice(0, -1).join(' ')
+      }
+    }
+  }
 
   // Mapeamento simples de nome de estado por extenso para sigla UF
   const STATE_NAMES_TO_UF: Record<string, string> = {

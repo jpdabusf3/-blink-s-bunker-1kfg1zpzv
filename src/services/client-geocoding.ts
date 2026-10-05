@@ -1,16 +1,22 @@
 /**
  * Serviço de busca de CEP via ViaCEP e Geocodificação hierárquica por prioridades:
  * 1. Coordenadas já salvas (latitude / longitude) -> exata
- * 2. Endereço completo (logradouro, numero, cidade, estado) -> rua
- * 3. Apenas CEP -> bairro
- * 4. Apenas cidade e estado -> cidade
- * 5. Nada resolvido -> sem-localizacao
+ * 2. PRIORIDADE BASE LOCAL: normalizar município e UF e consultar base embutida IBGE / city-coordinates.
+ *    Se correspondido -> retorna imediatamente sem nenhuma requisição HTTP ('cidade').
+ * 3. Endereço completo (logradouro, numero, cidade, estado) via Nominatim com timeout curto e 1 retry -> rua
+ * 4. Apenas CEP via ViaCEP + Nominatim com timeout curto -> bairro
+ * 5. Fallback cidade/estado se não resolvido localmente via Nominatim -> cidade
+ * 6. Falhando ou dados inválidos -> marcar como 'sem-localizacao' (nunca 0,0 nem coordenada inventada)
  *
- * Inclui cache em memória e persistência nos registros do PocketBase.
+ * Inclui cache estrito por cidade+UF, persistência em lote no PocketBase e proteção por AbortController.
  */
 
 import pb from '@/lib/pocketbase/client'
-import { getCityCoordinateSync } from './city-coordinates'
+import {
+  getCityCoordinateSync,
+  normalizeCityUfKey,
+  resolveLocationFallbackSync,
+} from './city-coordinates'
 import type { Factory } from '@/types'
 
 export interface ViaCepResult {
@@ -35,26 +41,65 @@ export interface GeocodeResolutionResult {
   precisao: GeocodePrecisao
 }
 
-// Cache em memória para evitar chamadas duplicadas
+// Caches em memória para evitar chamadas duplicadas na sessão
 const viaCepCache = new Map<string, ViaCepResult | null>()
 const addressGeocodeCache = new Map<string, { lat: number; lng: number } | null>()
 const cepGeocodeCache = new Map<string, { lat: number; lng: number } | null>()
+const cityUfResolvedCache = new Map<
+  string,
+  { lat: number; lng: number; precisao: GeocodePrecisao } | null
+>()
 const clientResolutionInProgress = new Map<string, Promise<GeocodeResolutionResult>>()
 
-// Rate limiter / serializador para Nominatim (OSM exige máx 1 req/s)
-let lastNominatimTimestamp = 0
-async function throttleNominatim(): Promise<void> {
+// Rate limiter / serializador para chamadas externas (OSM exige máx ~1 req/s)
+let lastExternalTimestamp = 0
+async function throttleExternal(): Promise<void> {
   const now = Date.now()
-  const elapsed = now - lastNominatimTimestamp
-  if (elapsed < 1100) {
-    await new Promise((resolve) => setTimeout(resolve, 1100 - elapsed))
+  const elapsed = now - lastExternalTimestamp
+  if (elapsed < 1000) {
+    await new Promise((resolve) => setTimeout(resolve, 1000 - elapsed))
   }
-  lastNominatimTimestamp = Date.now()
+  lastExternalTimestamp = Date.now()
 }
 
 /**
- * Consulta CEP na API pública ViaCEP: GET https://viacep.com.br/ws/THE_CEP/json/
- * Nunca quebra fluxo: retorna null em caso de erro ou se CEP não for encontrado.
+ * Utilitário fetch com timeout usando AbortController nativo (~3,5s).
+ * Inclui retry rápido único se a requisição falhar ou expirar.
+ */
+export async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeoutMs = 3500,
+  retries = 1,
+): Promise<Response | null> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      })
+      clearTimeout(timeoutId)
+      return response
+    } catch (err: unknown) {
+      clearTimeout(timeoutId)
+      if (attempt >= retries) {
+        // Log leve apenas se falhou todas as tentativas
+        console.warn(`[Geocoding] Timeout ou erro ao consultar ${url.split('?')[0]}:`, err)
+        return null
+      }
+      // Pequena pausa antes do retry rápido
+      await new Promise((r) => setTimeout(r, 200))
+    }
+  }
+  return null
+}
+
+/**
+ * Consulta CEP na API pública ViaCEP com timeout de ~3,5s e no máx 1 retry.
+ * Nunca quebra o fluxo: retorna null em caso de erro ou se CEP não for encontrado.
  */
 export async function fetchViaCep(cepRaw: string): Promise<ViaCepResult | null> {
   const cleanCep = (cepRaw || '').replace(/\D/g, '')
@@ -67,14 +112,17 @@ export async function fetchViaCep(cepRaw: string): Promise<ViaCepResult | null> 
   }
 
   try {
-    const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`, {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
+    const response = await fetchWithTimeout(
+      `https://viacep.com.br/ws/${cleanCep}/json/`,
+      {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
       },
-    })
+      3500,
+      1,
+    )
 
-    if (!response.ok) {
+    if (!response || !response.ok) {
       viaCepCache.set(cleanCep, null)
       return null
     }
@@ -87,14 +135,14 @@ export async function fetchViaCep(cepRaw: string): Promise<ViaCepResult | null> 
 
     viaCepCache.set(cleanCep, data)
     return data
-  } catch (err) {
-    console.warn('[ViaCEP] Falha na consulta de CEP:', err)
+  } catch {
+    viaCepCache.set(cleanCep, null)
     return null
   }
 }
 
 /**
- * Geocodifica endereço completo via Nominatim OSM com cache e throttle
+ * Geocodifica endereço completo via Nominatim OSM com cache, throttle e timeout de ~3,5s
  */
 async function geocodeNominatimQuery(query: string): Promise<{ lat: number; lng: number } | null> {
   const trimmed = query.trim().toLowerCase()
@@ -105,7 +153,7 @@ async function geocodeNominatimQuery(query: string): Promise<{ lat: number; lng:
   }
 
   try {
-    await throttleNominatim()
+    await throttleExternal()
 
     const params = new URLSearchParams({
       format: 'json',
@@ -115,14 +163,19 @@ async function geocodeNominatimQuery(query: string): Promise<{ lat: number; lng:
     })
 
     const url = `https://nominatim.openstreetmap.org/search?${params.toString()}`
-    const resp = await fetch(url, {
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'BlinksBunker/1.0 (contact@blinkbiotech.com)',
+    const resp = await fetchWithTimeout(
+      url,
+      {
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'BlinksBunker/1.0 (contact@blinkbiotech.com)',
+        },
       },
-    })
+      3500,
+      1,
+    )
 
-    if (!resp.ok) {
+    if (!resp || !resp.ok) {
       addressGeocodeCache.set(trimmed, null)
       return null
     }
@@ -140,14 +193,14 @@ async function geocodeNominatimQuery(query: string): Promise<{ lat: number; lng:
 
     addressGeocodeCache.set(trimmed, null)
     return null
-  } catch (err) {
-    console.warn('[Nominatim] Erro ao consultar endereço:', query, err)
+  } catch {
+    addressGeocodeCache.set(trimmed, null)
     return null
   }
 }
 
 /**
- * Geocodifica a área de um CEP (prioridade 3: precisao = 'bairro')
+ * Geocodifica a área de um CEP (prioridade 4: precisao = 'bairro')
  */
 async function geocodeCepArea(
   cep: string,
@@ -162,9 +215,9 @@ async function geocodeCepArea(
     return cepGeocodeCache.get(cacheKey) || null
   }
 
-  // Tenta pelo CEP postal code no OSM
+  // Tenta pelo CEP postal code no OSM com timeout curto
   try {
-    await throttleNominatim()
+    await throttleExternal()
 
     const params = new URLSearchParams({
       format: 'json',
@@ -176,14 +229,19 @@ async function geocodeCepArea(
     if (estado && estado.length <= 3) params.append('state', estado)
 
     const url = `https://nominatim.openstreetmap.org/search?${params.toString()}`
-    const resp = await fetch(url, {
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'BlinksBunker/1.0 (contact@blinkbiotech.com)',
+    const resp = await fetchWithTimeout(
+      url,
+      {
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'BlinksBunker/1.0 (contact@blinkbiotech.com)',
+        },
       },
-    })
+      3500,
+      1,
+    )
 
-    if (resp.ok) {
+    if (resp && resp.ok) {
       const list = await resp.json()
       if (Array.isArray(list) && list.length > 0 && list[0].lat && list[0].lon) {
         const lat = parseFloat(list[0].lat)
@@ -195,8 +253,8 @@ async function geocodeCepArea(
         }
       }
     }
-  } catch (err) {
-    console.warn('[Nominatim] Falha geocodificando CEP:', cleanCep, err)
+  } catch {
+    // ignora
   }
 
   // Se o Nominatim pelo CEP não achou diretamente, tenta obter o bairro via ViaCEP
@@ -215,12 +273,50 @@ async function geocodeCepArea(
 }
 
 /**
- * Resolve a localização de um cliente estritamente pela ordem de prioridade descrita na especificação:
- * 1. Se já tem latitude/longitude válidas salvos -> usar como estão e definir precisao = exata
- * 2. Se há endereço completo com logradouro, numero, cidade e estado -> geocodificar e definir precisao = rua
- * 3. Se há apenas CEP -> geocodificar a área do CEP e definir precisao = bairro
- * 4. Se há apenas cidade e estado -> geocodificar centro da cidade e definir precisao = cidade
- * 5. Se nada resolver -> definir precisao = sem-localizacao e deixar latitude/longitude vazios
+ * Consulta síncrona na base local embutida (IBGE / static / peer cache) com normalização
+ */
+export function resolveLocalCityCoordinate(
+  cidade?: string | null,
+  estado?: string | null,
+): { lat: number; lng: number; precisao: GeocodePrecisao } | null {
+  if (!cidade && !estado) return null
+
+  // Chave normalizada cidade+UF
+  const cityKey = normalizeCityUfKey(cidade, estado)
+  if (cityKey && cityUfResolvedCache.has(cityKey)) {
+    return cityUfResolvedCache.get(cityKey) || null
+  }
+
+  // 1. Tenta na base de coordenadas embutida
+  const match = getCityCoordinateSync(cidade, estado)
+  if (match) {
+    const res = { lat: match.lat, lng: match.lng, precisao: 'cidade' as GeocodePrecisao }
+    if (cityKey) cityUfResolvedCache.set(cityKey, res)
+    return res
+  }
+
+  // 2. Tenta no fallback do centróide do estado se houver estado e a cidade for desconhecida
+  const fallback = resolveLocationFallbackSync(cidade, estado)
+  if (fallback) {
+    const res = { lat: fallback.lat, lng: fallback.lng, precisao: 'cidade' as GeocodePrecisao }
+    if (cityKey) cityUfResolvedCache.set(cityKey, res)
+    return res
+  }
+
+  return null
+}
+
+/**
+ * Resolve a localização de um cliente estritamente pela ordem de prioridade:
+ *
+ * 1. Já tem coordenadas salvas (latitude / longitude válidas) -> retorna imediatamente ('exata')
+ * 2. PRIORIDADE BASE LOCAL:
+ *    Antes de QUALQUER chamada de rede, normaliza município e UF e consulta a base embutida
+ *    IBGE/city-coordinates. Se encontrada -> retorna imediatamente com precisão 'cidade', SEM NENHUMA requisição HTTP.
+ * 3. Endereço completo (logradouro, número, cidade, estado) via Nominatim com timeout curto e retry -> 'rua'
+ * 4. Apenas CEP -> geocodificar área via ViaCEP / Nominatim com timeout curto -> 'bairro'
+ * 5. Se não estava na base local e não tem logradouro/CEP, tenta Nominatim online para cidade -> 'cidade'
+ * 6. Falhando ou sem dados suficientes -> 'sem-localizacao' (nunca 0,0 nem inventada)
  */
 export async function resolveClientCoordinates(
   client: Partial<Factory>,
@@ -231,7 +327,7 @@ export async function resolveClientCoordinates(
   }
 
   const promise = (async (): Promise<GeocodeResolutionResult> => {
-    // 1. Já tem coordenadas salvas
+    // 1. Já tem coordenadas salvas válidas
     const rawLat = client.latitude ?? client.lat
     const rawLng = client.longitude ?? client.lng
     const hasValidCoords =
@@ -251,13 +347,27 @@ export async function resolveClientCoordinates(
       }
     }
 
-    const logradouro = (client.logradouro || '').trim()
-    const numero = (client.numero || '').trim()
     const cidade = (client.city || '').trim()
     const estado = (client.state || '').trim()
+    const logradouro = (client.logradouro || '').trim()
+    const numero = (client.numero || '').trim()
     const cep = (client.cep || '').trim()
 
-    // 2. Endereço completo com logradouro, número, cidade e estado
+    // 2. PRIORIDADE BASE LOCAL: Se temos cidade/estado conhecidos localmente, retorna SEM rede!
+    // (A menos que o usuário tenha um logradouro + número explícito configurado e queira tentar precisão de rua)
+    const localCoord = resolveLocalCityCoordinate(cidade, estado)
+
+    // Se temos endereço completo (rua + número), tentamos a rede apenas se houver endereço específico;
+    // caso não haja logradouro/número, a base local já resolve imediatamente sem rede:
+    if (!logradouro && localCoord) {
+      return {
+        latitude: localCoord.lat,
+        longitude: localCoord.lng,
+        precisao: 'cidade',
+      }
+    }
+
+    // 3. Endereço completo com logradouro, número, cidade e estado
     if (logradouro && numero && cidade && estado) {
       const fullAddressQuery = `${logradouro}, ${numero}, ${cidade} - ${estado}, Brasil`
       const resolved = await geocodeNominatimQuery(fullAddressQuery)
@@ -268,7 +378,7 @@ export async function resolveClientCoordinates(
           precisao: 'rua',
         }
       }
-      // Tentativa sem o número caso OSM não tenha numeração predial exata
+      // Tentativa sem o número
       const streetQuery = `${logradouro}, ${cidade} - ${estado}, Brasil`
       const resolvedStreet = await geocodeNominatimQuery(streetQuery)
       if (resolvedStreet) {
@@ -279,7 +389,6 @@ export async function resolveClientCoordinates(
         }
       }
     } else if (logradouro && cidade && estado) {
-      // Logradouro com cidade e estado
       const streetQuery = `${logradouro}, ${cidade} - ${estado}, Brasil`
       const resolvedStreet = await geocodeNominatimQuery(streetQuery)
       if (resolvedStreet) {
@@ -291,7 +400,16 @@ export async function resolveClientCoordinates(
       }
     }
 
-    // 3. Apenas CEP
+    // Se falhou endereço de rua mas temos a base local para a cidade, use-a agora sem chamar mais nada!
+    if (localCoord) {
+      return {
+        latitude: localCoord.lat,
+        longitude: localCoord.lng,
+        precisao: 'cidade',
+      }
+    }
+
+    // 4. Apenas CEP
     if (cep) {
       const cepCoord = await geocodeCepArea(cep, cidade, estado)
       if (cepCoord) {
@@ -303,30 +421,41 @@ export async function resolveClientCoordinates(
       }
     }
 
-    // 4. Apenas cidade e estado
+    // 5. Tenta cidade via Nominatim online se não estava na base local
     if (cidade) {
-      const syncMatch = getCityCoordinateSync(cidade, estado)
-      if (syncMatch) {
-        return {
-          latitude: syncMatch.lat,
-          longitude: syncMatch.lng,
-          precisao: 'cidade',
+      const cityKey = normalizeCityUfKey(cidade, estado)
+      if (cityKey && cityUfResolvedCache.has(cityKey)) {
+        const cached = cityUfResolvedCache.get(cityKey)
+        if (cached) {
+          return {
+            latitude: cached.lat,
+            longitude: cached.lng,
+            precisao: 'cidade',
+          }
         }
       }
 
-      // Tenta geocodificar cidade via Nominatim se não estiver na tabela estática
       const cityQuery = `${cidade}, ${estado || ''}, Brasil`
       const cityResolved = await geocodeNominatimQuery(cityQuery)
       if (cityResolved) {
+        if (cityKey) {
+          cityUfResolvedCache.set(cityKey, {
+            lat: cityResolved.lat,
+            lng: cityResolved.lng,
+            precisao: 'cidade',
+          })
+        }
         return {
           latitude: cityResolved.lat,
           longitude: cityResolved.lng,
           precisao: 'cidade',
         }
+      } else if (cityKey) {
+        cityUfResolvedCache.set(cityKey, null)
       }
     }
 
-    // 5. Se nada resolver
+    // 6. Nada resolveu ou cliente sem cidade/estado válidos: marcar sem-localizacao
     return {
       latitude: undefined,
       longitude: undefined,
@@ -348,16 +477,12 @@ export async function resolveClientCoordinates(
 }
 
 /**
- * Persiste as coordenadas resolvidas de volta no registro do PocketBase caso o cliente ainda não as tenha salvas.
- */
-/**
  * Aplica um offset determinístico suave para clientes que compartilham as mesmas coordenadas (ex.: mesmo centróide de cidade).
  * Evita sobreposição perfeita sem alterar a coordenada original persistida.
  */
 export function applyDeterministicCoordinateOffset<
   T extends { id?: string; latitude?: number; longitude?: number; precisao?: string },
 >(items: T[]): (T & { displayLat: number; displayLng: number; hasOffset: boolean })[] {
-  // Agrupar por chave de coordenada arredondada para 4 casas (~11 metros)
   const groups = new Map<string, T[]>()
 
   items.forEach((item) => {
@@ -387,7 +512,6 @@ export function applyDeterministicCoordinateOffset<
       }
     }
 
-    // Índice determinístico ordenado por ID
     const sortedGroup = [...group].sort((a, b) => (a.id || '').localeCompare(b.id || ''))
     const idx = sortedGroup.findIndex((g) => (g.id || '') === (item.id || ''))
     const safeIdx = idx >= 0 ? idx : 0
@@ -401,10 +525,8 @@ export function applyDeterministicCoordinateOffset<
       }
     }
 
-    // Distribuição espiral / circular de raio pequeno (~150m a 600m)
-    // 0.001 graus de latitude ~= 111 metros
-    const angle = (safeIdx * 137.5 * Math.PI) / 180 // ângulo áureo
-    const radiusMeters = 0.0018 + Math.floor(safeIdx / 6) * 0.0012 // raio escalonado
+    const angle = (safeIdx * 137.5 * Math.PI) / 180
+    const radiusMeters = 0.0018 + Math.floor(safeIdx / 6) * 0.0012
     const offsetLat = Math.sin(angle) * radiusMeters
     const offsetLng = Math.cos(angle) * radiusMeters
 
@@ -418,7 +540,45 @@ export function applyDeterministicCoordinateOffset<
 }
 
 /**
- * Persiste as coordenadas resolvidas de volta no registro do PocketBase caso o cliente ainda não as tenha salvas.
+ * Cria o payload padrão para atualização de coordenadas de uma fábrica no PocketBase.
+ */
+export function createCoordinateUpdatePayload(resolved: GeocodeResolutionResult) {
+  const payload: {
+    precisao: GeocodePrecisao
+    latitude?: number | null
+    longitude?: number | null
+    lat?: number | null
+    lng?: number | null
+    geocode_precision?: string
+  } = {
+    precisao: resolved.precisao,
+  }
+
+  if (typeof resolved.latitude === 'number' && typeof resolved.longitude === 'number') {
+    payload.latitude = resolved.latitude
+    payload.longitude = resolved.longitude
+    payload.lat = resolved.latitude
+    payload.lng = resolved.longitude
+    payload.geocode_precision =
+      resolved.precisao === 'exata'
+        ? 'exact'
+        : resolved.precisao === 'rua'
+          ? 'street'
+          : resolved.precisao === 'cidade'
+            ? 'city'
+            : 'street'
+  } else {
+    payload.latitude = null
+    payload.longitude = null
+    payload.lat = null
+    payload.lng = null
+  }
+
+  return payload
+}
+
+/**
+ * Persiste um único cliente no PocketBase (usado por fluxos individuais ou pontuais)
  */
 export async function persistResolvedCoordinates(
   clientId: string,
@@ -426,38 +586,43 @@ export async function persistResolvedCoordinates(
 ): Promise<void> {
   if (!clientId) return
   try {
-    const payload: {
-      precisao: GeocodePrecisao
-      latitude?: number | null
-      longitude?: number | null
-      lat?: number | null
-      lng?: number | null
-      geocode_precision?: string
-    } = {
-      precisao: resolved.precisao,
-    }
-    if (typeof resolved.latitude === 'number' && typeof resolved.longitude === 'number') {
-      payload.latitude = resolved.latitude
-      payload.longitude = resolved.longitude
-      payload.lat = resolved.latitude
-      payload.lng = resolved.longitude
-      payload.geocode_precision =
-        resolved.precisao === 'exata'
-          ? 'exact'
-          : resolved.precisao === 'rua'
-            ? 'street'
-            : resolved.precisao === 'cidade'
-              ? 'city'
-              : 'street'
-    } else {
-      payload.latitude = null
-      payload.longitude = null
-      payload.lat = null
-      payload.lng = null
-    }
-
+    const payload = createCoordinateUpdatePayload(resolved)
     await pb.collection('factories').update(clientId, payload)
   } catch (err: unknown) {
     console.warn('[Geocoding] Falha ao persistir coordenadas no cliente:', clientId, err)
   }
+}
+
+/**
+ * Persiste uma lista de resoluções em lotes (chunks de 10 a 20) usando Promise.allSettled
+ * para evitar sobrecarga de rede e atualizar com segurança sem travar o cliente.
+ */
+export async function persistResolvedCoordinatesBatch(
+  items: Array<{ clientId: string; resolved: GeocodeResolutionResult }>,
+  chunkSize = 15,
+): Promise<{ successCount: number; failCount: number }> {
+  if (!items || items.length === 0) return { successCount: 0, failCount: 0 }
+
+  let successCount = 0
+  let failCount = 0
+
+  for (let i = 0; i < items.length; i += chunkSize) {
+    const chunk = items.slice(i, i + chunkSize)
+    const promises = chunk.map((item) => {
+      const payload = createCoordinateUpdatePayload(item.resolved)
+      return pb.collection('factories').update(item.clientId, payload)
+    })
+
+    const results = await Promise.allSettled(promises)
+    results.forEach((res) => {
+      if (res.status === 'fulfilled') {
+        successCount++
+      } else {
+        failCount++
+        console.warn('[Geocoding Batch] Falha ao persistir registro:', res.reason)
+      }
+    })
+  }
+
+  return { successCount, failCount }
 }

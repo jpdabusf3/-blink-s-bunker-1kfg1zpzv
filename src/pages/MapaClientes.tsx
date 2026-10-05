@@ -53,9 +53,10 @@ import {
 import { useOsrmRoute } from '@/hooks/use-osrm-route'
 import {
   resolveClientCoordinates,
-  persistResolvedCoordinates,
+  persistResolvedCoordinatesBatch,
   applyDeterministicCoordinateOffset,
   type GeocodePrecisao,
+  type GeocodeResolutionResult,
 } from '@/services/client-geocoding'
 import { ClienteFormDialog } from '@/components/ClienteFormDialog'
 import type { Factory, GestaoTecnica } from '@/types'
@@ -95,9 +96,16 @@ export default function MapaClientes() {
 
   // Resolução assíncrona única com cache de clientes que ainda não têm coordenadas salvas
   const [resolvingCoords, setResolvingCoords] = useState(false)
+  const [resolutionProgress, setResolutionProgress] = useState<{ resolved: number; total: number }>(
+    {
+      resolved: 0,
+      total: 0,
+    },
+  )
   const resolvedCacheRef = useRef<
     Map<string, { latitude?: number; longitude?: number; precisao: GeocodePrecisao }>
   >(new Map())
+  const [, setResolutionVersion] = useState(0)
   const hasTriggeredResolutionRef = useRef(false)
   const hasShownSuccessToastRef = useRef(false)
 
@@ -122,8 +130,8 @@ export default function MapaClientes() {
   const gestaoTecnicaList: GestaoTecnica[] = (globalGestaoTecnica as GestaoTecnica[]) || []
 
   // Estados principais de UX (Loading, Empty, Error, Success)
+  // O overlay de bloqueio inicial depende SOMENTE de initialLoading (dados ainda não carregados)
   const initialLoading = factoriesState.loading && factories.length === 0
-  const isResolving = initialLoading || resolvingCoords
   const isError = Boolean(factoriesState.error && factories.length === 0)
   const isEmpty = !factoriesState.loading && factories.length === 0 && !isError
 
@@ -173,24 +181,50 @@ export default function MapaClientes() {
 
     const runResolution = async () => {
       setResolvingCoords(true)
+      const totalToResolve = clientsNeedingResolution.length
+      setResolutionProgress({ resolved: 0, total: totalToResolve })
+
+      const resolvedBatchToPersist: Array<{
+        clientId: string
+        resolved: GeocodeResolutionResult
+      }> = []
+
       try {
+        let count = 0
         for (const client of clientsNeedingResolution) {
           if (isCancelled) break
           try {
             const res = await resolveClientCoordinates(client)
             resolvedCacheRef.current.set(client.id, res)
-            // Persistir UMA única vez de volta no PocketBase
-            await persistResolvedCoordinates(client.id, res)
+            resolvedBatchToPersist.push({ clientId: client.id, resolved: res })
           } catch (err: unknown) {
             console.warn('[MapaClientes] Falha ao resolver cliente:', client.name, err)
-            resolvedCacheRef.current.set(client.id, {
+            const fallbackRes = {
               latitude: undefined,
               longitude: undefined,
-              precisao: 'sem-localizacao',
-            })
+              precisao: 'sem-localizacao' as GeocodePrecisao,
+            }
+            resolvedCacheRef.current.set(client.id, fallbackRes)
+            resolvedBatchToPersist.push({ clientId: client.id, resolved: fallbackRes })
+          }
+
+          count++
+          // Atualiza estado reativo a cada cliente para os pins aparecerem no mapa progressivamente
+          if (!isCancelled) {
+            setResolutionProgress({ resolved: count, total: totalToResolve })
+            setResolutionVersion((v) => v + 1)
           }
         }
-        if (!isCancelled) {
+
+        // Persistência em lote ao PocketBase em chunks de 10 a 20 registros
+        if (!isCancelled && resolvedBatchToPersist.length > 0) {
+          try {
+            await persistResolvedCoordinatesBatch(resolvedBatchToPersist, 15)
+          } catch (persistErr) {
+            console.warn('[MapaClientes] Falha na persistência em lote:', persistErr)
+          }
+
+          // Dispara notificação UMA ÚNICA VEZ ao final de toda a fila
           notifyDataChanged('factories')
           if (!hasShownSuccessToastRef.current) {
             hasShownSuccessToastRef.current = true
@@ -789,10 +823,10 @@ export default function MapaClientes() {
             variant="outline"
             size="sm"
             onClick={loadData}
-            disabled={isResolving}
+            disabled={initialLoading}
             className="gap-2"
           >
-            {isResolving ? (
+            {initialLoading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <RotateCcw className="w-4 h-4" />
@@ -1104,18 +1138,31 @@ export default function MapaClientes() {
             </CardHeader>
 
             <div className="flex-1 w-full relative">
-              {/* 1. LOADING STATE */}
-              {isResolving && (
+              {/* Chip discreto e não-bloqueante no canto superior direito do mapa enquanto resolvingCoords */}
+              {resolvingCoords && (
+                <div className="absolute top-3 right-3 z-[1000] pointer-events-none animate-fade-in">
+                  <div className="bg-background/90 dark:bg-card/90 backdrop-blur-md border border-border shadow-md rounded-full px-3 py-1 flex items-center gap-2 text-xs font-medium text-foreground">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-primary shrink-0" />
+                    <span>
+                      Posicionando clientes em segundo plano ({resolutionProgress.resolved}/
+                      {resolutionProgress.total})...
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* 1. LOADING STATE INICIAL (overlay bloqueante apenas enquanto dados iniciais não carregaram) */}
+              {initialLoading && (
                 <div className="absolute inset-0 z-[1000] bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center space-y-3">
                   <Loader2 className="w-8 h-8 animate-spin text-primary" />
                   <p className="text-sm font-medium text-foreground">
-                    Carregando e posicionando clientes no mapa...
+                    Carregando dados dos clientes...
                   </p>
                 </div>
               )}
 
               {/* 3. ERROR STATE */}
-              {!isResolving && isError && (
+              {!initialLoading && isError && (
                 <div className="absolute inset-0 z-[1000] bg-background/95 flex flex-col items-center justify-center p-6 text-center space-y-3">
                   <div className="w-12 h-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
                     <AlertCircle className="w-6 h-6" />
@@ -1136,7 +1183,7 @@ export default function MapaClientes() {
               )}
 
               {/* 2. EMPTY STATE: nenhum cliente cadastrado ainda */}
-              {!isResolving && !isError && isEmpty && (
+              {!initialLoading && !isError && isEmpty && (
                 <div className="absolute inset-0 z-[1000] bg-background/95 flex flex-col items-center justify-center p-6 text-center space-y-3">
                   <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
                     <Building2 className="w-6 h-6" />
@@ -1231,24 +1278,28 @@ export default function MapaClientes() {
                 </div>
               )}
 
-              {/* Mensagem caso todos os clientes cadastrados estejam sem localização */}
-              {!isResolving && !isError && !isEmpty && clientsWithCoords.length === 0 && (
-                <div className="absolute inset-0 z-[500] bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center">
-                    <AlertTriangle className="w-6 h-6" />
+              {/* Mensagem caso todos os clientes cadastrados estejam sem localização (apenas se não estiver resolvendo nem no loading inicial) */}
+              {!initialLoading &&
+                !resolvingCoords &&
+                !isError &&
+                !isEmpty &&
+                clientsWithCoords.length === 0 && (
+                  <div className="absolute inset-0 z-[500] bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center space-y-3">
+                    <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                      <AlertTriangle className="w-6 h-6" />
+                    </div>
+                    <div className="max-w-md space-y-1">
+                      <h3 className="font-semibold text-foreground text-base">
+                        Todos os clientes estão sem localização
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Nenhum cliente possui endereço ou coordenadas suficientes para plotar pins
+                        no mapa. Utilize a lista lateral "Clientes sem localização" para completar o
+                        endereço.
+                      </p>
+                    </div>
                   </div>
-                  <div className="max-w-md space-y-1">
-                    <h3 className="font-semibold text-foreground text-base">
-                      Todos os clientes estão sem localização
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Nenhum cliente possui endereço ou coordenadas suficientes para plotar pins no
-                      mapa. Utilize a lista lateral "Clientes sem localização" para completar o
-                      endereço.
-                    </p>
-                  </div>
-                </div>
-              )}
+                )}
 
               <div ref={mapContainerRef} className="w-full h-full min-h-[500px]" />
             </div>
