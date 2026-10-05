@@ -1,5 +1,6 @@
 import pb from '@/lib/pocketbase/client'
 import * as XLSX from 'xlsx'
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 import { extrairTextoPdf } from '@/services/nfe-service'
 import { insertNF, insertItens } from '@/services/nfService'
 import { type ImportResult } from '@/services/import-excel'
@@ -415,20 +416,10 @@ export async function executeImportInvoices(
     console.warn('Erro ao registrar log de importação:', logErr)
   }
 
-  if (typeof window !== 'undefined') {
-    try {
-      window.dispatchEvent(
-        new CustomEvent('blink:datasync', { detail: { entity: 'notas_fiscais' } }),
-      )
-      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'faturamento' } }))
-      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'factories' } }))
-      window.dispatchEvent(
-        new CustomEvent('blink:datasync', { detail: { entity: 'activity_logs' } }),
-      )
-    } catch {
-      // ignore
-    }
-  }
+  notifyDataChanged('notas_fiscais')
+  notifyDataChanged('faturamento')
+  notifyDataChanged('factories')
+  notifyDataChanged('activity_logs')
 
   return {
     success: inserted > 0 || invoices.length === skippedDuplicates,
@@ -491,16 +482,8 @@ export async function executeRegisterClients(
     console.warn('Erro ao registrar log de clientes:', logErr)
   }
 
-  if (typeof window !== 'undefined') {
-    try {
-      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'factories' } }))
-      window.dispatchEvent(
-        new CustomEvent('blink:datasync', { detail: { entity: 'activity_logs' } }),
-      )
-    } catch {
-      // ignore
-    }
-  }
+  notifyDataChanged('factories')
+  notifyDataChanged('activity_logs')
 
   return {
     success: result.success && (result.criados > 0 || result.atualizados > 0),
@@ -568,20 +551,10 @@ export async function executeImportSales(
     console.warn('Erro ao registrar log de vendas:', logErr)
   }
 
-  if (typeof window !== 'undefined') {
-    try {
-      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'faturamento' } }))
-      window.dispatchEvent(
-        new CustomEvent('blink:datasync', { detail: { entity: 'historico_vendas' } }),
-      )
-      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'factories' } }))
-      window.dispatchEvent(
-        new CustomEvent('blink:datasync', { detail: { entity: 'activity_logs' } }),
-      )
-    } catch {
-      // ignore
-    }
-  }
+  notifyDataChanged('faturamento')
+  notifyDataChanged('historico_vendas')
+  notifyDataChanged('factories')
+  notifyDataChanged('activity_logs')
 
   return {
     success: res.success,
@@ -699,20 +672,11 @@ export async function executeImportMatrizVenda(
   }
 
   // Notificar realtime do CRM
-  if (typeof window !== 'undefined') {
-    try {
-      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'faturamento' } }))
-      window.dispatchEvent(
-        new CustomEvent('blink:datasync', { detail: { entity: 'historico_vendas' } }),
-      )
-      window.dispatchEvent(
-        new CustomEvent('blink:datasync', { detail: { entity: 'matriz_vendas' } }),
-      )
-      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'factories' } }))
-    } catch {
-      /* intentionally ignored */
-    }
-  }
+  notifyDataChanged('faturamento')
+  notifyDataChanged('historico_vendas')
+  notifyDataChanged('matriz_vendas')
+  notifyDataChanged('factories')
+  notifyDataChanged('import_history')
 
   const errorsList = (res.error_details || res.erros || []).map((e) => ({
     row: e.linha,
@@ -822,15 +786,8 @@ export async function executeImportPedidosCarteira(
   }
 
   // Notificar listeners
-  if (typeof window !== 'undefined') {
-    try {
-      window.dispatchEvent(
-        new CustomEvent('blink:datasync', { detail: { entity: 'pedidos_carteira' } }),
-      )
-    } catch {
-      /* intentionally ignored */
-    }
-  }
+  notifyDataChanged('pedidos_carteira')
+  notifyDataChanged('import_history')
 
   return {
     success: inserted > 0 || items.length === skippedDuplicates,
@@ -983,14 +940,9 @@ export async function executeImportRelatorioVendasSemanal(
   }
 
   // Notificar realtime do CRM
-  if (typeof window !== 'undefined') {
-    try {
-      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'metas' } }))
-      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'faturamento' } }))
-    } catch {
-      /* intentionally ignored */
-    }
-  }
+  notifyDataChanged('metas')
+  notifyDataChanged('faturamento')
+  notifyDataChanged('import_history')
 
   return {
     success: inserted > 0 || skippedDuplicates > 0,
@@ -1217,19 +1169,9 @@ export async function executeImportAtendimentoPedidos(
   }
 
   // Notificar sincronização em tempo real para telas do CRM (Gestão de Pedidos, Resumo, etc.)
-  if (typeof window !== 'undefined') {
-    try {
-      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'pedidos' } }))
-      window.dispatchEvent(
-        new CustomEvent('blink:datasync', { detail: { entity: 'pedidos_carteira' } }),
-      )
-      window.dispatchEvent(
-        new CustomEvent('blink:datasync', { detail: { entity: 'import_history' } }),
-      )
-    } catch {
-      /* intentionally ignored */
-    }
-  }
+  notifyDataChanged('pedidos')
+  notifyDataChanged('pedidos_carteira')
+  notifyDataChanged('import_history')
 
   return {
     success: inserted > 0 || skippedDuplicates > 0,

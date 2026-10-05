@@ -1,4 +1,5 @@
 import pb from '@/lib/pocketbase/client'
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 import type { EquipeMember } from '@/services/equipe'
 import type { ProdutoCatalogo } from '@/services/nfe-service'
 import { deriveDateParts, derivePais } from '@/services/historico-vendas'
@@ -183,13 +184,15 @@ export const pedidoService = {
       /* ignore */
     }
 
-    return await pb.collection('atribuicao_clientes').create<AtribuicaoCliente>({
+    const res = await pb.collection('atribuicao_clientes').create<AtribuicaoCliente>({
       cliente_nome: data.cliente_nome.trim(),
       gestor_tecnico_id: data.gestor_tecnico_id,
       vendedor_id: data.vendedor_id,
       observacoes: data.observacoes || '',
       user_id: userId || '',
     })
+    notifyDataChanged('atribuicao_clientes')
+    return res
   },
 
   /** Cria registro na coleção pedidos se existir, senão retorna dados */
@@ -201,6 +204,7 @@ export const pedidoService = {
         ...pedidoData,
         user_id: userId || '',
       })
+      notifyDataChanged('pedidos')
     } catch (err) {
       console.warn('Colecao pedidos nao persistida ou erro menor, prosseguindo:', err)
       pedidoRecord = pedidoData
@@ -257,6 +261,7 @@ export const pedidoService = {
       }
 
       await pb.collection('historico_vendas').create(historicoPayload)
+      notifyDataChanged('historico_vendas')
     } catch (hvErr) {
       console.error('Erro ao gravar pedido em historico_vendas:', hvErr)
     }

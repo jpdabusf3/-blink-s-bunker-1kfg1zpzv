@@ -1,5 +1,6 @@
 import pb from '@/lib/pocketbase/client'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 import type { Order } from '@/types'
 
 export interface OrderRecord {
@@ -151,6 +152,7 @@ export async function createOrder(data: CreateOrderInput): Promise<Order> {
     }
 
     const created = await pb.collection('orders').create(payload)
+    notifyDataChanged('orders')
     return mapOrderRecord(created)
   } catch (err: unknown) {
     const msg = getErrorMessage(err)
@@ -198,6 +200,7 @@ export async function updateOrder(id: string, data: UpdateOrderInput): Promise<O
     }
 
     const updated = await pb.collection('orders').update(id, payload)
+    notifyDataChanged('orders')
     return mapOrderRecord(updated)
   } catch (err: unknown) {
     const msg = getErrorMessage(err)
@@ -211,6 +214,7 @@ export async function updateOrder(id: string, data: UpdateOrderInput): Promise<O
 export async function removeOrder(id: string): Promise<boolean> {
   try {
     await pb.collection('orders').delete(id)
+    notifyDataChanged('orders')
     return true
   } catch (err: unknown) {
     const msg = getErrorMessage(err)

@@ -227,6 +227,8 @@ export async function getAllFactories(): Promise<Factory[]> {
 
 import { recordFactoryChangeLog, diffAndRecordFactoryChanges } from './factory-change-logs'
 
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
+
 export async function updateFactoryPB(id: string, data: Partial<Factory>) {
   // Buscar estado anterior para registrar diff de alterações
   let beforeRecord: Record<string, any> | null = null
@@ -246,6 +248,7 @@ export async function updateFactoryPB(id: string, data: Partial<Factory>) {
     })
   }
 
+  notifyDataChanged('factories')
   return result
 }
 
@@ -262,9 +265,12 @@ export async function createFactoryPB(data: Partial<Factory>) {
     console.warn('[factories] Falha ao registrar log de criação:', err)
   })
 
+  notifyDataChanged('factories')
   return result
 }
 
 export async function deleteFactoryPB(id: string) {
-  return pb.collection('factories').delete(id)
+  const res = await pb.collection('factories').delete(id)
+  notifyDataChanged('factories')
+  return res
 }

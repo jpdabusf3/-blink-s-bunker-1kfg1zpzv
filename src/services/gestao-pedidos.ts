@@ -1,4 +1,5 @@
 import pb from '@/lib/pocketbase/client'
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 
 export type PedidoStatus = 'ABERTO' | 'FATURADO' | 'CANCELADO'
 
@@ -112,7 +113,7 @@ export const gestaoPedidosService = {
    */
   async createPedido(data: PedidoInput): Promise<PedidoRecord> {
     const userId = pb.authStore.record?.id
-    return pb.collection('pedidos').create<PedidoRecord>(
+    const created = await pb.collection('pedidos').create<PedidoRecord>(
       {
         ...data,
         user_id: userId || '',
@@ -121,34 +122,42 @@ export const gestaoPedidosService = {
         expand: 'clienteId,produtoId',
       },
     )
+    notifyDataChanged('pedidos')
+    return created
   },
 
   /**
    * Atualiza um pedido existente
    */
   async updatePedido(id: string, data: Partial<PedidoInput>): Promise<PedidoRecord> {
-    return pb.collection('pedidos').update<PedidoRecord>(id, data, {
+    const updated = await pb.collection('pedidos').update<PedidoRecord>(id, data, {
       expand: 'clienteId,produtoId',
     })
+    notifyDataChanged('pedidos')
+    return updated
   },
 
   /**
    * Atualiza apenas o status de um pedido diretamente na linha
    */
   async updateStatus(id: string, status: PedidoStatus): Promise<PedidoRecord> {
-    return pb.collection('pedidos').update<PedidoRecord>(
+    const updated = await pb.collection('pedidos').update<PedidoRecord>(
       id,
       { status },
       {
         expand: 'clienteId,produtoId',
       },
     )
+    notifyDataChanged('pedidos')
+    return updated
   },
 
   /**
    * Exclui um pedido
    */
   async deletePedido(id: string): Promise<boolean> {
-    return pb.collection('pedidos').delete(id)
+    const res = await pb.collection('pedidos').delete(id)
+    notifyDataChanged('pedidos')
+    return res
   },
 }

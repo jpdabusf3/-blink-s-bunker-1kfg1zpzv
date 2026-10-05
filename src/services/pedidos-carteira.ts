@@ -16,10 +16,22 @@ export const getPedidosCarteira = () =>
     sort: 'marca,mes',
   })
 
-export const createPedidoCarteira = (data: Partial<PedidoCarteira>) =>
-  pb.collection('pedidos_carteira').create(data)
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 
-export const updatePedidoCarteira = (id: string, data: Partial<PedidoCarteira>) =>
-  pb.collection('pedidos_carteira').update(id, data)
+export const createPedidoCarteira = async (data: Partial<PedidoCarteira>) => {
+  const created = await pb.collection('pedidos_carteira').create(data)
+  notifyDataChanged('pedidos_carteira')
+  return created
+}
 
-export const deletePedidoCarteira = (id: string) => pb.collection('pedidos_carteira').delete(id)
+export const updatePedidoCarteira = async (id: string, data: Partial<PedidoCarteira>) => {
+  const updated = await pb.collection('pedidos_carteira').update(id, data)
+  notifyDataChanged('pedidos_carteira')
+  return updated
+}
+
+export const deletePedidoCarteira = async (id: string) => {
+  const res = await pb.collection('pedidos_carteira').delete(id)
+  notifyDataChanged('pedidos_carteira')
+  return res
+}

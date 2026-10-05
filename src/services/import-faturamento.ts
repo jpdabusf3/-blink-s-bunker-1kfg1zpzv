@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
 import pb from '@/lib/pocketbase/client'
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 
 export type FaturamentoFieldKey =
   | 'data'
@@ -1538,7 +1539,7 @@ export async function importFaturamento(
     return canonRow
   })
 
-  return pb.send<FaturamentoImportResult>('/backend/v1/importar-faturamento', {
+  const result = await pb.send<FaturamentoImportResult>('/backend/v1/importar-faturamento', {
     method: 'POST',
     body: JSON.stringify({
       fileName: file.name,
@@ -1550,6 +1551,13 @@ export async function importFaturamento(
     }),
     headers: { 'Content-Type': 'application/json' },
   })
+
+  notifyDataChanged('faturamento')
+  notifyDataChanged('historico_vendas')
+  notifyDataChanged('factories')
+  notifyDataChanged('import_history')
+
+  return result
 }
 
 /**

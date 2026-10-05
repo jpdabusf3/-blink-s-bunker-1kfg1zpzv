@@ -30,12 +30,11 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
-import { useRealtime } from '@/hooks/use-realtime'
-import { getAllFactories, getFactoryById, updateFactoryPB } from '@/services/factories'
-import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
+import { useGlobalData } from '@/store/GlobalDataProvider'
+import { updateFactoryPB } from '@/services/factories'
+import { type GestaoTecnica } from '@/services/gestao-tecnica'
 import { getScopedFactories } from '@/lib/user-scope'
 import { getIsEnrichmentInProgress, subscribeEnrichmentStatus } from '@/services/enrichment-service'
-import type { RecordSubscription } from 'pocketbase'
 import { factoryMatchesVendedor } from '@/lib/vendedorFilterHelper'
 import { normalizeArray } from '@/lib/utils'
 import { BLINK_LOCATIONS, BLINK_MARINGA_CD } from '@/constants/blinkLocations'
@@ -79,10 +78,15 @@ const GEOCODE_PRECISION_LABELS: Record<string, string> = {
 
 export default function MapaClientes() {
   const { user } = useAuth()
-  const [factories, setFactories] = useState<Factory[]>([])
-  const [loading, setLoading] = useState(true)
+  const {
+    factories: globalFactories,
+    factoriesState,
+    gestao_tecnica: globalGestaoTecnica,
+    refreshCollection,
+    notifyDataChanged,
+  } = useGlobalData()
+
   const [search, setSearch] = useState('')
-  const [gestaoTecnicaList, setGestaoTecnicaList] = useState<GestaoTecnica[]>([])
   const [vendedorFilter, setVendedorFilter] = useState('all')
   const [funnelStatusFilter, setFunnelStatusFilter] = useState<string>('all')
   const [addressStatusFilter, setAddressStatusFilter] = useState('all')
@@ -104,32 +108,17 @@ export default function MapaClientes() {
     userRef.current = user
   }, [user])
 
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const [all, gestao] = await Promise.all([
-        getAllFactories(),
-        getGestaoTecnica().catch(() => [] as GestaoTecnica[]),
-      ])
-      setFactories(getScopedFactories(all, userRef.current))
-      setGestaoTecnicaList(gestao)
-    } catch (err) {
-      console.error('[mapa] erro ao carregar clientes', err)
-      toast.error('Erro ao carregar clientes do mapa. Tente novamente.')
-      setFactories([])
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  // Clientes com escopo de permissão do usuário aplicados
+  const factories = useMemo(() => {
+    return getScopedFactories(globalFactories, userRef.current)
+  }, [globalFactories])
 
-  // Carrega apenas na montagem ou se o id/escopo do usuário de fato mudar
-  const userId = user?.id
-  const userRole = user?.job_title
-  const userArea = user?.geographicArea
-  const userCountry = user?.country
-  useEffect(() => {
-    loadData()
-  }, [loadData, userId, userRole, userArea, userCountry])
+  const gestaoTecnicaList = globalGestaoTecnica || []
+  const loading = factoriesState.loading && factories.length === 0
+
+  const loadData = useCallback(async () => {
+    await Promise.all([refreshCollection('factories'), refreshCollection('gestao_tecnica')])
+  }, [refreshCollection])
 
   // Ref para pausar/ignorar eventos realtime durante enriquecimento em lote
   const isEnrichingRef = useRef(getIsEnrichmentInProgress())
@@ -139,70 +128,10 @@ export default function MapaClientes() {
       isEnrichingRef.current = inProgress
       // Quando o enriquecimento finaliza, dispara UMA sincronização consolidada em segundo plano
       if (wasEnriching && !inProgress) {
-        getAllFactories()
-          .then((all) => {
-            setFactories(getScopedFactories(all, userRef.current))
-          })
-          .catch(() => {})
+        void refreshCollection('factories')
       }
     })
-  }, [])
-
-  // Sincronização em tempo real sem desmontar mapa / sem resetar zoom / sem spinner:
-  // - Se estiver enriquecendo em lote, ignora para evitar tempestade de re-renders
-  // - Para UPDATE: busca apenas o registro alterado via getFactoryById e faz merge cirúrgico local
-  // - Para DELETE: remove o registro do array local imediatamente
-  // - Para CREATE ou fallback: revalida silenciosamente em background sem setLoading(true)
-  const handleFactoriesRealtime = useCallback((e: RecordSubscription<any>) => {
-    if (isEnrichingRef.current) {
-      return
-    }
-
-    const action = e.action
-    const recordId = e.record?.id
-
-    if (action === 'delete' && recordId) {
-      setFactories((prev) => prev.filter((f) => f.id !== recordId))
-      return
-    }
-
-    if (action === 'update' && recordId) {
-      getFactoryById(recordId)
-        .then((updated) => {
-          if (!updated) return
-          const scoped = getScopedFactories([updated], userRef.current)
-          setFactories((prev) => {
-            const exists = prev.some((f) => f.id === recordId)
-            if (scoped.length === 0) {
-              // Registro saiu do escopo do usuário
-              return prev.filter((f) => f.id !== recordId)
-            }
-            if (exists) {
-              return prev.map((f) => (f.id === recordId ? scoped[0] : f))
-            }
-            return [scoped[0], ...prev]
-          })
-        })
-        .catch(() => {})
-      return
-    }
-
-    // Para 'create' ou qualquer outro tipo, refetch silencioso SEM spinner
-    getAllFactories()
-      .then((all) => {
-        setFactories(getScopedFactories(all, userRef.current))
-      })
-      .catch(() => {})
-  }, [])
-
-  const handleGestaoRealtime = useCallback(() => {
-    getGestaoTecnica()
-      .then(setGestaoTecnicaList)
-      .catch(() => {})
-  }, [])
-
-  useRealtime('factories', handleFactoriesRealtime)
-  useRealtime('gestao_tecnica', handleGestaoRealtime)
+  }, [refreshCollection])
 
   // Ref para controlar clientes já persistidos ou em persistência na sessão (evita escritas repetidas)
   const persistedClientIdsRef = useRef<Set<string>>(new Set())
@@ -378,6 +307,7 @@ export default function MapaClientes() {
             lng: item.lng,
             geocode_precision: item.precision,
           })
+          notifyDataChanged('factories')
         } catch (err) {
           console.warn('[mapa] persistencia de fallback falhou para cliente', item.id, err)
         }
@@ -385,7 +315,7 @@ export default function MapaClientes() {
     }, 1500)
 
     return () => clearTimeout(timer)
-  }, [enrichedFactories, factories])
+  }, [enrichedFactories, factories, notifyDataChanged])
 
   // Clientes com coordenadas válidas (diretas ou cidade aproximada)
   const validFactories = useMemo(() => {

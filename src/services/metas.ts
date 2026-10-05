@@ -1,4 +1,5 @@
 import pb from '@/lib/pocketbase/client'
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 
 export const CANAL_VENDAS_OPTIONS = [
   'Direto',
@@ -46,7 +47,7 @@ export const getMetas = () =>
     expand: 'vendedor_id,gestor_tecnico_id',
   })
 
-export const createMeta = (data: {
+export const createMeta = async (data: {
   vendedor_id?: string
   gestor_tecnico_id?: string | null
   especie?: string | null
@@ -62,9 +63,13 @@ export const createMeta = (data: {
   ano?: number
   valor_meta?: number
   vendedor_nome?: string
-}) => pb.collection('metas').create(data)
+}) => {
+  const created = await pb.collection('metas').create(data)
+  notifyDataChanged('metas')
+  return created
+}
 
-export const updateMeta = (
+export const updateMeta = async (
   id: string,
   data: Partial<{
     vendedor_id: string
@@ -83,9 +88,17 @@ export const updateMeta = (
     valor_meta: number
     vendedor_nome: string
   }>,
-) => pb.collection('metas').update(id, data)
+) => {
+  const updated = await pb.collection('metas').update(id, data)
+  notifyDataChanged('metas')
+  return updated
+}
 
-export const deleteMeta = (id: string) => pb.collection('metas').delete(id)
+export const deleteMeta = async (id: string) => {
+  const res = await pb.collection('metas').delete(id)
+  notifyDataChanged('metas')
+  return res
+}
 
 export interface MetaVendedorSegmentoInput {
   vendedor: string
@@ -125,7 +138,9 @@ export const saveMetaVendedorSegmento = async (
   }
 
   if (id) {
-    return pb.collection('metas').update<Meta>(id, payload)
+    const updated = await pb.collection('metas').update<Meta>(id, payload)
+    notifyDataChanged('metas')
+    return updated
   }
 
   // Se não tiver id, verificar se já existe meta para essa chave antes de criar (para evitar violação da constraint única)
@@ -136,11 +151,15 @@ export const saveMetaVendedorSegmento = async (
         `vendedor = "${payload.vendedor}" && segmento = "${payload.segmento}" && mes = ${payload.mes} && ano = ${payload.ano}`,
       )
     if (existing) {
-      return pb.collection('metas').update<Meta>(existing.id, payload)
+      const updated = await pb.collection('metas').update<Meta>(existing.id, payload)
+      notifyDataChanged('metas')
+      return updated
     }
   } catch {
     // Record não encontrado, segue para create
   }
 
-  return pb.collection('metas').create<Meta>(payload)
+  const created = await pb.collection('metas').create<Meta>(payload)
+  notifyDataChanged('metas')
+  return created
 }

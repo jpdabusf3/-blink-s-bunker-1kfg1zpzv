@@ -35,16 +35,14 @@ import { useLogoUrl } from '@/hooks/use-logo-url'
 import { useNavigate } from 'react-router-dom'
 import { RefreshCw, CheckCircle2 as SyncOkIcon } from 'lucide-react'
 
-function formatSyncTimestamp(timestamp: number | null): string {
+function formatSyncTimeHHMMSS(timestamp: number | null): string {
   if (!timestamp) return ''
   const d = new Date(timestamp)
   const pad = (n: number) => String(n).padStart(2, '0')
-  const dd = pad(d.getDate())
-  const mm = pad(d.getMonth() + 1)
-  const yyyy = d.getFullYear()
   const hh = pad(d.getHours())
   const min = pad(d.getMinutes())
-  return `Atualizado em ${dd}/${mm}/${yyyy} ${hh}:${min}`
+  const ss = pad(d.getSeconds())
+  return `${hh}:${min}:${ss}`
 }
 
 export function AppHeader() {
@@ -224,9 +222,8 @@ export function AppHeader() {
           </div>
         )}
 
-        {/* Global Data Sync Indicator + Sincronizar agora Button */}
-        <div className="hidden xl:flex items-center gap-2 text-xs text-muted-foreground ml-3 border-l border-border/60 pl-3">
-          {/* 4 STATES: LOADING, EMPTY, ERROR, SUCCESS */}
+        {/* Global Data Sync Indicator + Atualizar agora Button */}
+        <div className="hidden lg:flex items-center gap-2 text-xs text-muted-foreground ml-3 border-l border-border/60 pl-3">
           {isSyncing ? (
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <RefreshCw className="w-3 h-3 animate-spin text-primary shrink-0" />
@@ -238,10 +235,13 @@ export function AppHeader() {
               <span>Falha ao sincronizar. Tente novamente.</span>
             </div>
           ) : !lastSyncTime ? (
-            <span className="text-muted-foreground italic">Nenhum dado sincronizado ainda</span>
+            <span className="text-muted-foreground italic">Última sincronização: pendente</span>
           ) : (
             <span className="text-muted-foreground font-normal">
-              {formatSyncTimestamp(lastSyncTime)}
+              Última sincronização:{' '}
+              <span className="font-mono text-foreground font-medium">
+                {formatSyncTimeHHMMSS(lastSyncTime)}
+              </span>
             </span>
           )}
 
@@ -252,17 +252,17 @@ export function AppHeader() {
             onClick={() => void syncAll()}
             disabled={isSyncing}
             className="h-7 px-2.5 text-xs gap-1.5 shadow-none border-border/70 hover:bg-muted font-normal"
-            title="Sincronizar todos os dados do banco"
+            title="Sincronizar todos os dados agora"
           >
             <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin text-primary' : ''}`} />
-            <span>{syncStatus === 'error' ? 'Tentar novamente' : 'Sincronizar agora'}</span>
+            <span>{isSyncing ? 'Atualizando...' : 'Atualizar agora'}</span>
           </Button>
         </div>
       </div>
 
       <div className="flex items-center gap-2 lg:gap-4">
-        {/* Sync button for smaller screens (md-lg) where full text indicator is hidden */}
-        <div className="xl:hidden flex items-center">
+        {/* Sync button for smaller screens (< lg) where full text indicator is hidden */}
+        <div className="lg:hidden flex items-center">
           <Button
             type="button"
             variant="ghost"
@@ -272,12 +272,12 @@ export function AppHeader() {
             className="h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
             title={
               lastSyncTime
-                ? `${formatSyncTimestamp(lastSyncTime)} — Clique para sincronizar agora`
-                : 'Sincronizar agora'
+                ? `Última sincronização: ${formatSyncTimeHHMMSS(lastSyncTime)} — Atualizar agora`
+                : 'Atualizar agora'
             }
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-primary' : ''}`} />
-            <span className="hidden sm:inline text-[11px]">Sincronizar</span>
+            <span className="hidden sm:inline text-[11px]">Atualizar agora</span>
           </Button>
         </div>
         <LanguageSelector />

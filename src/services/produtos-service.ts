@@ -1,5 +1,6 @@
 import pb from '@/lib/pocketbase/client'
 import { z } from 'zod'
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 
 /**
  * Códigos canônicos das famílias de produtos Blink:
@@ -251,6 +252,7 @@ export const produtosService = {
 
     try {
       const created = await pb.collection('produtos').create<Produto>(payload)
+      notifyDataChanged('produtos')
       return {
         ...created,
         familia: created.familia || familiaDerivada,
@@ -295,6 +297,7 @@ export const produtosService = {
 
     try {
       const updated = await pb.collection('produtos').update<Produto>(id, payload)
+      notifyDataChanged('produtos')
       return {
         ...updated,
         familia: updated.familia || familiaDerivada,
@@ -315,7 +318,9 @@ export const produtosService = {
    */
   async deleteProduto(id: string): Promise<boolean> {
     try {
-      return await pb.collection('produtos').delete(id)
+      const res = await pb.collection('produtos').delete(id)
+      notifyDataChanged('produtos')
+      return res
     } catch (err: any) {
       console.error('[produtosService] Erro ao excluir produto:', err)
       throw new Error(err?.message || 'Erro ao excluir produto')

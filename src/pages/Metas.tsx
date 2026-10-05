@@ -14,12 +14,12 @@ import { toast } from 'sonner'
 import { Loader2, Plus, Edit, Trash2, Target, FileText } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
-import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
-import { getMetas, createMeta, updateMeta, deleteMeta, type Meta } from '@/services/metas'
+import { type GestaoTecnica } from '@/services/gestao-tecnica'
+import { createMeta, updateMeta, deleteMeta, type Meta } from '@/services/metas'
 import { MetaForm, type MetaFormValues } from '@/components/MetaForm'
 import { MetasMatrix } from '@/components/MetasMatrix'
 import { exportMetasBalancoPDF, logMetasBalancoExport, buildMetasMatrix } from '@/lib/exportMetas'
-import { useRealtimeData } from '@/hooks/useRealtimeData'
+import { useGlobalData } from '@/store/GlobalDataProvider'
 import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 
 export default function Metas() {
@@ -32,29 +32,24 @@ export default function Metas() {
   const { logAction } = useFunnelActivityLog()
 
   const {
-    data: syncData,
-    isLoading: loading,
-    isError,
-    refetch: loadData,
-  } = useRealtimeData<{
-    metas: Meta[]
-    vendedores: GestaoTecnica[]
-  }>({
-    entities: ['metas', 'gestao_tecnica', 'historico_vendas'],
-    fetcher: async () => {
-      const [metasList, gestaoList] = await Promise.all([
-        getMetas(),
-        getGestaoTecnica().catch(() => [] as GestaoTecnica[]),
-      ])
-      return {
-        metas: metasList,
-        vendedores: gestaoList.filter((g) => g.funcao === 'vendedor'),
-      }
-    },
-  })
+    metas,
+    metasState,
+    gestao_tecnica,
+    gestaoTecnicaState,
+    refreshCollection,
+    notifyDataChanged,
+  } = useGlobalData()
 
-  const metas = syncData?.metas || []
-  const vendedores = syncData?.vendedores || []
+  const loading = metasState.loading || gestaoTecnicaState.loading
+  const isError = Boolean(metasState.error || gestaoTecnicaState.error)
+
+  const vendedores: GestaoTecnica[] = useMemo(() => {
+    return (gestao_tecnica || []).filter((g) => g.funcao === 'vendedor')
+  }, [gestao_tecnica])
+
+  const loadData = async () => {
+    await Promise.all([refreshCollection('metas'), refreshCollection('gestao_tecnica')])
+  }
 
   const editingMeta = useMemo(
     () => (editingId ? (metas.find((m) => m.id === editingId) ?? null) : null),
@@ -90,6 +85,7 @@ export default function Metas() {
       }
       if (editingId) {
         await updateMeta(editingId, payload)
+        notifyDataChanged('metas')
         toast.success('Meta atualizada')
         // Funnel activity log: goal updated
         logAction({
@@ -101,6 +97,7 @@ export default function Metas() {
         })
       } else {
         const created = await createMeta(payload)
+        notifyDataChanged('metas')
         toast.success('Meta criada')
         // Funnel activity log: goal created
         logAction({
@@ -123,6 +120,7 @@ export default function Metas() {
     const meta = metas.find((m) => m.id === deleteId)
     try {
       await deleteMeta(deleteId)
+      notifyDataChanged('metas')
       toast.success('Meta excluída')
       // Funnel activity log: goal deleted
       logAction({
@@ -237,7 +235,7 @@ export default function Metas() {
         </CardHeader>
         <CardContent>
           {/* Skeleton SOMENTE na primeira carga sem dados */}
-          {loading && !syncData ? (
+          {loading && metas.length === 0 ? (
             <div className="space-y-3 p-4">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-24 w-full" />
@@ -255,7 +253,7 @@ export default function Metas() {
         </CardHeader>
         <CardContent className="p-0">
           {/* Skeleton SOMENTE na primeira carga sem dados */}
-          {loading && !syncData ? (
+          {loading && metas.length === 0 ? (
             <div className="space-y-3 p-4">
               <Skeleton className="h-12 w-full" />
               <Skeleton className="h-12 w-full" />

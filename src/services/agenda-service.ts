@@ -1,4 +1,5 @@
 import pb from '@/lib/pocketbase/client'
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 
 export type AgendaTaskType = 'reuniao' | 'visita' | 'evento' | 'ligacao' | 'outro'
 export type AgendaTaskStatus = 'agendada' | 'concluida' | 'cancelada'
@@ -237,9 +238,11 @@ export const agendaService = {
       notes: input.notes?.trim() || '',
     }
 
-    return pb.collection('agenda_tasks').create<AgendaTask>(payload, {
+    const created = await pb.collection('agenda_tasks').create<AgendaTask>(payload, {
       expand: 'deal_id',
     })
+    notifyDataChanged('agenda_tasks')
+    return created
   },
 
   /**
@@ -262,28 +265,34 @@ export const agendaService = {
     if (input.status !== undefined) payload.status = input.status
     if (input.notes !== undefined) payload.notes = input.notes?.trim() || ''
 
-    return pb.collection('agenda_tasks').update<AgendaTask>(id, payload, {
+    const updated = await pb.collection('agenda_tasks').update<AgendaTask>(id, payload, {
       expand: 'deal_id',
     })
+    notifyDataChanged('agenda_tasks')
+    return updated
   },
 
   /**
    * Atualiza status da tarefa (ex: agendada -> concluida / cancelada)
    */
   async updateStatus(id: string, status: AgendaTaskStatus): Promise<AgendaTask> {
-    return pb.collection('agenda_tasks').update<AgendaTask>(
+    const updated = await pb.collection('agenda_tasks').update<AgendaTask>(
       id,
       { status },
       {
         expand: 'deal_id',
       },
     )
+    notifyDataChanged('agenda_tasks')
+    return updated
   },
 
   /**
    * Exclui tarefa
    */
   async deleteTask(id: string): Promise<boolean> {
-    return pb.collection('agenda_tasks').delete(id)
+    const res = await pb.collection('agenda_tasks').delete(id)
+    notifyDataChanged('agenda_tasks')
+    return res
   },
 }

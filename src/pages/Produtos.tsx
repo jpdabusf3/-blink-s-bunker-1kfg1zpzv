@@ -50,7 +50,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useProdutos } from '@/hooks/useProdutos'
+import { useGlobalData } from '@/store/GlobalDataProvider'
 import {
   FAMILIAS_CATALOGO,
   FAMILIA_ROTULOS,
@@ -63,20 +63,47 @@ import {
 } from '@/services/produtos-service'
 
 export function Produtos() {
-  const {
-    produtos,
-    loading,
-    error,
-    searchTerm,
-    debouncedSearch,
-    familiaFilter,
-    loadProdutos,
-    createProduto,
-    updateProduto,
-    deleteProduto,
-    setSearchTerm,
-    setFamiliaFilter,
-  } = useProdutos()
+  const { produtos, produtosState, refreshCollection, notifyDataChanged } = useGlobalData()
+
+  const loading = produtosState.loading
+  const error = Boolean(produtosState.error)
+
+  const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [familiaFilter, setFamiliaFilter] = useState('all')
+
+  // Debounce da busca
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  const loadProdutos = async () => {
+    await refreshCollection('produtos')
+  }
+
+  const createProduto = async (data: ProdutoFormData): Promise<Produto> => {
+    const created = await produtosService.createProduto(data)
+    notifyDataChanged('produtos')
+    await refreshCollection('produtos')
+    return created
+  }
+
+  const updateProduto = async (id: string, data: ProdutoFormData): Promise<Produto> => {
+    const updated = await produtosService.updateProduto(id, data)
+    notifyDataChanged('produtos')
+    await refreshCollection('produtos')
+    return updated
+  }
+
+  const deleteProduto = async (id: string): Promise<boolean> => {
+    const res = await produtosService.deleteProduto(id)
+    notifyDataChanged('produtos')
+    await refreshCollection('produtos')
+    return res
+  }
 
   // Modal de Criação / Edição
   const [dialogOpen, setDialogOpen] = useState(false)

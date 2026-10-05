@@ -1,5 +1,6 @@
 import pb from '@/lib/pocketbase/client'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 import type { Task, TaskPriority, TaskType } from '@/types'
 
 export interface TaskRecord {
@@ -148,6 +149,7 @@ export async function createTask(data: CreateTaskInput): Promise<Task> {
     }
 
     const created = await pb.collection('tasks').create(payload)
+    notifyDataChanged('tasks')
     return mapTaskRecord(created)
   } catch (err: unknown) {
     const msg = getErrorMessage(err)
@@ -190,6 +192,7 @@ export async function updateTask(id: string, data: UpdateTaskInput): Promise<Tas
     }
 
     const updated = await pb.collection('tasks').update(id, payload)
+    notifyDataChanged('tasks')
     return mapTaskRecord(updated)
   } catch (err: unknown) {
     const msg = getErrorMessage(err)
@@ -203,6 +206,7 @@ export async function updateTask(id: string, data: UpdateTaskInput): Promise<Tas
 export async function removeTask(id: string): Promise<boolean> {
   try {
     await pb.collection('tasks').delete(id)
+    notifyDataChanged('tasks')
     return true
   } catch (err: unknown) {
     const msg = getErrorMessage(err)

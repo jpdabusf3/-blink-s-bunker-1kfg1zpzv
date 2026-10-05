@@ -1,5 +1,6 @@
 import pb from '@/lib/pocketbase/client'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 import type { Visit } from '@/types'
 
 export interface VisitRecord {
@@ -111,6 +112,7 @@ export async function createVisit(data: CreateVisitInput): Promise<Visit> {
     }
 
     const created = await pb.collection('visits').create(payload)
+    notifyDataChanged('visits')
     return mapVisitRecord(created)
   } catch (err: unknown) {
     const msg = getErrorMessage(err)
@@ -149,6 +151,7 @@ export async function updateVisit(id: string, data: UpdateVisitInput): Promise<V
     }
 
     const updated = await pb.collection('visits').update(id, payload)
+    notifyDataChanged('visits')
     return mapVisitRecord(updated)
   } catch (err: unknown) {
     const msg = getErrorMessage(err)
@@ -162,6 +165,7 @@ export async function updateVisit(id: string, data: UpdateVisitInput): Promise<V
 export async function removeVisit(id: string): Promise<boolean> {
   try {
     await pb.collection('visits').delete(id)
+    notifyDataChanged('visits')
     return true
   } catch (err: unknown) {
     const msg = getErrorMessage(err)

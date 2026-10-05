@@ -84,34 +84,20 @@ export async function getFaturamentos(
   })
 }
 
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
+
 export async function updateFaturamento(
   id: string,
   data: Partial<Omit<FaturamentoRecord, 'id' | 'created' | 'updated'>>,
 ): Promise<FaturamentoRecord> {
   const updated = await pb.collection('faturamento').update<FaturamentoRecord>(id, data)
-  if (typeof window !== 'undefined') {
-    try {
-      window.dispatchEvent(
-        new CustomEvent('blink:datasync', { detail: { entity: 'faturamento', id } }),
-      )
-    } catch {
-      // ignore
-    }
-  }
+  notifyDataChanged('faturamento')
   return updated
 }
 
 export async function deleteFaturamento(id: string): Promise<boolean> {
   const deleted = await pb.collection('faturamento').delete(id)
-  if (typeof window !== 'undefined') {
-    try {
-      window.dispatchEvent(
-        new CustomEvent('blink:datasync', { detail: { entity: 'faturamento', id } }),
-      )
-    } catch {
-      // ignore
-    }
-  }
+  notifyDataChanged('faturamento')
   return deleted
 }
 

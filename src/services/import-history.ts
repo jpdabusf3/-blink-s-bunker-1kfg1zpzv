@@ -95,15 +95,7 @@ export async function createImportHistory(
     details: input.details ?? '',
   })
 
-  if (typeof window !== 'undefined') {
-    try {
-      window.dispatchEvent(
-        new CustomEvent('blink:datasync', { detail: { entity: 'import_history' } }),
-      )
-    } catch {
-      // ignore
-    }
-  }
+  notifyDataChanged('import_history')
 
   return record
 }
