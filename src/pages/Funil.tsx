@@ -518,7 +518,9 @@ export default function Funil() {
                           onQuickCall={() => handleStartQuickCall(f)}
                         >
                           <Card
+                            id={`funnel-card-${f.id}`}
                             data-client-card={f.id}
+                            data-highlight-id={f.id}
                             tabIndex={0}
                             role="button"
                             aria-label={`Abrir detalhes de ${f.name}`}
