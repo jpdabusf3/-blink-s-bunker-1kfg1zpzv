@@ -20,34 +20,51 @@ import { useAuth } from '@/hooks/use-auth'
  * - report data / relatórios: 'faturamento', 'historico_vendas', 'pedidos_carteira', 'pedidos', 'metas', 'matriz_vendas', 'gestao_tecnica', 'targets', 'orders', 'documents'
  */
 export type RealtimeCollection =
-  | 'faturamento'
-  | 'historico_vendas'
-  | 'pedidos_carteira'
+  | 'users'
   | 'factories'
   | 'clientes' // alias semântico para factories
-  | 'metas'
-  | 'pedidos'
-  | 'nfe_pedidos'
-  | 'notas_fiscais'
-  | 'nf_itens'
+  | 'orders'
+  | 'targets'
+  | 'activity_logs'
+  | 'notifications'
+  | 'documents'
+  | 'invitations'
+  | 'system_settings'
+  | 'excel_templates'
   | 'atividades'
+  | 'metas'
+  | 'confirmacoes_pendentes'
+  | 'fila_processamento'
+  | 'historico_pedidos'
+  | 'pedidos_carteira'
   | 'matriz_vendas'
   | 'gestao_tecnica'
-  | 'equipe'
-  | 'activity_logs'
-  | 'targets'
-  | 'orders'
-  | 'documents'
-  | 'notifications'
+  | 'historico_vendas'
   | 'dashboard_preferences'
   | 'client_reports'
   | 'planos_acao'
   | 'funnel_activity_log'
-  | 'historico_pedidos'
-  | 'users'
-  | 'invitations'
+  | 'layout_versions'
   | 'produtos'
+  | 'nfe_pedidos'
+  | 'equipe'
+  | 'atribuicao_clientes'
+  | 'matriz_fiscal'
+  | 'pedidos'
+  | 'notas_fiscais'
+  | 'nf_itens'
+  | 'nf_lotes'
+  | 'notas_fiscais_files'
+  | 'faturamento'
+  | 'automation_cache'
+  | 'maestro_uploads'
+  | 'maestro_conversations'
   | 'import_history'
+  | 'agenda_tasks'
+  | 'deal_activities'
+  | 'factory_change_logs'
+  | 'tasks'
+  | 'visits'
   | 'all'
 
 /**
@@ -57,39 +74,81 @@ export function normalizeCollectionName(name: string): string {
   if (name === 'clientes') return 'factories'
   if (name === 'invoices') return 'notas_fiscais'
   if (name === 'reports' || name === 'report_data') return 'historico_vendas'
+  if (name === 'tarefas') return 'tasks'
+  if (name === 'visitas') return 'visits'
+  if (name === 'goals') return 'metas'
   return name
 }
 
-// Lista canônica de coleções que o provedor assina no PocketBase
+// Lista canônica de todas as coleções de negócio do PocketBase (espelho de schema.json)
 export const WATCHED_COLLECTIONS: string[] = [
-  'import_history',
-  'faturamento',
-  'historico_vendas',
-  'pedidos_carteira',
+  'users',
   'factories',
-  'metas',
-  'pedidos',
-  'nfe_pedidos',
-  'notas_fiscais',
-  'nf_itens',
+  'orders',
+  'targets',
+  'activity_logs',
+  'notifications',
+  'documents',
+  'invitations',
+  'system_settings',
+  'excel_templates',
   'atividades',
+  'metas',
+  'confirmacoes_pendentes',
+  'fila_processamento',
+  'historico_pedidos',
+  'pedidos_carteira',
   'matriz_vendas',
   'gestao_tecnica',
-  'equipe',
-  'activity_logs',
-  'targets',
-  'orders',
-  'documents',
-  'notifications',
+  'historico_vendas',
   'dashboard_preferences',
   'client_reports',
   'planos_acao',
   'funnel_activity_log',
-  'historico_pedidos',
-  'users',
-  'invitations',
+  'layout_versions',
   'produtos',
+  'nfe_pedidos',
+  'equipe',
+  'atribuicao_clientes',
+  'matriz_fiscal',
+  'pedidos',
+  'notas_fiscais',
+  'nf_itens',
+  'nf_lotes',
+  'notas_fiscais_files',
+  'faturamento',
+  'automation_cache',
+  'maestro_uploads',
+  'maestro_conversations',
+  'import_history',
+  'agenda_tasks',
+  'deal_activities',
+  'factory_change_logs',
+  'tasks',
+  'visits',
 ]
+
+/**
+ * Função utilitária global para notificar alterações de dados a partir de qualquer
+ * serviço, formulário ou diálogo sem precisar do hook.
+ */
+export function notifyDataChanged(
+  collection: RealtimeCollection | string = 'all',
+  details?: Record<string, unknown>,
+): void {
+  const norm = normalizeCollectionName(collection)
+  if (typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(
+        new CustomEvent('blink:datasync', {
+          detail: { collection: norm, entity: norm, ...details },
+        }),
+      )
+    } catch (err) {
+      console.warn('[notifyDataChanged] Falha ao despachar evento customizado:', err)
+    }
+  }
+}
 
 export interface RealtimeEvent<TRecord extends RecordModel = RecordModel> {
   collection: string
