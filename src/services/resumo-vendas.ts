@@ -140,13 +140,10 @@ export async function fetchResumoVendas(
       body: params,
     })
   } catch (err) {
-    return await pb.send<ResumoVendasResponse>(
-      `/backend/v1/resumo_vendas${qs ? `?${qs}` : ''}`,
-      {
-        method: 'POST',
-        body: params,
-      },
-    )
+    return await pb.send<ResumoVendasResponse>(`/backend/v1/resumo_vendas${qs ? `?${qs}` : ''}`, {
+      method: 'POST',
+      body: params,
+    })
   }
 }
 

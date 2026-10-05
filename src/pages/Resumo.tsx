@@ -59,6 +59,7 @@ import {
 } from '@/services/resumo-vendas'
 import { useRealtime } from '@/hooks/use-realtime'
 import { CODIGO_CANONICO_ROTULO } from '@/constants/familiaProdutos'
+import { normalizeSellerName } from '@/lib/vendedorFilterHelper'
 import { TodayTasksWidget } from '@/components/dashboard/TodayTasksWidget'
 import { WeeklyAgendaCard } from '@/components/dashboard/WeeklyAgendaCard'
 
@@ -244,7 +245,7 @@ export default function Resumo() {
             {/* Card 1: Faturamento do Mês */}
             <KpiCard
               label="Faturamento do Mês"
-              value={formatCurrency(data.faturamento_mes)}
+              value={formatCurrency(data.faturamento_mes || 0)}
               icon={DollarSign}
               borderClass="border-l-primary"
               variation={data.variacao_faturamento_mes}
@@ -254,7 +255,7 @@ export default function Resumo() {
             {/* Card 2: Faturamento Acumulado do Ano */}
             <KpiCard
               label="Faturamento Acumulado do Ano"
-              value={formatCurrency(data.faturamento_ano_ytd)}
+              value={formatCurrency(data.faturamento_ano_ytd || 0)}
               icon={TrendingUp}
               borderClass="border-l-indigo-500"
               variation={null}
@@ -274,7 +275,7 @@ export default function Resumo() {
             {/* Card 4: Ticket Médio */}
             <KpiCard
               label="Ticket Médio"
-              value={formatCurrency(data.ticket_medio)}
+              value={formatCurrency(data.ticket_medio || 0)}
               icon={Receipt}
               borderClass="border-l-emerald-500"
               variation={data.variacao_ticket_medio}
@@ -396,6 +397,8 @@ export default function Resumo() {
         onOpenChange={setMaestroPanelOpen}
         initialPeriodInfo={{
           mode: 'month',
+          ano: new Date().getFullYear(),
+          mes: new Date().getMonth() + 1,
         }}
       />
     </div>
@@ -737,7 +740,7 @@ function SectionMetasVendedor({ metas }: { metas: MetaVendedorItem[] }) {
                     className="border-border/20 hover:bg-muted/30 transition-colors"
                   >
                     <TableCell className="font-semibold text-xs text-foreground">
-                      {m.vendedor}
+                      {normalizeSellerName(m.vendedor)}
                     </TableCell>
                     <TableCell className="text-right font-mono text-xs text-muted-foreground whitespace-nowrap">
                       {m.meta_mensal > 0 ? formatCurrency(m.meta_mensal) : '—'}
@@ -749,17 +752,17 @@ function SectionMetasVendedor({ metas }: { metas: MetaVendedorItem[] }) {
                       {m.percentual_atingido.toFixed(1).replace('.', ',')}%
                     </TableCell>
                     <TableCell className="text-center whitespace-nowrap">
-                      {m.status === 'verde' ? (
+                      {m.status === 'verde' || m.percentual_atingido >= 100 ? (
                         <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[11px] font-semibold">
-                          100%+ (Meta batida)
+                          &gt;= 100%
                         </Badge>
-                      ) : m.status === 'amarelo' ? (
+                      ) : m.status === 'amarelo' || m.percentual_atingido >= 70 ? (
                         <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 text-[11px] font-semibold">
-                          70% - 99% (Atenção)
+                          70% - 99%
                         </Badge>
                       ) : (
                         <Badge className="bg-destructive/15 text-destructive border-destructive/30 text-[11px] font-semibold">
-                          &lt; 70% (Crítico)
+                          &lt; 70%
                         </Badge>
                       )}
                     </TableCell>
@@ -780,14 +783,16 @@ function SectionMetasVendedor({ metas }: { metas: MetaVendedorItem[] }) {
             metas.map((m, idx) => (
               <div key={`mob-meta-${idx}`} className="pt-3 first:pt-0 space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-semibold text-xs text-foreground">{m.vendedor}</span>
-                  {m.status === 'verde' ? (
+                  <span className="font-semibold text-xs text-foreground">
+                    {normalizeSellerName(m.vendedor)}
+                  </span>
+                  {m.status === 'verde' || m.percentual_atingido >= 100 ? (
                     <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] font-semibold">
-                      100%+
+                      &gt;= 100%
                     </Badge>
-                  ) : m.status === 'amarelo' ? (
+                  ) : m.status === 'amarelo' || m.percentual_atingido >= 70 ? (
                     <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 text-[10px] font-semibold">
-                      70-99%
+                      70% - 99%
                     </Badge>
                   ) : (
                     <Badge className="bg-destructive/15 text-destructive border-destructive/30 text-[10px] font-semibold">
@@ -828,9 +833,27 @@ function SectionMetasVendedor({ metas }: { metas: MetaVendedorItem[] }) {
 function SectionAlertasCarteira({ alertas }: { alertas: AlertaCarteiraItem[] }) {
   const formatDateBR = (isoStr: string) => {
     try {
+      if (!isoStr) return ''
+      // Suporta YYYY-MM-DD ou formato ISO completo com timezone
+      const parts = isoStr.split('T')[0].split('-')
+      if (parts.length === 3) {
+        const y = parseInt(parts[0], 10)
+        const m = parseInt(parts[1], 10) - 1
+        const d = parseInt(parts[2], 10)
+        const dt = new Date(y, m, d)
+        if (!isNaN(dt.getTime())) {
+          const dd = String(d).padStart(2, '0')
+          const mm = String(m + 1).padStart(2, '0')
+          const yyyy = String(y)
+          return `${dd}/${mm}/${yyyy}`
+        }
+      }
       const d = new Date(isoStr)
       if (isNaN(d.getTime())) return isoStr
-      return d.toLocaleDateString('pt-BR')
+      const dd = String(d.getDate()).padStart(2, '0')
+      const mm = String(d.getMonth() + 1).padStart(2, '0')
+      const yyyy = d.getFullYear()
+      return `${dd}/${mm}/${yyyy}`
     } catch (_) {
       return isoStr
     }
@@ -895,10 +918,17 @@ function SectionAlertasCarteira({ alertas }: { alertas: AlertaCarteiraItem[] }) 
 /** Seção: Vendas por Segmento (gráfico de barras para AVES, PETS, RUMINANTES, SUINOS) */
 function SectionVendasSegmento({ vendas }: { vendas: VendaSegmentoItem[] }) {
   const chartData = useMemo(() => {
-    return vendas.map((v) => ({
-      segmento: v.segmento,
-      'Ano Atual': v.valor_ano,
-      'Mês Atual': v.valor_mes,
+    // Garantir que todos os 4 segmentos canônicos estejam presentes
+    const canonicalOrder = ['AVES', 'PETS', 'RUMINANTES', 'SUINOS']
+    const map = new Map<string, number>()
+    for (const v of vendas) {
+      const seg = String(v.segmento || '').toUpperCase()
+      map.set(seg, v.valor_ano || 0)
+    }
+
+    return canonicalOrder.map((seg) => ({
+      segmento: seg,
+      'Ano Atual': map.get(seg) || 0,
     }))
   }, [vendas])
 
@@ -911,7 +941,7 @@ function SectionVendasSegmento({ vendas }: { vendas: VendaSegmentoItem[] }) {
               <PieChart className="w-4 h-4 text-primary" /> Vendas por Segmento
             </CardTitle>
             <CardDescription className="text-xs mt-0.5">
-              Faturamento por espécie animal (AVES, PETS, RUMINANTES, SUINOS) no ano corrente
+              Valores do ano corrente para os quatro segmentos (AVES, PETS, RUMINANTES, SUINOS)
             </CardDescription>
           </div>
         </div>
@@ -940,23 +970,16 @@ function SectionVendasSegmento({ vendas }: { vendas: VendaSegmentoItem[] }) {
               <RechartsTooltip
                 formatter={(val: number | string | undefined) => [
                   formatCurrency(Number(val) || 0),
-                  'Faturamento',
+                  'Faturamento Ano Atual',
                 ]}
               />
               <Legend wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
               <Bar
                 dataKey="Ano Atual"
-                name="Faturamento no Ano"
+                name="Faturamento Ano Atual"
                 fill="#0284c7"
                 radius={[4, 4, 0, 0]}
-                maxBarSize={40}
-              />
-              <Bar
-                dataKey="Mês Atual"
-                name="Faturamento no Mês"
-                fill="#10b981"
-                radius={[4, 4, 0, 0]}
-                maxBarSize={40}
+                maxBarSize={48}
               />
             </BarChart>
           </ResponsiveContainer>

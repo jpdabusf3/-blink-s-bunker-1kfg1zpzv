@@ -262,8 +262,9 @@ export function EditableFaturamentoTable({
       const d = new Date(String(validation.parsedValue))
       if (!isNaN(d.getTime())) {
         payload.ano = d.getUTCFullYear()
-        payload.mes = d.getUTCMonth() + 1
-        payload.semestre = payload.mes <= 6 ? 'S1' : 'S2'
+        const mesNum = d.getUTCMonth() + 1
+        payload.mes = mesNum
+        payload.semestre = mesNum <= 6 ? 'S1' : 'S2'
       }
     } else if (field === 'cliente_nome') {
       payload.cliente_nome = String(validation.parsedValue)
