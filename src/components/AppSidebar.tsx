@@ -28,6 +28,7 @@ import {
   MapPin,
   Sparkles,
   Calendar,
+  Database,
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
@@ -64,6 +65,7 @@ export function AppSidebar() {
     { name: 'Rel. Atividades', path: '/relatorio-atividades', icon: ClipboardList },
     { name: 'Rel. Performance', path: '/relatorio-performance', icon: Award },
     { name: t('nav.usuarios'), path: '/usuarios', icon: Users },
+    { name: 'Migração de Dados', path: '/migracao', icon: Database },
     ...(showMasterOrCeo ? [{ name: 'Equipe', path: '/equipe', icon: UserPlus }] : []),
     ...(showMasterOrCeo ? [{ name: 'Documentos', path: '/documentos', icon: FileText }] : []),
     ...(showMasterOrCeo

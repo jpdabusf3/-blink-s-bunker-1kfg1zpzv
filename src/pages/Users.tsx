@@ -97,6 +97,14 @@ export default function Users() {
             Monitore performance e atividades dos usuários.
           </p>
         </div>
+        <div className="ml-auto">
+          <Button variant="outline" size="sm" asChild className="gap-2">
+            <Link to="/migracao">
+              <Database className="w-4 h-4 text-primary" />
+              Migração de dados
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <Card className="shadow-subtle">
