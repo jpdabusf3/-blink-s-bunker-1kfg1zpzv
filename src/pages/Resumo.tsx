@@ -53,11 +53,10 @@ import {
 } from 'lucide-react'
 import { MaestroChatPanel } from '@/components/MaestroChatPanel'
 import { formatCurrency, cn } from '@/lib/utils'
-import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { useGlobalData } from '@/store/GlobalDataProvider'
-import { getFaturamentos, type FaturamentoRecord } from '@/services/resumo-vendas'
-import { getPedidosCarteira, type PedidoCarteira } from '@/services/pedidos-carteira'
-import { gestaoPedidosService, type PedidoRecord } from '@/services/gestao-pedidos'
+import type { FaturamentoRecord } from '@/services/resumo-vendas'
+import type { PedidoCarteira } from '@/services/pedidos-carteira'
+import type { PedidoRecord } from '@/services/gestao-pedidos'
 import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 import { MetasVendedorSegmentoSection } from '@/components/MetasVendedorSegmentoSection'
 import { AlertasCarteiraSection } from '@/components/dashboard/AlertasCarteiraSection'
@@ -226,8 +225,22 @@ export default function Resumo() {
   // Painel Maestro
   const [maestroPanelOpen, setMaestroPanelOpen] = useState(false)
 
-  // GlobalDataContext
-  const { factories: globalFactories, orders: globalOrders } = useGlobalData()
+  // GlobalDataContext: lê todas as coleções centralizadas da loja global
+  const {
+    factories: globalFactories,
+    orders: globalOrders,
+    faturamento: faturamentos,
+    faturamentoState,
+    pedidos_carteira: pedidosCarteira,
+    pedidosCarteiraState,
+    pedidos: pedidosAbertos,
+    pedidosState,
+    syncAll: loadData,
+  } = useGlobalData()
+
+  const loading = faturamentoState.loading || pedidosCarteiraState.loading || pedidosState.loading
+  const isRefreshing = false
+  const error = Boolean(faturamentoState.error || pedidosCarteiraState.error || pedidosState.error)
 
   // Anos disponíveis para seleção (baseados nos dados ou default)
   const availableYears = useMemo(() => {
@@ -237,38 +250,6 @@ export default function Resumo() {
     }
     return list
   }, [currentYear])
-
-  // Hook realtime para carregar todas as fontes de dados sem fetch paralelo redundante
-  const {
-    data: rawData,
-    isLoading: loading,
-    isRefreshing,
-    isError: error,
-    refetch: loadData,
-  } = useRealtimeData<{
-    faturamentos: FaturamentoRecord[]
-    pedidosCarteira: PedidoCarteira[]
-    pedidosAbertos: PedidoRecord[]
-  }>({
-    entities: ['faturamento', 'pedidos_carteira', 'pedidos', 'factories', 'orders'],
-    fetcher: async () => {
-      const [faturamentos, carteiras, pedidosAbertos] = await Promise.all([
-        getFaturamentos('', '-data_documento').catch(() => [] as FaturamentoRecord[]),
-        getPedidosCarteira().catch(() => [] as PedidoCarteira[]),
-        gestaoPedidosService.listPedidos().catch(() => [] as PedidoRecord[]),
-      ])
-      return {
-        faturamentos,
-        pedidosCarteira: carteiras,
-        pedidosAbertos,
-      }
-    },
-  })
-
-  // Extrair arrays
-  const faturamentos = rawData?.faturamentos || []
-  const pedidosCarteira = rawData?.pedidosCarteira || []
-  const pedidosAbertos = rawData?.pedidosAbertos || []
 
   // Mapa de clientes (factories) por nome e código para resolver segmento/carteira
   const factoryMap = useMemo(() => {

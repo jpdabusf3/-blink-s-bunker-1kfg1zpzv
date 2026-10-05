@@ -42,7 +42,6 @@ import {
 import { formatCurrency } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
 import {
-  getHistoricoVendas,
   deleteHistoricoVenda,
   downloadPedidoModel,
   ESPECIE_OPTIONS,
@@ -53,13 +52,12 @@ import {
   exportHistoricoVendasToExcel,
   exportHistoricoVendasToPDF,
 } from '@/lib/exportHistoricoVendas'
-import { getVendedoresGestao, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { VendaForm } from '@/components/VendaForm'
 import { UploadPedidoDialog } from '@/components/UploadPedidoDialog'
 import { UploadNfeDialog } from '@/components/UploadNfeDialog'
 import { ResumoVendasTab } from '@/components/historico/ResumoVendasTab'
 import { ImportarFaturamentoDialog } from '@/components/ImportarFaturamentoDialog'
-import { useRealtimeData } from '@/hooks/useRealtimeData'
+import { useGlobalData } from '@/store/GlobalDataProvider'
 import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 
 export default function HistoricoVendas() {
@@ -74,29 +72,18 @@ export default function HistoricoVendas() {
   const [importarFatOpen, setImportarFatOpen] = useState(false)
 
   const {
-    data: syncData,
-    isLoading: loading,
-    isError,
-    refetch: loadData,
-  } = useRealtimeData<{
-    vendas: HistoricoVenda[]
-    vendedores: GestaoTecnica[]
-  }>({
-    entities: ['historico_vendas', 'faturamento', 'gestao_tecnica'],
-    fetcher: async () => {
-      const [vendasList, vendedoresList] = await Promise.all([
-        getHistoricoVendas(),
-        getVendedoresGestao().catch(() => [] as GestaoTecnica[]),
-      ])
-      return {
-        vendas: vendasList,
-        vendedores: vendedoresList,
-      }
-    },
-  })
+    historico_vendas: data,
+    historicoVendasState,
+    gestao_tecnica: vendedores,
+    gestaoTecnicaState,
+    refreshCollection,
+  } = useGlobalData()
 
-  const data = syncData?.vendas || []
-  const vendedores = syncData?.vendedores || []
+  const loading = historicoVendasState.loading || gestaoTecnicaState.loading
+  const isError = Boolean(historicoVendasState.error || gestaoTecnicaState.error)
+  const loadData = async () => {
+    await Promise.all([refreshCollection('historico_vendas'), refreshCollection('gestao_tecnica')])
+  }
 
   const filtered = useMemo(() => {
     let r = [...data]
@@ -348,7 +335,7 @@ export default function HistoricoVendas() {
             </CardHeader>
             <CardContent>
               {/* Skeleton SOMENTE na primeira carga sem dados */}
-              {loading && !syncData ? (
+              {loading && data.length === 0 ? (
                 <div className="space-y-3 p-4">
                   <Skeleton className="h-8 w-full" />
                   <Skeleton className="h-10 w-full" />

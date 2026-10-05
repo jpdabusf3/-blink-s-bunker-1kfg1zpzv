@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
   Table,
@@ -10,33 +10,13 @@ import {
 } from '@/components/ui/table'
 import { Loader2, Wallet } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-import { getPedidosCarteira, type PedidoCarteira } from '@/services/pedidos-carteira'
-import { useRealtime } from '@/hooks/use-realtime'
+import { useGlobalData } from '@/store/GlobalDataProvider'
 
 const MESES = ['agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
 
 export default function PedidosCarteira() {
-  const [data, setData] = useState<PedidoCarteira[]>([])
-  const [loading, setLoading] = useState(true)
-
-  const loadData = async () => {
-    try {
-      const records = await getPedidosCarteira()
-      setData(records)
-    } catch {
-      setData([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  useRealtime('pedidos_carteira', () => {
-    loadData()
-  })
+  const { pedidos_carteira: data, pedidosCarteiraState } = useGlobalData()
+  const loading = pedidosCarteiraState.loading && data.length === 0
 
   const { marcas, totalGeralCarteira } = useMemo(() => {
     const marcaMap = new Map<string, Map<string, number>>()
