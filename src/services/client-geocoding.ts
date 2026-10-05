@@ -350,13 +350,90 @@ export async function resolveClientCoordinates(
 /**
  * Persiste as coordenadas resolvidas de volta no registro do PocketBase caso o cliente ainda não as tenha salvas.
  */
+/**
+ * Aplica um offset determinístico suave para clientes que compartilham as mesmas coordenadas (ex.: mesmo centróide de cidade).
+ * Evita sobreposição perfeita sem alterar a coordenada original persistida.
+ */
+export function applyDeterministicCoordinateOffset<
+  T extends { id?: string; latitude?: number; longitude?: number; precisao?: string },
+>(items: T[]): (T & { displayLat: number; displayLng: number; hasOffset: boolean })[] {
+  // Agrupar por chave de coordenada arredondada para 4 casas (~11 metros)
+  const groups = new Map<string, T[]>()
+
+  items.forEach((item) => {
+    const lat = item.latitude
+    const lng = item.longitude
+    if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
+      return
+    }
+    const key = `${lat.toFixed(4)},${lng.toFixed(4)}`
+    const list = groups.get(key) || []
+    list.push(item)
+    groups.set(key, list)
+  })
+
+  return items.map((item) => {
+    const lat = item.latitude ?? 0
+    const lng = item.longitude ?? 0
+    const key = `${lat.toFixed(4)},${lng.toFixed(4)}`
+    const group = groups.get(key) || []
+
+    if (group.length <= 1) {
+      return {
+        ...item,
+        displayLat: lat,
+        displayLng: lng,
+        hasOffset: false,
+      }
+    }
+
+    // Índice determinístico ordenado por ID
+    const sortedGroup = [...group].sort((a, b) => (a.id || '').localeCompare(b.id || ''))
+    const idx = sortedGroup.findIndex((g) => (g.id || '') === (item.id || ''))
+    const safeIdx = idx >= 0 ? idx : 0
+
+    if (safeIdx === 0) {
+      return {
+        ...item,
+        displayLat: lat,
+        displayLng: lng,
+        hasOffset: false,
+      }
+    }
+
+    // Distribuição espiral / circular de raio pequeno (~150m a 600m)
+    // 0.001 graus de latitude ~= 111 metros
+    const angle = (safeIdx * 137.5 * Math.PI) / 180 // ângulo áureo
+    const radiusMeters = 0.0018 + Math.floor(safeIdx / 6) * 0.0012 // raio escalonado
+    const offsetLat = Math.sin(angle) * radiusMeters
+    const offsetLng = Math.cos(angle) * radiusMeters
+
+    return {
+      ...item,
+      displayLat: lat + offsetLat,
+      displayLng: lng + offsetLng,
+      hasOffset: true,
+    }
+  })
+}
+
+/**
+ * Persiste as coordenadas resolvidas de volta no registro do PocketBase caso o cliente ainda não as tenha salvas.
+ */
 export async function persistResolvedCoordinates(
   clientId: string,
   resolved: GeocodeResolutionResult,
 ): Promise<void> {
   if (!clientId) return
   try {
-    const payload: Record<string, any> = {
+    const payload: {
+      precisao: GeocodePrecisao
+      latitude?: number | null
+      longitude?: number | null
+      lat?: number | null
+      lng?: number | null
+      geocode_precision?: string
+    } = {
       precisao: resolved.precisao,
     }
     if (typeof resolved.latitude === 'number' && typeof resolved.longitude === 'number') {
@@ -380,7 +457,7 @@ export async function persistResolvedCoordinates(
     }
 
     await pb.collection('factories').update(clientId, payload)
-  } catch (err) {
+  } catch (err: unknown) {
     console.warn('[Geocoding] Falha ao persistir coordenadas no cliente:', clientId, err)
   }
 }

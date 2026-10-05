@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
@@ -27,14 +28,15 @@ import {
   Compass,
   Maximize2,
   Minimize2,
+  PlusCircle,
+  Edit,
+  AlertCircle,
+  HelpCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
 import { useGlobalData } from '@/store/GlobalDataProvider'
-import { updateFactoryPB } from '@/services/factories'
-import { type GestaoTecnica } from '@/services/gestao-tecnica'
 import { getScopedFactories } from '@/lib/user-scope'
-import { getIsEnrichmentInProgress, subscribeEnrichmentStatus } from '@/services/enrichment-service'
 import { factoryMatchesVendedor } from '@/lib/vendedorFilterHelper'
 import { normalizeArray } from '@/lib/utils'
 import { BLINK_LOCATIONS, BLINK_MARINGA_CD } from '@/constants/blinkLocations'
@@ -47,33 +49,23 @@ import {
   getFunnelCategory,
   FUNNEL_CATEGORY_OPTIONS,
   FUNNEL_CATEGORY_COLORS,
-  type FunnelCategory,
 } from '@/lib/funnel-status'
 import { useOsrmRoute } from '@/hooks/use-osrm-route'
 import {
-  buildPeerCityCache,
-  getCityCoordinateSync,
-  resolveLocationFallbackSync,
-  fetchCityCoordinateNominatim,
-} from '@/services/city-coordinates'
-import type { Factory } from '@/types'
+  resolveClientCoordinates,
+  persistResolvedCoordinates,
+  applyDeterministicCoordinateOffset,
+  type GeocodePrecisao,
+} from '@/services/client-geocoding'
+import { ClienteFormDialog } from '@/components/ClienteFormDialog'
+import type { Factory, GestaoTecnica } from '@/types'
 
-// Window.L is declared in src/components/ClientsMapDialog.tsx
-
-const ADDRESS_STATUS_LABELS: Record<string, string> = {
-  complete: 'Completo',
-  partial: 'Parcial',
-  inconsistent: 'Inconsistente',
-  enriched: 'Enriquecido',
-  failed: 'Falha',
-}
-
-const GEOCODE_PRECISION_LABELS: Record<string, string> = {
-  exact: 'Exata (Número)',
-  street: 'Rua/Logradouro',
-  city: 'Aprox. Cidade/Município',
-  state: 'Aprox. Centro do Estado (UF)',
-  failed: 'Falha',
+const PRECISÃO_LABELS: Record<string, string> = {
+  exata: 'Exata (Salva/Número)',
+  rua: 'Rua/Logradouro',
+  bairro: 'Bairro/CEP',
+  cidade: 'Aprox. Cidade',
+  'sem-localizacao': 'Sem Localização',
 }
 
 export default function MapaClientes() {
@@ -89,11 +81,24 @@ export default function MapaClientes() {
   const [search, setSearch] = useState('')
   const [vendedorFilter, setVendedorFilter] = useState('all')
   const [funnelStatusFilter, setFunnelStatusFilter] = useState<string>('all')
-  const [addressStatusFilter, setAddressStatusFilter] = useState('all')
+  const [precisionFilter, setPrecisionFilter] = useState<string>('all')
   const [profileFilter, setProfileFilter] = useState('all')
   const [showBlinkLocations, setShowBlinkLocations] = useState(true)
   const [selectedClient, setSelectedClient] = useState<Factory | null>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [activeTab, setActiveTab] = useState<'plotados' | 'sem_localizacao'>('plotados')
+
+  // Estado para cadastro/edição de cliente sem localização ou via botão "Novo Cliente"
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [clientToEdit, setClientToEdit] = useState<Factory | null>(null)
+
+  // Resolução assíncrona única com cache de clientes que ainda não têm coordenadas salvas
+  const [resolvingCoords, setResolvingCoords] = useState(false)
+  const resolvedCacheRef = useRef<
+    Map<string, { latitude?: number; longitude?: number; precisao: GeocodePrecisao }>
+  >(new Map())
+  const hasTriggeredResolutionRef = useRef(false)
+  const hasShownSuccessToastRef = useRef(false)
 
   const { calculating, route, calculateRouteToCD, clearRoute } = useOsrmRoute()
 
@@ -108,232 +113,153 @@ export default function MapaClientes() {
     userRef.current = user
   }, [user])
 
-  // Clientes com escopo de permissão do usuário aplicados
+  // Clientes com escopo de permissão
   const factories = useMemo(() => {
     return getScopedFactories(globalFactories, userRef.current)
   }, [globalFactories])
 
-  const gestaoTecnicaList = globalGestaoTecnica || []
-  const loading = factoriesState.loading && factories.length === 0
+  const gestaoTecnicaList: GestaoTecnica[] = (globalGestaoTecnica as GestaoTecnica[]) || []
+
+  // Estados principais de UX (Loading, Empty, Error, Success)
+  const initialLoading = factoriesState.loading && factories.length === 0
+  const isResolving = initialLoading || resolvingCoords
+  const isError = Boolean(factoriesState.error && factories.length === 0)
+  const isEmpty = !factoriesState.loading && factories.length === 0 && !isError
 
   const loadData = useCallback(async () => {
-    await Promise.all([refreshCollection('factories'), refreshCollection('gestao_tecnica')])
+    try {
+      hasTriggeredResolutionRef.current = false
+      hasShownSuccessToastRef.current = false
+      await Promise.all([refreshCollection('factories'), refreshCollection('gestao_tecnica')])
+    } catch (err: unknown) {
+      console.warn('[MapaClientes] Erro ao recarregar:', err)
+    }
   }, [refreshCollection])
 
-  // Ref para pausar/ignorar eventos realtime durante enriquecimento em lote
-  const isEnrichingRef = useRef(getIsEnrichmentInProgress())
+  // 1. Resolução única e controlada por cache de clientes que ainda não possuem latitude/longitude persistidas
   useEffect(() => {
-    return subscribeEnrichmentStatus((inProgress) => {
-      const wasEnriching = isEnrichingRef.current
-      isEnrichingRef.current = inProgress
-      // Quando o enriquecimento finaliza, dispara UMA sincronização consolidada em segundo plano
-      if (wasEnriching && !inProgress) {
-        void refreshCollection('factories')
+    if (factories.length === 0 || hasTriggeredResolutionRef.current) return
+
+    const clientsNeedingResolution = factories.filter((f) => {
+      const lat = f.latitude ?? f.lat
+      const lng = f.longitude ?? f.lng
+      const hasCoords =
+        typeof lat === 'number' &&
+        typeof lng === 'number' &&
+        !isNaN(lat) &&
+        !isNaN(lng) &&
+        lat !== 0 &&
+        lng !== 0
+
+      // Se já tem coordenadas salvas ou já está marcado com sem-localizacao, não precisa resolver
+      if (hasCoords) return false
+      if (f.precisao === 'sem-localizacao') return false
+      if (resolvedCacheRef.current.has(f.id)) return false
+      return true
+    })
+
+    if (clientsNeedingResolution.length === 0) {
+      // Nenhum cliente precisando de resolução: mapa já pronto
+      if (!hasShownSuccessToastRef.current && factories.length > 0) {
+        hasShownSuccessToastRef.current = true
+        toast.success('Mapa atualizado')
+      }
+      return
+    }
+
+    hasTriggeredResolutionRef.current = true
+    let isCancelled = false
+
+    const runResolution = async () => {
+      setResolvingCoords(true)
+      try {
+        for (const client of clientsNeedingResolution) {
+          if (isCancelled) break
+          try {
+            const res = await resolveClientCoordinates(client)
+            resolvedCacheRef.current.set(client.id, res)
+            // Persistir UMA única vez de volta no PocketBase
+            await persistResolvedCoordinates(client.id, res)
+          } catch (err: unknown) {
+            console.warn('[MapaClientes] Falha ao resolver cliente:', client.name, err)
+            resolvedCacheRef.current.set(client.id, {
+              latitude: undefined,
+              longitude: undefined,
+              precisao: 'sem-localizacao',
+            })
+          }
+        }
+        if (!isCancelled) {
+          notifyDataChanged('factories')
+          if (!hasShownSuccessToastRef.current) {
+            hasShownSuccessToastRef.current = true
+            toast.success('Mapa atualizado')
+          }
+        }
+      } catch (err: unknown) {
+        console.warn('[MapaClientes] Erro durante ciclo de resolução:', err)
+      } finally {
+        if (!isCancelled) {
+          setResolvingCoords(false)
+        }
+      }
+    }
+
+    void runResolution()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [factories, notifyDataChanged])
+
+  // 2. Separação estrita dos clientes:
+  // - clientsWithCoords: possuem latitude e longitude válidas E precisao != 'sem-localizacao'
+  // - clientsWithoutCoords: precisao === 'sem-localizacao' OU sem coordenadas válidas
+  const { clientsWithCoords, clientsWithoutCoords } = useMemo(() => {
+    const withCoords: Factory[] = []
+    const withoutCoords: Factory[] = []
+
+    factories.forEach((f) => {
+      const cached = resolvedCacheRef.current.get(f.id)
+      const lat = f.latitude ?? f.lat ?? cached?.latitude
+      const lng = f.longitude ?? f.lng ?? cached?.longitude
+      const precisao = (cached?.precisao ||
+        f.precisao ||
+        (lat && lng ? 'exata' : 'sem-localizacao')) as GeocodePrecisao
+
+      const hasValidCoords =
+        typeof lat === 'number' &&
+        typeof lng === 'number' &&
+        !isNaN(lat) &&
+        !isNaN(lng) &&
+        lat !== 0 &&
+        lng !== 0
+
+      if (hasValidCoords && precisao !== 'sem-localizacao') {
+        withCoords.push({
+          ...f,
+          latitude: lat,
+          longitude: lng,
+          lat,
+          lng,
+          precisao,
+        })
+      } else {
+        withoutCoords.push({
+          ...f,
+          latitude: undefined,
+          longitude: undefined,
+          lat: undefined,
+          lng: undefined,
+          precisao: 'sem-localizacao',
+        })
       }
     })
-  }, [refreshCollection])
 
-  // Ref para controlar clientes já persistidos ou em persistência na sessão (evita escritas repetidas)
-  const persistedClientIdsRef = useRef<Set<string>>(new Set())
-
-  // Async city resolution state: guarda coordenadas resolvidas dinamicamente via Nominatim
-  const [asyncResolvedCoords, setAsyncResolvedCoords] = useState<
-    Record<string, { lat: number; lng: number }>
-  >({})
-
-  // 1. Constrói o cache de cidades a partir dos clientes que já têm coordenadas exatas válidas
-  useEffect(() => {
-    buildPeerCityCache(factories)
+    return { clientsWithCoords: withCoords, clientsWithoutCoords: withoutCoords }
   }, [factories])
 
-  // 2. Enriquecimento de clientes sem coordenadas com centro da cidade ou centro do estado (síncrono via cache estático/peer/UF)
-  const enrichedFactories = useMemo(() => {
-    return factories.map((f) => {
-      const lat = f.lat ?? f.coordinates?.lat
-      const lng = f.lng ?? f.coordinates?.lng
-      const hasDirectCoord =
-        typeof lat === 'number' &&
-        typeof lng === 'number' &&
-        !isNaN(lat) &&
-        !isNaN(lng) &&
-        lat !== 0 &&
-        lng !== 0
-
-      // Se já tem coordenadas reais, NUNCA é movido
-      if (hasDirectCoord) {
-        return {
-          ...f,
-          isApproximateCity: f.geocode_precision === 'city',
-          isApproximateState: f.geocode_precision === 'state',
-          locationFallbackPrecision:
-            f.geocode_precision === 'city'
-              ? ('city' as const)
-              : f.geocode_precision === 'state'
-                ? ('state' as const)
-                : ('exact' as const),
-        }
-      }
-
-      // Procura primeiro em asyncResolvedCoords (descoberta via Nominatim)
-      if (asyncResolvedCoords[f.id]) {
-        const c = asyncResolvedCoords[f.id]
-        return {
-          ...f,
-          lat: c.lat,
-          lng: c.lng,
-          coordinates: { lat: c.lat, lng: c.lng },
-          geocode_precision: 'city',
-          isApproximateCity: true,
-          isApproximateState: false,
-          locationFallbackPrecision: 'city' as const,
-        }
-      }
-
-      // Procura resolução imediata por cidade e, como fallback, por UF (estado)
-      const locationFallback = resolveLocationFallbackSync(f.city, f.state)
-      if (locationFallback) {
-        const isCity = locationFallback.precision === 'city'
-        const isState = locationFallback.precision === 'state'
-        return {
-          ...f,
-          lat: locationFallback.lat,
-          lng: locationFallback.lng,
-          coordinates: { lat: locationFallback.lat, lng: locationFallback.lng },
-          geocode_precision: isCity ? 'city' : 'state',
-          isApproximateCity: isCity,
-          isApproximateState: isState,
-          locationFallbackPrecision: isCity ? ('city' as const) : ('state' as const),
-        }
-      }
-
-      // Sem coordenadas e sem cidade/estado resolvível
-      return f
-    })
-  }, [factories, asyncResolvedCoords])
-
-  // 3. Clientes sem coordenadas que possuem cidade e ainda não foram resolvidos: dispara Nominatim em background (não bloqueante)
-  useEffect(() => {
-    const unresolved = factories.filter((f) => {
-      const lat = f.lat ?? f.coordinates?.lat
-      const lng = f.lng ?? f.coordinates?.lng
-      const hasDirectCoord =
-        typeof lat === 'number' &&
-        typeof lng === 'number' &&
-        !isNaN(lat) &&
-        !isNaN(lng) &&
-        lat !== 0 &&
-        lng !== 0
-      if (hasDirectCoord) return false
-      if (asyncResolvedCoords[f.id]) return false
-      if (!f.city || !f.city.trim()) return false
-      const syncMatch = getCityCoordinateSync(f.city, f.state)
-      return !syncMatch
-    })
-
-    if (unresolved.length === 0) return
-
-    let cancelled = false
-    const resolveAsync = async () => {
-      // Agrupa por cidade para não disparar consultas repetidas
-      const cityMap = new Map<string, { city: string; state?: string; clientIds: string[] }>()
-      unresolved.forEach((f) => {
-        const key = `${(f.city || '').toLowerCase()}-${(f.state || '').toLowerCase()}`
-        const group = cityMap.get(key) || { city: f.city, state: f.state, clientIds: [] }
-        group.clientIds.push(f.id)
-        cityMap.set(key, group)
-      })
-
-      for (const group of cityMap.values()) {
-        if (cancelled) break
-        const coord = await fetchCityCoordinateNominatim(group.city, group.state)
-        if (coord && !cancelled) {
-          setAsyncResolvedCoords((prev) => {
-            const next = { ...prev }
-            group.clientIds.forEach((id) => {
-              next[id] = { lat: coord.lat, lng: coord.lng }
-            })
-            return next
-          })
-        }
-      }
-    }
-
-    resolveAsync()
-    return () => {
-      cancelled = true
-    }
-  }, [factories, asyncResolvedCoords])
-
-  // 4. Persistência em lote das coordenadas resolvidas no PocketBase (sem sobrescrever clientes existentes, debounce em lote)
-  useEffect(() => {
-    // Apenas persiste se não estiver enriquecendo via backend oficial e se houver novos clientes resolvidos
-    if (isEnrichingRef.current) return
-
-    const toPersist: Array<{ id: string; lat: number; lng: number; precision: string }> = []
-
-    enrichedFactories.forEach((f) => {
-      // Apenas clientes que originalmente não tinham lat/lng no banco e agora têm aproximação de cidade ou estado
-      const original = factories.find((orig) => orig.id === f.id)
-      const origLat = original?.lat ?? original?.coordinates?.lat
-      const origLng = original?.lng ?? original?.coordinates?.lng
-      const hadNoCoords =
-        typeof origLat !== 'number' ||
-        typeof origLng !== 'number' ||
-        isNaN(origLat) ||
-        isNaN(origLng) ||
-        (origLat === 0 && origLng === 0)
-
-      if (hadNoCoords && f.lat && f.lng && (f.isApproximateCity || f.isApproximateState)) {
-        if (!persistedClientIdsRef.current.has(f.id)) {
-          toPersist.push({
-            id: f.id,
-            lat: f.lat,
-            lng: f.lng,
-            precision: f.isApproximateCity ? 'city' : 'state',
-          })
-        }
-      }
-    })
-
-    if (toPersist.length === 0) return
-
-    // Debounce de 1.5s antes de salvar em lote sequencial suave sem flood
-    const timer = setTimeout(async () => {
-      for (const item of toPersist) {
-        persistedClientIdsRef.current.add(item.id)
-        try {
-          await updateFactoryPB(item.id, {
-            lat: item.lat,
-            lng: item.lng,
-            geocode_precision: item.precision,
-          })
-          notifyDataChanged('factories')
-        } catch (err) {
-          console.warn('[mapa] persistencia de fallback falhou para cliente', item.id, err)
-        }
-      }
-    }, 1500)
-
-    return () => clearTimeout(timer)
-  }, [enrichedFactories, factories, notifyDataChanged])
-
-  // Clientes com coordenadas válidas (diretas ou cidade aproximada)
-  const validFactories = useMemo(() => {
-    return enrichedFactories.filter((f) => {
-      const lat = f.lat ?? f.coordinates?.lat
-      const lng = f.lng ?? f.coordinates?.lng
-      return (
-        typeof lat === 'number' &&
-        typeof lng === 'number' &&
-        !isNaN(lat) &&
-        !isNaN(lng) &&
-        lat !== 0 &&
-        lng !== 0
-      )
-    })
-  }, [enrichedFactories])
-
-  // Opções dinâmicas de membros ATIVOS da gestão técnica (mesmo critério de /cadastro: m.ativo !== false)
+  // Opções dinâmicas de membros ativos da gestão técnica
   const dynamicVendedoresOptions = useMemo(() => {
     const vends = new Set<string>()
     gestaoTecnicaList.forEach((m) => {
@@ -344,14 +270,14 @@ export default function MapaClientes() {
     return Array.from(vends).sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }, [gestaoTecnicaList])
 
-  // Contagem estática por categoria sobre o conjunto completo de clientes carregados
+  // Contagem por perfil sobre todos os clientes
   const profileCategoryCounts = useMemo(() => {
     return countClientsByCategory(factories)
   }, [factories])
 
-  // Filtros aplicados sobre os clientes com coordenadas válidas (diretas ou cidade aproximada)
-  const filteredFactories = useMemo(() => {
-    return validFactories.filter((f) => {
+  // Filtros aplicados sobre os clientes com coordenadas
+  const filteredClientsWithCoords = useMemo(() => {
+    return clientsWithCoords.filter((f) => {
       if (!f) return false
       if (search.trim()) {
         const q = search.toLowerCase()
@@ -369,8 +295,8 @@ export default function MapaClientes() {
         const cat = getFunnelCategory(f)
         if (cat !== funnelStatusFilter) return false
       }
-      if (addressStatusFilter !== 'all') {
-        if (f.address_status !== addressStatusFilter) return false
+      if (precisionFilter !== 'all') {
+        if (f.precisao !== precisionFilter) return false
       }
       if (profileFilter !== 'all') {
         const profs = normalizeArray(f.profile_type)
@@ -382,14 +308,50 @@ export default function MapaClientes() {
       return true
     })
   }, [
-    validFactories,
+    clientsWithCoords,
     search,
     vendedorFilter,
     funnelStatusFilter,
-    addressStatusFilter,
+    precisionFilter,
     profileFilter,
   ])
 
+  // Filtros aplicados sobre os clientes sem localização
+  const filteredClientsWithoutCoords = useMemo(() => {
+    return clientsWithoutCoords.filter((f) => {
+      if (!f) return false
+      if (search.trim()) {
+        const q = search.toLowerCase()
+        const matchName = f.name?.toLowerCase()?.includes(q) ?? false
+        const matchCity = f.city?.toLowerCase()?.includes(q) ?? false
+        const matchState = f.state?.toLowerCase()?.includes(q) ?? false
+        const matchVendedor = f.vendedor_name?.toLowerCase()?.includes(q) ?? false
+        if (!matchName && !matchCity && !matchState && !matchVendedor) return false
+      }
+      if (vendedorFilter !== 'all') {
+        if (!factoryMatchesVendedor(f, vendedorFilter)) return false
+      }
+      if (funnelStatusFilter !== 'all') {
+        const cat = getFunnelCategory(f)
+        if (cat !== funnelStatusFilter) return false
+      }
+      if (profileFilter !== 'all') {
+        const profs = normalizeArray(f.profile_type)
+        if (f.carteira && f.carteira.trim() && !profs.includes(f.carteira.trim())) {
+          profs.push(f.carteira.trim())
+        }
+        if (!matchesAnyProfileCategory(profs, [profileFilter])) return false
+      }
+      return true
+    })
+  }, [clientsWithoutCoords, search, vendedorFilter, funnelStatusFilter, profileFilter])
+
+  // Aplicação do offset determinístico suave para clientes com as mesmas coordenadas
+  const plottedClientsWithOffset = useMemo(() => {
+    return applyDeterministicCoordinateOffset(filteredClientsWithCoords)
+  }, [filteredClientsWithCoords])
+
+  // Invalidação de tamanho ao alternar tela cheia
   useEffect(() => {
     if (mapInstanceRef.current) {
       setTimeout(() => {
@@ -406,7 +368,6 @@ export default function MapaClientes() {
       if (!window.L || !mapContainerRef.current) return
 
       if (!mapInstanceRef.current) {
-        // Centro do Brasil: [-14.235, -51.925], zoom 4
         const map = window.L.map(mapContainerRef.current, {
           center: [-14.235, -51.925],
           zoom: 4,
@@ -436,23 +397,20 @@ export default function MapaClientes() {
       }
     }
 
-    let intervalId: any = null
+    let intervalId: ReturnType<typeof setInterval> | null = null
     if (window.L) {
       initLeaflet()
     } else {
       intervalId = setInterval(() => {
         if (window.L) {
-          clearInterval(intervalId)
-          intervalId = null
+          if (intervalId) clearInterval(intervalId)
           initLeaflet()
         }
       }, 100)
     }
 
     return () => {
-      if (intervalId) {
-        clearInterval(intervalId)
-      }
+      if (intervalId) clearInterval(intervalId)
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove()
         mapInstanceRef.current = null
@@ -463,7 +421,7 @@ export default function MapaClientes() {
     }
   }, [])
 
-  // Atualização dos Pontos Fixos Blink no Mapa
+  // Pontos Fixos Blink
   useEffect(() => {
     if (!mapInstanceRef.current || !blinkLayerRef.current || !window.L) return
 
@@ -474,7 +432,6 @@ export default function MapaClientes() {
     if (!showBlinkLocations) return
 
     BLINK_LOCATIONS.forEach((loc) => {
-      // Marcador com cor dourada (#F5C518 / #d97706) e ícone industrial/predial
       const isCD = loc.type === 'cd'
       const pinColor = isCD ? '#F5C518' : '#0f172a'
       const iconTextColor = isCD ? '#0f172a' : '#F5C518'
@@ -513,7 +470,6 @@ export default function MapaClientes() {
       })
 
       const marker = L.marker([loc.lat, loc.lng], { icon: blinkIcon, zIndexOffset: 1000 })
-
       const popupContent = `
         <div style="font-family: sans-serif; font-size: 13px; min-width: 240px; padding: 4px;">
           <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
@@ -531,18 +487,23 @@ export default function MapaClientes() {
     })
   }, [showBlinkLocations])
 
-  // Referência para calcular rota dentro dos popups sem recriar marcadores
+  // Manipulador de rota
   const handleCalculateRouteRef = useRef<(f: Factory) => void>(() => {})
+  const handleCalculateRoute = useCallback(
+    (f: Factory) => {
+      const lat = f.latitude ?? f.lat
+      const lng = f.longitude ?? f.lng
+      calculateRouteToCD(f.name, lat, lng)
+    },
+    [calculateRouteToCD],
+  )
+  useEffect(() => {
+    handleCalculateRouteRef.current = handleCalculateRoute
+  }, [handleCalculateRoute])
 
-  // Chave de identificação dos clientes filtrados para evitar recriar markers se os IDs não mudarem
-  const filteredFactoriesKey = useMemo(() => {
-    return filteredFactories.map((f) => f.id).join(',')
-  }, [filteredFactories])
-
-  // Flag para controlar o fitBounds inicial (evita resetar o zoom/pan do usuário a cada pequeno update)
   const initialFitBoundsDone = useRef(false)
 
-  // Atualização dos Marcadores de Clientes no Mapa
+  // Renderização dos pins com fade-in suave, estilo mais leve para "cidade" e "bairro", e offset determinístico
   useEffect(() => {
     if (!mapInstanceRef.current || !markersLayerRef.current || !window.L) return
 
@@ -552,57 +513,51 @@ export default function MapaClientes() {
 
     markersLayer.clearLayers()
 
-    if (filteredFactories.length === 0) return
+    if (plottedClientsWithOffset.length === 0) return
 
     const bounds = L.latLngBounds([])
-
-    // Adiciona pontos de referência aos bounds caso visíveis
     if (showBlinkLocations) {
       BLINK_LOCATIONS.forEach((l) => bounds.extend([l.lat, l.lng]))
     }
 
-    filteredFactories.forEach((f) => {
-      const lat = (f.lat ?? f.coordinates?.lat)!
-      const lng = (f.lng ?? f.coordinates?.lng)!
+    plottedClientsWithOffset.forEach((f) => {
+      const lat = f.displayLat
+      const lng = f.displayLng
 
-      const isCityApprox = f.isApproximateCity || f.geocode_precision === 'city'
-      const isStateApprox = f.isApproximateState || f.geocode_precision === 'state'
-      const isApproximate = isCityApprox || isStateApprox
+      const precisao = (f.precisao || 'exata') as GeocodePrecisao
+      const isApproximate = precisao === 'cidade' || precisao === 'bairro'
+      const isCity = precisao === 'cidade'
+      const isBairro = precisao === 'bairro'
 
-      // Cor do pin baseada EXCLUSIVAMENTE na categoria do funil de vendas:
-      // Ativos -> Azul (#2563eb)
-      // Prospectos -> Verde (#16a34a)
-      // Inativos -> Amarelo (#eab308)
-      // Negociação encerrada -> Vermelho (#dc2626)
+      // Cor de base pelo funil de vendas
       const funnelCat = getFunnelCategory(f)
-      const pinColor = FUNNEL_CATEGORY_COLORS[funnelCat]
+      const baseColor = FUNNEL_CATEGORY_COLORS[funnelCat] || '#2563eb'
 
-      // Resolução de conflito visual:
-      // A precisão da localização (Exato, Centróide de Cidade "CID" ou Centróide de Estado "UF")
-      // é comunicada através da forma/badge interna do pin e pelo contorno:
-      // - UF: badge com texto "UF" (fundo roxo escuro translúcido para contraste) + anel tracejado
-      // - CID: badge com texto "CID" (fundo azul escuro translúcido para contraste) + anel pontilhado
-      // - Exato: ponto branco central padrão + anel sólido duplo branco
-      // A cor do corpo do pin SEMPRE expressa o Status do Funil de Vendas (Azul/Verde/Amarelo/Vermelho).
-      const borderStyle = isStateApprox
-        ? '2.5px dashed #ffffff'
-        : isCityApprox
+      // Para precisão "cidade" e "bairro", estilo mais claro/leve sinalizando aproximação
+      const pinOpacity = isApproximate ? 0.78 : 1.0
+      const borderStyle = isCity
+        ? '2px dashed #ffffff'
+        : isBairro
           ? '2px dotted #ffffff'
           : '2px solid #ffffff'
 
-      const innerBadgeHtml = isStateApprox
-        ? `<div style="transform: rotate(45deg); display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.45); border-radius: 3px; padding: 1px 2px;"><span style="font-size: 8px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px; line-height: 1;">UF</span></div>`
-        : isCityApprox
-          ? `<div style="transform: rotate(45deg); display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.45); border-radius: 3px; padding: 1px 2px;"><span style="font-size: 8px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px; line-height: 1;">CID</span></div>`
-          : `<div style="width: 8px; height: 8px; background-color: #ffffff; border-radius: 50%; transform: rotate(45deg); box-shadow: 0 1px 2px rgba(0,0,0,0.4);"></div>`
+      const pinSize = isApproximate ? 30 : 26
+      const shadowStyle = isApproximate
+        ? '0 2px 6px rgba(0,0,0,0.25)'
+        : '0 3px 10px rgba(0,0,0,0.4)'
 
-      const pinSize = isApproximate ? 32 : 28
+      const innerBadgeHtml = isCity
+        ? `<div style="transform: rotate(45deg); display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.55); border-radius: 3px; padding: 1px 2px;"><span style="font-size: 8px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px; line-height: 1;">CID</span></div>`
+        : isBairro
+          ? `<div style="transform: rotate(45deg); display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.55); border-radius: 3px; padding: 1px 2px;"><span style="font-size: 8px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px; line-height: 1;">BAI</span></div>`
+          : `<div style="width: 7px; height: 7px; background-color: #ffffff; border-radius: 50%; transform: rotate(45deg); box-shadow: 0 1px 2px rgba(0,0,0,0.4);"></div>`
 
       const customIcon = L.divIcon({
-        className: 'custom-map-pin',
+        className: 'custom-map-pin animate-fade-in',
         html: `
           <div style="
-            background-color: ${pinColor};
+            background-color: ${baseColor};
+            opacity: ${pinOpacity};
             width: ${pinSize}px;
             height: ${pinSize}px;
             border-radius: 50% 50% 50% 0;
@@ -610,10 +565,10 @@ export default function MapaClientes() {
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+            box-shadow: ${shadowStyle};
             border: ${borderStyle};
             cursor: pointer;
-            position: relative;
+            transition: transform 0.2s ease;
           ">
             ${innerBadgeHtml}
           </div>
@@ -624,13 +579,7 @@ export default function MapaClientes() {
       })
 
       const marker = L.marker([lat, lng], { icon: customIcon })
-
-      const statusLabel = f.address_status
-        ? ADDRESS_STATUS_LABELS[f.address_status] || f.address_status
-        : 'Não informado'
-      const precisionLabel = f.geocode_precision
-        ? GEOCODE_PRECISION_LABELS[f.geocode_precision] || f.geocode_precision
-        : 'Não informada'
+      const precisionLabel = PRECISÃO_LABELS[precisao] || precisao
       const cityState = [f.city, f.state].filter(Boolean).join(' - ') || 'Localidade não informada'
       const perfilLabel = normalizeArray(f.profile_type).join(', ') || 'Não informado'
 
@@ -651,30 +600,32 @@ export default function MapaClientes() {
               ? '#854d0e'
               : '#991b1b'
 
+      const addressDetail = [
+        f.logradouro ? `${f.logradouro}${f.numero ? `, ${f.numero}` : ''}` : null,
+        f.bairro,
+        f.cep ? `CEP: ${f.cep}` : null,
+      ]
+        .filter(Boolean)
+        .join(' - ')
+
       const popupContent = `
-        <div style="font-family: sans-serif; font-size: 13px; min-width: 240px; padding: 2px;">
+        <div style="font-family: sans-serif; font-size: 13px; min-width: 250px; padding: 2px;">
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px;">
             <h4 style="font-weight: 700; font-size: 14px; margin: 0; color: #0f172a;">${f.name}</h4>
-            <span style="font-weight: 700; font-size: 10px; padding: 2px 7px; border-radius: 9999px; background: ${funnelBadgeBg}; color: ${funnelBadgeColor}; white-space: nowrap; border: 1px solid ${pinColor}40;">
+            <span style="font-weight: 700; font-size: 10px; padding: 2px 7px; border-radius: 9999px; background: ${funnelBadgeBg}; color: ${funnelBadgeColor}; white-space: nowrap;">
               ${funnelCat}
             </span>
           </div>
-          <p style="margin: 0 0 4px 0; color: #475569; font-size: 12px;"><strong>Localização:</strong> ${cityState}</p>
+          <p style="margin: 0 0 4px 0; color: #475569; font-size: 12px;"><strong>Cidade/UF:</strong> ${cityState}</p>
+          ${addressDetail ? `<p style="margin: 0 0 4px 0; color: #64748b; font-size: 11px;">${addressDetail}</p>` : ''}
           <p style="margin: 0 0 6px 0; color: #475569; font-size: 12px;"><strong>Perfil / Carteira:</strong> ${perfilLabel}</p>
-          <div style="margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-            <span style="color: #64748b; font-size: 12px;">Status do Funil:</span>
-            <span style="font-weight: 700; font-size: 11px; padding: 2px 6px; border-radius: 4px; background: ${funnelBadgeBg}; color: ${funnelBadgeColor};">${funnelCat}</span>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 4px; border-top: 1px solid #e2e8f0;">
+            <span style="color: #64748b; font-size: 11px;">Precisão:</span>
+            <span style="font-weight: 600; font-size: 11px; padding: 2px 6px; border-radius: 4px; background: ${isApproximate ? '#fef3c7' : '#e2e8f0'}; color: ${isApproximate ? '#92400e' : '#1e293b'};">
+              ${precisionLabel}${f.hasOffset ? ' (offset suave)' : ''}
+            </span>
           </div>
-          <div style="margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-            <span style="color: #64748b; font-size: 12px;">Status Endereço:</span>
-            <span style="font-weight: 600; font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #e2e8f0; color: #1e293b;">${statusLabel}</span>
-          </div>
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-            <span style="color: #64748b; font-size: 12px;">Precisão Geocode:</span>
-            <span style="font-weight: 600; font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #e2e8f0; color: #1e293b;">${precisionLabel}</span>
-          </div>
-          ${f.standardized_address ? `<p style="margin: 6px 0 0 0; padding-top: 4px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b;">${f.standardized_address}</p>` : ''}
-          <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 6px;">
+          <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 6px;">
             <button
               id="btn-rota-${f.id}"
               style="
@@ -724,7 +675,6 @@ export default function MapaClientes() {
       marker.on('click', () => {
         setSelectedClient(f)
       })
-
       marker.on('popupopen', () => {
         const btn = document.getElementById(`btn-rota-${f.id}`)
         if (btn) {
@@ -742,36 +692,9 @@ export default function MapaClientes() {
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 })
       initialFitBoundsDone.current = true
     }
-  }, [filteredFactoriesKey, showBlinkLocations])
+  }, [plottedClientsWithOffset, showBlinkLocations])
 
-  // Quando o usuário alterar explicitamente os filtros, reajusta a área do mapa aos resultados
-  useEffect(() => {
-    if (!mapInstanceRef.current || !window.L || filteredFactories.length === 0) return
-    const L = window.L
-    const bounds = L.latLngBounds([])
-    if (showBlinkLocations) {
-      BLINK_LOCATIONS.forEach((l) => bounds.extend([l.lat, l.lng]))
-    }
-    filteredFactories.forEach((f) => {
-      const lat = f.lat ?? f.coordinates?.lat
-      const lng = f.lng ?? f.coordinates?.lng
-      if (typeof lat === 'number' && typeof lng === 'number' && lat !== 0 && lng !== 0) {
-        bounds.extend([lat, lng])
-      }
-    })
-    if (bounds.isValid()) {
-      mapInstanceRef.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 })
-    }
-  }, [
-    search,
-    vendedorFilter,
-    funnelStatusFilter,
-    addressStatusFilter,
-    profileFilter,
-    showBlinkLocations,
-  ])
-
-  // Desenho da Rota no Mapa
+  // Redesenho da rota Leaflet
   useEffect(() => {
     if (!mapInstanceRef.current || !routeLayerRef.current || !window.L) return
 
@@ -782,7 +705,6 @@ export default function MapaClientes() {
 
     if (!route || route.coordinates.length === 0) return
 
-    // Polyline principal da rota em azul vibrante
     const polyline = L.polyline(route.coordinates, {
       color: '#2563eb',
       weight: 5,
@@ -790,43 +712,33 @@ export default function MapaClientes() {
       lineCap: 'round',
       lineJoin: 'round',
     })
-
     polyline.addTo(routeLayer)
 
-    // Ajusta visualização do mapa para englobar a rota inteira
     const bounds = polyline.getBounds()
     if (bounds.isValid()) {
       map.fitBounds(bounds, { padding: [60, 60] })
     }
   }, [route])
 
-  const handleCalculateRoute = useCallback(
-    (f: Factory) => {
-      const lat = f.lat ?? f.coordinates?.lat
-      const lng = f.lng ?? f.coordinates?.lng
-      calculateRouteToCD(f.name, lat, lng)
-    },
-    [calculateRouteToCD],
-  )
-
-  useEffect(() => {
-    handleCalculateRouteRef.current = handleCalculateRoute
-  }, [handleCalculateRoute])
-
   const handleCenterOnClient = (f: Factory) => {
     setSelectedClient(f)
-    const lat = f.lat ?? f.coordinates?.lat
-    const lng = f.lng ?? f.coordinates?.lng
+    const lat = f.latitude ?? f.lat
+    const lng = f.longitude ?? f.lng
     if (mapInstanceRef.current && typeof lat === 'number' && typeof lng === 'number') {
       mapInstanceRef.current.setView([lat, lng], 14, { animate: true })
     }
+  }
+
+  const handleOpenClientForm = (client?: Factory) => {
+    setClientToEdit(client || null)
+    setDialogOpen(true)
   }
 
   const clearFilters = () => {
     setSearch('')
     setVendedorFilter('all')
     setFunnelStatusFilter('all')
-    setAddressStatusFilter('all')
+    setPrecisionFilter('all')
     setProfileFilter('all')
   }
 
@@ -834,7 +746,7 @@ export default function MapaClientes() {
     search.trim() !== '' ||
     vendedorFilter !== 'all' ||
     funnelStatusFilter !== 'all' ||
-    addressStatusFilter !== 'all' ||
+    precisionFilter !== 'all' ||
     profileFilter !== 'all'
 
   return (
@@ -854,13 +766,22 @@ export default function MapaClientes() {
 
         <div className="flex items-center gap-2">
           <Button
+            variant="default"
+            size="sm"
+            onClick={() => handleOpenClientForm()}
+            className="gap-2"
+          >
+            <PlusCircle className="w-4 h-4" />
+            Novo Cliente
+          </Button>
+          <Button
             variant="outline"
             size="sm"
             onClick={loadData}
-            disabled={loading}
+            disabled={isResolving}
             className="gap-2"
           >
-            {loading ? (
+            {isResolving ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <RotateCcw className="w-4 h-4" />
@@ -884,9 +805,9 @@ export default function MapaClientes() {
         <Card className="shadow-subtle">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Com Coordenadas</p>
+              <p className="text-xs font-medium text-muted-foreground">Plotados no Mapa</p>
               <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                {validFactories.length}
+                {clientsWithCoords.length}
               </p>
             </div>
             <MapPin className="w-8 h-8 text-emerald-500/40" />
@@ -896,7 +817,7 @@ export default function MapaClientes() {
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground">Exibidos no Filtro</p>
-              <p className="text-2xl font-bold text-primary">{filteredFactories.length}</p>
+              <p className="text-2xl font-bold text-primary">{filteredClientsWithCoords.length}</p>
             </div>
             <Layers className="w-8 h-8 text-primary/40" />
           </CardContent>
@@ -904,9 +825,9 @@ export default function MapaClientes() {
         <Card className="shadow-subtle">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Sem Coordenadas</p>
+              <p className="text-xs font-medium text-muted-foreground">Sem Localização</p>
               <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                {factories.length - validFactories.length}
+                {clientsWithoutCoords.length}
               </p>
             </div>
             <AlertTriangle className="w-8 h-8 text-amber-500/40" />
@@ -953,7 +874,7 @@ export default function MapaClientes() {
                     <SelectValue placeholder="Status do funil de vendas" />
                   </SelectTrigger>
                   <SelectContent className="z-[9999]">
-                    <SelectItem value="all">Status do funil de vendas: Todos</SelectItem>
+                    <SelectItem value="all">Status do funil: Todos</SelectItem>
                     {FUNNEL_CATEGORY_OPTIONS.map((cat) => (
                       <SelectItem key={cat} value={cat}>
                         <span className="flex items-center gap-2">
@@ -970,7 +891,7 @@ export default function MapaClientes() {
               </div>
 
               {/* Filtro Perfil/Categoria */}
-              <div className="w-full sm:w-[200px]">
+              <div className="w-full sm:w-[190px]">
                 <Select value={profileFilter} onValueChange={setProfileFilter}>
                   <SelectTrigger className="h-9 text-xs">
                     <SelectValue placeholder="Perfil / Categoria" />
@@ -986,19 +907,18 @@ export default function MapaClientes() {
                 </Select>
               </div>
 
-              {/* Status Endereço */}
-              <div className="w-full sm:w-[160px]">
-                <Select value={addressStatusFilter} onValueChange={setAddressStatusFilter}>
+              {/* Filtro Precisão */}
+              <div className="w-full sm:w-[180px]">
+                <Select value={precisionFilter} onValueChange={setPrecisionFilter}>
                   <SelectTrigger className="h-9 text-xs">
-                    <SelectValue placeholder="Status Endereço" />
+                    <SelectValue placeholder="Precisão do Pin" />
                   </SelectTrigger>
                   <SelectContent className="z-[9999]">
-                    <SelectItem value="all">Todos Endereços</SelectItem>
-                    <SelectItem value="complete">Completo</SelectItem>
-                    <SelectItem value="enriched">Enriquecido</SelectItem>
-                    <SelectItem value="partial">Parcial</SelectItem>
-                    <SelectItem value="inconsistent">Inconsistente</SelectItem>
-                    <SelectItem value="failed">Falha</SelectItem>
+                    <SelectItem value="all">Todas as precisões</SelectItem>
+                    <SelectItem value="exata">Exata (Número/Salva)</SelectItem>
+                    <SelectItem value="rua">Rua/Logradouro</SelectItem>
+                    <SelectItem value="bairro">Bairro/CEP</SelectItem>
+                    <SelectItem value="cidade">Aprox. Cidade</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1062,49 +982,47 @@ export default function MapaClientes() {
                   Mapa Interativo do Brasil
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  {filteredFactories.length} cliente(s) plotado(s)
+                  {filteredClientsWithCoords.length} cliente(s) plotado(s)
                   {showBlinkLocations ? ' + 4 pontos fixos Blink' : ''}
                 </CardDescription>
               </div>
               <div className="flex items-center gap-3">
-                {/* Legenda do Mapa: Cores fixas do Status do Funil de Vendas + Precisão Geocode */}
+                {/* Legenda do Mapa */}
                 <div className="hidden sm:flex items-center gap-2.5 text-xs flex-wrap">
-                  {/* Cores do Funil de Vendas */}
-                  <span className="flex items-center gap-1" title="Fechamento / Pós-venda recente">
+                  <span className="flex items-center gap-1" title="Ativos">
                     <span
                       className="w-2.5 h-2.5 rounded-full inline-block shadow-sm"
                       style={{ backgroundColor: FUNNEL_CATEGORY_COLORS.Ativos }}
                     />{' '}
                     Ativos
                   </span>
-                  <span className="flex items-center gap-1" title="Lead até Negociação">
+                  <span className="flex items-center gap-1" title="Prospectos">
                     <span
                       className="w-2.5 h-2.5 rounded-full inline-block shadow-sm"
                       style={{ backgroundColor: FUNNEL_CATEGORY_COLORS.Prospectos }}
                     />{' '}
                     Prospectos
                   </span>
-                  <span className="flex items-center gap-1" title="Pós-venda > 180 dias sem compra">
+                  <span className="flex items-center gap-1" title="Inativos">
                     <span
                       className="w-2.5 h-2.5 rounded-full inline-block shadow-sm"
                       style={{ backgroundColor: FUNNEL_CATEGORY_COLORS.Inativos }}
                     />{' '}
                     Inativos
                   </span>
-                  <span className="flex items-center gap-1" title="Etapa Perda">
+                  <span className="flex items-center gap-1" title="Negociação encerrada">
                     <span
                       className="w-2.5 h-2.5 rounded-full inline-block shadow-sm"
                       style={{ backgroundColor: FUNNEL_CATEGORY_COLORS['Negociação encerrada'] }}
                     />{' '}
-                    Negociação encerrada
+                    Encerrados
                   </span>
 
                   <span className="h-3 w-px bg-border mx-0.5" />
 
-                  {/* Indicadores de Precisão de Localização */}
                   <span
                     className="flex items-center gap-1 text-muted-foreground"
-                    title="Centróide de Município (badge CID)"
+                    title="Aproximação por Centróide de Cidade (tracejado/mais claro)"
                   >
                     <span className="inline-flex items-center justify-center px-1 rounded text-[9px] font-bold bg-slate-800 text-white">
                       CID
@@ -1113,20 +1031,13 @@ export default function MapaClientes() {
                   </span>
                   <span
                     className="flex items-center gap-1 text-muted-foreground"
-                    title="Centróide do Estado (badge UF + tracejado)"
+                    title="Aproximação por Bairro/CEP (pontilhado)"
                   >
                     <span className="inline-flex items-center justify-center px-1 rounded text-[9px] font-bold bg-slate-800 text-white">
-                      UF
+                      BAI
                     </span>{' '}
-                    UF
+                    Bairro
                   </span>
-
-                  {showBlinkLocations && (
-                    <span className="flex items-center gap-1 font-semibold text-slate-900 dark:text-amber-400">
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#F5C518] inline-block border border-slate-600" />{' '}
-                      Blink
-                    </span>
-                  )}
                 </div>
                 <Button
                   variant="outline"
@@ -1145,14 +1056,60 @@ export default function MapaClientes() {
             </CardHeader>
 
             <div className="flex-1 w-full relative">
-              {loading && (
+              {/* 1. LOADING STATE */}
+              {isResolving && (
                 <div className="absolute inset-0 z-[1000] bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center space-y-3">
                   <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                  <p className="text-sm font-medium text-foreground">Carregando dados do mapa...</p>
+                  <p className="text-sm font-medium text-foreground">
+                    Carregando e posicionando clientes no mapa...
+                  </p>
                 </div>
               )}
 
-              {/* Overlay de rota ativa */}
+              {/* 3. ERROR STATE */}
+              {!isResolving && isError && (
+                <div className="absolute inset-0 z-[1000] bg-background/95 flex flex-col items-center justify-center p-6 text-center space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
+                    <AlertCircle className="w-6 h-6" />
+                  </div>
+                  <div className="max-w-md space-y-1">
+                    <h3 className="font-semibold text-foreground text-base">
+                      Não foi possível carregar o mapa.
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Ocorreu uma instabilidade ao obter os dados dos clientes. Por favor, tente
+                      novamente.
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={loadData} className="gap-2">
+                    <RotateCcw className="w-4 h-4" /> Tentar novamente
+                  </Button>
+                </div>
+              )}
+
+              {/* 2. EMPTY STATE: nenhum cliente cadastrado ainda */}
+              {!isResolving && !isError && isEmpty && (
+                <div className="absolute inset-0 z-[1000] bg-background/95 flex flex-col items-center justify-center p-6 text-center space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+                    <Building2 className="w-6 h-6" />
+                  </div>
+                  <div className="max-w-md space-y-1">
+                    <h3 className="font-semibold text-foreground text-base">
+                      Nenhum cliente cadastrado ainda
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Comece cadastrando seu primeiro cliente para acompanhar sua localização no
+                      mapa.
+                    </p>
+                  </div>
+                  <Button onClick={() => handleOpenClientForm()} className="gap-2" size="sm">
+                    <PlusCircle className="w-4 h-4" />
+                    Cadastrar primeiro cliente
+                  </Button>
+                </div>
+              )}
+
+              {/* Rota ativa */}
               {route && (
                 <div className="absolute top-4 left-4 z-[500] bg-background/95 backdrop-blur border rounded-lg p-3 shadow-lg max-w-sm pointer-events-auto">
                   <div className="flex items-start justify-between gap-2">
@@ -1226,40 +1183,22 @@ export default function MapaClientes() {
                 </div>
               )}
 
-              {!loading && validFactories.length === 0 && (
-                <div className="absolute inset-0 z-[500] bg-background/95 flex flex-col items-center justify-center p-6 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
-                    <MapPin className="w-6 h-6" />
+              {/* Mensagem caso todos os clientes cadastrados estejam sem localização */}
+              {!isResolving && !isError && !isEmpty && clientsWithCoords.length === 0 && (
+                <div className="absolute inset-0 z-[500] bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                    <AlertTriangle className="w-6 h-6" />
                   </div>
                   <div className="max-w-md space-y-1">
                     <h3 className="font-semibold text-foreground text-base">
-                      Nenhum cliente com coordenadas para exibir no mapa.
+                      Todos os clientes estão sem localização
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      Nenhum cliente cadastrado possui latitude e longitude válidas no momento. Você
-                      pode utilizar a opção "Enriquecer Dados" na página de Cadastro para obter as
-                      coordenadas automaticamente.
+                      Nenhum cliente possui endereço ou coordenadas suficientes para plotar pins no
+                      mapa. Utilize a lista lateral "Clientes sem localização" para completar o
+                      endereço.
                     </p>
                   </div>
-                </div>
-              )}
-
-              {!loading && validFactories.length > 0 && filteredFactories.length === 0 && (
-                <div className="absolute inset-0 z-[500] bg-background/95 flex flex-col items-center justify-center p-6 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
-                    <Search className="w-6 h-6" />
-                  </div>
-                  <div className="max-w-md space-y-1">
-                    <h3 className="font-semibold text-foreground text-base">
-                      Nenhum cliente corresponde aos filtros selecionados.
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Tente alterar os termos de busca ou remover os filtros aplicados.
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={clearFilters}>
-                    Limpar Filtros
-                  </Button>
                 </div>
               )}
 
@@ -1268,142 +1207,206 @@ export default function MapaClientes() {
           </Card>
         </div>
 
-        {/* Sidebar list of clients */}
+        {/* Sidebar list of clients (com abas: Plotados no Mapa vs Clientes sem localização) */}
         <div className="lg:col-span-1 h-full">
           <Card className={`shadow-subtle flex flex-col ${isFullscreen ? 'h-full' : 'h-[650px]'}`}>
-            <CardHeader className="py-3 px-4 border-b">
-              <CardTitle className="text-sm font-semibold flex items-center justify-between">
-                <span>Clientes no Mapa</span>
-                <Badge variant="secondary" className="text-xs">
-                  {filteredFactories.length}
-                </Badge>
-              </CardTitle>
+            <CardHeader className="py-2.5 px-3 border-b">
+              <Tabs
+                value={activeTab}
+                onValueChange={(val) => setActiveTab(val as 'plotados' | 'sem_localizacao')}
+                className="w-full"
+              >
+                <TabsList className="grid w-full grid-cols-2 h-8 text-xs">
+                  <TabsTrigger value="plotados" className="text-[11px] gap-1 px-1">
+                    <MapPin className="w-3 h-3 text-emerald-600" />
+                    No Mapa ({filteredClientsWithCoords.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="sem_localizacao" className="text-[11px] gap-1 px-1">
+                    <AlertTriangle className="w-3 h-3 text-amber-600" />
+                    Sem Localização ({filteredClientsWithoutCoords.length})
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
             </CardHeader>
+
             <CardContent className="p-0 flex-1 overflow-y-auto">
-              {filteredFactories.length === 0 ? (
-                <div className="p-6 text-center text-sm text-muted-foreground">
-                  Nenhum cliente para listar.
-                </div>
-              ) : (
-                <div className="divide-y divide-border">
-                  {filteredFactories.map((f) => {
-                    const isSelected = selectedClient?.id === f.id
-                    const profiles = normalizeArray(f.profile_type)
-                    const funnelCat = getFunnelCategory(f)
-                    const funnelBadgeBg =
-                      funnelCat === 'Ativos'
-                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border-blue-300'
-                        : funnelCat === 'Prospectos'
-                          ? 'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300 border-green-300'
-                          : funnelCat === 'Inativos'
-                            ? 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border-amber-300'
-                            : 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300 border-red-300'
+              {activeTab === 'plotados' ? (
+                /* Lista de Clientes Plotados */
+                filteredClientsWithCoords.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-muted-foreground space-y-2">
+                    <MapPin className="w-6 h-6 mx-auto text-muted-foreground/40" />
+                    <p>Nenhum cliente com coordenadas para listar no filtro atual.</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {filteredClientsWithCoords.map((f) => {
+                      const isSelected = selectedClient?.id === f.id
+                      const profiles = normalizeArray(f.profile_type)
+                      const funnelCat = getFunnelCategory(f)
+                      const funnelBadgeBg =
+                        funnelCat === 'Ativos'
+                          ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border-blue-300'
+                          : funnelCat === 'Prospectos'
+                            ? 'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300 border-green-300'
+                            : funnelCat === 'Inativos'
+                              ? 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border-amber-300'
+                              : 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300 border-red-300'
 
-                    return (
-                      <div
-                        key={f.id}
-                        onClick={() => handleCenterOnClient(f)}
-                        className={`p-3 text-left transition-colors cursor-pointer hover:bg-muted/50 ${
-                          isSelected ? 'bg-primary/10 border-l-4 border-l-primary' : ''
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-1">
-                          <p className="font-semibold text-xs text-foreground truncate">{f.name}</p>
-                          <span
-                            className="w-2 h-2 rounded-full shrink-0"
-                            style={{ backgroundColor: FUNNEL_CATEGORY_COLORS[funnelCat] }}
-                            title={`Status do funil: ${funnelCat}`}
-                          />
-                        </div>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                          {[f.city, f.state].filter(Boolean).join(' - ') ||
-                            'Localidade não informada'}
-                        </p>
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] px-1.5 py-0 h-4 font-semibold ${funnelBadgeBg}`}
-                          >
-                            {funnelCat}
-                          </Badge>
-                          {profiles.map((p) => (
-                            <Badge
-                              key={p}
-                              variant="secondary"
-                              className="text-[10px] px-1.5 py-0 h-4"
-                            >
-                              {p}
-                            </Badge>
-                          ))}
-                          {f.geocode_precision === 'city' && (
+                      return (
+                        <div
+                          key={f.id}
+                          onClick={() => handleCenterOnClient(f)}
+                          className={`p-3 text-left transition-colors cursor-pointer hover:bg-muted/50 ${
+                            isSelected ? 'bg-primary/10 border-l-4 border-l-primary' : ''
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <p className="font-semibold text-xs text-foreground truncate">
+                              {f.name}
+                            </p>
+                            <span
+                              className="w-2 h-2 rounded-full shrink-0"
+                              style={{ backgroundColor: FUNNEL_CATEGORY_COLORS[funnelCat] }}
+                              title={`Status do funil: ${funnelCat}`}
+                            />
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {[f.city, f.state].filter(Boolean).join(' - ') ||
+                              'Localidade não informada'}
+                          </p>
+                          <div className="flex flex-wrap gap-1 mt-2">
                             <Badge
                               variant="outline"
-                              className="text-[10px] px-1.5 py-0 h-4 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300"
+                              className={`text-[10px] px-1.5 py-0 h-4 font-semibold ${funnelBadgeBg}`}
                             >
-                              CID
+                              {funnelCat}
                             </Badge>
-                          )}
-                          {f.geocode_precision === 'state' && (
-                            <Badge
-                              variant="outline"
-                              className="text-[10px] px-1.5 py-0 h-4 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300"
-                            >
-                              UF
-                            </Badge>
-                          )}
-                        </div>
+                            {profiles.map((p) => (
+                              <Badge
+                                key={p}
+                                variant="secondary"
+                                className="text-[10px] px-1.5 py-0 h-4"
+                              >
+                                {p}
+                              </Badge>
+                            ))}
+                            {f.precisao && (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] px-1.5 py-0 h-4 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300"
+                              >
+                                {f.precisao === 'cidade'
+                                  ? 'CID'
+                                  : f.precisao === 'bairro'
+                                    ? 'BAI'
+                                    : f.precisao === 'rua'
+                                      ? 'RUA'
+                                      : 'EXATO'}
+                              </Badge>
+                            )}
+                          </div>
 
-                        {isSelected && (
-                          <div
-                            className="mt-3 pt-2 border-t flex flex-col gap-1.5"
-                            onClick={(e) => e.stopPropagation()}
-                          >
+                          <div className="mt-2.5 pt-2 border-t flex items-center justify-between gap-1">
                             <Button
                               size="sm"
-                              variant="default"
-                              className="h-7 text-xs w-full gap-1.5"
-                              disabled={calculating}
-                              onClick={() => handleCalculateRoute(f)}
+                              variant="ghost"
+                              className="h-6 text-[11px] px-1.5 text-muted-foreground hover:text-foreground gap-1"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleOpenClientForm(f)
+                              }}
                             >
-                              {calculating ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              ) : (
-                                <Navigation className="w-3.5 h-3.5" />
-                              )}
-                              Mostrar rota até CD (Maringá)
+                              <Edit className="w-3 h-3" /> Editar cadastro
                             </Button>
-                            {(() => {
-                              const lat = f.lat ?? f.coordinates?.lat
-                              const lng = f.lng ?? f.coordinates?.lng
-                              if (typeof lat !== 'number' || typeof lng !== 'number') return null
-                              return (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 text-xs w-full gap-1"
-                                  asChild
-                                >
-                                  <a
-                                    href={`https://www.google.com/maps/dir/?api=1&origin=${lat},${lng}&destination=${BLINK_MARINGA_CD.lat},${BLINK_MARINGA_CD.lng}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    <ExternalLink className="w-3 h-3" /> Abrir no Google Maps
-                                  </a>
-                                </Button>
-                              )
-                            })()}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 text-[11px] px-1.5 text-primary gap-1"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCalculateRoute(f)
+                              }}
+                            >
+                              <Navigation className="w-3 h-3" /> Rota CD
+                            </Button>
                           </div>
-                        )}
-                      </div>
-                    )
-                  })}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              ) : (
+                /* Lista Lateral: "Clientes sem localização" */
+                <div className="divide-y divide-border">
+                  <div className="p-3 bg-amber-50/50 dark:bg-amber-950/20 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                    <HelpCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+                    <span>
+                      Estes clientes não têm endereço nem coordenadas válidas e{' '}
+                      <strong>não são plotados no mapa</strong>. Clique em{' '}
+                      <strong>Completar endereço</strong> para regularizar.
+                    </span>
+                  </div>
+
+                  {filteredClientsWithoutCoords.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-muted-foreground">
+                      Parabéns! Nenhum cliente pendente de localização no filtro atual.
+                    </div>
+                  ) : (
+                    filteredClientsWithoutCoords.map((client) => {
+                      return (
+                        <div
+                          key={client.id}
+                          className="p-3 text-left space-y-2 hover:bg-muted/40 transition-colors"
+                        >
+                          <div>
+                            <p className="font-semibold text-xs text-foreground truncate">
+                              {client.name}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                              {[client.city, client.state].filter(Boolean).join(' - ') ||
+                                'Sem cidade/estado'}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-1">
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] px-1.5 py-0 h-4 bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300"
+                            >
+                              Sem Localização
+                            </Badge>
+
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs gap-1 border-amber-300 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                              onClick={() => handleOpenClientForm(client)}
+                            >
+                              <Edit className="w-3 h-3" /> Completar endereço
+                            </Button>
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Dialog para Criar ou Editar Cliente (completar endereço, viaCEP, etc) */}
+      <ClienteFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        cliente={clientToEdit}
+        gestaoTecnicaList={gestaoTecnicaList}
+        onSuccess={() => {
+          hasTriggeredResolutionRef.current = false
+          void loadData()
+        }}
+      />
     </div>
   )
 }
