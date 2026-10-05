@@ -252,12 +252,21 @@ export const produtosService = {
 
     try {
       const created = await pb.collection('produtos').create<Produto>(payload)
+      const { recordEntityChangeLog } = await import('./entity-change-logs')
+      recordEntityChangeLog({
+        entity_type: 'produto',
+        entity_id: created.id,
+        entity_name: created.nome,
+        change_summary: `Produto ${created.nome} (${created.codigo}) criado`,
+        action: 'create',
+      }).catch(() => {})
+
       notifyDataChanged('produtos')
       return {
         ...created,
         familia: created.familia || familiaDerivada,
-        createdAt: created.created,
-        updatedAt: created.updated,
+        createdAt: (created as any).created,
+        updatedAt: (created as any).updated,
       }
     } catch (err: any) {
       console.error('[produtosService] Erro ao criar produto:', err)
@@ -297,12 +306,21 @@ export const produtosService = {
 
     try {
       const updated = await pb.collection('produtos').update<Produto>(id, payload)
+      const { recordEntityChangeLog } = await import('./entity-change-logs')
+      recordEntityChangeLog({
+        entity_type: 'produto',
+        entity_id: id,
+        entity_name: updated.nome,
+        change_summary: `Produto ${updated.nome} (${updated.codigo}) atualizado`,
+        action: 'update',
+      }).catch(() => {})
+
       notifyDataChanged('produtos')
       return {
         ...updated,
         familia: updated.familia || familiaDerivada,
-        createdAt: updated.created,
-        updatedAt: updated.updated,
+        createdAt: (updated as any).created,
+        updatedAt: (updated as any).updated,
       }
     } catch (err: any) {
       console.error('[produtosService] Erro ao atualizar produto:', err)
@@ -316,14 +334,55 @@ export const produtosService = {
   /**
    * Exclui um produto do banco de dados
    */
-  async deleteProduto(id: string): Promise<boolean> {
+  /**
+   * Exclusão lógica (soft delete) do produto
+   */
+  async deleteProduto(id: string, nome?: string): Promise<boolean> {
     try {
-      const res = await pb.collection('produtos').delete(id)
+      await pb.collection('produtos').update(id, {
+        ativo: false,
+        is_deleted: true,
+        deleted_at: new Date().toISOString(),
+      })
+      const { recordEntityChangeLog } = await import('./entity-change-logs')
+      recordEntityChangeLog({
+        entity_type: 'produto',
+        entity_id: id,
+        entity_name: nome || 'Produto',
+        change_summary: `Produto ${nome || id} excluído logicamente (soft delete)`,
+        action: 'delete',
+      }).catch(() => {})
+
       notifyDataChanged('produtos')
-      return res
+      return true
     } catch (err: any) {
-      console.error('[produtosService] Erro ao excluir produto:', err)
+      console.error('[produtosService] Erro ao excluir logicamente produto:', err)
       throw new Error(err?.message || 'Erro ao excluir produto')
+    }
+  },
+
+  /**
+   * Desativação alternativa de produto
+   */
+  async deactivateProduto(id: string, nome?: string): Promise<boolean> {
+    try {
+      await pb.collection('produtos').update(id, {
+        ativo: false,
+      })
+      const { recordEntityChangeLog } = await import('./entity-change-logs')
+      recordEntityChangeLog({
+        entity_type: 'produto',
+        entity_id: id,
+        entity_name: nome || 'Produto',
+        change_summary: `Produto ${nome || id} desativado no catálogo`,
+        action: 'deactivate',
+      }).catch(() => {})
+
+      notifyDataChanged('produtos')
+      return true
+    } catch (err: any) {
+      console.error('[produtosService] Erro ao desativar produto:', err)
+      throw new Error(err?.message || 'Erro ao desativar produto')
     }
   },
 }

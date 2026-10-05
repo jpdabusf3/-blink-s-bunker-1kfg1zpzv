@@ -62,6 +62,36 @@ export function formatCNPJ(val?: string | null): string {
 /**
  * Validação de CNPJ (com verificação dos 14 dígitos e dígitos verificadores)
  */
+/**
+ * Validação de CPF (com verificação dos 11 dígitos e dígitos verificadores)
+ */
+export function isValidCPF(cpf?: string | null): boolean {
+  const digits = cleanDigits(cpf)
+  if (digits.length !== 11) return false
+  if (/^(\d)\1{10}$/.test(digits)) return false
+
+  let soma = 0
+  for (let i = 0; i < 9; i++) {
+    soma += parseInt(digits.charAt(i), 10) * (10 - i)
+  }
+  let resto = (soma * 10) % 11
+  if (resto === 10 || resto === 11) resto = 0
+  if (resto !== parseInt(digits.charAt(9), 10)) return false
+
+  soma = 0
+  for (let i = 0; i < 10; i++) {
+    soma += parseInt(digits.charAt(i), 10) * (11 - i)
+  }
+  resto = (soma * 10) % 11
+  if (resto === 10 || resto === 11) resto = 0
+  if (resto !== parseInt(digits.charAt(10), 10)) return false
+
+  return true
+}
+
+/**
+ * Validação de CNPJ (com verificação dos 14 dígitos e dígitos verificadores)
+ */
 export function isValidCNPJ(cnpj?: string | null): boolean {
   const digits = cleanDigits(cnpj)
   if (digits.length !== 14) return false
@@ -99,6 +129,30 @@ export function isValidCNPJ(cnpj?: string | null): boolean {
   if (resultado !== Number(digitos.charAt(1))) return false
 
   return true
+}
+
+/**
+ * Valida tanto CPF (11 dígitos) quanto CNPJ (14 dígitos)
+ */
+export function isValidCpfCnpj(val?: string | null): boolean {
+  const digits = cleanDigits(val)
+  if (digits.length === 11) return isValidCPF(digits)
+  if (digits.length === 14) return isValidCNPJ(digits)
+  return false
+}
+
+/**
+ * Aplica máscara de CPF (000.000.000-00) ou CNPJ (00.000.000/0000-00)
+ */
+export function formatCpfCnpj(val?: string | null): string {
+  const digits = cleanDigits(val)
+  if (digits.length <= 11) {
+    if (digits.length <= 3) return digits
+    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`
+    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`
+  }
+  return formatCNPJ(digits)
 }
 
 /**

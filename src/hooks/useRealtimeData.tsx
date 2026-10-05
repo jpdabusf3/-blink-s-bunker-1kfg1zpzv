@@ -63,6 +63,7 @@ export type RealtimeCollection =
   | 'agenda_tasks'
   | 'deal_activities'
   | 'factory_change_logs'
+  | 'entity_change_logs'
   | 'tasks'
   | 'visits'
   | 'all'
@@ -124,6 +125,7 @@ export const WATCHED_COLLECTIONS: string[] = [
   'agenda_tasks',
   'deal_activities',
   'factory_change_logs',
+  'entity_change_logs',
   'tasks',
   'visits',
 ]

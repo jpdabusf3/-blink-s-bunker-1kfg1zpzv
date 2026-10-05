@@ -95,10 +95,26 @@ export async function updateFaturamento(
   return updated
 }
 
-export async function deleteFaturamento(id: string): Promise<boolean> {
-  const deleted = await pb.collection('faturamento').delete(id)
+export async function deleteFaturamento(id: string, clienteOuDesc?: string): Promise<boolean> {
+  const updated = await pb.collection('faturamento').update(id, {
+    is_deleted: true,
+    deleted_at: new Date().toISOString(),
+  })
+  try {
+    const { recordEntityChangeLog } = await import('./entity-change-logs')
+    await recordEntityChangeLog({
+      entity_type: 'faturamento',
+      entity_id: id,
+      entity_name: clienteOuDesc || 'NF',
+      change_summary: `Registro de faturamento ${clienteOuDesc || id} excluído logicamente (soft delete)`,
+      action: 'delete',
+    })
+  } catch {
+    /* intentionally ignored */
+  }
+
   notifyDataChanged('faturamento')
-  return deleted
+  return !!updated
 }
 
 export interface UploadHistoryItem {

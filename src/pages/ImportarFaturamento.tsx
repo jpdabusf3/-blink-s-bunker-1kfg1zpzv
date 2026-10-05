@@ -57,7 +57,11 @@ import {
   type FaturamentoImportResult,
 } from '@/services/import-faturamento'
 import { getFaturamentos, type FaturamentoRecord } from '@/services/resumo-vendas'
-import { getImportHistory, type ImportHistoryRecord } from '@/services/import-history'
+import {
+  getImportHistory,
+  rollbackImportBatch,
+  type ImportHistoryRecord,
+} from '@/services/import-history'
 import { useRealtimeDataContext } from '@/hooks/useRealtimeData'
 import { FaturamentoUploadHistory } from '@/components/faturamento/FaturamentoUploadHistory'
 import { EditableFaturamentoTable } from '@/components/faturamento/EditableFaturamentoTable'
@@ -86,6 +90,7 @@ export default function ImportarFaturamento() {
   const [historyError, setHistoryError] = useState<string | null>(null)
   const [faturamentoRecords, setFaturamentoRecords] = useState<FaturamentoRecord[]>([])
   const [loadingRecords, setLoadingRecords] = useState(false)
+  const [templateSaved, setTemplateSaved] = useState(false)
 
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -180,20 +185,42 @@ export default function ImportarFaturamento() {
     setLoadingFile(true)
 
     try {
-      const { headers, rows } = await parseFaturamentoPreview(selected, 8)
+      // Escopo 2: Prévia das primeiras 10 linhas
+      const { headers, rows } = await parseFaturamentoPreview(selected, 10)
       setSheetHeaders(headers)
       setPreviewRows(rows)
 
       const isOfficial = isBlinkOfficialTemplate(headers)
       setIsOfficialTemplate(isOfficial)
 
-      // Sugestão automática resiliente
-      const suggested = autoSuggestMapping(headers)
-      setMapping(suggested)
+      // Tenta recuperar template de mapeamento salvo previamente no navegador
+      const headerSignature = headers.slice().sort().join('|')
+      let loadedFromSavedTemplate = false
+      try {
+        const savedTemplatesRaw = localStorage.getItem('blink_faturamento_mapping_templates')
+        if (savedTemplatesRaw) {
+          const templates = JSON.parse(savedTemplatesRaw)
+          if (templates[headerSignature]) {
+            setMapping(templates[headerSignature])
+            loadedFromSavedTemplate = true
+          }
+        }
+      } catch {
+        /* intentionally ignored */
+      }
+
+      if (!loadedFromSavedTemplate) {
+        const suggested = autoSuggestMapping(headers)
+        setMapping(suggested)
+      }
 
       if (isOfficial) {
         toast.success(
           'Template Oficial Blink de Faturamento reconhecido! Mapeamento oficial aplicado automaticamente.',
+        )
+      } else if (loadedFromSavedTemplate) {
+        toast.success(
+          `Template de mapeamento salvo anteriormente reconhecido e reaproveitado para este layout!`,
         )
       } else {
         toast.success(
@@ -265,6 +292,16 @@ export default function ImportarFaturamento() {
 
     setImporting(true)
     setError(null)
+
+    // Salva automaticamente o template utilizado com sucesso
+    try {
+      const sig = sheetHeaders.slice().sort().join('|')
+      const prev = JSON.parse(localStorage.getItem('blink_faturamento_mapping_templates') || '{}')
+      prev[sig] = mapping
+      localStorage.setItem('blink_faturamento_mapping_templates', JSON.stringify(prev))
+    } catch {
+      /* intentionally ignored */
+    }
 
     try {
       const res = await importFaturamento(file, mapping, {
@@ -512,6 +549,30 @@ export default function ImportarFaturamento() {
                         ? 'Mapeamento oficial aplicado'
                         : 'Auto-sugestão inteligente ativa'}
                     </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs ml-2"
+                      onClick={() => {
+                        try {
+                          const sig = sheetHeaders.slice().sort().join('|')
+                          const prev = JSON.parse(
+                            localStorage.getItem('blink_faturamento_mapping_templates') || '{}',
+                          )
+                          prev[sig] = mapping
+                          localStorage.setItem(
+                            'blink_faturamento_mapping_templates',
+                            JSON.stringify(prev),
+                          )
+                          setTemplateSaved(true)
+                          toast.success('Mapeamento salvo como template para este layout!')
+                        } catch (_) {
+                          toast.error('Erro ao salvar template de mapeamento')
+                        }
+                      }}
+                    >
+                      {templateSaved ? '✓ Template Salvo' : 'Salvar como Template'}
+                    </Button>
                   </div>
                 </div>
               </CardHeader>

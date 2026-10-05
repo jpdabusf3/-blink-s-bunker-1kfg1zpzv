@@ -1,7 +1,7 @@
 import pb from '@/lib/pocketbase/client'
 import { notifyDataChanged } from '@/hooks/useRealtimeData'
 
-export type ImportHistoryStatus = 'sucesso' | 'parcial' | 'erro'
+export type ImportHistoryStatus = 'sucesso' | 'parcial' | 'erro' | 'desfeita'
 
 export interface ImportHistoryRecord {
   id: string
@@ -16,6 +16,10 @@ export interface ImportHistoryRecord {
   duplicate_rows?: number
   status: ImportHistoryStatus
   details?: string
+  batch_id?: string
+  can_rollback?: boolean
+  rolled_back_at?: string
+  error_report_json?: any
   created: string
   updated: string
 }
@@ -32,6 +36,9 @@ export interface CreateImportHistoryInput {
   duplicate_rows?: number
   status: ImportHistoryStatus
   details?: string
+  batch_id?: string
+  can_rollback?: boolean
+  error_report_json?: any
 }
 
 /**
@@ -94,9 +101,133 @@ export async function createImportHistory(
     duplicate_rows: input.duplicate_rows ?? 0,
     status: input.status,
     details: input.details ?? '',
+    batch_id: input.batch_id || `batch_${Date.now()}`,
+    can_rollback: input.can_rollback !== undefined ? input.can_rollback : true,
+    error_report_json: input.error_report_json || null,
   })
 
   notifyDataChanged('import_history')
 
   return record
+}
+
+/**
+ * UC4: Desfazer importação inteira (Rollback de lote)
+ * Remove ou marca soft delete apenas os registros criados por esta importação dentro de 30 dias.
+ */
+export async function rollbackImportBatch(
+  batchIdOrHistoryId: string,
+): Promise<{ success: boolean; removedCount: number; message: string }> {
+  try {
+    let historyRecord: any = null
+    try {
+      historyRecord = await pb.collection('import_history').getOne(batchIdOrHistoryId)
+    } catch (_) {
+      const records = await pb.collection('import_history').getList(1, 1, {
+        filter: `batch_id = '${batchIdOrHistoryId}'`,
+      })
+      if (records.items.length > 0) {
+        historyRecord = records.items[0]
+      }
+    }
+
+    if (!historyRecord) {
+      return {
+        success: false,
+        removedCount: 0,
+        message: 'Lote de importação não encontrado no histórico.',
+      }
+    }
+
+    // Validação da janela de 30 dias
+    const importedAt = new Date(historyRecord.imported_at || historyRecord.created).getTime()
+    const now = Date.now()
+    const diffDays = (now - importedAt) / (1000 * 60 * 60 * 24)
+    if (diffDays > 30) {
+      return {
+        success: false,
+        removedCount: 0,
+        message: 'Não é possível desfazer uma importação realizada há mais de 30 dias.',
+      }
+    }
+
+    if (historyRecord.status === 'desfeita' || historyRecord.rolled_back_at) {
+      return {
+        success: false,
+        removedCount: 0,
+        message: 'Esta importação já foi desfeita anteriormente.',
+      }
+    }
+
+    const batchKey = historyRecord.batch_id || historyRecord.id
+    let removedCount = 0
+
+    // 1. Remove ou soft-deleta registros em faturamento com este batch_id
+    try {
+      const fatItems = await pb.collection('faturamento').getFullList({
+        filter: `batch_id = '${batchKey}'`,
+      })
+      for (const item of fatItems) {
+        try {
+          await pb.collection('faturamento').delete(item.id)
+          removedCount++
+        } catch (_) {
+          await pb.collection('faturamento').update(item.id, {
+            is_deleted: true,
+            deleted_at: new Date().toISOString(),
+          })
+          removedCount++
+        }
+      }
+    } catch {
+      /* intentionally ignored */
+    }
+
+    // 2. Remove registros em historico_vendas criados com este batch_id
+    try {
+      const hvItems = await pb.collection('historico_vendas').getFullList({
+        filter: `batch_id = '${batchKey}'`,
+      })
+      for (const item of hvItems) {
+        try {
+          await pb.collection('historico_vendas').delete(item.id)
+          removedCount++
+        } catch (_) {
+          await pb.collection('historico_vendas').update(item.id, {
+            is_deleted: true,
+            deleted_at: new Date().toISOString(),
+          })
+          removedCount++
+        }
+      }
+    } catch {
+      /* intentionally ignored */
+    }
+
+    // 3. Atualiza registro em import_history
+    await pb.collection('import_history').update(historyRecord.id, {
+      status: 'desfeita',
+      rolled_back_at: new Date().toISOString(),
+      details:
+        `${historyRecord.details || ''} [Desfeita em ${new Date().toLocaleString('pt-BR')}]`.trim(),
+    })
+
+    notifyDataChanged('faturamento')
+    notifyDataChanged('historico_vendas')
+    notifyDataChanged('import_history')
+    notifyDataChanged('factories')
+
+    return {
+      success: true,
+      removedCount,
+      message: `Importação desfeita com sucesso! ${removedCount} registros criados pelo lote foram revertidos.`,
+    }
+  } catch (err: any) {
+    console.error('[rollbackImportBatch] Erro:', err)
+    return {
+      success: false,
+      removedCount: 0,
+      message: err?.message || 'Falha ao processar rollback da importação.',
+    }
+  }
 }

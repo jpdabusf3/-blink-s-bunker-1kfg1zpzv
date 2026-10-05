@@ -314,8 +314,51 @@ export async function createFactoryPB(data: Partial<Factory>) {
   return result
 }
 
-export async function deleteFactoryPB(id: string) {
-  const res = await pb.collection('factories').delete(id)
+export async function softDeleteFactoryPB(id: string, name?: string) {
+  const res = await pb.collection('factories').update(id, {
+    is_deleted: true,
+    deleted_at: new Date().toISOString(),
+  })
+  try {
+    const { recordFactoryChangeLog } = await import('./factory-change-logs')
+    await recordFactoryChangeLog({
+      factory_id: id,
+      factory_name: name || 'Cliente',
+      change_summary: `Cliente ${name || id} excluído logicamente (soft delete)`,
+      field: 'is_deleted',
+      old_value: 'false',
+      new_value: 'true',
+    })
+  } catch {
+    /* intentionally ignored */
+  }
+
   notifyDataChanged('factories')
   return res
+}
+
+export async function deactivateFactoryPB(id: string, name?: string) {
+  const res = await pb.collection('factories').update(id, {
+    status_funil: 'Inativo',
+  })
+  try {
+    const { recordFactoryChangeLog } = await import('./factory-change-logs')
+    await recordFactoryChangeLog({
+      factory_id: id,
+      factory_name: name || 'Cliente',
+      change_summary: `Cliente ${name || id} desativado`,
+      field: 'status_funil',
+      old_value: 'Ativo',
+      new_value: 'Inativo',
+    })
+  } catch {
+    /* intentionally ignored */
+  }
+
+  notifyDataChanged('factories')
+  return res
+}
+
+export async function deleteFactoryPB(id: string, name?: string) {
+  return softDeleteFactoryPB(id, name)
 }

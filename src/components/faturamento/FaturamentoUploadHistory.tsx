@@ -26,8 +26,23 @@ import {
   AlertCircle,
   FileText,
   FileCode,
+  Undo2,
+  Download,
 } from 'lucide-react'
-import type { ImportHistoryRecord, ImportHistoryStatus } from '@/services/import-history'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { toast } from 'sonner'
+import {
+  rollbackImportBatch,
+  type ImportHistoryRecord,
+  type ImportHistoryStatus,
+} from '@/services/import-history'
 
 interface FaturamentoUploadHistoryProps {
   history: ImportHistoryRecord[]
@@ -44,6 +59,47 @@ export function FaturamentoUploadHistory({
 }: FaturamentoUploadHistoryProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const [rollbackTarget, setRollbackTarget] = useState<ImportHistoryRecord | null>(null)
+  const [rollbackConfirmStep, setRollbackConfirmStep] = useState<1 | 2>(1)
+  const [isRollingBack, setIsRollingBack] = useState(false)
+
+  const handleRollback = async () => {
+    if (!rollbackTarget) return
+    setIsRollingBack(true)
+    try {
+      const res = await rollbackImportBatch(rollbackTarget.batch_id || rollbackTarget.id)
+      if (res.success) {
+        toast.success(res.message)
+        setRollbackTarget(null)
+        setRollbackConfirmStep(1)
+        onRefresh()
+      } else {
+        toast.error(res.message)
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Falha ao desfazer importação')
+    } finally {
+      setIsRollingBack(false)
+    }
+  }
+
+  const handleDownloadErrorReport = (item: ImportHistoryRecord) => {
+    try {
+      const content = `RELATÓRIO DE ERROS DA IMPORTAÇÃO\nArquivo: ${item.file_name}\nData: ${formatDate(item.imported_at)}\nStatus: ${item.status}\nTotal de Linhas: ${item.total_rows}\nImportadas: ${item.imported_rows}\nLinhas com Erro: ${item.error_rows}\n\nDETALHES / ERROS:\n${item.details || 'Sem detalhes adicionais.'}`
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `erros_importacao_${item.file_name.replace(/[^a-zA-Z0-9]/g, '_')}.txt`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      toast.success('Relatório de erros baixado com sucesso.')
+    } catch (_) {
+      toast.error('Erro ao gerar download do relatório.')
+    }
+  }
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -112,6 +168,16 @@ export function FaturamentoUploadHistory({
           >
             <XCircle className="w-3 h-3 text-destructive" />
             Erro
+          </Badge>
+        )
+      case 'desfeita':
+        return (
+          <Badge
+            variant="outline"
+            className="bg-muted text-muted-foreground border-muted-foreground/30 gap-1 text-[11px] font-medium"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Desfeita
           </Badge>
         )
       default:
@@ -274,8 +340,11 @@ export function FaturamentoUploadHistory({
                       <TableHead className="text-xs text-right font-semibold">
                         Valor Total (R$)
                       </TableHead>
-                      <TableHead className="w-[120px] text-center text-xs font-semibold">
+                      <TableHead className="w-[110px] text-center text-xs font-semibold">
                         Status
+                      </TableHead>
+                      <TableHead className="w-[130px] text-center text-xs font-semibold">
+                        Ações
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -283,6 +352,15 @@ export function FaturamentoUploadHistory({
                     {filteredHistory.map((item) => {
                       const isExpanded = expandedIds.has(item.id)
                       const hasDetails = Boolean(item.details && item.details.trim().length > 0)
+                      const isWithin30Days =
+                        (Date.now() - new Date(item.imported_at).getTime()) /
+                          (1000 * 60 * 60 * 24) <=
+                        30
+                      const canRollback =
+                        item.status !== 'desfeita' &&
+                        !item.rolled_back_at &&
+                        isWithin30Days &&
+                        (item.imported_rows > 0 || (item.total_rows && item.total_rows > 0))
 
                       return (
                         <React.Fragment key={item.id}>
@@ -388,6 +466,38 @@ export function FaturamentoUploadHistory({
                             <TableCell className="text-center">
                               {renderStatusBadge(item.status)}
                             </TableCell>
+
+                            {/* Ações: Download Erros e Rollback */}
+                            <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-center gap-1">
+                                {item.error_rows > 0 && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                                    title="Baixar relatório de erros da importação"
+                                    onClick={() => handleDownloadErrorReport(item)}
+                                  >
+                                    <Download className="w-3.5 h-3.5" />
+                                  </Button>
+                                )}
+                                {canRollback && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-[11px] gap-1 text-destructive hover:bg-destructive/10 border-destructive/30"
+                                    title="Desfazer esta importação (reverter registros criados)"
+                                    onClick={() => {
+                                      setRollbackTarget(item)
+                                      setRollbackConfirmStep(1)
+                                    }}
+                                  >
+                                    <Undo2 className="w-3 h-3" />
+                                    <span>Desfazer</span>
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
                           </TableRow>
 
                           {/* Linha expansível para detalhes dos erros e detalhamento breakdown */}
@@ -482,6 +592,92 @@ export function FaturamentoUploadHistory({
                   </TableBody>
                 </Table>
               </div>
+
+              {/* Modal de Confirmação Dupla para Rollback */}
+              <Dialog
+                open={Boolean(rollbackTarget)}
+                onOpenChange={(open) => {
+                  if (!open) {
+                    setRollbackTarget(null)
+                    setRollbackConfirmStep(1)
+                  }
+                }}
+              >
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2 text-destructive">
+                      <Undo2 className="w-5 h-5" />
+                      {rollbackConfirmStep === 1
+                        ? 'Desfazer Importação Inteira?'
+                        : 'Confirmação Definitiva de Rollback'}
+                    </DialogTitle>
+                    <DialogDescription className="text-xs pt-1">
+                      {rollbackConfirmStep === 1 ? (
+                        <>
+                          Você está prestes a reverter o lote{' '}
+                          <strong className="text-foreground">{rollbackTarget?.file_name}</strong>.
+                          Todos os registros de faturamento e vendas inseridos por este lote serão
+                          removidos/inativados no banco de dados. Os dashboards e mapas serão
+                          recalculados.
+                        </>
+                      ) : (
+                        <div className="space-y-2">
+                          <p className="font-semibold text-destructive">
+                            Atenção: esta ação é irreversível!
+                          </p>
+                          <p>
+                            Deseja realmente confirmar a exclusão e estorno dos registros criados
+                            por <strong>{rollbackTarget?.file_name}</strong>?
+                          </p>
+                        </div>
+                      )}
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <DialogFooter className="flex gap-2 sm:justify-end pt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setRollbackTarget(null)
+                        setRollbackConfirmStep(1)
+                      }}
+                      disabled={isRollingBack}
+                    >
+                      Cancelar
+                    </Button>
+                    {rollbackConfirmStep === 1 ? (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setRollbackConfirmStep(2)}
+                      >
+                        Continuar para confirmação final
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleRollback}
+                        disabled={isRollingBack}
+                        className="gap-1.5"
+                      >
+                        {isRollingBack ? (
+                          <>
+                            <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+                            Revertendo lote...
+                          </>
+                        ) : (
+                          <>
+                            <Undo2 className="w-3.5 h-3.5" />
+                            Confirmar reversão do lote
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
 
               {/* Cards para Mobile (< 768px) */}
               <div className="md:hidden space-y-3 p-3">
