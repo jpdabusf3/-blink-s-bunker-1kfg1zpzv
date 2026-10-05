@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useScopedFactories } from '@/hooks/use-scoped-data'
 import { useAppContext } from '@/store/AppContext'
 import { Card } from '@/components/ui/card'
@@ -31,6 +31,14 @@ import { useAuth } from '@/hooks/use-auth'
 import { Link } from 'react-router-dom'
 import { ClientDetailDrawer } from '@/components/ClientDetailDrawer'
 import { factoryMatchesVendedor, type UnifiedVendedorOption } from '@/lib/vendedorFilterHelper'
+import { useToast } from '@/hooks/use-toast'
+import { useIsMobile } from '@/hooks/use-mobile'
+import { updateFactoryPB } from '@/services/factories'
+import { logActivity } from '@/services/activity-logs'
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
+import { FunnelCardActionBar } from '@/components/funil/FunnelCardActionBar'
+import { FunnelCardContextMenuWrapper } from '@/components/funil/FunnelCardContextMenuWrapper'
+import { QuickCallDialog } from '@/components/funil/QuickCallDialog'
 
 const ANIMAL_SPECIES = [
   'Bovinos',
@@ -68,9 +76,23 @@ export default function Funil() {
   const [stateFilter, setStateFilter] = useState('all')
   const [speciesFilter, setSpeciesFilter] = useState('all')
 
+  const { toast } = useToast()
+  const isMobile = useIsMobile()
+
   // Drawer de detalhes e histórico do cliente
   const [drawerClientId, setDrawerClientId] = useState<string | null>(null)
   const clickedCardRef = useRef<HTMLElement | null>(null)
+
+  // Modal de ligação rápida
+  const [quickCallClient, setQuickCallClient] = useState<Factory | null>(null)
+  const [quickCallOpen, setQuickCallOpen] = useState(false)
+
+  // Drag and drop state
+  const [draggingFactoryId, setDraggingFactoryId] = useState<string | null>(null)
+  const [dragOverStage, setDragOverStage] = useState<FunnelStage | null>(null)
+  const [touchDraggingFactory, setTouchDraggingFactory] = useState<Factory | null>(null)
+  const touchStartCoord = useRef<{ x: number; y: number } | null>(null)
+  const isTouchDragging = useRef<boolean>(false)
 
   const factories = allFactories.filter(
     (f) =>
@@ -105,6 +127,203 @@ export default function Funil() {
     },
     [updateFactory],
   )
+
+  // Mover cliente para um novo estágio do funil com rollback e toasts em português
+  const handleMoveToStage = useCallback(
+    async (factoryId: string, newStage: FunnelStage) => {
+      const targetFactory = allFactories.find((f) => f.id === factoryId)
+      if (!targetFactory) return
+      const oldStage = targetFactory.funnelStage
+      if (oldStage === newStage) return
+
+      // Atualização otimista
+      const updatedFactory: Factory = {
+        ...targetFactory,
+        funnelStage: newStage,
+      }
+      updateFactory(factoryId, { funnelStage: newStage })
+
+      try {
+        await updateFactoryPB(factoryId, { funnelStage: newStage })
+
+        await logActivity(
+          `Estágio Funil: ${oldStage} → ${newStage}`,
+          `Cliente: ${targetFactory.name}`,
+          factoryId,
+          'factories',
+          {
+            tipo: 'status',
+            status_anterior: oldStage,
+            status_novo: newStage,
+            origem: 'funil_atalhos',
+          },
+        )
+
+        notifyDataChanged('factories')
+
+        toast({
+          title: 'Cliente movido',
+          description: `Cliente movido para ${newStage}.`,
+        })
+      } catch (err: unknown) {
+        console.error('[Funil] Falha ao mover estágio do cliente:', err)
+        // Rollback
+        updateFactory(factoryId, { funnelStage: oldStage })
+        toast({
+          title: 'Erro ao mover cliente',
+          description: 'Não foi possível mover o cliente.',
+          variant: 'destructive',
+        })
+      }
+    },
+    [allFactories, updateFactory, toast],
+  )
+
+  // Drop via arrastar e soltar (HTML5 DnD)
+  const handleDropOnStage = useCallback(
+    async (targetStage: FunnelStage) => {
+      const factoryId = draggingFactoryId
+      setDragOverStage(null)
+      setDraggingFactoryId(null)
+
+      if (!factoryId) return
+      const targetFactory = allFactories.find((f) => f.id === factoryId)
+      if (!targetFactory) return
+
+      const oldStage = targetFactory.funnelStage
+      if (oldStage === targetStage) return
+
+      // Atualização otimista
+      updateFactory(factoryId, { funnelStage: targetStage })
+
+      try {
+        await updateFactoryPB(factoryId, { funnelStage: targetStage })
+
+        await logActivity(
+          `Estágio Funil (Drag&Drop): ${oldStage} → ${targetStage}`,
+          `Cliente: ${targetFactory.name}`,
+          factoryId,
+          'factories',
+          {
+            tipo: 'status',
+            status_anterior: oldStage,
+            status_novo: targetStage,
+            origem: 'funil_drag_drop',
+          },
+        )
+
+        notifyDataChanged('factories')
+
+        toast({
+          title: 'Status atualizado',
+          description: `${targetFactory.name} movido para ${targetStage}.`,
+        })
+      } catch (err: unknown) {
+        console.error('[Funil] Falha no drag-and-drop de cliente:', err)
+        // Rollback
+        updateFactory(factoryId, { funnelStage: oldStage })
+        toast({
+          title: 'Erro ao mover cliente',
+          description: 'Não foi possível mover o cliente.',
+          variant: 'destructive',
+        })
+      }
+    },
+    [draggingFactoryId, allFactories, updateFactory, toast],
+  )
+
+  // Atalhos de ação
+  const handleOpenWhatsApp = useCallback(
+    (factory: Factory) => {
+      const rawPhone = factory.telefone || factory.contactPhone || ''
+      const cleanPhone = rawPhone.replace(/\D/g, '')
+      if (!cleanPhone) {
+        toast({
+          title: 'Telefone não cadastrado',
+          description: 'O cliente não possui telefone válido para contato por WhatsApp.',
+          variant: 'destructive',
+        })
+        return
+      }
+      const fullNumber = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`
+      const msg = encodeURIComponent(`Olá, ${factory.contactName || factory.name}!`)
+      window.open(`https://wa.me/${fullNumber}?text=${msg}`, '_blank', 'noopener,noreferrer')
+    },
+    [toast],
+  )
+
+  const handleStartQuickCall = useCallback((factory: Factory) => {
+    setQuickCallClient(factory)
+    setQuickCallOpen(true)
+  }, [])
+
+  // Suporte a Touch Drag-and-Drop em Mobile
+  const handleCardTouchStart = useCallback((e: React.TouchEvent, factory: Factory) => {
+    if (e.touches.length !== 1) return
+    const touch = e.touches[0]
+    touchStartCoord.current = { x: touch.clientX, y: touch.clientY }
+    isTouchDragging.current = false
+  }, [])
+
+  const handleCardTouchMove = useCallback(
+    (e: React.TouchEvent, factory: Factory) => {
+      if (e.touches.length !== 1 || !touchStartCoord.current) return
+      const touch = e.touches[0]
+      const dx = touch.clientX - touchStartCoord.current.x
+      const dy = touch.clientY - touchStartCoord.current.y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+
+      // Se arrastou mais de 25px e o movimento é predominantemente horizontal
+      if (dist > 25 && Math.abs(dx) > Math.abs(dy)) {
+        if (!isTouchDragging.current) {
+          isTouchDragging.current = true
+          setTouchDraggingFactory(factory)
+          setDraggingFactoryId(factory.id)
+        }
+
+        // Descobre sob qual coluna o dedo está
+        const elementUnderPoint = document.elementFromPoint(touch.clientX, touch.clientY)
+        const colElem = elementUnderPoint?.closest('[data-funnel-column]') as HTMLElement | null
+        if (colElem) {
+          const colStage = colElem.getAttribute('data-funnel-column') as FunnelStage
+          if (colStage && colStage !== dragOverStage) {
+            setDragOverStage(colStage)
+          }
+        }
+      }
+    },
+    [dragOverStage],
+  )
+
+  const handleCardTouchEnd = useCallback(() => {
+    if (isTouchDragging.current && touchDraggingFactory && dragOverStage) {
+      void handleDropOnStage(dragOverStage)
+    }
+    isTouchDragging.current = false
+    touchStartCoord.current = null
+    setTouchDraggingFactory(null)
+    setDraggingFactoryId(null)
+    setDragOverStage(null)
+  }, [touchDraggingFactory, dragOverStage, handleDropOnStage])
+
+  // Fecha o overlay de touch dragging caso desmonte
+  useEffect(() => {
+    const handleGlobalTouchEnd = () => {
+      if (isTouchDragging.current) {
+        isTouchDragging.current = false
+        touchStartCoord.current = null
+        setTouchDraggingFactory(null)
+        setDraggingFactoryId(null)
+        setDragOverStage(null)
+      }
+    }
+    window.addEventListener('touchend', handleGlobalTouchEnd)
+    window.addEventListener('touchcancel', handleGlobalTouchEnd)
+    return () => {
+      window.removeEventListener('touchend', handleGlobalTouchEnd)
+      window.removeEventListener('touchcancel', handleGlobalTouchEnd)
+    }
+  }, [])
 
   return (
     <div className="flex flex-col h-full animate-fade-in space-y-4">
@@ -177,10 +396,36 @@ export default function Funil() {
               const items = factories.filter((f) => f.funnelStage === stage)
               const totalStageValue = items.reduce((s, f) => s + f.potentialValue, 0)
 
+              const isTargetColumn = dragOverStage === stage
+
               return (
                 <div
                   key={stage}
-                  className="w-80 bg-muted/40 border rounded-xl flex flex-col max-h-full"
+                  data-funnel-column={stage}
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    e.dataTransfer.dropEffect = 'move'
+                    if (dragOverStage !== stage) {
+                      setDragOverStage(stage)
+                    }
+                  }}
+                  onDragLeave={(e) => {
+                    // Se estiver saindo da coluna de fato (e não entrando em um filho)
+                    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                      if (dragOverStage === stage) {
+                        setDragOverStage(null)
+                      }
+                    }
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    void handleDropOnStage(stage)
+                  }}
+                  className={`w-80 bg-muted/40 border rounded-xl flex flex-col max-h-full transition-all duration-200 ${
+                    isTargetColumn
+                      ? 'border-primary ring-2 ring-primary/30 bg-primary/5 shadow-md'
+                      : 'border-border'
+                  }`}
                 >
                   <div className="p-3 border-b bg-card/50 rounded-t-xl sticky top-0 z-10">
                     <div className="flex justify-between items-center mb-1">
@@ -200,101 +445,148 @@ export default function Funil() {
                       const passed = isPassedDeadline(f.deadline)
                       const approaching = isApproachingDeadline(f.deadline)
                       const nextStep = f.suggested_approach || f.notes
+                      const isBeingDragged = draggingFactoryId === f.id
 
                       return (
-                        <Card
+                        <FunnelCardContextMenuWrapper
                           key={f.id}
-                          data-client-card={f.id}
-                          tabIndex={0}
-                          role="button"
-                          aria-label={`Abrir detalhes de ${f.name}`}
-                          onClick={(e) => openDrawer(f.id, e.currentTarget)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault()
-                              openDrawer(f.id, e.currentTarget)
-                            }
-                          }}
-                          className={`p-3 shadow-subtle hover:shadow-md transition-all duration-300 ease-in-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary border-l-4 ${
-                            f.priority === 'High'
-                              ? 'border-l-emerald-500'
-                              : f.priority === 'Low'
-                                ? 'border-l-destructive'
-                                : 'border-l-amber-500'
-                          }`}
+                          factory={f}
+                          onMoveToStage={(newStg) => void handleMoveToStage(f.id, newStg)}
+                          onOpenClient={() => openDrawer(f.id)}
+                          onQuickCall={() => handleStartQuickCall(f)}
                         >
-                          <div className="flex justify-between items-start gap-1">
-                            <div>
-                              <div className="font-bold text-sm leading-tight line-clamp-2">
-                                {f.name}
+                          <Card
+                            data-client-card={f.id}
+                            tabIndex={0}
+                            role="button"
+                            aria-label={`Abrir detalhes de ${f.name}`}
+                            draggable
+                            onDragStart={(e) => {
+                              setDraggingFactoryId(f.id)
+                              e.dataTransfer.effectAllowed = 'move'
+                              e.dataTransfer.setData('text/plain', f.id)
+                            }}
+                            onDragEnd={() => {
+                              setDraggingFactoryId(null)
+                              setDragOverStage(null)
+                            }}
+                            onTouchStart={(e) => handleCardTouchStart(e, f)}
+                            onTouchMove={(e) => handleCardTouchMove(e, f)}
+                            onTouchEnd={handleCardTouchEnd}
+                            onClick={(e) => openDrawer(f.id, e.currentTarget)}
+                            onDoubleClick={(e) => {
+                              e.stopPropagation()
+                              openDrawer(f.id, e.currentTarget)
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                openDrawer(f.id, e.currentTarget)
+                              }
+                            }}
+                            className={`group p-3 shadow-subtle hover:shadow-md transition-all duration-300 ease-in-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary border-l-4 ${
+                              f.priority === 'High'
+                                ? 'border-l-emerald-500'
+                                : f.priority === 'Low'
+                                  ? 'border-l-destructive'
+                                  : 'border-l-amber-500'
+                            } ${isBeingDragged ? 'opacity-40 scale-[0.98]' : ''}`}
+                          >
+                            <div className="flex justify-between items-start gap-1">
+                              <div>
+                                <div className="font-bold text-sm leading-tight line-clamp-2">
+                                  {f.name}
+                                </div>
+                                <div className="text-[11px] text-muted-foreground mt-0.5">
+                                  {[f.city, f.profile_type].filter(Boolean).join(' • ')}
+                                </div>
                               </div>
-                              <div className="text-[11px] text-muted-foreground mt-0.5">
-                                {[f.city, f.profile_type].filter(Boolean).join(' • ')}
-                              </div>
+                              {stale && (
+                                <span title="Sem interação recente">
+                                  <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
+                                </span>
+                              )}
                             </div>
-                            {stale && (
-                              <span title="Sem interação recente">
-                                <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
+
+                            <div className="flex items-center justify-between mt-2 pt-2 border-t text-xs">
+                              <span className="text-muted-foreground">Potencial:</span>
+                              <span className="text-primary font-bold">
+                                {formatCurrency(f.potentialValue)}
                               </span>
+                            </div>
+
+                            <div className="mt-2 space-y-1">
+                              <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
+                                <span>Probabilidade</span>
+                                <span>{f.winProbability}%</span>
+                              </div>
+                              <Progress value={f.winProbability} className="h-1.5" />
+                            </div>
+
+                            {f.salesOwnerName && (
+                              <div className="mt-2 text-[10px] text-muted-foreground flex items-center gap-1">
+                                <User className="w-3 h-3 text-primary" />
+                                <span className="truncate">Gestor: {f.salesOwnerName}</span>
+                              </div>
                             )}
-                          </div>
 
-                          <div className="flex items-center justify-between mt-2 pt-2 border-t text-xs">
-                            <span className="text-muted-foreground">Potencial:</span>
-                            <span className="text-primary font-bold">
-                              {formatCurrency(f.potentialValue)}
-                            </span>
-                          </div>
-
-                          <div className="mt-2 space-y-1">
-                            <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
-                              <span>Probabilidade</span>
-                              <span>{f.winProbability}%</span>
-                            </div>
-                            <Progress value={f.winProbability} className="h-1.5" />
-                          </div>
-
-                          {f.salesOwnerName && (
-                            <div className="mt-2 text-[10px] text-muted-foreground flex items-center gap-1">
-                              <User className="w-3 h-3 text-primary" />
-                              <span className="truncate">Gestor: {f.salesOwnerName}</span>
-                            </div>
-                          )}
-
-                          {nextStep && (
-                            <div className="mt-2 text-[10px] bg-muted/60 p-1.5 rounded border text-muted-foreground">
-                              <div className="font-semibold text-primary flex items-center gap-1">
-                                <ArrowRight className="w-3 h-3" /> Próximos Passos:
+                            {nextStep && (
+                              <div className="mt-2 text-[10px] bg-muted/60 p-1.5 rounded border text-muted-foreground">
+                                <div className="font-semibold text-primary flex items-center gap-1">
+                                  <ArrowRight className="w-3 h-3" /> Próximos Passos:
+                                </div>
+                                <p className="line-clamp-2 italic">{nextStep}</p>
                               </div>
-                              <p className="line-clamp-2 italic">{nextStep}</p>
-                            </div>
-                          )}
+                            )}
 
-                          <div className="mt-2 pt-2 border-t space-y-1">
-                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                              <Clock className="w-3 h-3" />
-                              <span>
-                                Contato: {new Date(f.lastInteraction).toLocaleDateString('pt-BR')}
-                              </span>
-                            </div>
-                            {f.deadline && (
-                              <div
-                                className={`flex items-center gap-1 text-[10px] ${
-                                  passed
-                                    ? 'text-destructive font-bold'
-                                    : approaching
-                                      ? 'text-amber-600 font-bold'
-                                      : 'text-muted-foreground'
-                                }`}
-                              >
-                                <Calendar className="w-3 h-3" />
+                            <div className="mt-2 pt-2 border-t space-y-1">
+                              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                                <Clock className="w-3 h-3" />
                                 <span>
-                                  Prazo: {new Date(f.deadline).toLocaleDateString('pt-BR')}
+                                  Contato: {new Date(f.lastInteraction).toLocaleDateString('pt-BR')}
                                 </span>
                               </div>
+                              {f.deadline && (
+                                <div
+                                  className={`flex items-center gap-1 text-[10px] ${
+                                    passed
+                                      ? 'text-destructive font-bold'
+                                      : approaching
+                                        ? 'text-amber-600 font-bold'
+                                        : 'text-muted-foreground'
+                                  }`}
+                                >
+                                  <Calendar className="w-3 h-3" />
+                                  <span>
+                                    Prazo: {new Date(f.deadline).toLocaleDateString('pt-BR')}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Barra de atalhos rápidos revelada no hover em desktop */}
+                            {!isMobile && (
+                              <FunnelCardActionBar
+                                factory={f}
+                                onQuickCall={(e) => {
+                                  e.stopPropagation()
+                                  handleStartQuickCall(f)
+                                }}
+                                onWhatsApp={(e) => {
+                                  e.stopPropagation()
+                                  handleOpenWhatsApp(f)
+                                }}
+                                onOpenDrawer={(e) => {
+                                  e.stopPropagation()
+                                  openDrawer(
+                                    f.id,
+                                    (e.target as HTMLElement).closest('[data-client-card]'),
+                                  )
+                                }}
+                              />
                             )}
-                          </div>
-                        </Card>
+                          </Card>
+                        </FunnelCardContextMenuWrapper>
                       )
                     })}
                     {items.length === 0 && (
@@ -320,6 +612,19 @@ export default function Funil() {
         triggerRef={clickedCardRef}
         mode="funil"
         origin="funil"
+      />
+
+      {/* Modal de ligação rápida */}
+      <QuickCallDialog
+        client={quickCallClient}
+        open={quickCallOpen}
+        onOpenChange={(isOpen) => {
+          setQuickCallOpen(isOpen)
+          if (!isOpen) setQuickCallClient(null)
+        }}
+        onSuccess={(updatedClient) => {
+          handleClientUpdated(updatedClient)
+        }}
       />
     </div>
   )
