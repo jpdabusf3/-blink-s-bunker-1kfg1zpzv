@@ -396,6 +396,20 @@ export function getFactorySellerMatches(factory: Factory): {
  * @param targetIdOrName ID de gestao_tecnica, ID de users OU nome do vendedor
  * @param catalog Catálogo unificado opcional para resolução rápida
  */
+/**
+ * Verifica se um cliente/fábrica é "órfão", isto é, não possui vendedor atribuído
+ * (vendedor_id vazio E vendedor_name vazio E campo textual vendedor vazio).
+ */
+export function isFactoryOrphan(factory: Factory): boolean {
+  const matches = getFactorySellerMatches(factory)
+  // Checa se os conjuntos extraídos de IDs e Nomes estão vazios
+  const hasId = matches.ids.some((id) => id && id.trim() !== '' && id !== 'none')
+  const hasName = matches.names.some(
+    (name) => name && name.trim() !== '' && name.toLowerCase() !== 'não atribuído',
+  )
+  return !hasId && !hasName
+}
+
 export function factoryMatchesVendedor(
   factory: Factory,
   targetIdOrName: string,

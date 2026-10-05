@@ -17,8 +17,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Loader2 } from 'lucide-react'
+import { Loader2, History, UserCheck } from 'lucide-react'
 import { toast } from 'sonner'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { FactoryHistoryView } from '@/components/FactoryHistoryView'
 import pb from '@/lib/pocketbase/client'
 import {
   formatCNPJ,
@@ -90,6 +92,7 @@ export function ClienteFormDialog({
   const [submitting, setSubmitting] = useState(false)
   const [confirmProfileDialogOpen, setConfirmProfileDialogOpen] = useState(false)
   const [pendingSavePayload, setPendingSavePayload] = useState<Partial<Factory> | null>(null)
+  const [activeTab, setActiveTab] = useState<'dados' | 'historico'>('dados')
 
   // Membros ativos da equipe para vendedor
   const activeSellers = React.useMemo(() => {
@@ -102,6 +105,7 @@ export function ClienteFormDialog({
   useEffect(() => {
     if (!open) return
 
+    setActiveTab('dados')
     setErrors({})
     setVendedorTouched(false)
 
@@ -399,270 +403,297 @@ export function ClienteFormDialog({
           <DialogTitle>{cliente ? 'Editar Cliente' : 'Novo Cliente'}</DialogTitle>
           <DialogDescription>
             {cliente
-              ? 'Atualize os dados cadastrais do cliente.'
+              ? 'Atualize os dados cadastrais do cliente ou consulte o histórico de alterações.'
               : 'Preencha os dados abaixo para cadastrar um novo cliente no CRM.'}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-          {/* Razão Social */}
-          <div className="space-y-1.5">
-            <Label htmlFor="cli-razaoSocial">
-              Razão Social <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="cli-razaoSocial"
-              value={razaoSocial}
-              onChange={(e) => {
-                setRazaoSocial(e.target.value)
-                if (errors.razaoSocial) {
-                  setErrors((prev) => ({ ...prev, razaoSocial: undefined }))
-                }
-              }}
-              placeholder="Ex: Granja São Paulo Nutrição Animal Ltda"
-              className={
-                errors.razaoSocial ? 'border-destructive focus-visible:ring-destructive' : ''
-              }
-            />
-            {errors.razaoSocial && (
-              <p className="text-xs text-destructive font-medium">{errors.razaoSocial}</p>
-            )}
-          </div>
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as 'dados' | 'historico')}
+          className="w-full"
+        >
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="dados" className="gap-2 text-xs">
+              <UserCheck className="w-3.5 h-3.5" />
+              Dados do Cadastro
+            </TabsTrigger>
+            <TabsTrigger value="historico" className="gap-2 text-xs">
+              <History className="w-3.5 h-3.5" />
+              Histórico de Alterações
+            </TabsTrigger>
+          </TabsList>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* CNPJ */}
-            <div className="space-y-1.5">
-              <Label htmlFor="cli-cnpj">
-                CNPJ <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="cli-cnpj"
-                value={cnpj}
-                onChange={handleCnpjChange}
-                placeholder="00.000.000/0000-00"
-                maxLength={18}
-                className={errors.cnpj ? 'border-destructive focus-visible:ring-destructive' : ''}
-              />
-              {errors.cnpj && <p className="text-xs text-destructive font-medium">{errors.cnpj}</p>}
-            </div>
-
-            {/* Contato */}
-            <div className="space-y-1.5">
-              <Label htmlFor="cli-contato">Contato (Nome)</Label>
-              <Input
-                id="cli-contato"
-                value={contato}
-                onChange={(e) => setContato(e.target.value)}
-                placeholder="Ex: Carlos Eduardo"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Email */}
-            <div className="space-y-1.5">
-              <Label htmlFor="cli-email">E-mail</Label>
-              <Input
-                id="cli-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="carlos@empresa.com.br"
-              />
-            </div>
-
-            {/* Telefone */}
-            <div className="space-y-1.5">
-              <Label htmlFor="cli-telefone">Telefone</Label>
-              <Input
-                id="cli-telefone"
-                value={telefone}
-                onChange={handleTelefoneChange}
-                placeholder="(00) 00000-0000"
-                maxLength={15}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* Cidade */}
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="cli-cidade">Cidade</Label>
-              <Input
-                id="cli-cidade"
-                value={cidade}
-                onChange={(e) => setCidade(e.target.value)}
-                placeholder="Ex: Cascavel"
-              />
-            </div>
-
-            {/* UF */}
-            <div className="space-y-1.5">
-              <Label htmlFor="cli-uf">UF</Label>
-              <Select
-                value={uf || 'none'}
-                onValueChange={(val) => setUf(val === 'none' ? '' : val)}
-              >
-                <SelectTrigger id="cli-uf">
-                  <SelectValue placeholder="UF" />
-                </SelectTrigger>
-                <SelectContent className="max-h-56">
-                  <SelectItem value="none">Selecione</SelectItem>
-                  {BRAZILIAN_UFS.map((sigla) => (
-                    <SelectItem key={sigla} value={sigla}>
-                      {sigla}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* Perfil / Categoria Canônica */}
-            <div className="space-y-1.5">
-              <Label htmlFor="cli-categoria">
-                Categoria / Perfil <span className="text-destructive">*</span>
-              </Label>
-              <Select
-                value={categoria}
-                onValueChange={(val) => {
-                  setCategoriaTouched(true)
-                  setCategoria(val)
-                  if (errors.categoria) {
-                    setErrors((prev) => ({ ...prev, categoria: undefined }))
+          <TabsContent value="dados" className="mt-0 space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Razão Social */}
+              <div className="space-y-1.5">
+                <Label htmlFor="cli-razaoSocial">
+                  Razão Social <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="cli-razaoSocial"
+                  value={razaoSocial}
+                  onChange={(e) => {
+                    setRazaoSocial(e.target.value)
+                    if (errors.razaoSocial) {
+                      setErrors((prev) => ({ ...prev, razaoSocial: undefined }))
+                    }
+                  }}
+                  placeholder="Ex: Granja São Paulo Nutrição Animal Ltda"
+                  className={
+                    errors.razaoSocial ? 'border-destructive focus-visible:ring-destructive' : ''
                   }
-                }}
-              >
-                <SelectTrigger
-                  id="cli-categoria"
-                  className={errors.categoria ? 'border-destructive' : ''}
+                />
+                {errors.razaoSocial && (
+                  <p className="text-xs text-destructive font-medium">{errors.razaoSocial}</p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* CNPJ */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="cli-cnpj">
+                    CNPJ <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="cli-cnpj"
+                    value={cnpj}
+                    onChange={handleCnpjChange}
+                    placeholder="00.000.000/0000-00"
+                    maxLength={18}
+                    className={
+                      errors.cnpj ? 'border-destructive focus-visible:ring-destructive' : ''
+                    }
+                  />
+                  {errors.cnpj && (
+                    <p className="text-xs text-destructive font-medium">{errors.cnpj}</p>
+                  )}
+                </div>
+
+                {/* Contato */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="cli-contato">Contato (Nome)</Label>
+                  <Input
+                    id="cli-contato"
+                    value={contato}
+                    onChange={(e) => setContato(e.target.value)}
+                    placeholder="Ex: Carlos Eduardo"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Email */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="cli-email">E-mail</Label>
+                  <Input
+                    id="cli-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="carlos@empresa.com.br"
+                  />
+                </div>
+
+                {/* Telefone */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="cli-telefone">Telefone</Label>
+                  <Input
+                    id="cli-telefone"
+                    value={telefone}
+                    onChange={handleTelefoneChange}
+                    placeholder="(00) 00000-0000"
+                    maxLength={15}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Cidade */}
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="cli-cidade">Cidade</Label>
+                  <Input
+                    id="cli-cidade"
+                    value={cidade}
+                    onChange={(e) => setCidade(e.target.value)}
+                    placeholder="Ex: Cascavel"
+                  />
+                </div>
+
+                {/* UF */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="cli-uf">UF</Label>
+                  <Select
+                    value={uf || 'none'}
+                    onValueChange={(val) => setUf(val === 'none' ? '' : val)}
+                  >
+                    <SelectTrigger id="cli-uf">
+                      <SelectValue placeholder="UF" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-56">
+                      <SelectItem value="none">Selecione</SelectItem>
+                      {BRAZILIAN_UFS.map((sigla) => (
+                        <SelectItem key={sigla} value={sigla}>
+                          {sigla}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Perfil / Categoria Canônica */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="cli-categoria">
+                    Categoria / Perfil <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={categoria}
+                    onValueChange={(val) => {
+                      setCategoriaTouched(true)
+                      setCategoria(val)
+                      if (errors.categoria) {
+                        setErrors((prev) => ({ ...prev, categoria: undefined }))
+                      }
+                    }}
+                  >
+                    <SelectTrigger
+                      id="cli-categoria"
+                      className={errors.categoria ? 'border-destructive' : ''}
+                    >
+                      <SelectValue placeholder="Selecione a categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Não informada (pendente)</SelectItem>
+                      {CLIENT_PROFILE_CATEGORIES.map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat}
+                        </SelectItem>
+                      ))}
+                      {/* Se houver uma categoria legada/outros não vazia */}
+                      {categoria !== 'none' &&
+                        !CLIENT_PROFILE_CATEGORIES.includes(categoria as ClientProfileCategory) && (
+                          <SelectItem value={categoria}>Outra: {categoria}</SelectItem>
+                        )}
+                    </SelectContent>
+                  </Select>
+                  {errors.categoria && (
+                    <p className="text-xs text-destructive font-medium">{errors.categoria}</p>
+                  )}
+                  <p className="text-[11px] text-muted-foreground">
+                    Padrão uniforme para segmentação de carteira
+                  </p>
+                </div>
+
+                {/* Segmento */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="cli-segmento">Segmento (Espécie)</Label>
+                  <Select
+                    value={segmento}
+                    onValueChange={(val) => {
+                      setSegmento(val)
+                      if (errors.segmento) {
+                        setErrors((prev) => ({ ...prev, segmento: undefined }))
+                      }
+                    }}
+                  >
+                    <SelectTrigger
+                      id="cli-segmento"
+                      className={errors.segmento ? 'border-destructive' : ''}
+                    >
+                      <SelectValue placeholder="Selecione o segmento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Não informado</SelectItem>
+                      {CLIENT_SEGMENTOS.map((seg) => (
+                        <SelectItem key={seg} value={seg}>
+                          {seg}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.segmento && (
+                    <p className="text-xs text-destructive font-medium">{errors.segmento}</p>
+                  )}
+                </div>
+
+                {/* Vendedor */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="cli-vendedor">Vendedor Responsável</Label>
+                  <Select
+                    value={vendedorId}
+                    onValueChange={(val) => {
+                      setVendedorTouched(true)
+                      setVendedorId(val)
+                      if (errors.vendedor) {
+                        setErrors((prev) => ({ ...prev, vendedor: undefined }))
+                      }
+                    }}
+                  >
+                    <SelectTrigger
+                      id="cli-vendedor"
+                      className={errors.vendedor ? 'border-destructive' : ''}
+                    >
+                      <SelectValue placeholder="Selecione o vendedor" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      <SelectItem value="none">Nenhum / Não atribuído</SelectItem>
+                      {activeSellers.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {normalizeSellerName(s.nome)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.vendedor && (
+                    <p className="text-xs text-destructive font-medium">{errors.vendedor}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Observações */}
+              <div className="space-y-1.5">
+                <Label htmlFor="cli-observacoes">Observações</Label>
+                <Textarea
+                  id="cli-observacoes"
+                  value={observacoes}
+                  onChange={(e) => setObservacoes(e.target.value)}
+                  placeholder="Informações adicionais, histórico inicial de contato ou especificidades da operação..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={submitting}
+                  onClick={() => onOpenChange(false)}
                 >
-                  <SelectValue placeholder="Selecione a categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Não informada (pendente)</SelectItem>
-                  {CLIENT_PROFILE_CATEGORIES.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
-                    </SelectItem>
-                  ))}
-                  {/* Se houver uma categoria legada/outros não vazia */}
-                  {categoria !== 'none' &&
-                    !CLIENT_PROFILE_CATEGORIES.includes(categoria as ClientProfileCategory) && (
-                      <SelectItem value={categoria}>Outra: {categoria}</SelectItem>
-                    )}
-                </SelectContent>
-              </Select>
-              {errors.categoria && (
-                <p className="text-xs text-destructive font-medium">{errors.categoria}</p>
-              )}
-              <p className="text-[11px] text-muted-foreground">
-                Padrão uniforme para segmentação de carteira
-              </p>
-            </div>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : cliente ? (
+                    'Salvar Alterações'
+                  ) : (
+                    'Cadastrar Cliente'
+                  )}
+                </Button>
+              </div>
+            </form>
+          </TabsContent>
 
-            {/* Segmento */}
-            <div className="space-y-1.5">
-              <Label htmlFor="cli-segmento">Segmento (Espécie)</Label>
-              <Select
-                value={segmento}
-                onValueChange={(val) => {
-                  setSegmento(val)
-                  if (errors.segmento) {
-                    setErrors((prev) => ({ ...prev, segmento: undefined }))
-                  }
-                }}
-              >
-                <SelectTrigger
-                  id="cli-segmento"
-                  className={errors.segmento ? 'border-destructive' : ''}
-                >
-                  <SelectValue placeholder="Selecione o segmento" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Não informado</SelectItem>
-                  {CLIENT_SEGMENTOS.map((seg) => (
-                    <SelectItem key={seg} value={seg}>
-                      {seg}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.segmento && (
-                <p className="text-xs text-destructive font-medium">{errors.segmento}</p>
-              )}
-            </div>
-
-            {/* Vendedor */}
-            <div className="space-y-1.5">
-              <Label htmlFor="cli-vendedor">Vendedor Responsável</Label>
-              <Select
-                value={vendedorId}
-                onValueChange={(val) => {
-                  setVendedorTouched(true)
-                  setVendedorId(val)
-                  if (errors.vendedor) {
-                    setErrors((prev) => ({ ...prev, vendedor: undefined }))
-                  }
-                }}
-              >
-                <SelectTrigger
-                  id="cli-vendedor"
-                  className={errors.vendedor ? 'border-destructive' : ''}
-                >
-                  <SelectValue placeholder="Selecione o vendedor" />
-                </SelectTrigger>
-                <SelectContent className="max-h-60">
-                  <SelectItem value="none">Nenhum / Não atribuído</SelectItem>
-                  {activeSellers.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {normalizeSellerName(s.nome)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.vendedor && (
-                <p className="text-xs text-destructive font-medium">{errors.vendedor}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Observações */}
-          <div className="space-y-1.5">
-            <Label htmlFor="cli-observacoes">Observações</Label>
-            <Textarea
-              id="cli-observacoes"
-              value={observacoes}
-              onChange={(e) => setObservacoes(e.target.value)}
-              placeholder="Informações adicionais, histórico inicial de contato ou especificidades da operação..."
-              rows={3}
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={submitting}
-              onClick={() => onOpenChange(false)}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Salvando...
-                </>
-              ) : cliente ? (
-                'Salvar Alterações'
-              ) : (
-                'Cadastrar Cliente'
-              )}
-            </Button>
-          </div>
-        </form>
+          <TabsContent value="historico" className="mt-0">
+            <FactoryHistoryView factoryId={cliente?.id} />
+          </TabsContent>
+        </Tabs>
       </DialogContent>
 
       {/* Diálogo de confirmação de categoria/perfil ao editar */}

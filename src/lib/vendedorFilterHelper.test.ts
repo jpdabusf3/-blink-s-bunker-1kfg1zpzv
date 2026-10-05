@@ -4,6 +4,7 @@ import {
   normalizeSellerName,
   getFactorySellerMatches,
   factoryMatchesVendedor,
+  isFactoryOrphan,
   resolveVendedorIdentity,
   type UnifiedVendedorOption,
 } from './vendedorFilterHelper'
@@ -205,6 +206,38 @@ describe('vendedorFilterHelper', () => {
       })
       expect(factoryMatchesVendedor(factoryRodrigo, '4urt19q2phjs7fn', mockOptions)).toBe(false)
       expect(factoryMatchesVendedor(factoryRodrigo, 'vscx4eb1s06fuiy', mockOptions)).toBe(true)
+    })
+  })
+
+  describe('isFactoryOrphan', () => {
+    it('identifica corretamente clientes sem vendedor atribuído', () => {
+      const orphan1: any = {
+        name: 'Cliente Sem Vendedor 1',
+        vendedor_id: '',
+        vendedor_name: '',
+      }
+      expect(isFactoryOrphan(orphan1)).toBe(true)
+
+      const orphan2: any = {
+        name: 'Cliente Sem Vendedor 2',
+        vendedor_id: null,
+        vendedor_name: null,
+        vendedor: '',
+      }
+      expect(isFactoryOrphan(orphan2)).toBe(true)
+
+      const assigned1: any = {
+        name: 'Cliente Com Vendedor 1',
+        vendedor_id: '4urt19q2phjs7fn',
+        vendedor_name: 'João Figueiredo',
+      }
+      expect(isFactoryOrphan(assigned1)).toBe(false)
+
+      const assigned2: any = {
+        name: 'Cliente Com Apenas Nome',
+        vendedor_name: 'Rodrigo Gardinal',
+      }
+      expect(isFactoryOrphan(assigned2)).toBe(false)
     })
   })
 

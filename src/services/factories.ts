@@ -225,12 +225,44 @@ export async function getAllFactories(): Promise<Factory[]> {
   return records.map(mapRecordToFactory)
 }
 
+import { recordFactoryChangeLog, diffAndRecordFactoryChanges } from './factory-change-logs'
+
 export async function updateFactoryPB(id: string, data: Partial<Factory>) {
-  return pb.collection('factories').update(id, toPBData(data) as any)
+  // Buscar estado anterior para registrar diff de alterações
+  let beforeRecord: Record<string, any> | null = null
+  try {
+    beforeRecord = await pb.collection('factories').getOne(id)
+  } catch (err) {
+    console.warn('[factories] Não foi possível ler estado anterior para log:', err)
+  }
+
+  const pbData = toPBData(data)
+  const result = await pb.collection('factories').update(id, pbData as any)
+
+  if (beforeRecord) {
+    // Gravação assíncrona do diff sem bloquear ou falhar a operação principal
+    diffAndRecordFactoryChanges(id, beforeRecord, pbData).catch((err) => {
+      console.warn('[factories] Falha ao registrar diff de alteração:', err)
+    })
+  }
+
+  return result
 }
 
 export async function createFactoryPB(data: Partial<Factory>) {
-  return pb.collection('factories').create(toPBData(data) as any)
+  const pbData = toPBData(data)
+  const result = await pb.collection('factories').create(pbData as any)
+
+  // Gravar registro inicial "Cliente criado"
+  recordFactoryChangeLog({
+    factory_id: result.id,
+    change_summary: `Cliente criado (${data.name || 'Sem nome'})`,
+    new_value: data.name || '',
+  }).catch((err) => {
+    console.warn('[factories] Falha ao registrar log de criação:', err)
+  })
+
+  return result
 }
 
 export async function deleteFactoryPB(id: string) {

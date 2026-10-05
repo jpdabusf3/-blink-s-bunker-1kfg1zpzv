@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-30T17:39:06.512Z",
+  "generatedAt": "2026-10-05T11:51:05.350Z",
   "collections": [
     {
       "name": "users",
@@ -4666,6 +4666,81 @@
         "CREATE INDEX idx_deal_activities_deal_id ON deal_activities (deal_id)",
         "CREATE INDEX idx_deal_activities_user_id ON deal_activities (user_id)",
         "CREATE INDEX idx_deal_activities_created ON deal_activities (created DESC)"
+      ]
+    },
+    {
+      "name": "factory_change_logs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "factory_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "factories"
+        },
+        {
+          "name": "user_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "user_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "field",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "old_value",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "new_value",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "change_summary",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_factory_change_logs_factory_id ON factory_change_logs (factory_id)",
+        "CREATE INDEX idx_factory_change_logs_created ON factory_change_logs (created DESC)"
       ]
     }
   ]

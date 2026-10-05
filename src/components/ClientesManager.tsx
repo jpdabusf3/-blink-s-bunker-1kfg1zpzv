@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
 import {
   Building2,
   Plus,
@@ -40,9 +41,26 @@ import {
   Users,
   MapPin,
   FolderOpen,
+  UserX,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  CheckSquare,
+  Square,
+  UserCheck,
+  Check,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { getAllFactories, deleteFactoryPB } from '@/services/factories'
+import { getAllFactories, deleteFactoryPB, updateFactoryPB } from '@/services/factories'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { exportClientesToExcel, exportClientesToPDF } from '@/lib/exportClientes'
+import { formatDataBR } from '@/lib/corporateDocuments'
 import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { useAuth } from '@/hooks/use-auth'
 import { useUsers } from '@/hooks/use-users'
@@ -56,6 +74,7 @@ import { formatCNPJ, cleanDigits, BRAZILIAN_UFS, CLIENT_SEGMENTOS } from '@/lib/
 import {
   buildUnifiedVendedoresList,
   factoryMatchesVendedor,
+  isFactoryOrphan,
   normalizeSellerName,
   type UnifiedVendedorOption,
 } from '@/lib/vendedorFilterHelper'
@@ -81,6 +100,13 @@ export function ClientesManager() {
   const [segmentoFilter, setSegmentoFilter] = useState<string>('all')
   const [ufFilter, setUfFilter] = useState<string>('all')
   const [vendedorFilter, setVendedorFilter] = useState<string>('all')
+  const [onlyOrphans, setOnlyOrphans] = useState(false)
+
+  // Atribuição rápida em lote / individual
+  const [selectedOrphanIds, setSelectedOrphanIds] = useState<string[]>([])
+  const [batchSellerId, setBatchSellerId] = useState<string>('none')
+  const [assigningBatch, setAssigningBatch] = useState(false)
+  const [exportingType, setExportingType] = useState<'pdf' | 'excel' | null>(null)
 
   // Modal de criação / edição
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -160,9 +186,21 @@ export function ClientesManager() {
     return map
   }, [gestaoTecnicaList])
 
+  // Contagem de clientes órfãos (sem vendedor atribuído)
+  const totalOrphansCount = useMemo(() => {
+    return clientes.filter(isFactoryOrphan).length
+  }, [clientes])
+
   // Filtragem
   const filteredClientes = useMemo(() => {
     return clientes.filter((c) => {
+      // Filtro especial de Órfãos (sem vendedor atribuído)
+      if (onlyOrphans) {
+        if (!isFactoryOrphan(c)) {
+          return false
+        }
+      }
+
       // Busca por nome ou CNPJ
       if (debouncedSearch.trim()) {
         const q = debouncedSearch.toLowerCase().trim()
@@ -192,8 +230,8 @@ export function ClientesManager() {
         }
       }
 
-      // Filtro por Vendedor
-      if (vendedorFilter !== 'all') {
+      // Filtro por Vendedor (ignorado se onlyOrphans estiver ativo)
+      if (!onlyOrphans && vendedorFilter !== 'all') {
         if (!factoryMatchesVendedor(c, vendedorFilter, vendedorOptions)) {
           return false
         }
@@ -201,7 +239,165 @@ export function ClientesManager() {
 
       return true
     })
-  }, [clientes, debouncedSearch, segmentoFilter, ufFilter, vendedorFilter, vendedorOptions])
+  }, [
+    clientes,
+    debouncedSearch,
+    segmentoFilter,
+    ufFilter,
+    vendedorFilter,
+    vendedorOptions,
+    onlyOrphans,
+  ])
+
+  // Atribuição individual rápida direto na linha
+  const handleAssignSingleSeller = async (clienteId: string, gtId: string) => {
+    if (!gtId || gtId === 'none') return
+    const sellerOpt = vendedorOptions.find((v) => v.value === gtId || v.gestaoTecnicaId === gtId)
+    const sellerName = sellerOpt ? normalizeSellerName(sellerOpt.label) : undefined
+
+    try {
+      await updateFactoryPB(clienteId, {
+        vendedor_id: gtId,
+        vendedor_name: sellerName,
+      })
+      toast.success(
+        sellerName
+          ? `Vendedor ${sellerName} atribuído com sucesso.`
+          : 'Vendedor atribuído com sucesso.',
+      )
+      // Atualiza localmente para resposta imediata
+      setClientes((prev) =>
+        prev.map((c) =>
+          c.id === clienteId ? { ...c, vendedor_id: gtId, vendedor_name: sellerName } : c,
+        ),
+      )
+      setSelectedOrphanIds((prev) => prev.filter((id) => id !== clienteId))
+    } catch (err) {
+      console.error('[ClientesManager] Erro ao atribuir vendedor:', err)
+      toast.error('Erro ao atribuir vendedor. Tente novamente.')
+    }
+  }
+
+  // Atribuição em lote para os clientes órfãos selecionados
+  const handleBatchAssign = async () => {
+    if (selectedOrphanIds.length === 0 || !batchSellerId || batchSellerId === 'none') {
+      toast.error('Selecione ao menos um cliente e um vendedor para atribuir.')
+      return
+    }
+
+    const sellerOpt = vendedorOptions.find(
+      (v) => v.value === batchSellerId || v.gestaoTecnicaId === batchSellerId,
+    )
+    const sellerName = sellerOpt ? normalizeSellerName(sellerOpt.label) : undefined
+
+    setAssigningBatch(true)
+    try {
+      await Promise.all(
+        selectedOrphanIds.map((id) =>
+          updateFactoryPB(id, {
+            vendedor_id: batchSellerId,
+            vendedor_name: sellerName,
+          }),
+        ),
+      )
+
+      toast.success(
+        `${selectedOrphanIds.length} cliente(s) atribuído(s) para ${sellerName || 'vendedor'} com sucesso.`,
+      )
+
+      setClientes((prev) =>
+        prev.map((c) =>
+          selectedOrphanIds.includes(c.id)
+            ? { ...c, vendedor_id: batchSellerId, vendedor_name: sellerName }
+            : c,
+        ),
+      )
+      setSelectedOrphanIds([])
+      setBatchSellerId('none')
+    } catch (err) {
+      console.error('[ClientesManager] Erro na atribuição em lote:', err)
+      toast.error('Ocorreu um erro ao aplicar a atribuição em lote.')
+    } finally {
+      setAssigningBatch(false)
+    }
+  }
+
+  // Ações de seleção de todos os órfãos visíveis
+  const toggleSelectAllOrphans = () => {
+    const visibleOrphanIds = filteredClientes.filter(isFactoryOrphan).map((c) => c.id)
+    const allSelected =
+      visibleOrphanIds.length > 0 && visibleOrphanIds.every((id) => selectedOrphanIds.includes(id))
+    if (allSelected) {
+      setSelectedOrphanIds((prev) => prev.filter((id) => !visibleOrphanIds.includes(id)))
+    } else {
+      setSelectedOrphanIds(Array.from(new Set([...selectedOrphanIds, ...visibleOrphanIds])))
+    }
+  }
+
+  const toggleSelectOneOrphan = (id: string) => {
+    setSelectedOrphanIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
+  }
+
+  // Exportações PDF / Excel
+  const handleExportExcel = () => {
+    if (filteredClientes.length === 0) return
+    setExportingType('excel')
+    try {
+      const selectedSellerLabel =
+        vendedorFilter !== 'all'
+          ? vendedorOptions.find((v) => v.value === vendedorFilter)?.label || vendedorFilter
+          : undefined
+
+      exportClientesToExcel(
+        filteredClientes,
+        {
+          busca: debouncedSearch || undefined,
+          segmento: segmentoFilter,
+          uf: ufFilter,
+          vendedor: selectedSellerLabel,
+          somenteSemVendedor: onlyOrphans,
+        },
+        vendedorMap,
+      )
+      toast.success('Exportação Excel concluída com sucesso.')
+    } catch (err) {
+      console.error('[ClientesManager] Erro ao exportar Excel:', err)
+      toast.error('Falha ao gerar o arquivo Excel.')
+    } finally {
+      setExportingType(null)
+    }
+  }
+
+  const handleExportPDF = () => {
+    if (filteredClientes.length === 0) return
+    setExportingType('pdf')
+    try {
+      const selectedSellerLabel =
+        vendedorFilter !== 'all'
+          ? vendedorOptions.find((v) => v.value === vendedorFilter)?.label || vendedorFilter
+          : undefined
+
+      exportClientesToPDF(
+        filteredClientes,
+        {
+          busca: debouncedSearch || undefined,
+          segmento: segmentoFilter,
+          uf: ufFilter,
+          vendedor: selectedSellerLabel,
+          somenteSemVendedor: onlyOrphans,
+        },
+        vendedorMap,
+      )
+      toast.success('Exportação PDF concluída com sucesso.')
+    } catch (err: any) {
+      console.error('[ClientesManager] Erro ao exportar PDF:', err)
+      toast.error(err?.message || 'Falha ao gerar o relatório PDF.')
+    } finally {
+      setExportingType(null)
+    }
+  }
 
   // Abertura do formulário
   const handleOpenNew = () => {
@@ -280,15 +476,64 @@ export function ClientesManager() {
             <div>
               <CardTitle className="text-xl flex items-center gap-2">
                 <Users className="w-5 h-5 text-primary" />
-                Clientes
+                Clientes e Carteira
               </CardTitle>
               <CardDescription>
                 Gerencie todos os clientes, dados cadastrais, segmentos e carteira comercial.
               </CardDescription>
             </div>
-            <Button onClick={handleOpenNew} className="gap-2 shrink-0">
-              <Plus className="w-4 h-4" /> Novo Cliente
-            </Button>
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              {/* Botão de Exportação com Menu Corporativo */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="gap-2"
+                            disabled={filteredClientes.length === 0 || exportingType !== null}
+                          >
+                            <Download className="w-4 h-4" />
+                            {exportingType === 'excel'
+                              ? 'Gerando Excel...'
+                              : exportingType === 'pdf'
+                                ? 'Gerando PDF...'
+                                : 'Exportar'}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem
+                            onClick={handleExportPDF}
+                            className="gap-2 cursor-pointer"
+                          >
+                            <FileText className="w-4 h-4 text-red-600" />
+                            Exportar PDF
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={handleExportExcel}
+                            className="gap-2 cursor-pointer"
+                          >
+                            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                            Exportar Excel
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </span>
+                  </TooltipTrigger>
+                  {filteredClientes.length === 0 && (
+                    <TooltipContent>
+                      Nenhum cliente para exportar com os filtros atuais
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
+
+              <Button onClick={handleOpenNew} className="gap-2 shrink-0">
+                <Plus className="w-4 h-4" /> Novo Cliente
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -354,6 +599,77 @@ export function ClientesManager() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Linha de Filtros Rápidos: Botão/Badge "Sem vendedor (N)" */}
+          <div className="pt-2 border-t border-border/60 flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Button
+                variant={onlyOrphans ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => {
+                  setOnlyOrphans((prev) => !prev)
+                  if (!onlyOrphans) {
+                    setVendedorFilter('all')
+                  }
+                }}
+                className="gap-2 text-xs h-8"
+              >
+                <UserX className="w-3.5 h-3.5" />
+                Sem vendedor
+                <Badge
+                  variant={onlyOrphans ? 'secondary' : 'default'}
+                  className="ml-1 px-1.5 py-0 text-[10px] h-4"
+                >
+                  {totalOrphansCount}
+                </Badge>
+              </Button>
+
+              {onlyOrphans && (
+                <span className="text-xs text-muted-foreground">
+                  Modo relatório de clientes órfãos ativado
+                </span>
+              )}
+            </div>
+
+            {/* Painel de Atribuição em Lote quando há órfãos selecionados */}
+            {selectedOrphanIds.length > 0 && (
+              <div className="flex items-center gap-2 bg-muted/40 p-1.5 rounded-md border border-border">
+                <span className="text-xs font-medium text-foreground">
+                  {selectedOrphanIds.length} selecionado(s):
+                </span>
+                <Select value={batchSellerId} onValueChange={setBatchSellerId}>
+                  <SelectTrigger className="h-7 text-xs w-48">
+                    <SelectValue placeholder="Selecione o vendedor" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    <SelectItem value="none">Selecione o vendedor</SelectItem>
+                    {vendedorOptions.map((v) => (
+                      <SelectItem key={v.value} value={v.value}>
+                        {v.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  disabled={batchSellerId === 'none' || assigningBatch}
+                  onClick={handleBatchAssign}
+                >
+                  <UserCheck className="w-3.5 h-3.5" />
+                  {assigningBatch ? 'Atribuindo...' : 'Atribuir'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs px-2 text-muted-foreground"
+                  onClick={() => setSelectedOrphanIds([])}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -478,7 +794,8 @@ export function ClientesManager() {
             {(searchTerm ||
               segmentoFilter !== 'all' ||
               ufFilter !== 'all' ||
-              vendedorFilter !== 'all') && (
+              vendedorFilter !== 'all' ||
+              onlyOrphans) && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -488,6 +805,8 @@ export function ClientesManager() {
                   setSegmentoFilter('all')
                   setUfFilter('all')
                   setVendedorFilter('all')
+                  setOnlyOrphans(false)
+                  setSelectedOrphanIds([])
                 }}
               >
                 <RotateCcw className="w-3 h-3" /> Limpar filtros
@@ -496,8 +815,20 @@ export function ClientesManager() {
           </div>
 
           {filteredClientes.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">
-              Nenhum cliente atende aos filtros selecionados.
+            <div className="p-8 text-center text-muted-foreground space-y-2">
+              {onlyOrphans ? (
+                <>
+                  <UserCheck className="w-8 h-8 mx-auto text-emerald-600 mb-2" />
+                  <p className="font-semibold text-foreground">
+                    Nenhum cliente sem vendedor atribuído
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Todos os clientes deste filtro possuem vendedor responsável ativo.
+                  </p>
+                </>
+              ) : (
+                'Nenhum cliente atende aos filtros selecionados.'
+              )}
             </div>
           ) : (
             <>
@@ -506,20 +837,58 @@ export function ClientesManager() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      {onlyOrphans && (
+                        <TableHead className="w-10">
+                          <button
+                            type="button"
+                            onClick={toggleSelectAllOrphans}
+                            className="p-1 hover:text-foreground text-muted-foreground"
+                            title="Selecionar todos os órfãos visíveis"
+                          >
+                            {filteredClientes.length > 0 &&
+                            filteredClientes.every((c) => selectedOrphanIds.includes(c.id)) ? (
+                              <CheckSquare className="w-4 h-4 text-primary" />
+                            ) : (
+                              <Square className="w-4 h-4" />
+                            )}
+                          </button>
+                        </TableHead>
+                      )}
                       <TableHead>Razão Social</TableHead>
                       <TableHead>CNPJ</TableHead>
                       <TableHead>Cidade/UF</TableHead>
                       <TableHead>Perfil / Categoria</TableHead>
                       <TableHead>Segmento</TableHead>
-                      <TableHead>Vendedor</TableHead>
+                      <TableHead>
+                        {onlyOrphans ? 'Atribuição Rápida de Vendedor' : 'Vendedor'}
+                      </TableHead>
+                      {onlyOrphans && <TableHead>Última Edição</TableHead>}
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredClientes.map((c) => {
                       const seg = c.carteira?.trim().toUpperCase()
+                      const isOrphan = isFactoryOrphan(c)
+                      const isSelected = selectedOrphanIds.includes(c.id)
+
                       return (
-                        <TableRow key={c.id}>
+                        <TableRow key={c.id} className={isSelected ? 'bg-primary/5' : undefined}>
+                          {onlyOrphans && (
+                            <TableCell className="w-10">
+                              <button
+                                type="button"
+                                onClick={() => toggleSelectOneOrphan(c.id)}
+                                className="p-1 hover:text-foreground text-muted-foreground"
+                              >
+                                {isSelected ? (
+                                  <CheckSquare className="w-4 h-4 text-primary" />
+                                ) : (
+                                  <Square className="w-4 h-4" />
+                                )}
+                              </button>
+                            </TableCell>
+                          )}
                           <TableCell className="font-medium text-foreground">
                             <div>
                               <span>{c.name}</span>
@@ -549,8 +918,34 @@ export function ClientesManager() {
                             )}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
-                            {getVendedorDisplay(c)}
+                            {isOrphan ? (
+                              <div className="flex items-center gap-1.5 min-w-[210px]">
+                                <Select
+                                  value={c.vendedor_id || 'none'}
+                                  onValueChange={(val) => handleAssignSingleSeller(c.id, val)}
+                                >
+                                  <SelectTrigger className="h-7 text-xs border-amber-300 bg-amber-50/50 text-amber-900 dark:bg-amber-950/20 dark:border-amber-800 dark:text-amber-300">
+                                    <SelectValue placeholder="Atribuir vendedor..." />
+                                  </SelectTrigger>
+                                  <SelectContent className="max-h-60">
+                                    <SelectItem value="none">Selecione o vendedor</SelectItem>
+                                    {vendedorOptions.map((v) => (
+                                      <SelectItem key={v.value} value={v.value}>
+                                        {v.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            ) : (
+                              getVendedorDisplay(c)
+                            )}
                           </TableCell>
+                          {onlyOrphans && (
+                            <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                              {formatDataBR(c.lastInteraction || c.created)}
+                            </TableCell>
+                          )}
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
                               <Button
@@ -583,6 +978,8 @@ export function ClientesManager() {
               <div className="md:hidden p-4 space-y-3">
                 {filteredClientes.map((c) => {
                   const seg = c.carteira?.trim().toUpperCase()
+                  const isOrphan = isFactoryOrphan(c)
+
                   return (
                     <div
                       key={c.id}
@@ -604,7 +1001,7 @@ export function ClientesManager() {
                         )}
                       </div>
 
-                      <div className="text-xs text-muted-foreground space-y-1 pt-1 border-t border-border/50">
+                      <div className="text-xs text-muted-foreground space-y-1.5 pt-1 border-t border-border/50">
                         <div className="flex items-center gap-1.5">
                           <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                           <span>{getCidadeUfDisplay(c)}</span>
@@ -620,6 +1017,30 @@ export function ClientesManager() {
                         {c.contato && (
                           <div className="text-xs text-muted-foreground">
                             Contato: <span className="text-foreground">{c.contato}</span>
+                          </div>
+                        )}
+
+                        {isOrphan && (
+                          <div className="pt-2">
+                            <Label className="text-[11px] text-amber-700 dark:text-amber-400 font-medium mb-1 block">
+                              Atribuir vendedor rápido:
+                            </Label>
+                            <Select
+                              value={c.vendedor_id || 'none'}
+                              onValueChange={(val) => handleAssignSingleSeller(c.id, val)}
+                            >
+                              <SelectTrigger className="h-8 text-xs border-amber-300 bg-amber-50/50 text-amber-900 dark:bg-amber-950/20 dark:border-amber-800 dark:text-amber-300">
+                                <SelectValue placeholder="Atribuir vendedor..." />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-60">
+                                <SelectItem value="none">Selecione o vendedor</SelectItem>
+                                {vendedorOptions.map((v) => (
+                                  <SelectItem key={v.value} value={v.value}>
+                                    {v.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                         )}
                       </div>

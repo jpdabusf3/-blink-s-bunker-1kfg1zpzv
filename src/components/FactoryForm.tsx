@@ -23,8 +23,10 @@ import { extractFieldErrors, getErrorMessage } from '@/lib/pocketbase/errors'
 import { normalizeArray } from '@/lib/utils'
 import { useFunnelActivityLog } from '@/hooks/use-funnel-activity-log'
 import { normalizeSellerName } from '@/lib/vendedorFilterHelper'
-import { UserCog } from 'lucide-react'
+import { UserCog, Building2, History } from 'lucide-react'
 import { toast } from 'sonner'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { FactoryHistoryView } from '@/components/FactoryHistoryView'
 
 interface FactoryFormProps {
   factory?: Factory
@@ -382,328 +384,358 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Nome da Fábrica / Cliente</Label>
-          <Input name="name" defaultValue={factory?.name} required />
-          {fieldErrors.name && <p className="text-xs text-destructive">{fieldErrors.name}</p>}
-        </div>
-        <div className="space-y-2">
-          <Label>Cidade</Label>
-          <Input name="city" defaultValue={factory?.city} required />
-          {fieldErrors.city && <p className="text-xs text-destructive">{fieldErrors.city}</p>}
-        </div>
-        <div className="space-y-2">
-          <Label>País</Label>
-          <Select name="country" defaultValue={factory?.country || 'Brasil'}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {COUNTRIES.map((c) => (
-                <SelectItem key={c.name} value={c.name}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Estado (UF)</Label>
-          <Input name="state" defaultValue={factory?.state} placeholder="Ex: SP, PR, MG" />
-        </div>
+    <Tabs defaultValue="dados" className="w-full mt-4">
+      <TabsList className="grid w-full grid-cols-2 mb-4">
+        <TabsTrigger value="dados" className="gap-2 text-xs">
+          <Building2 className="w-3.5 h-3.5" />
+          Dados da Fábrica
+        </TabsTrigger>
+        <TabsTrigger value="historico" className="gap-2 text-xs">
+          <History className="w-3.5 h-3.5" />
+          Histórico de Alterações
+        </TabsTrigger>
+      </TabsList>
 
-        <div className="space-y-2">
-          <Label>Região (Múltipla Seleção)</Label>
-          <MultiSelect
-            options={REGION_OPTIONS}
-            value={regions}
-            onChange={setRegions}
-            placeholder="Selecione as Regiões"
-          />
-          {fieldErrors.regions && <p className="text-xs text-destructive">{fieldErrors.regions}</p>}
-        </div>
-
-        <div className="space-y-2">
-          <Label>Espécie Animal (Múltipla Seleção)</Label>
-          <MultiSelect
-            options={SPECIES_OPTIONS}
-            value={species}
-            onChange={setSpecies}
-            placeholder="Selecione as Espécies"
-          />
-          {fieldErrors.species && <p className="text-xs text-destructive">{fieldErrors.species}</p>}
-        </div>
-
-        <div className="space-y-2">
-          <Label>Canal de Vendas</Label>
-          <Select
-            name="salesChannel"
-            value={salesChannelState}
-            onValueChange={setSalesChannelState}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o canal" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Direct">Direto</SelectItem>
-              <SelectItem value="Indirect">Indireto</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Carteira - Tipo de Perfil (Múltipla Seleção)</Label>
-          <MultiSelect
-            options={carteiraProfileOptions}
-            value={carteira}
-            onChange={setCarteira}
-            placeholder="Selecione o Perfil do Cliente"
-          />
-          {fieldErrors.carteira && (
-            <p className="text-xs text-destructive">{fieldErrors.carteira}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label>Prioridade (Múltipla Seleção)</Label>
-          <MultiSelect
-            options={PRIORITY_OPTIONS}
-            value={priorities}
-            onChange={setPriorities}
-            placeholder="Selecione as Prioridades"
-          />
-          {fieldErrors.priorities && (
-            <p className="text-xs text-destructive">{fieldErrors.priorities}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label>Nível de Foco (1-5 ou 'Cliente')</Label>
-          <Input
-            name="focusLevel"
-            defaultValue={factory?.focusLevel?.toString()}
-            placeholder="Ex: 5 ou Cliente"
-            required
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Status (Múltipla Seleção)</Label>
-          <MultiSelect
-            options={STATUS_OPTIONS}
-            value={statuses}
-            onChange={setStatuses}
-            placeholder="Selecione os Status"
-          />
-          {fieldErrors.statuses && (
-            <p className="text-xs text-destructive">{fieldErrors.statuses}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label>Tendência de Linha - Blink (Múltipla Seleção)</Label>
-          <MultiSelect
-            options={PRODUCT_LINE_OPTIONS}
-            value={productLines}
-            onChange={setProductLines}
-            placeholder="Selecione as Linhas"
-          />
-          {fieldErrors.productLines && (
-            <p className="text-xs text-destructive">{fieldErrors.productLines}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label>Capacidade (ton/mês)</Label>
-          <Input type="number" name="capacity" defaultValue={factory?.capacity} required />
-        </div>
-        <div className="space-y-2">
-          <Label>Potencial (R$)</Label>
-          <Input
-            type="number"
-            name="potentialValue"
-            defaultValue={factory?.potentialValue}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Estágio no Funil</Label>
-          <Select name="funnelStage" defaultValue={factory?.funnelStage || 'Lead'} required>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {[
-                'Lead',
-                'Primeiro Contato',
-                'Diagnóstico Técnico',
-                'Apresentação',
-                'Teste/Trial',
-                'Proposta',
-                'Negociação',
-                'Fechamento',
-                'Pós-venda',
-                'Perda',
-              ].map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Probabilidade (%)</Label>
-          <Input
-            type="number"
-            name="winProbability"
-            min={0}
-            max={100}
-            defaultValue={factory?.winProbability || 10}
-            required
-          />
-          {fieldErrors.winProbability && (
-            <p className="text-xs text-destructive">{fieldErrors.winProbability}</p>
-          )}
-        </div>
-        <div className="space-y-2 md:col-span-2">
-          <Label>Prazo Limite de Negociação</Label>
-          <Input
-            type="date"
-            name="deadline"
-            defaultValue={factory?.deadline ? factory.deadline.split('T')[0] : ''}
-          />
-        </div>
-
-        {/* Dedicated Responsibility Assignment UI */}
-        <div className="space-y-4 md:col-span-2 p-4 border rounded-lg bg-muted/20">
-          <h3 className="font-semibold text-sm flex items-center gap-2 text-foreground">
-            <UserCog className="w-4 h-4 text-primary" /> Atribuição de Vendedor
-          </h3>
-          <div className="space-y-2">
-            <Label>Vendedor Responsável</Label>
-            <Select
-              value={vendedorId || 'none'}
-              onValueChange={(val) => {
-                setVendedorTouched(true)
-                setVendedorId(val)
-              }}
-            >
-              <SelectTrigger className="bg-background">
-                <SelectValue placeholder="Selecione Vendedor" />
-              </SelectTrigger>
-              <SelectContent className="max-h-60">
-                <SelectItem value="none">Nenhum / Não atribuído</SelectItem>
-                {teamMembers.map((v) => (
-                  <SelectItem key={v.id} value={v.id}>
-                    {v.nome} —{' '}
-                    <span className="text-muted-foreground">
-                      {v.funcao === 'vendedor'
-                        ? 'vendedor'
-                        : v.funcao?.replace(/_/g, ' ') || 'membro'}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {salesChannelState === 'Indirect' && (
-          <div className="space-y-2 md:col-span-2">
-            <Label>Tipo de Canal Indireto</Label>
-            <Select name="indirectChannelType" defaultValue={factory?.indirectChannelType || ''}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                {['Representantes', 'Distribuidores', 'Revendas', 'Cooperativas', 'Indústrias'].map(
-                  (t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
+      <TabsContent value="dados" className="mt-0">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Nome da Fábrica / Cliente</Label>
+              <Input name="name" defaultValue={factory?.name} required />
+              {fieldErrors.name && <p className="text-xs text-destructive">{fieldErrors.name}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label>Cidade</Label>
+              <Input name="city" defaultValue={factory?.city} required />
+              {fieldErrors.city && <p className="text-xs text-destructive">{fieldErrors.city}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label>País</Label>
+              <Select name="country" defaultValue={factory?.country || 'Brasil'}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {COUNTRIES.map((c) => (
+                    <SelectItem key={c.name} value={c.name}>
+                      {c.name}
                     </SelectItem>
-                  ),
-                )}
-              </SelectContent>
-            </Select>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Estado (UF)</Label>
+              <Input name="state" defaultValue={factory?.state} placeholder="Ex: SP, PR, MG" />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Região (Múltipla Seleção)</Label>
+              <MultiSelect
+                options={REGION_OPTIONS}
+                value={regions}
+                onChange={setRegions}
+                placeholder="Selecione as Regiões"
+              />
+              {fieldErrors.regions && (
+                <p className="text-xs text-destructive">{fieldErrors.regions}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Espécie Animal (Múltipla Seleção)</Label>
+              <MultiSelect
+                options={SPECIES_OPTIONS}
+                value={species}
+                onChange={setSpecies}
+                placeholder="Selecione as Espécies"
+              />
+              {fieldErrors.species && (
+                <p className="text-xs text-destructive">{fieldErrors.species}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Canal de Vendas</Label>
+              <Select
+                name="salesChannel"
+                value={salesChannelState}
+                onValueChange={setSalesChannelState}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o canal" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Direct">Direto</SelectItem>
+                  <SelectItem value="Indirect">Indireto</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Carteira - Tipo de Perfil (Múltipla Seleção)</Label>
+              <MultiSelect
+                options={carteiraProfileOptions}
+                value={carteira}
+                onChange={setCarteira}
+                placeholder="Selecione o Perfil do Cliente"
+              />
+              {fieldErrors.carteira && (
+                <p className="text-xs text-destructive">{fieldErrors.carteira}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Prioridade (Múltipla Seleção)</Label>
+              <MultiSelect
+                options={PRIORITY_OPTIONS}
+                value={priorities}
+                onChange={setPriorities}
+                placeholder="Selecione as Prioridades"
+              />
+              {fieldErrors.priorities && (
+                <p className="text-xs text-destructive">{fieldErrors.priorities}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Nível de Foco (1-5 ou 'Cliente')</Label>
+              <Input
+                name="focusLevel"
+                defaultValue={factory?.focusLevel?.toString()}
+                placeholder="Ex: 5 ou Cliente"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Status (Múltipla Seleção)</Label>
+              <MultiSelect
+                options={STATUS_OPTIONS}
+                value={statuses}
+                onChange={setStatuses}
+                placeholder="Selecione os Status"
+              />
+              {fieldErrors.statuses && (
+                <p className="text-xs text-destructive">{fieldErrors.statuses}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tendência de Linha - Blink (Múltipla Seleção)</Label>
+              <MultiSelect
+                options={PRODUCT_LINE_OPTIONS}
+                value={productLines}
+                onChange={setProductLines}
+                placeholder="Selecione as Linhas"
+              />
+              {fieldErrors.productLines && (
+                <p className="text-xs text-destructive">{fieldErrors.productLines}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Capacidade (ton/mês)</Label>
+              <Input type="number" name="capacity" defaultValue={factory?.capacity} required />
+            </div>
+            <div className="space-y-2">
+              <Label>Potencial (R$)</Label>
+              <Input
+                type="number"
+                name="potentialValue"
+                defaultValue={factory?.potentialValue}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Estágio no Funil</Label>
+              <Select name="funnelStage" defaultValue={factory?.funnelStage || 'Lead'} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[
+                    'Lead',
+                    'Primeiro Contato',
+                    'Diagnóstico Técnico',
+                    'Apresentação',
+                    'Teste/Trial',
+                    'Proposta',
+                    'Negociação',
+                    'Fechamento',
+                    'Pós-venda',
+                    'Perda',
+                  ].map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Probabilidade (%)</Label>
+              <Input
+                type="number"
+                name="winProbability"
+                min={0}
+                max={100}
+                defaultValue={factory?.winProbability || 10}
+                required
+              />
+              {fieldErrors.winProbability && (
+                <p className="text-xs text-destructive">{fieldErrors.winProbability}</p>
+              )}
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Prazo Limite de Negociação</Label>
+              <Input
+                type="date"
+                name="deadline"
+                defaultValue={factory?.deadline ? factory.deadline.split('T')[0] : ''}
+              />
+            </div>
+
+            {/* Dedicated Responsibility Assignment UI */}
+            <div className="space-y-4 md:col-span-2 p-4 border rounded-lg bg-muted/20">
+              <h3 className="font-semibold text-sm flex items-center gap-2 text-foreground">
+                <UserCog className="w-4 h-4 text-primary" /> Atribuição de Vendedor
+              </h3>
+              <div className="space-y-2">
+                <Label>Vendedor Responsável</Label>
+                <Select
+                  value={vendedorId || 'none'}
+                  onValueChange={(val) => {
+                    setVendedorTouched(true)
+                    setVendedorId(val)
+                  }}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Selecione Vendedor" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    <SelectItem value="none">Nenhum / Não atribuído</SelectItem>
+                    {teamMembers.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.nome} —{' '}
+                        <span className="text-muted-foreground">
+                          {v.funcao === 'vendedor'
+                            ? 'vendedor'
+                            : v.funcao?.replace(/_/g, ' ') || 'membro'}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {salesChannelState === 'Indirect' && (
+              <div className="space-y-2 md:col-span-2">
+                <Label>Tipo de Canal Indireto</Label>
+                <Select
+                  name="indirectChannelType"
+                  defaultValue={factory?.indirectChannelType || ''}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[
+                      'Representantes',
+                      'Distribuidores',
+                      'Revendas',
+                      'Cooperativas',
+                      'Indústrias',
+                    ].map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Carteira (Segmento de Negócio)</Label>
+              <Select value={carteiraSegmento} onValueChange={setCarteiraSegmento}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Não informada</SelectItem>
+                  <SelectItem value="AVES">Aves</SelectItem>
+                  <SelectItem value="PETS">Pets</SelectItem>
+                  <SelectItem value="RUMINANTES">Ruminantes</SelectItem>
+                  <SelectItem value="SUINOS">Suínos</SelectItem>
+                  <SelectItem value="AQUA">Aqua</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Grupo de Cliente</Label>
+              <Select value={grupoCliente} onValueChange={setGrupoCliente}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Não informado</SelectItem>
+                  <SelectItem value="Indústrias">Indústrias</SelectItem>
+                  <SelectItem value="Distribuidores Diretos">Distribuidores Diretos</SelectItem>
+                  <SelectItem value="Produtores Diretos">Produtores Diretos</SelectItem>
+                  <SelectItem value="Premixeras">Premixeras</SelectItem>
+                  <SelectItem value="Cooperativas">Cooperativas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Contato (Pessoa no Prospect)</Label>
+              <Input
+                name="contato"
+                defaultValue={factory?.contato}
+                placeholder="Nome da pessoa de contato"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Status do Contato</Label>
+              <Select name="status_contato" defaultValue={factory?.status_contato || 'none'}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Não informado</SelectItem>
+                  <SelectItem value="Champion">Champion</SelectItem>
+                  <SelectItem value="Stakeholder">Stakeholder</SelectItem>
+                  <SelectItem value="Decisor">Decisor</SelectItem>
+                  <SelectItem value="Influenciador">Influenciador</SelectItem>
+                  <SelectItem value="Gatekeepers">Gatekeepers</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Próximos Passos / Abordagem Sugerida</Label>
+              <Textarea
+                name="suggested_approach"
+                defaultValue={factory?.suggested_approach || factory?.notes}
+                placeholder="Ex: Agendar reunião presencial para apresentar linha de Adsorventes em Maio..."
+                className="h-20"
+              />
+            </div>
           </div>
-        )}
-        <div className="space-y-2">
-          <Label>Carteira (Segmento de Negócio)</Label>
-          <Select value={carteiraSegmento} onValueChange={setCarteiraSegmento}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Não informada</SelectItem>
-              <SelectItem value="AVES">Aves</SelectItem>
-              <SelectItem value="PETS">Pets</SelectItem>
-              <SelectItem value="RUMINANTES">Ruminantes</SelectItem>
-              <SelectItem value="SUINOS">Suínos</SelectItem>
-              <SelectItem value="AQUA">Aqua</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Grupo de Cliente</Label>
-          <Select value={grupoCliente} onValueChange={setGrupoCliente}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Não informado</SelectItem>
-              <SelectItem value="Indústrias">Indústrias</SelectItem>
-              <SelectItem value="Distribuidores Diretos">Distribuidores Diretos</SelectItem>
-              <SelectItem value="Produtores Diretos">Produtores Diretos</SelectItem>
-              <SelectItem value="Premixeras">Premixeras</SelectItem>
-              <SelectItem value="Cooperativas">Cooperativas</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Contato (Pessoa no Prospect)</Label>
-          <Input
-            name="contato"
-            defaultValue={factory?.contato}
-            placeholder="Nome da pessoa de contato"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Status do Contato</Label>
-          <Select name="status_contato" defaultValue={factory?.status_contato || 'none'}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Não informado</SelectItem>
-              <SelectItem value="Champion">Champion</SelectItem>
-              <SelectItem value="Stakeholder">Stakeholder</SelectItem>
-              <SelectItem value="Decisor">Decisor</SelectItem>
-              <SelectItem value="Influenciador">Influenciador</SelectItem>
-              <SelectItem value="Gatekeepers">Gatekeepers</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2 md:col-span-2">
-          <Label>Próximos Passos / Abordagem Sugerida</Label>
-          <Textarea
-            name="suggested_approach"
-            defaultValue={factory?.suggested_approach || factory?.notes}
-            placeholder="Ex: Agendar reunião presencial para apresentar linha de Adsorventes em Maio..."
-            className="h-20"
-          />
-        </div>
-      </div>
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onSubmit} disabled={submitting}>
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={submitting}>
-          {submitting ? 'Salvando...' : 'Salvar Fábrica'}
-        </Button>
-      </div>
-    </form>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onSubmit} disabled={submitting}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Salvando...' : 'Salvar Fábrica'}
+            </Button>
+          </div>
+        </form>
+      </TabsContent>
+
+      <TabsContent value="historico" className="mt-0">
+        <FactoryHistoryView factoryId={factory?.id} />
+      </TabsContent>
+    </Tabs>
   )
 }
