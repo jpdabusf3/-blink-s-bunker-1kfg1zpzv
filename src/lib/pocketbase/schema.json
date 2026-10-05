@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-05T17:17:11.167Z",
+  "generatedAt": "2026-10-05T17:41:27.283Z",
   "collections": [
     {
       "name": "users",
@@ -5169,6 +5169,67 @@
       "indexes": [
         "CREATE INDEX idx_entity_change_logs_entity ON entity_change_logs (entity_type, entity_id)",
         "CREATE INDEX idx_entity_change_logs_created ON entity_change_logs (created DESC)"
+      ]
+    },
+    {
+      "name": "relatorios_gerados",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && user_id = @request.auth.id",
+        "view": "@request.auth.id != '' && user_id = @request.auth.id",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != '' && user_id = @request.auth.id",
+        "delete": "@request.auth.id != '' && user_id = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "user_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "periodo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "filtros",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "conteudo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "formato",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_relatorios_gerados_user_created ON relatorios_gerados (user_id, created DESC)"
       ]
     }
   ]

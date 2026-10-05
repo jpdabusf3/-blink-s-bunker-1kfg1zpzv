@@ -59,6 +59,7 @@ export function AppSidebar() {
     { name: t('nav.swot'), path: '/swot', icon: Target },
     { name: t('nav.prioridade'), path: '/matriz', icon: Grid },
     { name: 'Agenda', path: '/agenda', icon: Calendar },
+    { name: 'Relatório de Vendas', path: '/relatorio-vendas', icon: FileText },
     { name: t('nav.metas'), path: '/metas', icon: Target },
     { name: t('nav.relatorios'), path: '/relatorios', icon: BarChart2 },
     { name: 'Relatórios Automáticos', path: '/relatorios-automaticos', icon: FileText },

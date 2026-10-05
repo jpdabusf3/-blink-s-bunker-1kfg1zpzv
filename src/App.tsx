@@ -24,6 +24,7 @@ import HistoricoVendas from './pages/HistoricoVendas'
 import Relatorios from './pages/Relatorios'
 import Documents from './pages/Documents'
 import RelatoriosAutomaticos from './pages/RelatoriosAutomaticos'
+import RelatorioVendasPage from './pages/RelatorioVendasPage'
 import AdminLogs from './pages/AdminLogs'
 import MapaClientes from './pages/MapaClientes'
 import UsersPage from './pages/Users'
@@ -187,6 +188,7 @@ const App = () => (
                           }
                         />
                         <Route path="/historico-vendas" element={<HistoricoVendas />} />
+                        <Route path="/relatorio-vendas" element={<RelatorioVendasPage />} />
                         <Route path="/metas" element={<Metas />} />
                         <Route path="/relatorios" element={<Relatorios />} />
                         <Route path="/relatorios-automaticos" element={<RelatoriosAutomaticos />} />
