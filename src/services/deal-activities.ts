@@ -1,4 +1,5 @@
 import pb from '@/lib/pocketbase/client'
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 
 export interface DealActivity {
   id: string
@@ -41,6 +42,7 @@ export async function recordDealActivity(params: {
       activity_text: params.activityText,
       created_at: nowIso,
     })
+    notifyDataChanged('deal_activities')
   } catch (err) {
     console.error('Falha ao gravar em deal_activities:', err)
   }
@@ -56,6 +58,7 @@ export async function recordDealActivity(params: {
       tipo: 'acao',
       origem: 'agenda',
     })
+    notifyDataChanged('activity_logs')
   } catch (err) {
     console.error('Falha ao gravar em activity_logs:', err)
   }

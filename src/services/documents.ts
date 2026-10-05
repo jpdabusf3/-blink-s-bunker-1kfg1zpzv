@@ -16,9 +16,19 @@ export interface DocumentItem {
 export const getDocuments = (): Promise<DocumentItem[]> =>
   pb.send('/backend/v1/documents', { method: 'GET' })
 
-export const createDocument = (data: FormData) => pb.collection('documents').create(data)
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 
-export const deleteDocument = (id: string) => pb.collection('documents').delete(id)
+export const createDocument = async (data: FormData) => {
+  const res = await pb.collection('documents').create(data)
+  notifyDataChanged('documents')
+  return res
+}
+
+export const deleteDocument = async (id: string) => {
+  const res = await pb.collection('documents').delete(id)
+  notifyDataChanged('documents')
+  return res
+}
 
 export const getFileUrl = (doc: DocumentItem): string =>
   `${import.meta.env.VITE_POCKETBASE_URL}/api/files/documents/${doc.id}/${doc.file}`

@@ -1,4 +1,5 @@
 import pb from '@/lib/pocketbase/client'
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 import type { ActivityLog } from '@/types'
 import type { ReportTemplateKey } from '@/lib/reportTemplates'
 import { REPORT_TEMPLATE_LABEL } from '@/lib/reportTemplates'
@@ -211,6 +212,7 @@ export const generateAndStoreClientPdfReport = async (
   form.append('title', opts?.titulo || `Relatório de Histórico — ${clientName}`)
   form.append('file', file)
   const created = await pb.collection('client_reports').create<ClientReport>(form)
+  notifyDataChanged('client_reports')
   return created
 }
 
@@ -294,4 +296,8 @@ export const downloadClientReportFile = async (report: ClientReport) => {
 }
 
 /** Delete a stored client report. */
-export const deleteClientReport = (id: string) => pb.collection('client_reports').delete(id)
+export const deleteClientReport = async (id: string) => {
+  const res = await pb.collection('client_reports').delete(id)
+  notifyDataChanged('client_reports')
+  return res
+}

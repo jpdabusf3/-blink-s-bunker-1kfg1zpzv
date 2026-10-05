@@ -1,4 +1,5 @@
 import pb from '@/lib/pocketbase/client'
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 
 export interface FactoryChangeLogItem {
   id: string
@@ -77,6 +78,7 @@ export async function recordFactoryChangeLog(params: {
       new_value: params.new_value ?? '',
       change_summary: params.change_summary,
     })
+    notifyDataChanged('factory_change_logs')
   } catch (err) {
     console.warn('[factory-change-logs] Falha ao registrar log de alteração:', err)
   }

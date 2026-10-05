@@ -16,10 +16,22 @@ export const getHistoricoPedidos = () =>
     sort: '-created',
   })
 
-export const createHistoricoPedido = (data: Partial<HistoricoPedido>) =>
-  pb.collection('historico_pedidos').create(data)
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 
-export const updateHistoricoPedido = (id: string, data: Partial<HistoricoPedido>) =>
-  pb.collection('historico_pedidos').update(id, data)
+export const createHistoricoPedido = async (data: Partial<HistoricoPedido>) => {
+  const created = await pb.collection('historico_pedidos').create(data)
+  notifyDataChanged('historico_pedidos')
+  return created
+}
 
-export const deleteHistoricoPedido = (id: string) => pb.collection('historico_pedidos').delete(id)
+export const updateHistoricoPedido = async (id: string, data: Partial<HistoricoPedido>) => {
+  const updated = await pb.collection('historico_pedidos').update(id, data)
+  notifyDataChanged('historico_pedidos')
+  return updated
+}
+
+export const deleteHistoricoPedido = async (id: string) => {
+  const res = await pb.collection('historico_pedidos').delete(id)
+  notifyDataChanged('historico_pedidos')
+  return res
+}

@@ -119,13 +119,25 @@ export const getHistoricoVendas = () =>
     expand: 'gestor_tecnico_id,vendedor_id',
   })
 
-export const createHistoricoVenda = (data: Partial<HistoricoVenda>) =>
-  pb.collection('historico_vendas').create(data)
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 
-export const updateHistoricoVenda = (id: string, data: Partial<HistoricoVenda>) =>
-  pb.collection('historico_vendas').update(id, data)
+export const createHistoricoVenda = async (data: Partial<HistoricoVenda>) => {
+  const created = await pb.collection('historico_vendas').create(data)
+  notifyDataChanged('historico_vendas')
+  return created
+}
 
-export const deleteHistoricoVenda = (id: string) => pb.collection('historico_vendas').delete(id)
+export const updateHistoricoVenda = async (id: string, data: Partial<HistoricoVenda>) => {
+  const updated = await pb.collection('historico_vendas').update(id, data)
+  notifyDataChanged('historico_vendas')
+  return updated
+}
+
+export const deleteHistoricoVenda = async (id: string) => {
+  const res = await pb.collection('historico_vendas').delete(id)
+  notifyDataChanged('historico_vendas')
+  return res
+}
 
 export async function uploadPedidoPdf(
   pdfText: string,
@@ -139,20 +151,10 @@ export async function uploadPedidoPdf(
       headers: { 'Content-Type': 'application/json' },
     },
   )
-  if (typeof window !== 'undefined') {
-    try {
-      window.dispatchEvent(
-        new CustomEvent('blink:datasync', { detail: { entity: 'historico_vendas' } }),
-      )
-      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'faturamento' } }))
-      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'pedidos' } }))
-      window.dispatchEvent(
-        new CustomEvent('blink:datasync', { detail: { entity: 'activity_logs' } }),
-      )
-    } catch {
-      // ignore
-    }
-  }
+  notifyDataChanged('historico_vendas')
+  notifyDataChanged('faturamento')
+  notifyDataChanged('pedidos')
+  notifyDataChanged('activity_logs')
   return res
 }
 
@@ -169,20 +171,10 @@ export async function uploadPedido(file: File): Promise<UploadPedidoResult> {
     body: JSON.stringify({ rows }),
     headers: { 'Content-Type': 'application/json' },
   })
-  if (typeof window !== 'undefined') {
-    try {
-      window.dispatchEvent(
-        new CustomEvent('blink:datasync', { detail: { entity: 'historico_vendas' } }),
-      )
-      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'faturamento' } }))
-      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'pedidos' } }))
-      window.dispatchEvent(
-        new CustomEvent('blink:datasync', { detail: { entity: 'activity_logs' } }),
-      )
-    } catch {
-      // ignore
-    }
-  }
+  notifyDataChanged('historico_vendas')
+  notifyDataChanged('faturamento')
+  notifyDataChanged('pedidos')
+  notifyDataChanged('activity_logs')
   return res
 }
 

@@ -25,8 +25,10 @@ export const getPlanosByAtividade = (atividadeId: string): Promise<PlanoAcao[]> 
     expand: 'cliente,vendedor,atividade_origem',
   })
 
-export const createPlanoAcao = (data: NewPlanoAcao): Promise<PlanoAcao> =>
-  pb.collection('planos_acao').create<PlanoAcao>({
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
+
+export const createPlanoAcao = async (data: NewPlanoAcao): Promise<PlanoAcao> => {
+  const created = await pb.collection('planos_acao').create<PlanoAcao>({
     descricao: data.descricao,
     data_prevista: data.data_prevista || null,
     status: data.status || 'pendente',
@@ -35,14 +37,24 @@ export const createPlanoAcao = (data: NewPlanoAcao): Promise<PlanoAcao> =>
     atividade_origem: data.atividade_origem || null,
     origem: data.origem || 'manual',
   })
+  notifyDataChanged('planos_acao')
+  return created
+}
 
-export const updatePlanoAcao = (id: string, patch: Partial<NewPlanoAcao>): Promise<PlanoAcao> =>
-  pb.collection('planos_acao').update<PlanoAcao>(id, {
+export const updatePlanoAcao = async (
+  id: string,
+  patch: Partial<NewPlanoAcao>,
+): Promise<PlanoAcao> => {
+  const updated = await pb.collection('planos_acao').update<PlanoAcao>(id, {
     descricao: patch.descricao,
     data_prevista: patch.data_prevista || null,
     status: patch.status,
   })
+  notifyDataChanged('planos_acao')
+  return updated
+}
 
 export const deletePlanoAcao = async (id: string): Promise<void> => {
   await pb.collection('planos_acao').delete(id)
+  notifyDataChanged('planos_acao')
 }

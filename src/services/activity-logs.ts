@@ -22,14 +22,16 @@ export interface ActivityLogMeta {
   origem?: string
 }
 
-export const logActivity = (
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
+
+export const logActivity = async (
   action: string,
   details: string = '',
   recordId?: string,
   collectionName?: string,
   meta?: ActivityLogMeta,
-) =>
-  pb.send('/backend/v1/log-activity', {
+) => {
+  const res = await pb.send('/backend/v1/log-activity', {
     method: 'POST',
     body: JSON.stringify({
       action,
@@ -40,6 +42,9 @@ export const logActivity = (
     }),
     headers: { 'Content-Type': 'application/json' },
   })
+  notifyDataChanged('activity_logs')
+  return res
+}
 
 export interface BatchActivityLogItem {
   action: string
@@ -55,11 +60,16 @@ export interface BatchActivityLogItem {
 
 export const logActivityBatch = async (entries: BatchActivityLogItem[]) => {
   if (!entries || entries.length === 0) return { success: true, count: 0 }
-  return pb.send<{ success: boolean; count: number }>('/backend/v1/log-assignment-batch', {
-    method: 'POST',
-    body: JSON.stringify({ entries }),
-    headers: { 'Content-Type': 'application/json' },
-  })
+  const res = await pb.send<{ success: boolean; count: number }>(
+    '/backend/v1/log-assignment-batch',
+    {
+      method: 'POST',
+      body: JSON.stringify({ entries }),
+      headers: { 'Content-Type': 'application/json' },
+    },
+  )
+  notifyDataChanged('activity_logs')
+  return res
 }
 
 /**

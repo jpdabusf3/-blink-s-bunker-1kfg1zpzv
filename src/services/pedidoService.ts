@@ -171,7 +171,7 @@ export const pedidoService = {
         filter: `cliente_nome = "${data.cliente_nome.trim()}"`,
       })
       if (existing.length > 0) {
-        return await pb
+        const updated = await pb
           .collection('atribuicao_clientes')
           .update<AtribuicaoCliente>(existing[0].id, {
             gestor_tecnico_id: data.gestor_tecnico_id,
@@ -179,6 +179,8 @@ export const pedidoService = {
             observacoes: data.observacoes || '',
             user_id: userId || '',
           })
+        notifyDataChanged('atribuicao_clientes')
+        return updated
       }
     } catch {
       /* ignore */

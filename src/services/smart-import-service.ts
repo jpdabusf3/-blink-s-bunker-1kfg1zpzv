@@ -28,6 +28,7 @@ import {
   executeImportRelatorioVendasSemanal,
   executeImportAtendimentoPedidos,
 } from '@/services/maestro-analyze-service'
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 import { type AtendimentoPedidoItem, parseAtendimentoPedidos } from '@/services/blink-pdf-parsers'
 import { normalizeNumberBR } from '@/lib/utils'
 
@@ -847,6 +848,7 @@ export async function executeSmartImport(params: ExecuteSmartImportOptions): Pro
         status: 'erro',
         details: errSummary,
       })
+      notifyDataChanged('import_history')
     } catch {
       /* intentionally ignored */
     }

@@ -25,10 +25,22 @@ export const getMatrizVendas = () =>
     expand: 'gestor_tecnico_id,vendedor_id',
   })
 
-export const createMatrizVenda = (data: Partial<MatrizVenda>) =>
-  pb.collection('matriz_vendas').create(data)
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 
-export const updateMatrizVenda = (id: string, data: Partial<MatrizVenda>) =>
-  pb.collection('matriz_vendas').update(id, data)
+export const createMatrizVenda = async (data: Partial<MatrizVenda>) => {
+  const created = await pb.collection('matriz_vendas').create(data)
+  notifyDataChanged('matriz_vendas')
+  return created
+}
 
-export const deleteMatrizVenda = (id: string) => pb.collection('matriz_vendas').delete(id)
+export const updateMatrizVenda = async (id: string, data: Partial<MatrizVenda>) => {
+  const updated = await pb.collection('matriz_vendas').update(id, data)
+  notifyDataChanged('matriz_vendas')
+  return updated
+}
+
+export const deleteMatrizVenda = async (id: string) => {
+  const res = await pb.collection('matriz_vendas').delete(id)
+  notifyDataChanged('matriz_vendas')
+  return res
+}

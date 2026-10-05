@@ -41,10 +41,22 @@ export const getGestoresGestao = () =>
     filter: "funcao = 'gestor_tecnico' && ativo = true",
     sort: 'nome',
   })
-export const createGestaoTecnica = (data: Partial<GestaoTecnica>) =>
-  pb.collection('gestao_tecnica').create(data)
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 
-export const updateGestaoTecnica = (id: string, data: Partial<GestaoTecnica>) =>
-  pb.collection('gestao_tecnica').update(id, data)
+export const createGestaoTecnica = async (data: Partial<GestaoTecnica>) => {
+  const created = await pb.collection('gestao_tecnica').create(data)
+  notifyDataChanged('gestao_tecnica')
+  return created
+}
 
-export const deleteGestaoTecnica = (id: string) => pb.collection('gestao_tecnica').delete(id)
+export const updateGestaoTecnica = async (id: string, data: Partial<GestaoTecnica>) => {
+  const updated = await pb.collection('gestao_tecnica').update(id, data)
+  notifyDataChanged('gestao_tecnica')
+  return updated
+}
+
+export const deleteGestaoTecnica = async (id: string) => {
+  const res = await pb.collection('gestao_tecnica').delete(id)
+  notifyDataChanged('gestao_tecnica')
+  return res
+}

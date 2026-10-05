@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
 import pb from '@/lib/pocketbase/client'
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 import { generateClientImportTemplateXlsx } from './xlsx-template'
 
 export interface ImportError {
@@ -52,16 +53,8 @@ export async function importExcel(file: File): Promise<ImportResult> {
     body: JSON.stringify({ rows }),
     headers: { 'Content-Type': 'application/json' },
   })
-  if (typeof window !== 'undefined') {
-    try {
-      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'factories' } }))
-      window.dispatchEvent(
-        new CustomEvent('blink:datasync', { detail: { entity: 'activity_logs' } }),
-      )
-    } catch {
-      // ignore
-    }
-  }
+  notifyDataChanged('factories')
+  notifyDataChanged('activity_logs')
   return res
 }
 

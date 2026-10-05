@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
 import pb from '@/lib/pocketbase/client'
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 
 export interface FunilImportResult {
   success: boolean
@@ -23,15 +24,7 @@ export async function importFunil(file: File): Promise<FunilImportResult> {
     body: JSON.stringify({ rows }),
     headers: { 'Content-Type': 'application/json' },
   })
-  if (typeof window !== 'undefined') {
-    try {
-      window.dispatchEvent(new CustomEvent('blink:datasync', { detail: { entity: 'factories' } }))
-      window.dispatchEvent(
-        new CustomEvent('blink:datasync', { detail: { entity: 'funnel_activity_log' } }),
-      )
-    } catch {
-      // ignore
-    }
-  }
+  notifyDataChanged('factories')
+  notifyDataChanged('funnel_activity_log')
   return res
 }

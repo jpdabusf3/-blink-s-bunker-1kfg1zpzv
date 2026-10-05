@@ -1,4 +1,5 @@
 import pb from '@/lib/pocketbase/client'
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 import type { Atividade } from '@/types'
 
 export interface ValidarEGravarRequest {
@@ -33,12 +34,16 @@ export interface ValidarEGravarResponse {
   pending_id?: string
 }
 
-export const validarEGravar = (data: ValidarEGravarRequest) =>
-  pb.send<ValidarEGravarResponse>('/backend/v1/validar-e-gravar', {
+export const validarEGravar = async (data: ValidarEGravarRequest) => {
+  const res = await pb.send<ValidarEGravarResponse>('/backend/v1/validar-e-gravar', {
     method: 'POST',
     body: JSON.stringify(data),
     headers: { 'Content-Type': 'application/json' },
   })
+  notifyDataChanged('atividades')
+  notifyDataChanged('factories')
+  return res
+}
 
 export const getAtividades = () =>
   pb.collection('atividades').getFullList<Atividade>({

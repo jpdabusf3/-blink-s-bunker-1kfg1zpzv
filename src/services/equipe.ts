@@ -52,21 +52,29 @@ export async function getVendedoresEquipe(): Promise<EquipeMember[]> {
   }
 }
 
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
+
 export async function createEquipeMember(data: Partial<EquipeMember>): Promise<EquipeMember> {
   const payload = {
     ...data,
     user_id: data.user_id || pb.authStore.record?.id || '',
   }
-  return await pb.collection('equipe').create<EquipeMember>(payload)
+  const created = await pb.collection('equipe').create<EquipeMember>(payload)
+  notifyDataChanged('equipe')
+  return created
 }
 
 export async function updateEquipeMember(
   id: string,
   data: Partial<EquipeMember>,
 ): Promise<EquipeMember> {
-  return await pb.collection('equipe').update<EquipeMember>(id, data)
+  const updated = await pb.collection('equipe').update<EquipeMember>(id, data)
+  notifyDataChanged('equipe')
+  return updated
 }
 
 export async function deleteEquipeMember(id: string): Promise<boolean> {
-  return await pb.collection('equipe').delete(id)
+  const res = await pb.collection('equipe').delete(id)
+  notifyDataChanged('equipe')
+  return res
 }
