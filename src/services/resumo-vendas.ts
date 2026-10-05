@@ -1,240 +1,178 @@
+// Serviço de consumo do resumo comercial executivo da Blink Biotech
+// Endpoint pb_hook: POST /backend/v1/resumo-vendas (ou /backend/v1/resumo_vendas)
+
 import pb from '@/lib/pocketbase/client'
+import { notifyDataChanged } from '@/hooks/useRealtimeData'
 
 export interface FaturamentoRecord {
   id: string
-  country?: string
-  nf_ano?: number
-  nf_ano_mes?: string
-  cliente_codigo?: string
-  cliente_nome?: string
-  familia_produto?: string
+  created?: string
+  updated?: string
   data_documento?: string
-  produto_codigo?: string
+  cliente_nome?: string
+  cliente_codigo?: string
   produto_descricao?: string
+  produto_codigo?: string
+  familia_produto?: string
+  quantidade?: number
   valor_usd?: number
   valor_brl?: number
-  quantidade?: number
   vendedor?: string
-  semana_iso?: number
+  country?: string
+  nf_ano?: number
   mes?: number
   ano?: number
   semestre?: string
-  user_id?: string
-  created?: string
-  updated?: string
-}
-
-export interface ResumoClienteItem {
-  cliente: string
-  valor_brl: number
-}
-
-export interface ResumoFamiliaItem {
-  familia: string
-  valor_brl: number
-}
-
-export interface ResumoEspecieItem {
-  especie: string
-  valor_brl: number
-}
-
-export interface ResumoVendasResponse {
-  periodo: string
-  faturado_total_brl: number
-  faturado_total_usd: number
-  carteira_total_brl: number | null
-  cobertura_percent?: number | null
-  meta_brl?: number
-  meta_atingida_percent?: number | null
-  por_cliente: ResumoClienteItem[]
-  por_familia: ResumoFamiliaItem[]
-  por_especie: ResumoEspecieItem[]
-  quantidade_notas: number
-  variacao_semana_anterior?: number | null
-  variacao_vs_anterior_percent?: number | null
+  is_deleted?: boolean
+  [key: string]: unknown
 }
 
 export interface ResumoVendasParams {
-  mode: 'week' | 'month'
+  mode?: 'month' | 'week'
   ano?: number
   mes?: number
   semana?: number
 }
 
-export async function fetchResumoVendas(params: ResumoVendasParams): Promise<ResumoVendasResponse> {
-  const query: Record<string, string> = { mode: params.mode }
-  if (params.ano !== undefined) query.ano = String(params.ano)
-  if (params.mes !== undefined) query.mes = String(params.mes)
-  if (params.semana !== undefined) query.semana = String(params.semana)
-
-  return pb.send<ResumoVendasResponse>('/backend/v1/resumo_vendas', {
-    method: 'GET',
-    query,
-  })
+export interface TopClienteItem {
+  rank: number
+  cliente: string
+  valor_brl: number
+  share_percentual: number
 }
 
+export interface TopFamiliaItem {
+  rank: number
+  familia: string
+  valor_brl: number
+  share_percentual: number
+}
+
+// Aliases para retrocompatibilidade
+export type ResumoClienteItem = {
+  cliente: string
+  valor_brl: number
+  share_percentual?: number
+}
+
+export type ResumoFamiliaItem = {
+  familia: string
+  valor_brl: number
+  share_percentual?: number
+}
+
+export interface MetaVendedorItem {
+  vendedor: string
+  meta_mensal: number
+  valor_atingido: number
+  percentual_atingido: number
+  status: 'verde' | 'amarelo' | 'vermelho'
+}
+
+export interface VendaSegmentoItem {
+  segmento: 'AVES' | 'PETS' | 'RUMINANTES' | 'SUINOS' | string
+  valor_ano: number
+  valor_mes: number
+}
+
+export interface EvolucaoMensalItem {
+  ano: number
+  mes: number
+  label: string
+  key: string
+  valor_brl: number
+}
+
+export interface AlertaCarteiraItem {
+  id: string
+  tipo: 'cobertura_baixa' | 'segmento_zerado' | 'cliente_inativo_60d' | string
+  severidade: 'critical' | 'warning' | 'risk' | 'info'
+  mensagem: string
+  data: string
+}
+
+export interface ResumoVendasResponse {
+  periodo: string
+  // Dados obrigatórios da especificação
+  faturamento_mes: number
+  faturamento_ano_ytd: number
+  clientes_ativos: number
+  ticket_medio: number
+  carteira_total_brl: number
+  meta_brl: number
+  cobertura_percent: number | null
+  variacao_faturamento_mes: number | null
+  variacao_ticket_medio: number | null
+  top_clientes: TopClienteItem[]
+  top_familias: TopFamiliaItem[]
+  metas_por_vendedor: MetaVendedorItem[]
+  vendas_por_segmento: VendaSegmentoItem[]
+  evolucao_mensal: EvolucaoMensalItem[]
+  alertas_carteira: AlertaCarteiraItem[]
+
+  // Retrocompatibilidade para Maestro e telas existentes
+  faturado_total_brl?: number
+  faturado_total_usd?: number
+  meta_atingida_percent?: number | null
+  por_cliente?: Array<{ cliente: string; valor_brl: number }>
+  por_familia?: Array<{ familia: string; valor_brl: number }>
+  por_especie?: Array<{ especie: string; valor_brl: number; share_percentual?: number }>
+  quantidade_notas?: number
+  variacao_semana_anterior?: number | null
+  variacao_vs_anterior_percent?: number | null
+}
+
+export async function fetchResumoVendas(
+  params: ResumoVendasParams = {},
+): Promise<ResumoVendasResponse> {
+  const queryParams = new URLSearchParams()
+  if (params.mode) queryParams.set('mode', params.mode)
+  if (params.ano) queryParams.set('ano', String(params.ano))
+  if (params.mes) queryParams.set('mes', String(params.mes))
+  if (params.semana) queryParams.set('semana', String(params.semana))
+
+  const qs = queryParams.toString()
+  const endpoint = `/backend/v1/resumo-vendas${qs ? `?${qs}` : ''}`
+
+  try {
+    return await pb.send<ResumoVendasResponse>(endpoint, {
+      method: 'POST',
+      body: params,
+    })
+  } catch (err) {
+    return await pb.send<ResumoVendasResponse>(
+      `/backend/v1/resumo_vendas${qs ? `?${qs}` : ''}`,
+      {
+        method: 'POST',
+        body: params,
+      },
+    )
+  }
+}
+
+/**
+ * Consulta registros da coleção faturamento com suporte a filtros e ordenação
+ */
 export async function getFaturamentos(
   filter = '',
   sort = '-data_documento',
+  limit = 2000,
 ): Promise<FaturamentoRecord[]> {
-  return pb.collection('faturamento').getFullList<FaturamentoRecord>({
-    filter,
+  const records = await pb.collection('faturamento').getList<FaturamentoRecord>(1, limit, {
+    filter: filter || undefined,
     sort,
   })
+  return records.items
 }
 
-import { notifyDataChanged } from '@/hooks/useRealtimeData'
-
+/**
+ * Atualiza um registro de faturamento
+ */
 export async function updateFaturamento(
   id: string,
-  data: Partial<Omit<FaturamentoRecord, 'id' | 'created' | 'updated'>>,
+  data: Partial<FaturamentoRecord>,
 ): Promise<FaturamentoRecord> {
   const updated = await pb.collection('faturamento').update<FaturamentoRecord>(id, data)
   notifyDataChanged('faturamento')
   return updated
-}
-
-export async function deleteFaturamento(id: string, clienteOuDesc?: string): Promise<boolean> {
-  const updated = await pb.collection('faturamento').update(id, {
-    is_deleted: true,
-    deleted_at: new Date().toISOString(),
-  })
-  try {
-    const { recordEntityChangeLog } = await import('./entity-change-logs')
-    await recordEntityChangeLog({
-      entity_type: 'faturamento',
-      entity_id: id,
-      entity_name: clienteOuDesc || 'NF',
-      change_summary: `Registro de faturamento ${clienteOuDesc || id} excluído logicamente (soft delete)`,
-      action: 'delete',
-    })
-  } catch {
-    /* intentionally ignored */
-  }
-
-  notifyDataChanged('faturamento')
-  return !!updated
-}
-
-export interface UploadHistoryItem {
-  id: string
-  created: string
-  fileName: string
-  authorName: string
-  authorEmail: string
-  importedCount: number
-  duplicatesCount: number
-  status: 'concluido' | 'parcial' | 'erro'
-  details: string
-}
-
-export async function getFaturamentoUploadHistory(): Promise<UploadHistoryItem[]> {
-  // Primeiro tentar ler da nova collection oficial import_history
-  try {
-    const historyRecords = await pb.collection('import_history').getFullList<{
-      id: string
-      file_name: string
-      file_type: string
-      imported_at: string
-      total_rows: number
-      imported_rows: number
-      error_rows: number
-      status: string
-      details: string
-      created: string
-    }>({
-      sort: '-imported_at,-created',
-    })
-
-    if (historyRecords && historyRecords.length > 0) {
-      return historyRecords.map((r) => {
-        const rawStatus = (r.status || '').toLowerCase()
-        let status: 'concluido' | 'parcial' | 'erro' = 'concluido'
-        if (rawStatus === 'erro') status = 'erro'
-        else if (rawStatus === 'parcial') status = 'parcial'
-        else status = 'concluido'
-
-        return {
-          id: r.id,
-          created: r.imported_at || r.created,
-          fileName: r.file_name || 'arquivo_importacao.xlsx',
-          authorName: 'Sistema',
-          authorEmail: '',
-          importedCount: r.imported_rows ?? 0,
-          duplicatesCount: Math.max(
-            0,
-            (r.total_rows ?? 0) - (r.imported_rows ?? 0) - (r.error_rows ?? 0),
-          ),
-          status,
-          details: r.details || '',
-        }
-      })
-    }
-  } catch {
-    // fallback para activity_logs caso import_history falhe
-  }
-
-  const logs = await pb.collection('activity_logs').getFullList({
-    sort: '-created',
-    filter: 'action ~ "Import" || target_collection = "faturamento"',
-    expand: 'user',
-  })
-
-  return logs.map((log) => {
-    const rawDetails = String(log.details || '')
-    // Extrai nome do arquivo: ex: "Importação de faturamento [faturamento_2026.xlsx]: ..."
-    const fileMatch = rawDetails.match(/\[(.*?)\]/)
-    const fileName = fileMatch ? fileMatch[1] : 'faturamento_importacao.xlsx'
-
-    // Extrai quantidade de importados: ex: "58 registros importados"
-    const countMatch = rawDetails.match(/(\d+)\s+registros importados/i)
-    let importedCount = countMatch ? parseInt(countMatch[1], 10) : 0
-
-    // Se countMatch não achou ou foi 0, tenta achar pedidos criados em histórico: "81 pedidos criados em histórico"
-    if (importedCount === 0) {
-      const pedidosMatch = rawDetails.match(/(\d+)\s+pedidos criados em histórico/i)
-      if (pedidosMatch) {
-        importedCount = parseInt(pedidosMatch[1], 10)
-      }
-    }
-
-    // Duplicados
-    const dupMatch = rawDetails.match(/(\d+)\s+duplicados ignorados/i)
-    const duplicatesCount = dupMatch ? parseInt(dupMatch[1], 10) : 0
-
-    // Status: log.proximo_passo ou extraído de "Status: ..." ou padrão concluído
-    let status: 'concluido' | 'parcial' | 'erro' = 'concluido'
-    if (log.proximo_passo === 'erro' || rawDetails.toLowerCase().includes('status: erro')) {
-      status = 'erro'
-    } else if (
-      log.proximo_passo === 'parcial' ||
-      rawDetails.toLowerCase().includes('status: parcial') ||
-      rawDetails.toLowerCase().includes('linhas que não puderam')
-    ) {
-      status = 'parcial'
-    } else if (
-      log.proximo_passo === 'concluido' ||
-      rawDetails.toLowerCase().includes('sucesso') ||
-      importedCount > 0
-    ) {
-      status = 'concluido'
-    }
-
-    const expandUser = log.expand?.user as { name?: string; email?: string } | undefined
-    const authorName = expandUser?.name || expandUser?.email?.split('@')[0] || 'Sistema'
-    const authorEmail = expandUser?.email || ''
-
-    return {
-      id: log.id,
-      created: log.created,
-      fileName,
-      authorName,
-      authorEmail,
-      importedCount,
-      duplicatesCount,
-      status,
-      details: rawDetails,
-    }
-  })
 }
