@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAppContext } from '@/store/AppContext'
 import { useScopedFactories } from '@/hooks/use-scoped-data'
 import { useAuth } from '@/hooks/use-auth'
-import { isManager } from '@/lib/user-scope'
+
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatCompactCurrency, normalizeArray } from '@/lib/utils'
@@ -127,7 +127,6 @@ export default function Index() {
     initialData: { loaded: true },
   })
   const { user } = useAuth()
-  const isLeader = useMemo(() => isManager(user), [user])
   const userRegion = user?.geographicArea || ''
 
   const [regionFilter, setRegionFilter] = useState('Todas as Regiões')
@@ -161,9 +160,10 @@ export default function Index() {
     [blocks, setBlocks],
   )
 
+  // Visão global como padrão para todos os usuários (sem restrição automática à região do usuário)
   const effectiveRegionFilter = useMemo(
-    () => (isLeader ? regionFilter : userRegion || 'Todas as Regiões'),
-    [isLeader, regionFilter, userRegion],
+    () => (viewMode === 'regional' ? regionFilter : 'Todas as Regiões'),
+    [viewMode, regionFilter],
   )
 
   const filteredFactories = useMemo(() => {
@@ -215,7 +215,7 @@ export default function Index() {
 
   const handleExportPDF = () => {
     const originalTitle = document.title
-    const safeRegion = (isLeader ? regionFilter : userRegion).replace(/\s+/g, '_')
+    const safeRegion = (effectiveRegionFilter || 'Global').replace(/\s+/g, '_')
     const dateStr = new Date().toISOString().split('T')[0]
     document.title = `Relatorio_${safeRegion}_${dateStr}`
     window.print()
@@ -331,7 +331,7 @@ export default function Index() {
       case 'targets':
         return <TargetsCard regionFilter={effectiveRegionFilter} />
       case 'role-widgets': {
-        if (isLeader && viewMode === 'global') {
+        if (viewMode === 'global') {
           return (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <GlobalRankingCard />
@@ -368,12 +368,12 @@ export default function Index() {
           </div>
         )
       case 'historical':
-        return isLeader ? (
+        return (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-1">
             <HistoricalComparisonCard regionFilter={effectiveRegionFilter} />
             <TimelineSummaryCard regionFilter={effectiveRegionFilter} />
           </div>
-        ) : null
+        )
       default:
         return null
     }
@@ -391,9 +391,9 @@ export default function Index() {
           <div>
             <h1 className="text-3xl font-bold text-primary mb-1">Blink Biotech</h1>
             <h2 className="text-xl font-semibold mb-1">
-              {isLeader && viewMode === 'geographic'
+              {viewMode === 'geographic'
                 ? 'Relatório Geográfico Global'
-                : isLeader && viewMode === 'global'
+                : viewMode === 'global'
                   ? 'Relatório Executivo Global'
                   : `Relatório Regional - ${effectiveRegionFilter}`}
             </h2>
@@ -419,9 +419,9 @@ export default function Index() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2 print:hidden">
         <div className="flex items-center gap-4 flex-wrap">
           <h1 className="text-2xl font-bold tracking-tight">
-            {isLeader && viewMode === 'geographic'
+            {viewMode === 'geographic'
               ? 'Visão Geográfica'
-              : isLeader && viewMode === 'global'
+              : viewMode === 'global'
                 ? 'Visão Global'
                 : `Visão Regional - ${effectiveRegionFilter}`}
             {lastAutomationPeriod && (
@@ -430,41 +430,39 @@ export default function Index() {
               </span>
             )}
           </h1>
-          {isLeader && (
-            <div className="flex gap-1 bg-muted rounded-lg p-1">
-              <Button
-                size="sm"
-                variant={viewMode === 'global' ? 'default' : 'ghost'}
-                onClick={() => {
-                  setViewMode('global')
-                  setRegionFilter('Todas as Regiões')
-                }}
-                className="gap-1.5 h-8"
-              >
-                <Globe className="w-4 h-4" /> Global
-              </Button>
-              <Button
-                size="sm"
-                variant={viewMode === 'regional' ? 'default' : 'ghost'}
-                onClick={() => setViewMode('regional')}
-                className="gap-1.5 h-8"
-              >
-                <MapPin className="w-4 h-4" /> Regional
-              </Button>
-              <Button
-                size="sm"
-                variant={viewMode === 'geographic' ? 'default' : 'ghost'}
-                onClick={() => {
-                  setViewMode('geographic')
-                  setRegionFilter('Todas as Regiões')
-                }}
-                className="gap-1.5 h-8"
-              >
-                <Compass className="w-4 h-4" /> Geográfico
-              </Button>
-            </div>
-          )}
-          {isLeader && viewMode !== 'geographic' && (
+          <div className="flex gap-1 bg-muted rounded-lg p-1">
+            <Button
+              size="sm"
+              variant={viewMode === 'global' ? 'default' : 'ghost'}
+              onClick={() => {
+                setViewMode('global')
+                setRegionFilter('Todas as Regiões')
+              }}
+              className="gap-1.5 h-8"
+            >
+              <Globe className="w-4 h-4" /> Global
+            </Button>
+            <Button
+              size="sm"
+              variant={viewMode === 'regional' ? 'default' : 'ghost'}
+              onClick={() => setViewMode('regional')}
+              className="gap-1.5 h-8"
+            >
+              <MapPin className="w-4 h-4" /> Regional
+            </Button>
+            <Button
+              size="sm"
+              variant={viewMode === 'geographic' ? 'default' : 'ghost'}
+              onClick={() => {
+                setViewMode('geographic')
+                setRegionFilter('Todas as Regiões')
+              }}
+              className="gap-1.5 h-8"
+            >
+              <Compass className="w-4 h-4" /> Geográfico
+            </Button>
+          </div>
+          {viewMode !== 'geographic' && (
             <UserFilter
               value={salesOwnerFilter}
               onChange={setSalesOwnerFilter}
@@ -472,7 +470,7 @@ export default function Index() {
               className="w-[180px] h-9"
             />
           )}
-          {isLeader && viewMode !== 'geographic' && (
+          {viewMode !== 'geographic' && (
             <Select value={stateFilter} onValueChange={setStateFilter}>
               <SelectTrigger className="w-[150px] h-9">
                 <Filter className="w-4 h-4 mr-2" />
@@ -490,7 +488,7 @@ export default function Index() {
               </SelectContent>
             </Select>
           )}
-          {isLeader && viewMode !== 'geographic' && (
+          {viewMode !== 'geographic' && (
             <Select value={speciesFilter} onValueChange={setSpeciesFilter}>
               <SelectTrigger className="w-[150px] h-9">
                 <SelectValue placeholder="Espécie" />
@@ -515,7 +513,7 @@ export default function Index() {
               </SelectContent>
             </Select>
           )}
-          {isLeader && viewMode === 'regional' && (
+          {viewMode === 'regional' && (
             <Select value={regionFilter} onValueChange={setRegionFilter}>
               <SelectTrigger className="w-[180px] h-9">
                 <Filter className="w-4 h-4 mr-2" />
@@ -531,10 +529,13 @@ export default function Index() {
               </SelectContent>
             </Select>
           )}
-          {!isLeader && userRegion && (
-            <div className="text-sm text-muted-foreground flex items-center gap-1.5 px-3 py-1.5 bg-muted/50 rounded-lg">
-              <MapPin className="w-4 h-4" />
-              {userRegion}
+          {userRegion && (
+            <div
+              className="text-xs text-muted-foreground flex items-center gap-1.5 px-2.5 py-1 bg-muted/50 rounded-lg"
+              title={`Sua região cadastrada é ${userRegion}`}
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              <span>Base: {userRegion}</span>
             </div>
           )}
         </div>
@@ -564,7 +565,7 @@ export default function Index() {
         </div>
       </div>
 
-      {isLeader && viewMode === 'geographic' ? (
+      {viewMode === 'geographic' ? (
         <GeographicOverview />
       ) : (
         <div className="flex flex-col gap-6">

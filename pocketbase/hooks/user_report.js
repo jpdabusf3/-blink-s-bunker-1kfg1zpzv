@@ -52,36 +52,19 @@ routerAdd(
       } catch (_) {}
     }
 
+    // Visão global liberada para todos os usuários autenticados (pedidos e metas consolidados da empresa)
     var orders = $app.findRecordsByFilter('orders', "id != ''", '', 0, 0)
     var totalOrdersValue = 0
     for (var k = 0; k < orders.length; k++) {
       var order = orders[k]
-      if (isLeadership) {
-        totalOrdersValue += order.get('totalValue') || 0
-      } else {
-        var orderRegion = order.getString('region')
-        var orderCountry = order.getString('country')
-        var regionMatch = !userArea || orderRegion === userArea
-        var countryMatch = !userCountry || orderCountry === userCountry
-        if (regionMatch && countryMatch) {
-          totalOrdersValue += order.get('totalValue') || 0
-        }
-      }
+      totalOrdersValue += order.get('totalValue') || 0
     }
 
     var targets = $app.findRecordsByFilter('targets', "id != ''", '', 0, 0)
     var totalTargetsValue = 0
     for (var m = 0; m < targets.length; m++) {
       var target = targets[m]
-      if (isLeadership) {
-        totalTargetsValue += target.get('targetValue') || 0
-      } else {
-        var catType = target.getString('categoryType')
-        var catVal = target.getString('categoryValue')
-        if (catType === 'General' || (catType === 'Region' && catVal === userArea)) {
-          totalTargetsValue += target.get('targetValue') || 0
-        }
-      }
+      totalTargetsValue += target.get('targetValue') || 0
     }
 
     var logResults = []
