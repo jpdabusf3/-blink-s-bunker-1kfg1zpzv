@@ -925,7 +925,10 @@ export default function Resumo() {
 
       {/* Banner de erro mantendo dados em background */}
       {error && !loading && (
-        <SyncErrorBanner message="Não foi possível sincronizar o resumo." onRetry={loadData} />
+        <SyncErrorBanner
+          message="Não foi possível sincronizar o resumo."
+          onRetry={() => void loadData()}
+        />
       )}
 
       {/* 1. ESTADO DE LOADING (Skeletons no formato exato do dashboard) */}
