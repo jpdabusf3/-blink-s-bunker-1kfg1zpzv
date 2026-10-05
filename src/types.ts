@@ -270,6 +270,14 @@ export interface Factory {
   locationFallbackPrecision?: 'exact' | 'street' | 'city' | 'state'
   enriched_at?: string
   standardized_address?: string
+  latitude?: number
+  longitude?: number
+  precisao?: 'exata' | 'rua' | 'bairro' | 'cidade' | 'sem-localizacao'
+  cep?: string
+  logradouro?: string
+  numero?: string
+  bairro?: string
+  complemento?: string
   updated?: string
   expand?: {
     gestor_tecnico_id?: { id: string; nome: string }

@@ -18,6 +18,7 @@ import { isManager } from '@/lib/user-scope'
 import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { COUNTRIES } from '@/lib/countries'
 import { createFactoryPB, updateFactoryPB } from '@/services/factories'
+import { fetchViaCep, resolveClientCoordinates } from '@/services/client-geocoding'
 import { logActivity } from '@/services/activity-logs'
 import { extractFieldErrors, getErrorMessage } from '@/lib/pocketbase/errors'
 import { normalizeArray } from '@/lib/utils'
@@ -121,6 +122,15 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
   const [salesChannelState, setSalesChannelState] = useState<string>(
     (factory?.salesChannel as string) || '',
   )
+  const [cep, setCep] = useState<string>(factory?.cep || '')
+  const [logradouro, setLogradouro] = useState<string>(factory?.logradouro || '')
+  const [numero, setNumero] = useState<string>(factory?.numero || '')
+  const [bairro, setBairro] = useState<string>(factory?.bairro || '')
+  const [complemento, setComplemento] = useState<string>(factory?.complemento || '')
+  const [cityInput, setCityInput] = useState<string>(factory?.city || '')
+  const [stateInput, setStateInput] = useState<string>(factory?.state || '')
+  const [cepLoading, setCepLoading] = useState(false)
+  const [cepNotice, setCepNotice] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   const carteiraProfileOptions = useMemo(() => {
@@ -192,6 +202,41 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
     }
   }, [factory, vendedorTouched, user, teamMembers])
 
+  const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value
+    const digits = raw.replace(/\D/g, '').slice(0, 8)
+    if (digits.length > 5) {
+      setCep(`${digits.slice(0, 5)}-${digits.slice(5)}`)
+    } else {
+      setCep(digits)
+    }
+    if (cepNotice) setCepNotice(null)
+  }
+
+  const handleCepBlur = async () => {
+    const clean = cep.replace(/\D/g, '')
+    if (clean.length !== 8) return
+
+    setCepLoading(true)
+    setCepNotice(null)
+    try {
+      const data = await fetchViaCep(clean)
+      if (data && !data.erro) {
+        if (data.logradouro) setLogradouro(data.logradouro)
+        if (data.bairro) setBairro(data.bairro)
+        if (data.localidade) setCityInput(data.localidade)
+        if (data.uf) setStateInput(data.uf.trim().toUpperCase())
+        if (data.complemento && !complemento) setComplemento(data.complemento)
+      } else {
+        setCepNotice('CEP não encontrado. Você pode continuar o cadastro normalmente.')
+      }
+    } catch {
+      setCepNotice('CEP não encontrado. Você pode continuar o cadastro normalmente.')
+    } finally {
+      setCepLoading(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
@@ -251,9 +296,12 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
 
+    const finalCity = (fd.get('city') as string) || cityInput
+    const finalState = (fd.get('state') as string) || stateInput
+
     const data: Partial<Factory> = {
       name: fd.get('name') as string,
-      city: fd.get('city') as string,
+      city: finalCity,
       region: regions as unknown as Region,
       animalSpecies: species as unknown as Factory['animalSpecies'],
       profile_type: carteira as unknown as Factory['profile_type'],
@@ -269,7 +317,12 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
       deadline: deadlineValue ? new Date(deadlineValue).toISOString() : undefined,
       lastInteraction: factory?.lastInteraction || new Date().toISOString(),
       country: (fd.get('country') as string) || 'Brasil',
-      state: (fd.get('state') as string) || undefined,
+      state: finalState || undefined,
+      cep: cep.trim() || undefined,
+      logradouro: logradouro.trim() || undefined,
+      numero: numero.trim() || undefined,
+      bairro: bairro.trim() || undefined,
+      complemento: complemento.trim() || undefined,
       gestor_tecnico_id: factory?.gestor_tecnico_id || undefined,
       gestor_tecnico_name: factory?.gestor_tecnico_name || undefined,
       vendedor_id: finalVendedorId,
@@ -287,6 +340,19 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
         (fd.get('status_contato') as string) && fd.get('status_contato') !== 'none'
           ? (fd.get('status_contato') as Factory['status_contato'])
           : undefined,
+    }
+
+    try {
+      const geo = await resolveClientCoordinates({ ...factory, ...data })
+      data.precisao = geo.precisao
+      if (typeof geo.latitude === 'number' && typeof geo.longitude === 'number') {
+        data.latitude = geo.latitude
+        data.longitude = geo.longitude
+        data.lat = geo.latitude
+        data.lng = geo.longitude
+      }
+    } catch {
+      // geocodificação preventiva não-bloqueante
     }
 
     setSubmitting(true)
@@ -404,11 +470,7 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
               <Input name="name" defaultValue={factory?.name} required />
               {fieldErrors.name && <p className="text-xs text-destructive">{fieldErrors.name}</p>}
             </div>
-            <div className="space-y-2">
-              <Label>Cidade</Label>
-              <Input name="city" defaultValue={factory?.city} required />
-              {fieldErrors.city && <p className="text-xs text-destructive">{fieldErrors.city}</p>}
-            </div>
+
             <div className="space-y-2">
               <Label>País</Label>
               <Select name="country" defaultValue={factory?.country || 'Brasil'}>
@@ -424,9 +486,111 @@ export function FactoryForm({ factory, onSubmit }: FactoryFormProps) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Estado (UF)</Label>
-              <Input name="state" defaultValue={factory?.state} placeholder="Ex: SP, PR, MG" />
+
+            {/* Seção de Endereço Opcional com busca de CEP */}
+            <div className="space-y-3 md:col-span-2 p-3 border rounded-lg bg-muted/20">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold text-foreground">
+                  Endereço e Localização (Campos Opcionais)
+                </Label>
+                <span className="text-[11px] text-muted-foreground">
+                  Preencha o que tiver em mãos
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">CEP</Label>
+                  <div className="relative">
+                    <Input
+                      value={cep}
+                      onChange={handleCepChange}
+                      onBlur={handleCepBlur}
+                      placeholder="00000-000"
+                      maxLength={9}
+                      className="text-xs pr-8"
+                    />
+                    {cepLoading && (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-1 md:col-span-2">
+                  <Label className="text-xs">Logradouro (Rua / Avenida)</Label>
+                  <Input
+                    value={logradouro}
+                    onChange={(e) => setLogradouro(e.target.value)}
+                    placeholder="Ex: Avenida Melvin Jones"
+                    className="text-xs"
+                  />
+                </div>
+              </div>
+
+              {cepNotice && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                  {cepNotice}
+                </p>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Número</Label>
+                  <Input
+                    value={numero}
+                    onChange={(e) => setNumero(e.target.value)}
+                    placeholder="Ex: 440"
+                    className="text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Bairro</Label>
+                  <Input
+                    value={bairro}
+                    onChange={(e) => setBairro(e.target.value)}
+                    placeholder="Ex: Distrito Industrial"
+                    className="text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Complemento</Label>
+                  <Input
+                    value={complemento}
+                    onChange={(e) => setComplemento(e.target.value)}
+                    placeholder="Ex: Galpão B"
+                    className="text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-1 md:col-span-2">
+                  <Label className="text-xs">
+                    Cidade <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    name="city"
+                    value={cityInput}
+                    onChange={(e) => setCityInput(e.target.value)}
+                    placeholder="Ex: Cascavel"
+                    required
+                    className="text-xs"
+                  />
+                  {fieldErrors.city && (
+                    <p className="text-xs text-destructive">{fieldErrors.city}</p>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Estado (UF)</Label>
+                  <Input
+                    name="state"
+                    value={stateInput}
+                    onChange={(e) => setStateInput(e.target.value)}
+                    placeholder="Ex: PR"
+                    className="text-xs"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="space-y-2">

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-05T14:57:22.918Z",
+  "generatedAt": "2026-10-05T15:14:20.583Z",
   "collections": [
     {
       "name": "users",
@@ -514,6 +514,55 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "cep",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "logradouro",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "numero",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "bairro",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "complemento",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "latitude",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "longitude",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "precisao",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["exata", "rua", "bairro", "cidade", "sem-localizacao"]
         }
       ],
       "indexes": [

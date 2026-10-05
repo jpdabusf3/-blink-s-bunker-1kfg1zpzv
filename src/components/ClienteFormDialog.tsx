@@ -17,8 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Loader2, History, UserCheck } from 'lucide-react'
+import { Loader2, History, UserCheck, Search, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
+import { fetchViaCep, resolveClientCoordinates } from '@/services/client-geocoding'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { FactoryHistoryView } from '@/components/FactoryHistoryView'
 import pb from '@/lib/pocketbase/client'
@@ -81,6 +82,13 @@ export function ClienteFormDialog({
   const [telefone, setTelefone] = useState('')
   const [cidade, setCidade] = useState('')
   const [uf, setUf] = useState('')
+  const [cep, setCep] = useState('')
+  const [logradouro, setLogradouro] = useState('')
+  const [numero, setNumero] = useState('')
+  const [bairro, setBairro] = useState('')
+  const [complemento, setComplemento] = useState('')
+  const [cepLoading, setCepLoading] = useState(false)
+  const [cepNotice, setCepNotice] = useState<string | null>(null)
   const [segmento, setSegmento] = useState<string>('none')
   const [categoria, setCategoria] = useState<string>('none')
   const [categoriaTouched, setCategoriaTouched] = useState(false)
@@ -117,6 +125,12 @@ export function ClienteFormDialog({
       setTelefone(formatTelefone(cliente.telefone || cliente.contactPhone || ''))
       setCidade(cliente.city || '')
       setUf(cliente.state ? cliente.state.trim().toUpperCase() : '')
+      setCep(cliente.cep || '')
+      setLogradouro(cliente.logradouro || '')
+      setNumero(cliente.numero || '')
+      setBairro(cliente.bairro || '')
+      setComplemento(cliente.complemento || '')
+      setCepNotice(null)
       const seg = cliente.carteira?.trim().toUpperCase()
       setSegmento(seg && (CLIENT_SEGMENTOS as readonly string[]).includes(seg) ? seg : 'none')
 
@@ -137,6 +151,12 @@ export function ClienteFormDialog({
       setTelefone('')
       setCidade('')
       setUf('')
+      setCep('')
+      setLogradouro('')
+      setNumero('')
+      setBairro('')
+      setComplemento('')
+      setCepNotice(null)
       setSegmento('none')
       setCategoria('Indústria')
       setCategoriaTouched(false)
@@ -188,6 +208,52 @@ export function ClienteFormDialog({
   const handleTelefoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value
     setTelefone(formatTelefone(raw))
+  }
+
+  // Máscara e busca automática de CEP via ViaCEP ao perder o foco (blur)
+  const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value
+    const digits = raw.replace(/\D/g, '').slice(0, 8)
+    if (digits.length > 5) {
+      setCep(`${digits.slice(0, 5)}-${digits.slice(5)}`)
+    } else {
+      setCep(digits)
+    }
+    if (cepNotice) {
+      setCepNotice(null)
+    }
+  }
+
+  const handleCepBlur = async () => {
+    const cleanCep = cep.replace(/\D/g, '')
+    if (cleanCep.length !== 8) return
+
+    setCepLoading(true)
+    setCepNotice(null)
+    try {
+      const data = await fetchViaCep(cleanCep)
+      if (data && !data.erro) {
+        if (data.logradouro) setLogradouro(data.logradouro)
+        if (data.bairro) setBairro(data.bairro)
+        if (data.localidade) setCidade(data.localidade)
+        if (data.uf) {
+          const upperUf = data.uf.trim().toUpperCase().slice(0, 2)
+          if (BRAZILIAN_UFS.includes(upperUf as any)) {
+            setUf(upperUf)
+          }
+        }
+        if (data.complemento && !complemento) {
+          setComplemento(data.complemento)
+        }
+      } else {
+        setCepNotice('CEP não encontrado. Você pode continuar o cadastro normalmente.')
+      }
+    } catch (err) {
+      console.warn('[ClienteFormDialog] Erro na busca de CEP:', err)
+      setCepNotice('CEP não encontrado. Você pode continuar o cadastro normalmente.')
+    } finally {
+      setCepLoading(false)
+    }
   }
 
   const executeSave = async (payloadToSave: Partial<Factory>) => {
@@ -370,6 +436,11 @@ export function ClienteFormDialog({
         contactPhone: cleanDigits(telefone) || undefined,
         city: cidade.trim() || (cliente?.city ?? ''),
         state: cleanUf || cliente?.state,
+        cep: cep.trim() || undefined,
+        logradouro: logradouro.trim() || undefined,
+        numero: numero.trim() || undefined,
+        bairro: bairro.trim() || undefined,
+        complemento: complemento.trim() || undefined,
         carteira: cleanSeg || cliente?.carteira,
         profile_type: finalProfileType,
         vendedor_id: finalVendedorId,
@@ -378,6 +449,23 @@ export function ClienteFormDialog({
         notes: observacoes.trim() || undefined,
         suggested_approach: observacoes.trim() || cliente?.suggested_approach,
         salesOwner: cliente?.salesOwner || (user?.id ? user.id : undefined),
+      }
+
+      // Geocodificação hierárquica preventiva para salvar coordenadas imediatamente
+      try {
+        const geoRes = await resolveClientCoordinates({
+          ...cliente,
+          ...payload,
+        })
+        payload.precisao = geoRes.precisao
+        if (typeof geoRes.latitude === 'number' && typeof geoRes.longitude === 'number') {
+          payload.latitude = geoRes.latitude
+          payload.longitude = geoRes.longitude
+          payload.lat = geoRes.latitude
+          payload.lng = geoRes.longitude
+        }
+      } catch (errGeo) {
+        console.warn('[ClienteFormDialog] Geocodificação silenciosa no salvamento:', errGeo)
       }
 
       // Se estiver editando e a categoria estiver vazia ou inválida, interrompe e pede confirmação
@@ -509,37 +597,142 @@ export function ClienteFormDialog({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {/* Cidade */}
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label htmlFor="cli-cidade">Cidade</Label>
-                  <Input
-                    id="cli-cidade"
-                    value={cidade}
-                    onChange={(e) => setCidade(e.target.value)}
-                    placeholder="Ex: Cascavel"
-                  />
+              {/* Endereço - Campos opcionais com busca ViaCEP */}
+              <div className="p-3 border rounded-lg bg-muted/20 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-primary" /> Endereço e Localização
+                    (Opcional)
+                  </Label>
+                  <span className="text-[11px] text-muted-foreground">
+                    Preencha o que tiver em mãos
+                  </span>
                 </div>
 
-                {/* UF */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="cli-uf">UF</Label>
-                  <Select
-                    value={uf || 'none'}
-                    onValueChange={(val) => setUf(val === 'none' ? '' : val)}
-                  >
-                    <SelectTrigger id="cli-uf">
-                      <SelectValue placeholder="UF" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-56">
-                      <SelectItem value="none">Selecione</SelectItem>
-                      {BRAZILIAN_UFS.map((sigla) => (
-                        <SelectItem key={sigla} value={sigla}>
-                          {sigla}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* CEP com busca ViaCEP no blur */}
+                  <div className="space-y-1 sm:col-span-1">
+                    <Label htmlFor="cli-cep" className="text-xs">
+                      CEP
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="cli-cep"
+                        value={cep}
+                        onChange={handleCepChange}
+                        onBlur={handleCepBlur}
+                        placeholder="00000-000"
+                        maxLength={9}
+                        className="text-xs pr-8"
+                      />
+                      {cepLoading && (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Logradouro */}
+                  <div className="space-y-1 sm:col-span-2">
+                    <Label htmlFor="cli-logradouro" className="text-xs">
+                      Logradouro (Rua / Avenida)
+                    </Label>
+                    <Input
+                      id="cli-logradouro"
+                      value={logradouro}
+                      onChange={(e) => setLogradouro(e.target.value)}
+                      placeholder="Ex: Avenida Melvin Jones"
+                      className="text-xs"
+                    />
+                  </div>
+                </div>
+
+                {cepNotice && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                    {cepNotice}
+                  </p>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Número */}
+                  <div className="space-y-1">
+                    <Label htmlFor="cli-numero" className="text-xs">
+                      Número
+                    </Label>
+                    <Input
+                      id="cli-numero"
+                      value={numero}
+                      onChange={(e) => setNumero(e.target.value)}
+                      placeholder="Ex: 440 ou S/N"
+                      className="text-xs"
+                    />
+                  </div>
+
+                  {/* Bairro */}
+                  <div className="space-y-1">
+                    <Label htmlFor="cli-bairro" className="text-xs">
+                      Bairro
+                    </Label>
+                    <Input
+                      id="cli-bairro"
+                      value={bairro}
+                      onChange={(e) => setBairro(e.target.value)}
+                      placeholder="Ex: Distrito Industrial"
+                      className="text-xs"
+                    />
+                  </div>
+
+                  {/* Complemento */}
+                  <div className="space-y-1">
+                    <Label htmlFor="cli-complemento" className="text-xs">
+                      Complemento
+                    </Label>
+                    <Input
+                      id="cli-complemento"
+                      value={complemento}
+                      onChange={(e) => setComplemento(e.target.value)}
+                      placeholder="Ex: Lote 211, Galpão A"
+                      className="text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Cidade */}
+                  <div className="space-y-1 sm:col-span-2">
+                    <Label htmlFor="cli-cidade" className="text-xs">
+                      Cidade
+                    </Label>
+                    <Input
+                      id="cli-cidade"
+                      value={cidade}
+                      onChange={(e) => setCidade(e.target.value)}
+                      placeholder="Ex: Cascavel"
+                      className="text-xs"
+                    />
+                  </div>
+
+                  {/* UF */}
+                  <div className="space-y-1">
+                    <Label htmlFor="cli-uf" className="text-xs">
+                      UF
+                    </Label>
+                    <Select
+                      value={uf || 'none'}
+                      onValueChange={(val) => setUf(val === 'none' ? '' : val)}
+                    >
+                      <SelectTrigger id="cli-uf" className="text-xs">
+                        <SelectValue placeholder="UF" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-56 z-[9999]">
+                        <SelectItem value="none">Selecione</SelectItem>
+                        {BRAZILIAN_UFS.map((sigla) => (
+                          <SelectItem key={sigla} value={sigla}>
+                            {sigla}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 

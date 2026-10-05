@@ -33,6 +33,7 @@ const ALLOWED_SELECT_VALUES: Record<string, readonly string[]> = {
   region: ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul'],
   status_contato: ['Champion', 'Stakeholder', 'Decisor', 'Influenciador', 'Gatekeepers'],
   geocode_precision: ['exact', 'street', 'city', 'failed'],
+  precisao: ['exata', 'rua', 'bairro', 'cidade', 'sem-localizacao'],
   address_status: ['complete', 'partial', 'inconsistent', 'enriched', 'failed'],
   salesChannel: ['Direct', 'Indirect'],
   indirectChannelType: [
@@ -177,8 +178,52 @@ export function mapRecordToFactory(record: any): Factory {
     cnpj: record.cnpj,
     telefone: record.telefone || record.contactPhone,
     observacoes: record.observacoes || record.notes,
-    lat: typeof record.lat === 'number' ? record.lat : record.lat ? Number(record.lat) : undefined,
-    lng: typeof record.lng === 'number' ? record.lng : record.lng ? Number(record.lng) : undefined,
+    lat:
+      typeof record.lat === 'number'
+        ? record.lat
+        : record.lat
+          ? Number(record.lat)
+          : typeof record.latitude === 'number'
+            ? record.latitude
+            : record.latitude
+              ? Number(record.latitude)
+              : undefined,
+    lng:
+      typeof record.lng === 'number'
+        ? record.lng
+        : record.lng
+          ? Number(record.lng)
+          : typeof record.longitude === 'number'
+            ? record.longitude
+            : record.longitude
+              ? Number(record.longitude)
+              : undefined,
+    latitude:
+      typeof record.latitude === 'number'
+        ? record.latitude
+        : record.latitude
+          ? Number(record.latitude)
+          : typeof record.lat === 'number'
+            ? record.lat
+            : record.lat
+              ? Number(record.lat)
+              : undefined,
+    longitude:
+      typeof record.longitude === 'number'
+        ? record.longitude
+        : record.longitude
+          ? Number(record.longitude)
+          : typeof record.lng === 'number'
+            ? record.lng
+            : record.lng
+              ? Number(record.lng)
+              : undefined,
+    precisao: record.precisao,
+    cep: record.cep || '',
+    logradouro: record.logradouro || '',
+    numero: record.numero || '',
+    bairro: record.bairro || '',
+    complemento: record.complemento || '',
     geocode_precision: record.geocode_precision,
     address_status: record.address_status,
     enriched_at: record.enriched_at,
