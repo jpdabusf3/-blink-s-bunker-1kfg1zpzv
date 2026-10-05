@@ -34,6 +34,7 @@ import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { ImportFunilDialog } from '@/components/ImportFunilDialog'
 import { ClientHistoryDialog } from '@/components/ClientHistoryDialog'
 import { DealUpcomingActivities } from '@/components/DealUpcomingActivities'
+import { ClientDetailDrawer } from '@/components/ClientDetailDrawer'
 import {
   Upload,
   Filter,
@@ -127,6 +128,10 @@ export default function FunilVendas() {
   // Persisted "Modelo Visual" report template preference (per user).
   const [reportTemplate, setReportTemplate] = useState<ReportTemplateKey>(DEFAULT_REPORT_TEMPLATE)
   const [templateLoading, setTemplateLoading] = useState(true)
+
+  // Drawer de interação rápida do cliente
+  const [drawerClientId, setDrawerClientId] = useState<string | null>(null)
+  const clickedCardRef = useRef<HTMLDivElement | null>(null)
 
   // Multi-selection of clients (kanban cards) for batch export.
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set())
@@ -250,6 +255,17 @@ export default function FunilVendas() {
     () => factories.find((f) => f.id === selectedFactoryId) || null,
     [factories, selectedFactoryId],
   )
+
+  const openDrawer = (factoryId: string, eventTarget?: HTMLElement | null) => {
+    if (eventTarget) {
+      clickedCardRef.current = eventTarget.closest('[data-client-card]') as HTMLDivElement | null
+    }
+    setDrawerClientId(factoryId)
+  }
+
+  const closeDrawer = () => {
+    setDrawerClientId(null)
+  }
 
   const openPanel = (factoryId: string) => {
     const f = factories.find((x) => x.id === factoryId)
@@ -633,8 +649,18 @@ export default function FunilVendas() {
                     {items.map((f) => (
                       <Card
                         key={f.id}
-                        className="p-3 shadow-subtle hover:shadow-md transition-all cursor-pointer"
-                        onClick={() => openPanel(f.id)}
+                        data-client-card={f.id}
+                        tabIndex={0}
+                        role="button"
+                        aria-label={`Abrir detalhes de ${f.name}`}
+                        className="p-3 shadow-subtle hover:shadow-md transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        onClick={(e) => openDrawer(f.id, e.currentTarget)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            openDrawer(f.id, e.currentTarget)
+                          }
+                        }}
                       >
                         <div className="flex items-start gap-2">
                           <div
@@ -876,6 +902,20 @@ export default function FunilVendas() {
         open={historyOpen}
         onOpenChange={setHistoryOpen}
         origin="funil_vendas"
+      />
+
+      {/* Drawer de interação rápida do cliente no funil */}
+      <ClientDetailDrawer
+        clientId={drawerClientId}
+        initialClient={factories.find((f) => f.id === drawerClientId) || null}
+        open={!!drawerClientId}
+        onClose={closeDrawer}
+        triggerRef={clickedCardRef}
+        onClientUpdated={(updated) => {
+          updateLocalFactories((prev) =>
+            prev.map((f) => (f.id === updated.id ? { ...f, ...updated } : f)),
+          )
+        }}
       />
     </div>
   )
