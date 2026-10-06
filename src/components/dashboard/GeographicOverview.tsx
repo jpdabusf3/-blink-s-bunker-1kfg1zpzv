@@ -176,10 +176,10 @@ export function GeographicOverview() {
     options: string[]
   }) => (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-full md:w-[140px] bg-background text-xs">
+      <SelectTrigger className="w-full md:w-[140px] bg-[#232329] border-[#3A3A42] text-white text-xs rounded-[12px] focus:ring-[#E5B64E]">
         <SelectValue placeholder={label} />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="bg-[#2A2A31] border-[#3A3A42] text-white">
         <SelectItem value="all">Todos ({label})</SelectItem>
         {options.map((o) => (
           <SelectItem key={o} value={o}>
@@ -191,20 +191,20 @@ export function GeographicOverview() {
   )
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 animate-fade-in text-white">
       <div className="flex justify-between items-center flex-wrap gap-2">
-        <h2 className="text-xl font-bold">Visão Geográfica & Estratégica</h2>
+        <h2 className="text-xl font-bold text-[#E5B64E]">Visão Geográfica & Estratégica</h2>
         <Button
           variant="default"
           size="sm"
           onClick={() => exportExecutiveMacroReport(filtered, filters)}
-          className="gap-2 shadow-sm"
+          className="gap-2 shadow-sm bg-[#E5B64E] text-[#1F1F1F] hover:bg-[#d4a643] font-semibold rounded-[12px]"
         >
           <Download className="w-4 h-4" /> Exportar Relatório Executivo (XLSX)
         </Button>
       </div>
 
-      <div className="flex flex-wrap gap-2 bg-card p-3 border rounded-xl shadow-subtle">
+      <div className="flex flex-wrap gap-2 bg-[#2A2A31] p-4 border border-[#3A3A42] rounded-[12px] shadow-subtle">
         <FSelect
           label="Continente"
           value={filters.continent}
@@ -249,15 +249,17 @@ export function GeographicOverview() {
         />
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {metricCards.map((m) => (
           <Card
             key={m.label}
-            className="shadow-subtle text-center flex flex-col justify-center items-center p-4 border-l-4 border-l-primary"
+            className="bg-[#2A2A31] border border-[#3A3A42] rounded-[12px] text-center flex flex-col justify-center items-center p-4 border-l-4 border-l-[#E5B64E] text-white"
           >
-            <m.icon className="w-5 h-5 text-primary mb-1" />
-            <div className="text-xl sm:text-2xl font-bold">{m.value}</div>
-            <h3 className="text-[11px] sm:text-sm font-medium text-muted-foreground">{m.label}</h3>
+            <m.icon className="w-5 h-5 text-[#E5B64E] mb-1" />
+            <div className="text-xl sm:text-2xl font-bold text-white tabular-nums">{m.value}</div>
+            <h3 className="text-[12px] font-semibold uppercase tracking-[0.05em] text-[#A1A1AA]">
+              {m.label}
+            </h3>
           </Card>
         ))}
       </div>
@@ -267,33 +269,40 @@ export function GeographicOverview() {
         defaultValue={continentGroups.length > 0 ? [continentGroups[0].name] : []}
       >
         {continentGroups.map((continent) => (
-          <AccordionItem key={continent.name} value={continent.name}>
+          <AccordionItem
+            key={continent.name}
+            value={continent.name}
+            className="border-b border-[#3A3A42]"
+          >
             <AccordionTrigger className="hover:no-underline py-4">
               <div className="flex items-center justify-between w-full pr-4">
-                <span className="text-lg font-bold flex items-center gap-2">
-                  <Globe2 className="w-5 h-5 text-primary" />
+                <span className="text-lg font-bold flex items-center gap-2 text-[#E5B64E]">
+                  <Globe2 className="w-5 h-5 text-[#E5B64E]" />
                   {continent.name}
                 </span>
-                <div className="flex gap-4 text-xs font-normal text-muted-foreground">
+                <div className="flex gap-4 text-xs font-normal text-[#A1A1AA]">
                   <span>{continent.countries.length} países</span>
                   <span>{continent.factories.length} fábricas</span>
-                  <span className="text-primary font-bold">
+                  <span className="text-[#E5B64E] font-bold">
                     {formatCompactCurrency(continent.potential)}
                   </span>
                 </div>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="space-y-6 pt-2">
+            <AccordionContent className="space-y-4 pt-2">
               {continent.countries.map((country) => (
-                <div key={country.name} className="space-y-3 bg-muted/20 p-4 rounded-xl border">
-                  <div className="flex items-center justify-between border-b pb-2 flex-wrap gap-2">
-                    <h4 className="font-bold text-base flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-primary" />
+                <div
+                  key={country.name}
+                  className="space-y-3 bg-[rgba(42,42,49,0.9)] p-4 rounded-[12px] border border-[#3A3A42] shadow-sm"
+                >
+                  <div className="flex items-center justify-between border-b border-[#3A3A42] pb-2 flex-wrap gap-2">
+                    <h4 className="font-bold text-base flex items-center gap-2 text-white">
+                      <Building2 className="w-4 h-4 text-[#E5B64E]" />
                       {country.name}
                     </h4>
-                    <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
+                    <div className="flex gap-3 text-xs text-[#A1A1AA] flex-wrap">
                       <span>{country.factories.length} fábricas</span>
-                      <span className="text-primary font-bold">
+                      <span className="text-[#E5B64E] font-bold">
                         {formatCompactCurrency(country.potential)}
                       </span>
                       <span>{country.active} ativas</span>

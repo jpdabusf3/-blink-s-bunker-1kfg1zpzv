@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -228,5 +228,132 @@
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--primary) / 0.5);
+  }
+
+  /* Blink Biotech Dashboard Scoped Theme & Identity */
+  .dashboard-blink-theme {
+    font-family:
+      'Inter',
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      Roboto,
+      sans-serif;
+    background-color: #1f1f1f;
+    color: #ffffff;
+    --background: 220 13% 9%;
+    --foreground: 0 0% 100%;
+    --card: 240 8% 18%;
+    --card-foreground: 0 0% 100%;
+    --primary: 41 74% 60%;
+    --primary-foreground: 220 13% 9%;
+    --secondary: 220 10% 18%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 220 10% 16%;
+    --muted-foreground: 220 5% 65%;
+    --accent: 12 80% 55%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 6% 24%;
+    --ring: 41 74% 60%;
+    --radius: 0.75rem;
+    --chart-1: 41 74% 60%;
+    --chart-2: 12 80% 55%;
+    --chart-3: 41 74% 60%;
+    --chart-4: 12 80% 55%;
+    --chart-5: 220 5% 65%;
+  }
+
+  .dashboard-blink-theme .blink-header-strip {
+    background-color: #44444c;
+    border-color: #3a3a42;
+    border-radius: 12px;
+  }
+
+  .dashboard-blink-theme .blink-card {
+    background-color: #2a2a31;
+    border: 1px solid #3a3a42;
+    border-radius: 12px;
+    padding: 16px;
+  }
+
+  .dashboard-blink-theme .blink-filter-input {
+    background-color: #232329 !important;
+    border: 1px solid #3a3a42 !important;
+    border-radius: 12px !important;
+    color: #ffffff !important;
+  }
+
+  .dashboard-blink-theme .blink-filter-input:focus-within,
+  .dashboard-blink-theme .blink-filter-input:focus {
+    border-color: #e5b64e !important;
+    box-shadow: 0 0 0 1px #e5b64e !important;
+  }
+
+  .dashboard-blink-theme .blink-table {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #3a3a42;
+  }
+
+  .dashboard-blink-theme .blink-table thead tr {
+    background-color: #32343a !important;
+  }
+
+  .dashboard-blink-theme .blink-table thead th {
+    color: #ffffff !important;
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+
+  .dashboard-blink-theme .blink-table tbody tr:nth-child(odd) {
+    background-color: #2a2a31;
+  }
+
+  .dashboard-blink-theme .blink-table tbody tr:nth-child(even) {
+    background-color: #232329;
+  }
+
+  .dashboard-blink-theme .blink-table tbody tr {
+    border-bottom: 1px solid #3a3a42;
+    transition:
+      background-color 0.15s ease,
+      border-left-color 0.15s ease;
+  }
+
+  .dashboard-blink-theme .blink-table tbody tr:hover {
+    background-color: #363640 !important;
+    border-left: 2px solid #e5b64e;
+  }
+
+  .dashboard-blink-theme .blink-btn-primary {
+    background-color: #e5b64e !important;
+    color: #1f1f1f !important;
+    font-weight: 600;
+    border-radius: 12px;
+    transition:
+      background-color 0.15s ease,
+      opacity 0.15s ease;
+  }
+
+  .dashboard-blink-theme .blink-btn-primary:hover:not(:disabled) {
+    background-color: #d4a643 !important;
+    color: #1f1f1f !important;
+  }
+
+  .dashboard-blink-theme .blink-btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .dashboard-blink-theme .blink-map-overlay {
+    background-color: rgba(42, 42, 49, 0.9);
+    border: 1px solid #3a3a42;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
   }
 }

@@ -74,46 +74,57 @@ export function DailySalesLogCard({
   }, [orders, factories, regionFilter])
 
   return (
-    <Card className="shadow-subtle">
-      <CardHeader>
-        <CardTitle>Diário de Vendas</CardTitle>
-        <CardDescription>
+    <Card className="bg-[#2A2A31] border border-[#3A3A42] rounded-[12px] p-4 text-white">
+      <CardHeader className="p-0 pb-4">
+        <CardTitle className="text-[#E5B64E] text-base font-bold">Diário de Vendas</CardTitle>
+        <CardDescription className="text-[#A1A1AA] text-xs">
           Últimos pedidos {regionFilter !== 'Todas as Regiões' ? `- ${regionFilter}` : ''}
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="mb-3 p-3 bg-primary/5 rounded-lg flex justify-between items-center">
-          <span className="text-sm text-muted-foreground">Total de Hoje:</span>
-          <span className="font-bold text-primary">{formatCurrency(todayTotal)}</span>
+      <CardContent className="p-0">
+        <div className="mb-3 p-3 bg-[#232329] border border-[#3A3A42] rounded-[12px] flex justify-between items-center">
+          <span className="text-xs uppercase tracking-wider text-[#A1A1AA] font-semibold">
+            Total de Hoje:
+          </span>
+          <span className="font-bold text-[#E5B64E] text-base tabular-nums">
+            {formatCurrency(todayTotal)}
+          </span>
         </div>
-        <div className="max-h-[200px] overflow-y-auto">
+        <div className="max-h-[200px] overflow-y-auto blink-table">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead className="text-xs">Data</TableHead>
-                <TableHead className="text-xs">Fábrica</TableHead>
-                <TableHead className="text-xs text-right">Valor</TableHead>
+              <TableRow className="border-b border-[#3A3A42] bg-[#32343A]">
+                <TableHead className="text-white text-xs uppercase font-semibold">Data</TableHead>
+                <TableHead className="text-white text-xs uppercase font-semibold">
+                  Fábrica
+                </TableHead>
+                <TableHead className="text-white text-xs uppercase font-semibold text-right">
+                  Valor
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center text-muted-foreground text-sm py-4">
+                  <TableCell colSpan={3} className="text-center text-[#A1A1AA] text-sm py-4">
                     Nenhum pedido recente.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredOrders.map((o) => {
+                filteredOrders.map((o, idx) => {
                   const factory = factories.find((f) => f.id === o.factoryId)
                   return (
-                    <TableRow key={o.id}>
-                      <TableCell className="text-xs whitespace-nowrap">
+                    <TableRow
+                      key={o.id}
+                      className={`${idx % 2 === 0 ? 'bg-[#2A2A31]' : 'bg-[#232329]'} border-b border-[#3A3A42] hover:bg-[#363640] hover:border-l-2 hover:border-l-[#E5B64E] transition-all`}
+                    >
+                      <TableCell className="text-xs whitespace-nowrap text-[#A1A1AA]">
                         {new Date(o.orderDate).toLocaleDateString('pt-BR')}
                       </TableCell>
-                      <TableCell className="text-xs font-medium">
+                      <TableCell className="text-xs font-medium text-white">
                         {factory?.name || 'N/A'}
                       </TableCell>
-                      <TableCell className="text-xs text-right font-semibold text-primary">
+                      <TableCell className="text-xs text-right font-semibold text-[#E5B64E] tabular-nums">
                         {formatCurrency(o.totalValue)}
                       </TableCell>
                     </TableRow>

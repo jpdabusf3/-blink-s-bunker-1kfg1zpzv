@@ -21,11 +21,11 @@ import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { normalizeArray } from '@/lib/utils'
 
 const COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
+  '#E5B64E', // Gold (primary series)
+  '#E85635', // Orange (secondary accent)
+  '#C99A36',
+  '#F3C96B',
+  '#71717A',
 ]
 
 export function DashboardCharts({ regionFilter = 'Todas as Regiões' }: { regionFilter?: string }) {
@@ -183,26 +183,24 @@ export function DashboardCharts({ regionFilter = 'Todas as Regiões' }: { region
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
-        <div className="bg-card border text-card-foreground p-3 rounded-lg shadow-lg text-sm z-50">
-          <p className="font-semibold mb-2">{data.name}</p>
+        <div className="bg-[#2A2A31] border border-[#3A3A42] text-white p-3 rounded-[12px] shadow-lg text-sm z-50">
+          <p className="font-semibold mb-2 text-[#E5B64E]">{data.name}</p>
           <div className="space-y-1">
             <p>
-              <span className="font-medium text-muted-foreground">Meta:</span> R${' '}
+              <span className="font-medium text-[#A1A1AA]">Meta:</span> R${' '}
               {data.Meta.toLocaleString('pt-BR')}
             </p>
             <p>
-              <span className="font-medium text-primary">Atual:</span> R${' '}
+              <span className="font-medium text-[#E5B64E]">Atual:</span> R${' '}
               {data.Atual.toLocaleString('pt-BR')}
             </p>
             <p>
-              <span className="font-medium" style={{ color: 'hsl(var(--chart-2))' }}>
-                Projetado:
-              </span>{' '}
-              R$ {data.Projetado.toLocaleString('pt-BR')}
+              <span className="font-medium text-[#E85635]">Projetado:</span> R${' '}
+              {data.Projetado.toLocaleString('pt-BR')}
             </p>
-            <div className="mt-2 pt-2 border-t">
+            <div className="mt-2 pt-2 border-t border-[#3A3A42]">
               <span
-                className={`font-semibold ${data.Status === 'On Track' ? 'text-green-500' : 'text-destructive'}`}
+                className={`font-semibold ${data.Status === 'On Track' ? 'text-green-400' : 'text-[#E85635]'}`}
               >
                 {data.Status === 'On Track' ? 'No Caminho (On Track)' : 'Em Risco (At Risk)'}
               </span>
@@ -215,70 +213,62 @@ export function DashboardCharts({ regionFilter = 'Todas as Regiões' }: { region
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-2">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 print:grid-cols-2">
       {projectionData.length > 0 && (
-        <Card className="shadow-subtle print:hidden lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Projeção de Fechamento</CardTitle>
-            <CardDescription>Acompanhamento de Metas vs. Realizado vs. Projetado</CardDescription>
+        <Card className="bg-[#2A2A31] border border-[#3A3A42] rounded-[12px] p-4 text-white print:hidden lg:col-span-2">
+          <CardHeader className="p-0 pb-4">
+            <CardTitle className="text-[#E5B64E] text-base font-bold">
+              Projeção de Fechamento
+            </CardTitle>
+            <CardDescription className="text-[#A1A1AA] text-xs">
+              Acompanhamento de Metas vs. Realizado vs. Projetado
+            </CardDescription>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="p-0 h-[300px]">
             <ChartContainer
               config={{
-                Meta: { label: 'Meta (R$)', color: 'hsl(var(--muted-foreground))' },
-                Atual: { label: 'Atual (R$)', color: 'hsl(var(--primary))' },
-                Projetado: { label: 'Projetado (R$)', color: 'hsl(var(--chart-2))' },
+                Meta: { label: 'Meta (R$)', color: '#A1A1AA' },
+                Atual: { label: 'Atual (R$)', color: '#E5B64E' },
+                Projetado: { label: 'Projetado (R$)', color: '#E85635' },
               }}
               className="h-full w-full"
             >
               <BarChart data={projectionData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3A3A42" />
                 <XAxis
                   dataKey="name"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                  tick={{ fontSize: 12, fill: '#A1A1AA' }}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                  tick={{ fontSize: 12, fill: '#A1A1AA' }}
                   tickFormatter={(val) => `R$ ${(val / 1000).toFixed(0)}k`}
                 />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--muted)/0.4)' }} />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
-                <Bar
-                  dataKey="Meta"
-                  fill="hsl(var(--muted-foreground))"
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={40}
+                <Tooltip
+                  content={<CustomTooltip />}
+                  cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
                 />
-                <Bar
-                  dataKey="Atual"
-                  fill="hsl(var(--primary))"
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={40}
-                />
-                <Bar
-                  dataKey="Projetado"
-                  fill="hsl(var(--chart-2))"
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={40}
-                />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', color: '#A1A1AA' }} />
+                <Bar dataKey="Meta" fill="#71717A" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                <Bar dataKey="Atual" fill="#E5B64E" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                <Bar dataKey="Projetado" fill="#E85635" radius={[4, 4, 0, 0]} maxBarSize={40} />
               </BarChart>
             </ChartContainer>
           </CardContent>
         </Card>
       )}
 
-      <Card className="shadow-subtle print:hidden">
-        <CardHeader>
-          <CardTitle>Funil de Vendas</CardTitle>
-          <CardDescription>Valor por estágio</CardDescription>
+      <Card className="bg-[#2A2A31] border border-[#3A3A42] rounded-[12px] p-4 text-white print:hidden">
+        <CardHeader className="p-0 pb-4">
+          <CardTitle className="text-[#E5B64E] text-base font-bold">Funil de Vendas</CardTitle>
+          <CardDescription className="text-[#A1A1AA] text-xs">Valor por estágio</CardDescription>
         </CardHeader>
-        <CardContent className="h-[280px]">
+        <CardContent className="p-0 h-[280px]">
           <ChartContainer
-            config={{ value: { label: 'Valor (R$)', color: 'hsl(var(--primary))' } }}
+            config={{ value: { label: 'Valor (R$)', color: '#E5B64E' } }}
             className="h-full w-full"
           >
             <BarChart data={funnelData} layout="vertical" margin={{ left: 10, right: 20 }}>
@@ -289,23 +279,29 @@ export function DashboardCharts({ regionFilter = 'Todas as Regiões' }: { region
                 width={90}
                 axisLine={false}
                 tickLine={false}
-                tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                tick={{ fontSize: 12, fill: '#A1A1AA' }}
               />
-              <Tooltip content={<ChartTooltipContent />} />
-              <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={24} />
+              <Tooltip
+                content={
+                  <ChartTooltipContent className="bg-[#2A2A31] border-[#3A3A42] text-white" />
+                }
+              />
+              <Bar dataKey="value" fill="#E5B64E" radius={[0, 4, 4, 0]} barSize={24} />
             </BarChart>
           </ChartContainer>
         </CardContent>
       </Card>
 
-      <Card className="shadow-subtle print:hidden">
-        <CardHeader>
-          <CardTitle>Distribuição Regional</CardTitle>
-          <CardDescription>Potencial financeiro</CardDescription>
+      <Card className="bg-[#2A2A31] border border-[#3A3A42] rounded-[12px] p-4 text-white print:hidden">
+        <CardHeader className="p-0 pb-4">
+          <CardTitle className="text-[#E5B64E] text-base font-bold">
+            Distribuição Regional
+          </CardTitle>
+          <CardDescription className="text-[#A1A1AA] text-xs">Potencial financeiro</CardDescription>
         </CardHeader>
-        <CardContent className="h-[280px]">
+        <CardContent className="p-0 h-[280px]">
           <ChartContainer
-            config={{ value: { label: 'Valor', color: 'hsl(var(--primary))' } }}
+            config={{ value: { label: 'Valor', color: '#E5B64E' } }}
             className="h-full w-full"
           >
             <PieChart>
@@ -323,20 +319,28 @@ export function DashboardCharts({ regionFilter = 'Todas as Regiões' }: { region
                   <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip content={<ChartTooltipContent />} />
+              <Tooltip
+                content={
+                  <ChartTooltipContent className="bg-[#2A2A31] border-[#3A3A42] text-white" />
+                }
+              />
             </PieChart>
           </ChartContainer>
         </CardContent>
       </Card>
 
-      <Card className="shadow-subtle print:break-inside-avoid print:shadow-none print:border">
-        <CardHeader>
-          <CardTitle>Ranking Volume de Compras (t/mês)</CardTitle>
-          <CardDescription>Maiores capacidades do pipeline</CardDescription>
+      <Card className="bg-[#2A2A31] border border-[#3A3A42] rounded-[12px] p-4 text-white print:break-inside-avoid print:shadow-none print:border">
+        <CardHeader className="p-0 pb-4">
+          <CardTitle className="text-[#E5B64E] text-base font-bold">
+            Ranking Volume de Compras (t/mês)
+          </CardTitle>
+          <CardDescription className="text-[#A1A1AA] text-xs">
+            Maiores capacidades do pipeline
+          </CardDescription>
         </CardHeader>
-        <CardContent className="h-[280px]">
+        <CardContent className="p-0 h-[280px]">
           <ChartContainer
-            config={{ value: { label: 'Capacidade', color: 'hsl(var(--chart-3))' } }}
+            config={{ value: { label: 'Capacidade', color: '#E5B64E' } }}
             className="h-full w-full"
           >
             <BarChart data={topVolume} layout="vertical" margin={{ left: 10, right: 20 }}>
@@ -347,23 +351,31 @@ export function DashboardCharts({ regionFilter = 'Todas as Regiões' }: { region
                 width={100}
                 axisLine={false}
                 tickLine={false}
-                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                tick={{ fontSize: 11, fill: '#A1A1AA' }}
               />
-              <Tooltip content={<ChartTooltipContent />} />
-              <Bar dataKey="value" fill="hsl(var(--chart-3))" radius={[0, 4, 4, 0]} barSize={20} />
+              <Tooltip
+                content={
+                  <ChartTooltipContent className="bg-[#2A2A31] border-[#3A3A42] text-white" />
+                }
+              />
+              <Bar dataKey="value" fill="#E5B64E" radius={[0, 4, 4, 0]} barSize={20} />
             </BarChart>
           </ChartContainer>
         </CardContent>
       </Card>
 
-      <Card className="shadow-subtle print:break-inside-avoid print:shadow-none print:border">
-        <CardHeader>
-          <CardTitle>Ranking Produtos Mais Vendidos</CardTitle>
-          <CardDescription>Receita por tendência de linha</CardDescription>
+      <Card className="bg-[#2A2A31] border border-[#3A3A42] rounded-[12px] p-4 text-white print:break-inside-avoid print:shadow-none print:border">
+        <CardHeader className="p-0 pb-4">
+          <CardTitle className="text-[#E5B64E] text-base font-bold">
+            Ranking Produtos Mais Vendidos
+          </CardTitle>
+          <CardDescription className="text-[#A1A1AA] text-xs">
+            Receita por tendência de linha
+          </CardDescription>
         </CardHeader>
-        <CardContent className="h-[280px]">
+        <CardContent className="p-0 h-[280px]">
           <ChartContainer
-            config={{ value: { label: 'Receita (R$)', color: 'hsl(var(--chart-4))' } }}
+            config={{ value: { label: 'Receita (R$)', color: '#E85635' } }}
             className="h-full w-full"
           >
             <BarChart data={productData} margin={{ left: 10, right: 10, top: 10, bottom: 20 }}>
@@ -371,11 +383,15 @@ export function DashboardCharts({ regionFilter = 'Todas as Regiões' }: { region
                 dataKey="name"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                tick={{ fontSize: 11, fill: '#A1A1AA' }}
               />
               <YAxis hide />
-              <Tooltip content={<ChartTooltipContent />} />
-              <Bar dataKey="value" fill="hsl(var(--chart-4))" radius={[4, 4, 0, 0]} barSize={32} />
+              <Tooltip
+                content={
+                  <ChartTooltipContent className="bg-[#2A2A31] border-[#3A3A42] text-white" />
+                }
+              />
+              <Bar dataKey="value" fill="#E85635" radius={[4, 4, 0, 0]} barSize={32} />
             </BarChart>
           </ChartContainer>
         </CardContent>

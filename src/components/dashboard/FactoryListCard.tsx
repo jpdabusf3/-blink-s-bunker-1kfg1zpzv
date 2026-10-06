@@ -32,15 +32,15 @@ export function FactoryListCard({ regionFilter = 'Todas as Regiões' }: { region
   })
 
   return (
-    <Card className="shadow-subtle lg:col-span-3 print:hidden">
-      <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <CardTitle>Lista de Fábricas</CardTitle>
+    <Card className="bg-[#2A2A31] border border-[#3A3A42] rounded-[12px] p-4 text-white lg:col-span-3 print:hidden">
+      <CardHeader className="p-0 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <CardTitle className="text-[#E5B64E] text-base font-bold">Lista de Fábricas</CardTitle>
         <div className="flex gap-2">
           <Select value={sectorFilter} onValueChange={setSectorFilter}>
-            <SelectTrigger className="w-[180px] h-9 text-xs">
+            <SelectTrigger className="w-[180px] h-9 text-xs bg-[#232329] border-[#3A3A42] text-white rounded-[12px] focus:ring-[#E5B64E]">
               <SelectValue placeholder="Setor" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-[#2A2A31] border-[#3A3A42] text-white">
               <SelectItem value="all">Todos os Setores</SelectItem>
               {[
                 'Aves',
@@ -62,10 +62,10 @@ export function FactoryListCard({ regionFilter = 'Todas as Regiões' }: { region
             </SelectContent>
           </Select>
           <Select value={lineFilter} onValueChange={setLineFilter}>
-            <SelectTrigger className="w-[180px] h-9 text-xs">
+            <SelectTrigger className="w-[180px] h-9 text-xs bg-[#232329] border-[#3A3A42] text-white rounded-[12px] focus:ring-[#E5B64E]">
               <SelectValue placeholder="Linha" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-[#2A2A31] border-[#3A3A42] text-white">
               <SelectItem value="all">Todas as Linhas</SelectItem>
               {['Adsorventes', 'Prebióticos', 'Minerais Orgânicos', 'Blends', 'Ingredientes'].map(
                 (l) => (
@@ -78,31 +78,40 @@ export function FactoryListCard({ regionFilter = 'Todas as Regiões' }: { region
           </Select>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
+      <CardContent className="p-0">
+        <div className="overflow-x-auto blink-table">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Fábrica</TableHead>
-                <TableHead>Setor</TableHead>
-                <TableHead>Linha</TableHead>
-                <TableHead className="text-right">Potencial</TableHead>
-                <TableHead className="text-right">Data da última compra</TableHead>
+              <TableRow className="border-b border-[#3A3A42] bg-[#32343A]">
+                <TableHead className="text-white text-xs uppercase font-semibold">
+                  Fábrica
+                </TableHead>
+                <TableHead className="text-white text-xs uppercase font-semibold">Setor</TableHead>
+                <TableHead className="text-white text-xs uppercase font-semibold">Linha</TableHead>
+                <TableHead className="text-right text-white text-xs uppercase font-semibold">
+                  Potencial
+                </TableHead>
+                <TableHead className="text-right text-white text-xs uppercase font-semibold">
+                  Data da última compra
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((f) => {
+              {filtered.map((f, idx) => {
                 const factoryOrders = orders
                   .filter((o) => o.factoryId === f.id)
                   .sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime())
                 const lastOrder = factoryOrders[0]
 
                 return (
-                  <TableRow key={f.id}>
-                    <TableCell className="font-medium">{f.name}</TableCell>
-                    <TableCell>{f.sector}</TableCell>
-                    <TableCell>{f.productLineAffinity}</TableCell>
-                    <TableCell className="text-right font-medium text-primary">
+                  <TableRow
+                    key={f.id}
+                    className={`${idx % 2 === 0 ? 'bg-[#2A2A31]' : 'bg-[#232329]'} border-b border-[#3A3A42] hover:bg-[#363640] hover:border-l-2 hover:border-l-[#E5B64E] transition-all`}
+                  >
+                    <TableCell className="font-medium text-white">{f.name}</TableCell>
+                    <TableCell className="text-[#A1A1AA]">{f.sector}</TableCell>
+                    <TableCell className="text-[#A1A1AA]">{f.productLineAffinity}</TableCell>
+                    <TableCell className="text-right font-medium text-[#E5B64E] tabular-nums">
                       {formatCurrency(f.potentialValue)}
                     </TableCell>
                     <TableCell className="text-right">
@@ -110,25 +119,25 @@ export function FactoryListCard({ regionFilter = 'Todas as Regiões' }: { region
                         <div className="flex items-center justify-end gap-2">
                           <Link
                             to={`/pedidos?factoryId=${f.id}`}
-                            className="text-primary hover:text-primary/80 hover:underline font-medium transition-colors whitespace-nowrap"
+                            className="text-[#E5B64E] hover:underline font-medium transition-colors whitespace-nowrap text-xs"
                           >
                             {new Date(lastOrder.orderDate).toLocaleDateString('pt-BR')}
                           </Link>
                           <Link
                             to={`/pedidos?factoryId=${f.id}&new=true`}
-                            className="text-[10px] bg-secondary hover:bg-secondary/80 text-secondary-foreground px-2 py-1 rounded transition-colors whitespace-nowrap"
+                            className="text-[10px] bg-[#3A3A42] hover:bg-[#44444C] text-white px-2 py-1 rounded-[6px] transition-colors whitespace-nowrap"
                           >
                             + Pedido
                           </Link>
                         </div>
                       ) : (
                         <div className="flex items-center justify-end gap-2">
-                          <span className="text-muted-foreground text-sm whitespace-nowrap">
+                          <span className="text-[#71717A] text-xs whitespace-nowrap">
                             Sem compras
                           </span>
                           <Link
                             to={`/pedidos?factoryId=${f.id}&new=true`}
-                            className="text-[10px] bg-secondary hover:bg-secondary/80 text-secondary-foreground px-2 py-1 rounded transition-colors whitespace-nowrap"
+                            className="text-[10px] bg-[#3A3A42] hover:bg-[#44444C] text-white px-2 py-1 rounded-[6px] transition-colors whitespace-nowrap"
                           >
                             + Pedido
                           </Link>
