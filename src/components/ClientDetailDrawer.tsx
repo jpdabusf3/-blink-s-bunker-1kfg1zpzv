@@ -14,6 +14,8 @@ import {
   Send,
   PlusCircle,
   RotateCw,
+  Save,
+  CheckCircle2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -197,6 +199,26 @@ export function ClientDetailDrawer({
   const [currentStage, setCurrentStage] = useState<FunnelStage>('Lead')
   const [isUpdatingStatus, setIsUpdatingStatus] = useState<boolean>(false)
 
+  // Seção: Atualização Manual
+  const [manualStatus, setManualStatus] = useState<FunnelStage>('Lead')
+  const [manualAcaoRealizada, setManualAcaoRealizada] = useState<string>('')
+  const [manualAcaoEmPratica, setManualAcaoEmPratica] = useState<string>('')
+  const [manualAcaoASerRealizada, setManualAcaoASerRealizada] = useState<string>('')
+
+  // Erros de validação inline (máximo 500 caracteres)
+  const [manualErrors, setManualErrors] = useState<{
+    acaoRealizada?: string
+    acaoEmPratica?: string
+    acaoASerRealizada?: string
+  }>({})
+
+  // Estados de salvamento da Atualização Manual
+  const [savingField, setSavingField] = useState<
+    'all' | 'status' | 'acao_realizada' | 'acao_em_pratica' | 'acao_a_ser_realizada' | null
+  >(null)
+  const [manualSaveError, setManualSaveError] = useState<string | null>(null)
+  const [manualFadeKey, setManualFadeKey] = useState<number>(0)
+
   // Carrega dados completos do cliente e histórico
   const loadData = useCallback(async () => {
     if (!clientId) return
@@ -221,6 +243,14 @@ export function ClientDetailDrawer({
         'Ativo'
       setCurrentStatus(statusVal)
       setCurrentStage(fetchedClient.funnelStage || 'Lead')
+
+      // Sincroniza campos da Atualização Manual com os dados persistidos do cliente
+      setManualStatus((fetchedClient.funnelStage as FunnelStage) || 'Lead')
+      setManualAcaoRealizada(fetchedClient.acao_realizada || '')
+      setManualAcaoEmPratica(fetchedClient.acao_em_pratica || '')
+      setManualAcaoASerRealizada(fetchedClient.acao_a_ser_realizada || '')
+      setManualErrors({})
+      setManualSaveError(null)
     } catch (err) {
       console.error('[ClientDetailDrawer] Erro ao carregar dados:', err)
       setHasError(true)
@@ -239,6 +269,9 @@ export function ClientDetailDrawer({
       setFollowUpNote('')
       setDismissedSuggestionStage(null)
       setInterestedAdvanceStage(null)
+      setSavingField(null)
+      setManualSaveError(null)
+      setManualErrors({})
       loadData()
     }
   }, [open, clientId, loadData])
@@ -716,6 +749,359 @@ export function ClientDetailDrawer({
     const fullNumber = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`
     const msg = encodeURIComponent(`Olá, ${client.contactName || client.name}!`)
     window.open(`https://wa.me/${fullNumber}?text=${msg}`, '_blank', 'noopener,noreferrer')
+  }
+
+  // Atualização Manual: funções de validação e salvamento
+  const validateManualFieldLength = (val: string): string | undefined => {
+    if (val && val.length > 500) {
+      return 'Máximo de 500 caracteres'
+    }
+    return undefined
+  }
+
+  const handleSaveManualSingle = async (
+    fieldKey: 'status' | 'acao_realizada' | 'acao_em_pratica' | 'acao_a_ser_realizada',
+  ) => {
+    if (!client || !clientId || savingField !== null) return
+
+    // Validação
+    if (fieldKey === 'status') {
+      if (!FUNIL_STAGES.includes(manualStatus)) {
+        toast({
+          title: 'Status inválido',
+          description: 'O status selecionado não é válido para o funil.',
+          variant: 'destructive',
+        })
+        return
+      }
+    } else {
+      const valueMap: Record<string, string> = {
+        acao_realizada: manualAcaoRealizada,
+        acao_em_pratica: manualAcaoEmPratica,
+        acao_a_ser_realizada: manualAcaoASerRealizada,
+      }
+      const val = valueMap[fieldKey] || ''
+      const err = validateManualFieldLength(val)
+      if (err) {
+        setManualErrors((prev) => ({
+          ...prev,
+          ...(fieldKey === 'acao_realizada' ? { acaoRealizada: err } : {}),
+          ...(fieldKey === 'acao_em_pratica' ? { acaoEmPratica: err } : {}),
+          ...(fieldKey === 'acao_a_ser_realizada' ? { acaoASerRealizada: err } : {}),
+        }))
+        return
+      }
+    }
+
+    setSavingField(fieldKey)
+    setManualSaveError(null)
+
+    // Valores anteriores para rollback
+    const prevClient = { ...client }
+    const prevManualStatus = (client.funnelStage as FunnelStage) || 'Lead'
+    const prevAcaoRealizada = client.acao_realizada || ''
+    const prevAcaoEmPratica = client.acao_em_pratica || ''
+    const prevAcaoASerRealizada = client.acao_a_ser_realizada || ''
+
+    try {
+      const fieldLabels: Record<string, string> = {
+        status: 'Status',
+        acao_realizada: 'Ação já realizada',
+        acao_em_pratica: 'Ação em prática',
+        acao_a_ser_realizada: 'Ação a ser realizada',
+      }
+      const label = fieldLabels[fieldKey]
+
+      let patch: Partial<Factory> = {}
+      let logActionText = ''
+      let logDetailsText = ''
+      let logTipo: 'status' | 'acao' = 'acao'
+      let updatedClient: Factory = { ...client }
+
+      if (fieldKey === 'status') {
+        patch = { funnelStage: manualStatus }
+        logActionText = `Status: ${manualStatus}`
+        logDetailsText = `Atualização manual de status: "${prevManualStatus}" → "${manualStatus}".`
+        logTipo = 'status'
+        updatedClient = { ...client, funnelStage: manualStatus }
+      } else if (fieldKey === 'acao_realizada') {
+        const cleanVal = manualAcaoRealizada.trim()
+        patch = { acao_realizada: cleanVal }
+        logActionText = `Ação já realizada: ${cleanVal || '(limpo)'}`
+        logDetailsText = cleanVal
+          ? `Ação já realizada atualizada: ${cleanVal}`
+          : 'Ação já realizada limpa.'
+        updatedClient = { ...client, acao_realizada: cleanVal }
+      } else if (fieldKey === 'acao_em_pratica') {
+        const cleanVal = manualAcaoEmPratica.trim()
+        patch = { acao_em_pratica: cleanVal }
+        logActionText = `Ação em prática: ${cleanVal || '(limpo)'}`
+        logDetailsText = cleanVal
+          ? `Ação em prática atualizada: ${cleanVal}`
+          : 'Ação em prática limpa.'
+        updatedClient = { ...client, acao_em_pratica: cleanVal }
+      } else if (fieldKey === 'acao_a_ser_realizada') {
+        const cleanVal = manualAcaoASerRealizada.trim()
+        patch = { acao_a_ser_realizada: cleanVal }
+        logActionText = `Ação a ser realizada: ${cleanVal || '(limpo)'}`
+        logDetailsText = cleanVal
+          ? `Ação a ser realizada atualizada: ${cleanVal}`
+          : 'Ação a ser realizada limpa.'
+        updatedClient = { ...client, acao_a_ser_realizada: cleanVal }
+      }
+
+      // 1. Database first: grava em factories no PocketBase
+      await updateFactoryPB(clientId, patch)
+
+      // 2. Atualiza estado local após sucesso no banco
+      setClient(updatedClient)
+      if (fieldKey === 'status') {
+        setCurrentStage(manualStatus)
+      }
+      onClientUpdated?.(updatedClient)
+
+      // 3. Registra entrada no histórico de atividades (activity_logs)
+      try {
+        await pb.collection('activity_logs').create({
+          user: user?.id || null,
+          action: logActionText,
+          details: logDetailsText,
+          recordId: clientId,
+          target_collection: 'factories',
+          tipo: logTipo,
+          origem: 'manual',
+          status_anterior: fieldKey === 'status' ? prevManualStatus : undefined,
+          status_novo: fieldKey === 'status' ? manualStatus : undefined,
+        })
+        const refreshedActs = await fetchClientInteractions(clientId)
+        setActivities(refreshedActs)
+      } catch (logErr) {
+        console.warn('[ClientDetailDrawer] Falha ao registrar log da atualização manual:', logErr)
+      }
+
+      // 4. Log em funnel_activity_log para auditoria
+      try {
+        logAction({
+          action_type: fieldKey === 'status' ? 'status_change' : 'update',
+          entity_type: 'deal',
+          entity_id: clientId,
+          entity_name: client.name,
+          old_value:
+            fieldKey === 'status'
+              ? prevManualStatus
+              : fieldKey === 'acao_realizada'
+                ? prevAcaoRealizada
+                : fieldKey === 'acao_em_pratica'
+                  ? prevAcaoEmPratica
+                  : prevAcaoASerRealizada,
+          new_value:
+            fieldKey === 'status'
+              ? manualStatus
+              : fieldKey === 'acao_realizada'
+                ? manualAcaoRealizada.trim()
+                : fieldKey === 'acao_em_pratica'
+                  ? manualAcaoEmPratica.trim()
+                  : manualAcaoASerRealizada.trim(),
+          description: `Atualização manual de ${label} em ${client.name}`,
+        })
+      } catch (fLogErr) {
+        console.warn('[ClientDetailDrawer] Falha ao registrar log no funnel_activity_log:', fLogErr)
+      }
+
+      // 5. Sucesso: trigger fade-in e toast em português
+      setManualFadeKey((k) => k + 1)
+      toast({
+        title: 'Atualização salva com sucesso.',
+      })
+    } catch (err) {
+      console.error('[ClientDetailDrawer] Falha ao salvar atualização manual:', err)
+      // Reverter estado local
+      setClient(prevClient)
+      setManualStatus(prevManualStatus)
+      setManualAcaoRealizada(prevAcaoRealizada)
+      setManualAcaoEmPratica(prevAcaoEmPratica)
+      setManualAcaoASerRealizada(prevAcaoASerRealizada)
+      setManualSaveError('Não foi possível salvar a alteração. Tente novamente.')
+      toast({
+        title: 'Erro ao salvar',
+        description: 'Não foi possível salvar a alteração no servidor.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSavingField(null)
+    }
+  }
+
+  const handleSaveManualAll = async () => {
+    if (!client || !clientId || savingField !== null) return
+
+    // Validações
+    if (!FUNIL_STAGES.includes(manualStatus)) {
+      toast({
+        title: 'Status inválido',
+        description: 'O status selecionado não é válido para o funil.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const errRealizada = validateManualFieldLength(manualAcaoRealizada)
+    const errEmPratica = validateManualFieldLength(manualAcaoEmPratica)
+    const errASerRealizada = validateManualFieldLength(manualAcaoASerRealizada)
+
+    if (errRealizada || errEmPratica || errASerRealizada) {
+      setManualErrors({
+        acaoRealizada: errRealizada,
+        acaoEmPratica: errEmPratica,
+        acaoASerRealizada: errASerRealizada,
+      })
+      return
+    }
+
+    setSavingField('all')
+    setManualSaveError(null)
+
+    // Valores anteriores para rollback
+    const prevClient = { ...client }
+    const prevManualStatus = (client.funnelStage as FunnelStage) || 'Lead'
+    const prevAcaoRealizada = client.acao_realizada || ''
+    const prevAcaoEmPratica = client.acao_em_pratica || ''
+    const prevAcaoASerRealizada = client.acao_a_ser_realizada || ''
+
+    const cleanRealizada = manualAcaoRealizada.trim()
+    const cleanEmPratica = manualAcaoEmPratica.trim()
+    const cleanASerRealizada = manualAcaoASerRealizada.trim()
+
+    try {
+      const patch: Partial<Factory> = {
+        funnelStage: manualStatus,
+        acao_realizada: cleanRealizada,
+        acao_em_pratica: cleanEmPratica,
+        acao_a_ser_realizada: cleanASerRealizada,
+      }
+
+      // 1. Database first: grava em factories no PocketBase
+      await updateFactoryPB(clientId, patch)
+
+      // 2. Atualiza estado local após sucesso no banco
+      const updatedClient: Factory = {
+        ...client,
+        funnelStage: manualStatus,
+        acao_realizada: cleanRealizada,
+        acao_em_pratica: cleanEmPratica,
+        acao_a_ser_realizada: cleanASerRealizada,
+      }
+      setClient(updatedClient)
+      setCurrentStage(manualStatus)
+      onClientUpdated?.(updatedClient)
+
+      // 3. Registra logs no histórico de atividades para cada campo alterado ou resumo
+      const changesToLog: Array<{
+        fieldName: string
+        newVal: string
+        oldVal: string
+        tipo: 'status' | 'acao'
+      }> = []
+      if (manualStatus !== prevManualStatus) {
+        changesToLog.push({
+          fieldName: 'Status',
+          newVal: manualStatus,
+          oldVal: prevManualStatus,
+          tipo: 'status',
+        })
+      }
+      if (cleanRealizada !== prevAcaoRealizada) {
+        changesToLog.push({
+          fieldName: 'Ação já realizada',
+          newVal: cleanRealizada,
+          oldVal: prevAcaoRealizada,
+          tipo: 'acao',
+        })
+      }
+      if (cleanEmPratica !== prevAcaoEmPratica) {
+        changesToLog.push({
+          fieldName: 'Ação em prática',
+          newVal: cleanEmPratica,
+          oldVal: prevAcaoEmPratica,
+          tipo: 'acao',
+        })
+      }
+      if (cleanASerRealizada !== prevAcaoASerRealizada) {
+        changesToLog.push({
+          fieldName: 'Ação a ser realizada',
+          newVal: cleanASerRealizada,
+          oldVal: prevAcaoASerRealizada,
+          tipo: 'acao',
+        })
+      }
+
+      // Se nenhum mudou (salvou os mesmos valores), grava entrada explícita
+      if (changesToLog.length === 0) {
+        changesToLog.push({
+          fieldName: 'Atualização Manual',
+          newVal: `Status: ${manualStatus}`,
+          oldVal: '',
+          tipo: 'acao',
+        })
+      }
+
+      try {
+        for (const item of changesToLog) {
+          await pb.collection('activity_logs').create({
+            user: user?.id || null,
+            action: `${item.fieldName}: ${item.newVal || '(vazio)'}`,
+            details: `Atualização manual de ${item.fieldName}: ${item.newVal || '(limpo)'}`,
+            recordId: clientId,
+            target_collection: 'factories',
+            tipo: item.tipo,
+            origem: 'manual',
+            status_anterior: item.tipo === 'status' ? item.oldVal : undefined,
+            status_novo: item.tipo === 'status' ? item.newVal : undefined,
+          })
+        }
+        const refreshedActs = await fetchClientInteractions(clientId)
+        setActivities(refreshedActs)
+      } catch (logErr) {
+        console.warn('[ClientDetailDrawer] Falha ao registrar logs da atualização manual:', logErr)
+      }
+
+      // Log geral de auditoria
+      try {
+        logAction({
+          action_type: 'update',
+          entity_type: 'deal',
+          entity_id: clientId,
+          entity_name: client.name,
+          old_value: prevManualStatus,
+          new_value: manualStatus,
+          description: `Atualização manual completa em ${client.name}`,
+        })
+      } catch (fLogErr) {
+        console.warn('[ClientDetailDrawer] Falha ao gravar log no funnel_activity_log:', fLogErr)
+      }
+
+      // 4. Sucesso: trigger fade-in e toast em português
+      setManualFadeKey((k) => k + 1)
+      toast({
+        title: 'Atualização salva com sucesso.',
+      })
+    } catch (err) {
+      console.error('[ClientDetailDrawer] Falha ao salvar todos os campos manuais:', err)
+      // Reverter estado local
+      setClient(prevClient)
+      setManualStatus(prevManualStatus)
+      setManualAcaoRealizada(prevAcaoRealizada)
+      setManualAcaoEmPratica(prevAcaoEmPratica)
+      setManualAcaoASerRealizada(prevAcaoASerRealizada)
+      setManualSaveError('Não foi possível salvar a atualização. Tente novamente.')
+      toast({
+        title: 'Erro ao salvar',
+        description: 'Não foi possível salvar a atualização no servidor.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSavingField(null)
+    }
   }
 
   const handleOpenEmail = () => {
@@ -1455,6 +1841,298 @@ export function ClientDetailDrawer({
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* SEÇÃO ADICIONADA: Atualização Manual */}
+              <div
+                key={manualFadeKey}
+                className="space-y-3 pt-3 border-t animate-in fade-in duration-300"
+                role="region"
+                aria-label="Atualização Manual"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                    Atualização Manual
+                  </h3>
+                  {savingField === 'all' && (
+                    <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                      <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                      Salvando tudo...
+                    </span>
+                  )}
+                </div>
+
+                {/* ESTADO 3 (ERRO NO SALVAMENTO): Mensagem em português com botão de tentar novamente */}
+                {manualSaveError && (
+                  <div className="p-3 rounded-lg border border-destructive/40 bg-destructive/10 text-destructive text-xs flex items-center justify-between gap-2 animate-in fade-in">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{manualSaveError}</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs border-destructive/40 hover:bg-destructive/20 text-destructive shrink-0"
+                      onClick={() => handleSaveManualAll()}
+                      disabled={savingField !== null}
+                    >
+                      <RotateCw className="w-3 h-3 mr-1" />
+                      Tentar novamente
+                    </Button>
+                  </div>
+                )}
+
+                {/* ESTADO 2 (EMPTY): Quando todos os campos de ação estão em branco */}
+                {!manualAcaoRealizada.trim() &&
+                  !manualAcaoEmPratica.trim() &&
+                  !manualAcaoASerRealizada.trim() && (
+                    <div className="p-2.5 rounded-lg border border-dashed bg-muted/20 text-[11px] text-muted-foreground text-center">
+                      Nenhuma ação registrada ainda
+                    </div>
+                  )}
+
+                <div className="space-y-3 rounded-xl border bg-card/60 p-3.5 text-xs">
+                  {/* Campo 1: Status (10 estágios oficiais do funil) */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="manual-field-status" className="text-xs font-medium">
+                        Status
+                      </Label>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs gap-1 px-2 text-primary hover:text-primary hover:bg-primary/10"
+                        onClick={() => handleSaveManualSingle('status')}
+                        disabled={savingField !== null}
+                      >
+                        {savingField === 'status' ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Save className="w-3 h-3" />
+                        )}
+                        Salvar Status
+                      </Button>
+                    </div>
+                    <Select
+                      value={manualStatus}
+                      onValueChange={(val) => setManualStatus(val as FunnelStage)}
+                      disabled={savingField !== null}
+                    >
+                      <SelectTrigger id="manual-field-status" className="h-8 text-xs">
+                        <SelectValue placeholder="Selecione o estágio" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FUNIL_STAGES.map((stage) => (
+                          <SelectItem key={stage} value={stage} className="text-xs">
+                            {stage}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Campo 2: Ação já realizada */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="manual-field-realizada" className="text-xs font-medium">
+                        Ação já realizada
+                      </Label>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs gap-1 px-2 text-primary hover:text-primary hover:bg-primary/10"
+                        onClick={() => handleSaveManualSingle('acao_realizada')}
+                        disabled={savingField !== null}
+                      >
+                        {savingField === 'acao_realizada' ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Save className="w-3 h-3" />
+                        )}
+                        Salvar
+                      </Button>
+                    </div>
+                    <Textarea
+                      id="manual-field-realizada"
+                      rows={2}
+                      placeholder="Descreva a ação já executada com este cliente..."
+                      value={manualAcaoRealizada}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setManualAcaoRealizada(val)
+                        const err = validateManualFieldLength(val)
+                        setManualErrors((prev) => ({ ...prev, acaoRealizada: err }))
+                      }}
+                      disabled={savingField !== null}
+                      className={cn(
+                        'text-xs resize-none',
+                        manualErrors.acaoRealizada &&
+                          'border-destructive focus-visible:ring-destructive',
+                      )}
+                    />
+                    <div className="flex items-center justify-between text-[10px]">
+                      {manualErrors.acaoRealizada ? (
+                        <span className="text-destructive font-medium">
+                          {manualErrors.acaoRealizada}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          Persiste no histórico de interações
+                        </span>
+                      )}
+                      <span
+                        className={cn(
+                          'tabular-nums',
+                          manualAcaoRealizada.length > 500
+                            ? 'text-destructive font-semibold'
+                            : 'text-muted-foreground',
+                        )}
+                      >
+                        {manualAcaoRealizada.length}/500
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Campo 3: Ação em prática */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="manual-field-em-pratica" className="text-xs font-medium">
+                        Ação em prática
+                      </Label>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs gap-1 px-2 text-primary hover:text-primary hover:bg-primary/10"
+                        onClick={() => handleSaveManualSingle('acao_em_pratica')}
+                        disabled={savingField !== null}
+                      >
+                        {savingField === 'acao_em_pratica' ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Save className="w-3 h-3" />
+                        )}
+                        Salvar
+                      </Button>
+                    </div>
+                    <Textarea
+                      id="manual-field-em-pratica"
+                      rows={2}
+                      placeholder="Descreva a ação atualmente em andamento..."
+                      value={manualAcaoEmPratica}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setManualAcaoEmPratica(val)
+                        const err = validateManualFieldLength(val)
+                        setManualErrors((prev) => ({ ...prev, acaoEmPratica: err }))
+                      }}
+                      disabled={savingField !== null}
+                      className={cn(
+                        'text-xs resize-none',
+                        manualErrors.acaoEmPratica &&
+                          'border-destructive focus-visible:ring-destructive',
+                      )}
+                    />
+                    <div className="flex items-center justify-between text-[10px]">
+                      {manualErrors.acaoEmPratica ? (
+                        <span className="text-destructive font-medium">
+                          {manualErrors.acaoEmPratica}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">Ação atualmente em execução</span>
+                      )}
+                      <span
+                        className={cn(
+                          'tabular-nums',
+                          manualAcaoEmPratica.length > 500
+                            ? 'text-destructive font-semibold'
+                            : 'text-muted-foreground',
+                        )}
+                      >
+                        {manualAcaoEmPratica.length}/500
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Campo 4: Ação a ser realizada */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="manual-field-a-ser-realizada" className="text-xs font-medium">
+                        Ação a ser realizada
+                      </Label>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs gap-1 px-2 text-primary hover:text-primary hover:bg-primary/10"
+                        onClick={() => handleSaveManualSingle('acao_a_ser_realizada')}
+                        disabled={savingField !== null}
+                      >
+                        {savingField === 'acao_a_ser_realizada' ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Save className="w-3 h-3" />
+                        )}
+                        Salvar
+                      </Button>
+                    </div>
+                    <Textarea
+                      id="manual-field-a-ser-realizada"
+                      rows={2}
+                      placeholder="Próxima ação planejada para este cliente..."
+                      value={manualAcaoASerRealizada}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setManualAcaoASerRealizada(val)
+                        const err = validateManualFieldLength(val)
+                        setManualErrors((prev) => ({ ...prev, acaoASerRealizada: err }))
+                      }}
+                      disabled={savingField !== null}
+                      className={cn(
+                        'text-xs resize-none',
+                        manualErrors.acaoASerRealizada &&
+                          'border-destructive focus-visible:ring-destructive',
+                      )}
+                    />
+                    <div className="flex items-center justify-between text-[10px]">
+                      {manualErrors.acaoASerRealizada ? (
+                        <span className="text-destructive font-medium">
+                          {manualErrors.acaoASerRealizada}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          Pode ser deixado em branco para limpar o valor
+                        </span>
+                      )}
+                      <span
+                        className={cn(
+                          'tabular-nums',
+                          manualAcaoASerRealizada.length > 500
+                            ? 'text-destructive font-semibold'
+                            : 'text-muted-foreground',
+                        )}
+                      >
+                        {manualAcaoASerRealizada.length}/500
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Botão para salvar todos os 4 campos juntos */}
+                  <div className="pt-2 flex justify-end">
+                    <Button
+                      size="sm"
+                      onClick={() => handleSaveManualAll()}
+                      disabled={savingField !== null}
+                      className="w-full sm:w-auto h-8 text-xs gap-1.5 font-medium"
+                    >
+                      {savingField === 'all' ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Save className="w-3.5 h-3.5" />
+                      )}
+                      Salvar todas as ações
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           )}

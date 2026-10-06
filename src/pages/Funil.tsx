@@ -146,8 +146,11 @@ export default function Funil() {
   const handleClientUpdated = useCallback(
     (updated: Factory) => {
       updateFactory(updated.id, updated)
+      void refreshCollection('factories').catch((e) => {
+        console.warn('[Funil] Falha ao atualizar coleção factories pós-update manual:', e)
+      })
     },
-    [updateFactory],
+    [updateFactory, refreshCollection],
   )
 
   // Mover cliente para um novo estágio do funil com banco primeiro, rollback e toasts em português

@@ -349,6 +349,9 @@ export interface Factory {
   ultimo_pedido?: string
   proximos_passos?: string
   acao?: string
+  acao_realizada?: string
+  acao_em_pratica?: string
+  acao_a_ser_realizada?: string
   data_importacao?: string
   contato?: string
   status_contato?: 'Champion' | 'Stakeholder' | 'Decisor' | 'Influenciador' | 'Gatekeepers'
