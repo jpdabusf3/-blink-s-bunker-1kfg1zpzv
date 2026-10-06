@@ -67,7 +67,7 @@ export function QuickCallDialog({ client, open, onOpenChange, onSuccess }: Quick
         summary: trimmed,
         outcome,
         userId: user?.id,
-        origem: 'funil_atalhos',
+        origem: 'funil',
       })
 
       const nowIso = new Date().toISOString()

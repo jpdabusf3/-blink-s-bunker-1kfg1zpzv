@@ -23,6 +23,7 @@ import {
   ListChecks,
   ArrowRight,
   User,
+  Loader2,
 } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
 import { FunilReviewMode } from '@/components/FunilReviewMode'
@@ -65,7 +66,7 @@ export default function Funil() {
   const allFactories = useScopedFactories()
   const { updateFactory } = useAppContext()
   const [searchParams] = useSearchParams()
-  const { agenda_tasks: globalAgendaTasks } = useGlobalData()
+  const { agenda_tasks: globalAgendaTasks, refreshCollection } = useGlobalData()
   const { user } = useAuth()
   const canReview = isManager(user)
   const [reviewMode, setReviewMode] = useState(false)
@@ -90,6 +91,7 @@ export default function Funil() {
   const [draggingFactoryId, setDraggingFactoryId] = useState<string | null>(null)
   const [dragOverStage, setDragOverStage] = useState<FunnelStage | null>(null)
   const [touchDraggingFactory, setTouchDraggingFactory] = useState<Factory | null>(null)
+  const [updatingFactoryIds, setUpdatingFactoryIds] = useState<Set<string>>(new Set())
   const touchStartCoord = useRef<{ x: number; y: number } | null>(null)
   const isTouchDragging = useRef<boolean>(false)
 
@@ -148,38 +150,47 @@ export default function Funil() {
     [updateFactory],
   )
 
-  // Mover cliente para um novo estágio do funil com rollback e toasts em português
+  // Mover cliente para um novo estágio do funil com banco primeiro, rollback e toasts em português
   const handleMoveToStage = useCallback(
     async (factoryId: string, newStage: FunnelStage) => {
+      if (updatingFactoryIds.has(factoryId)) return
       const targetFactory = allFactories.find((f) => f.id === factoryId)
       if (!targetFactory) return
       const oldStage = targetFactory.funnelStage
       if (oldStage === newStage) return
 
-      // Atualização otimista
-      const updatedFactory: Factory = {
-        ...targetFactory,
-        funnelStage: newStage,
-      }
-      updateFactory(factoryId, { funnelStage: newStage })
+      setUpdatingFactoryIds((prev) => new Set(prev).add(factoryId))
 
       try {
+        // 1. Atualiza primeiro o banco de dados via PocketBase
         await updateFactoryPB(factoryId, { funnelStage: newStage })
 
-        await logActivity(
-          `Estágio Funil: ${oldStage} → ${newStage}`,
-          `Cliente: ${targetFactory.name}`,
-          factoryId,
-          'factories',
-          {
-            tipo: 'status',
-            status_anterior: oldStage,
-            status_novo: newStage,
-            origem: 'funil_atalhos',
-          },
-        )
+        // 2. Atualiza estado local somente após sucesso do banco
+        updateFactory(factoryId, { funnelStage: newStage })
 
+        // 3. Log isolado para que falha de log nunca bloqueie ou reverta o movimento
+        try {
+          await logActivity(
+            `Estágio Funil: ${oldStage} → ${newStage}`,
+            `Cliente: ${targetFactory.name}`,
+            factoryId,
+            'factories',
+            {
+              tipo: 'status',
+              status_anterior: oldStage,
+              status_novo: newStage,
+              origem: 'funil',
+            },
+          )
+        } catch (logErr) {
+          console.warn('[Funil] Falha ao registrar logActivity (não impeditivo):', logErr)
+        }
+
+        // 4. Notifica barramento e recarrega dados para manter totais e contagens sincronizados
         notifyDataChanged('factories')
+        await refreshCollection('factories').catch((e) => {
+          console.warn('[Funil] Falha ao atualizar coleção factories:', e)
+        })
 
         toast({
           title: 'Cliente movido',
@@ -187,52 +198,73 @@ export default function Funil() {
         })
       } catch (err: unknown) {
         console.error('[Funil] Falha ao mover estágio do cliente:', err)
-        // Rollback
+        // Reverte posição original caso algum estado intermediário tenha mudado
         updateFactory(factoryId, { funnelStage: oldStage })
         toast({
           title: 'Erro ao mover cliente',
-          description: 'Não foi possível mover o cliente.',
+          description: 'Não foi possível mover o cliente. Tente novamente.',
           variant: 'destructive',
+        })
+      } finally {
+        setUpdatingFactoryIds((prev) => {
+          const next = new Set(prev)
+          next.delete(factoryId)
+          return next
         })
       }
     },
-    [allFactories, updateFactory, toast],
+    [allFactories, updatingFactoryIds, updateFactory, refreshCollection, toast],
   )
 
-  // Drop via arrastar e soltar (HTML5 DnD)
+  // Drop via arrastar e soltar (HTML5 DnD e Touch)
   const handleDropOnStage = useCallback(
-    async (targetStage: FunnelStage) => {
-      const factoryId = draggingFactoryId
+    async (targetStage: FunnelStage, droppedFactoryId?: string) => {
+      const factoryId = droppedFactoryId || draggingFactoryId
       setDragOverStage(null)
       setDraggingFactoryId(null)
 
       if (!factoryId) return
+      if (updatingFactoryIds.has(factoryId)) return
+
       const targetFactory = allFactories.find((f) => f.id === factoryId)
       if (!targetFactory) return
 
       const oldStage = targetFactory.funnelStage
+      // Edge case: soltar na mesma coluna não faz nada e não chama o banco
       if (oldStage === targetStage) return
 
-      // Atualização otimista
-      updateFactory(factoryId, { funnelStage: targetStage })
+      setUpdatingFactoryIds((prev) => new Set(prev).add(factoryId))
 
       try {
+        // 1. Atualiza primeiro no PocketBase
         await updateFactoryPB(factoryId, { funnelStage: targetStage })
 
-        await logActivity(
-          `Estágio Funil (Drag&Drop): ${oldStage} → ${targetStage}`,
-          `Cliente: ${targetFactory.name}`,
-          factoryId,
-          'factories',
-          {
-            tipo: 'status',
-            status_anterior: oldStage,
-            status_novo: targetStage,
-            origem: 'funil_drag_drop',
-          },
-        )
+        // 2. Atualiza estado local apenas após sucesso no banco
+        updateFactory(factoryId, { funnelStage: targetStage })
 
+        // 3. Log isolado em try/catch para que falhas de log não bloqueiem ou revertam a ação
+        try {
+          await logActivity(
+            `Estágio Funil (Drag&Drop): ${oldStage} → ${targetStage}`,
+            `Cliente: ${targetFactory.name}`,
+            factoryId,
+            'factories',
+            {
+              tipo: 'status',
+              status_anterior: oldStage,
+              status_novo: targetStage,
+              origem: 'funil',
+            },
+          )
+        } catch (logErr) {
+          console.warn('[Funil] Falha ao registrar logActivity (não impeditivo):', logErr)
+        }
+
+        // 4. Notifica barramento e recarrega dados para manter totais e contagens sincronizados
         notifyDataChanged('factories')
+        await refreshCollection('factories').catch((e) => {
+          console.warn('[Funil] Falha ao atualizar coleção factories:', e)
+        })
 
         toast({
           title: 'Status atualizado',
@@ -240,16 +272,22 @@ export default function Funil() {
         })
       } catch (err: unknown) {
         console.error('[Funil] Falha no drag-and-drop de cliente:', err)
-        // Rollback
+        // Rollback para coluna original
         updateFactory(factoryId, { funnelStage: oldStage })
         toast({
           title: 'Erro ao mover cliente',
-          description: 'Não foi possível mover o cliente.',
+          description: 'Não foi possível mover o cliente. Tente novamente.',
           variant: 'destructive',
+        })
+      } finally {
+        setUpdatingFactoryIds((prev) => {
+          const next = new Set(prev)
+          next.delete(factoryId)
+          return next
         })
       }
     },
-    [draggingFactoryId, allFactories, updateFactory, toast],
+    [draggingFactoryId, updatingFactoryIds, allFactories, updateFactory, refreshCollection, toast],
   )
 
   // Abertura ou destaque contextual de cliente no Funil (?cliente=ID ou ?highlight=ID)
@@ -297,15 +335,20 @@ export default function Funil() {
   }, [])
 
   // Suporte a Touch Drag-and-Drop em Mobile
-  const handleCardTouchStart = useCallback((e: React.TouchEvent, factory: Factory) => {
-    if (e.touches.length !== 1) return
-    const touch = e.touches[0]
-    touchStartCoord.current = { x: touch.clientX, y: touch.clientY }
-    isTouchDragging.current = false
-  }, [])
+  const handleCardTouchStart = useCallback(
+    (e: React.TouchEvent, factory: Factory) => {
+      if (updatingFactoryIds.has(factory.id)) return
+      if (e.touches.length !== 1) return
+      const touch = e.touches[0]
+      touchStartCoord.current = { x: touch.clientX, y: touch.clientY }
+      isTouchDragging.current = false
+    },
+    [updatingFactoryIds],
+  )
 
   const handleCardTouchMove = useCallback(
     (e: React.TouchEvent, factory: Factory) => {
+      if (updatingFactoryIds.has(factory.id)) return
       if (e.touches.length !== 1 || !touchStartCoord.current) return
       const touch = e.touches[0]
       const dx = touch.clientX - touchStartCoord.current.x
@@ -328,15 +371,23 @@ export default function Funil() {
           if (colStage && colStage !== dragOverStage) {
             setDragOverStage(colStage)
           }
+        } else {
+          // Dedo fora de qualquer coluna
+          if (dragOverStage !== null) {
+            setDragOverStage(null)
+          }
         }
       }
     },
-    [dragOverStage],
+    [updatingFactoryIds, dragOverStage],
   )
 
   const handleCardTouchEnd = useCallback(() => {
-    if (isTouchDragging.current && touchDraggingFactory && dragOverStage) {
-      void handleDropOnStage(dragOverStage)
+    const factory = touchDraggingFactory
+    const stage = dragOverStage
+    // Se soltou fora de qualquer coluna ou na mesma coluna, reverte sem erro
+    if (isTouchDragging.current && factory && stage) {
+      void handleDropOnStage(stage, factory.id)
     }
     isTouchDragging.current = false
     touchStartCoord.current = null
@@ -508,6 +559,7 @@ export default function Funil() {
                       const approaching = isApproachingDeadline(f.deadline)
                       const nextStep = f.suggested_approach || f.notes
                       const isBeingDragged = draggingFactoryId === f.id
+                      const isUpdating = updatingFactoryIds.has(f.id)
 
                       return (
                         <FunnelCardContextMenuWrapper
@@ -524,15 +576,29 @@ export default function Funil() {
                             tabIndex={0}
                             role="button"
                             aria-label={`Abrir detalhes de ${f.name}`}
-                            draggable
+                            aria-busy={isUpdating}
+                            draggable={!isUpdating}
                             onDragStart={(e) => {
+                              if (isUpdating) {
+                                e.preventDefault()
+                                return
+                              }
                               setDraggingFactoryId(f.id)
                               e.dataTransfer.effectAllowed = 'move'
                               e.dataTransfer.setData('text/plain', f.id)
                             }}
-                            onDragEnd={() => {
-                              setDraggingFactoryId(null)
-                              setDragOverStage(null)
+                            onDragEnd={(e) => {
+                              try {
+                                setDraggingFactoryId(null)
+                                setDragOverStage(null)
+                              } catch (dragEndErr) {
+                                console.error('[Funil] Erro no onDragEnd:', dragEndErr)
+                                toast({
+                                  title: 'Erro ao mover cliente',
+                                  description: 'Não foi possível mover o cliente. Tente novamente.',
+                                  variant: 'destructive',
+                                })
+                              }
                             }}
                             onTouchStart={(e) => handleCardTouchStart(e, f)}
                             onTouchMove={(e) => handleCardTouchMove(e, f)}
@@ -548,13 +614,15 @@ export default function Funil() {
                                 openDrawer(f.id, e.currentTarget)
                               }
                             }}
-                            className={`group p-3 shadow-subtle hover:shadow-md transition-all duration-300 ease-in-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary border-l-4 ${
+                            className={`relative group p-3 shadow-subtle hover:shadow-md transition-all duration-300 ease-in-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary border-l-4 ${
                               f.priority === 'High'
                                 ? 'border-l-emerald-500'
                                 : f.priority === 'Low'
                                   ? 'border-l-destructive'
                                   : 'border-l-amber-500'
-                            } ${isBeingDragged ? 'opacity-40 scale-[0.98]' : ''}`}
+                            } ${isBeingDragged ? 'opacity-40 scale-[0.98]' : ''} ${
+                              isUpdating ? 'opacity-70 pointer-events-none cursor-wait' : ''
+                            }`}
                           >
                             <div className="flex justify-between items-start gap-1">
                               <div className="min-w-0 flex-1">
@@ -562,7 +630,13 @@ export default function Funil() {
                                   <span className="font-bold text-sm leading-tight line-clamp-2">
                                     {f.name}
                                   </span>
-                                  {overdueClientIds.has(f.id) && (
+                                  {isUpdating && (
+                                    <Loader2
+                                      className="w-3.5 h-3.5 text-primary animate-spin shrink-0"
+                                      aria-label="Atualizando status..."
+                                    />
+                                  )}
+                                  {!isUpdating && overdueClientIds.has(f.id) && (
                                     <span
                                       className="inline-block w-2.5 h-2.5 rounded-full bg-destructive shrink-0 animate-pulse"
                                       role="status"
