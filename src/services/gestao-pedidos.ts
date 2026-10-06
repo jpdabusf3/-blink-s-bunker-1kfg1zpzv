@@ -92,6 +92,7 @@ export const gestaoPedidosService = {
    */
   async listClientes(): Promise<ClienteOption[]> {
     return pb.collection('factories').getFullList<ClienteOption>({
+      filter: 'is_deleted != true',
       fields: 'id,name,city,state',
       sort: 'name',
     })

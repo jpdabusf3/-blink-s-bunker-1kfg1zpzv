@@ -121,6 +121,7 @@ export async function generateSalesReport(
   if (!factoriesList || factoriesList.length === 0) {
     try {
       factoriesList = await pb.collection('factories').getFullList({
+        filter: 'is_deleted != true',
         fields: 'id,name,state,carteira,codigo_cliente,cnpj',
       })
     } catch {

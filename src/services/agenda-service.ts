@@ -206,6 +206,7 @@ export const agendaService = {
   async listDeals(): Promise<DealOption[]> {
     try {
       const records = await pb.collection('factories').getFullList<DealOption>({
+        filter: 'is_deleted != true',
         fields: 'id,name,city,state,funnelStage',
         sort: 'name',
       })

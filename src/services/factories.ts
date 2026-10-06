@@ -263,6 +263,7 @@ export async function getFactoryById(id: string): Promise<Factory | null> {
 
 export async function getAllFactories(): Promise<Factory[]> {
   const records = await pb.collection('factories').getFullList({
+    filter: 'is_deleted != true',
     sort: '-created',
     expand:
       'salesOwner,salesOwner.gestao_tecnica_id,technicalManager,gestor_tecnico,vendedor,gestor_tecnico_id,vendedor_id',

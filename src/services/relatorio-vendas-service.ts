@@ -233,6 +233,7 @@ export async function buildRelatorioVendas(
   let factoriesList: any[] = []
   try {
     factoriesList = await pb.collection('factories').getFullList({
+      filter: 'is_deleted != true',
       fields: 'id,name,state,carteira,codigo_cliente,cnpj,vendedor_id,vendedor_name',
     })
   } catch (err) {

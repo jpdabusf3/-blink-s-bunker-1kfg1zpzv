@@ -390,7 +390,7 @@ export function ClienteFormDialog({
       // Procurar registros com o mesmo CNPJ (seja mascarado ou com apenas dígitos)
       try {
         const existingRecords = await pb.collection('factories').getFullList({
-          filter: `cnpj = '${digitsCnpj}' || cnpj = '${formatCNPJ(digitsCnpj)}'`,
+          filter: `(cnpj = '${digitsCnpj}' || cnpj = '${formatCNPJ(digitsCnpj)}') && is_deleted != true`,
           limit: 10,
         })
         const conflict = existingRecords.find((r) => !cliente || r.id !== cliente.id)
