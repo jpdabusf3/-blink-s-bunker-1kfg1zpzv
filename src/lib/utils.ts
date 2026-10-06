@@ -89,12 +89,22 @@ export function formatCurrency(value: number) {
 }
 
 export function formatCurrencyUSD(value: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
+  const formatted = new Intl.NumberFormat('pt-BR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value)
+  return `US$ ${formatted}`
+}
+
+export function formatDateBR(value: string | number | Date | null | undefined): string {
+  if (!value) return '—'
+  const d = typeof value === 'string' || typeof value === 'number' ? new Date(value) : value
+  if (isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
 }
 
 export function formatDateTime(value: string | number | Date) {

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useId } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   X,
   Phone,
@@ -16,6 +17,7 @@ import {
   RotateCw,
   Save,
   CheckCircle2,
+  LayoutDashboard,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -153,6 +155,7 @@ export function ClientDetailDrawer({
   const { toast } = useToast()
   const { user } = useAuth()
   const isMobile = useIsMobile()
+  const navigate = useNavigate()
   const { logAction } = useFunnelActivityLog()
   const drawerRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
@@ -1237,15 +1240,34 @@ export function ClientDetailDrawer({
             </p>
           </div>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-full shrink-0"
-            onClick={handleClose}
-            aria-label="Fechar painel do cliente"
-          >
-            <X className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {clientId && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs gap-1.5 font-medium border-primary/30 text-primary hover:bg-primary/10"
+                onClick={() => {
+                  onClose()
+                  navigate(`/cliente/${clientId}/dashboard`)
+                }}
+                title="Abrir dashboard individual completo deste cliente"
+              >
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Ver Dashboard do Cliente</span>
+                <span className="sm:hidden">Dashboard</span>
+              </Button>
+            )}
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full shrink-0"
+              onClick={handleClose}
+              aria-label="Fechar painel do cliente"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Corpo do Drawer com rolagem */}
