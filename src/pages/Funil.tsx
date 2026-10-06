@@ -5,13 +5,6 @@ import { useGlobalData } from '@/store/GlobalDataProvider'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { formatCurrency, isStale, isPassedDeadline, isApproachingDeadline } from '@/lib/utils'
 import { exportExecutiveMacroReport } from '@/lib/exportReports'
 import { FunnelStage, type Factory } from '@/types'
@@ -45,6 +38,7 @@ import { notifyDataChanged } from '@/hooks/useRealtimeData'
 import { FunnelCardActionBar } from '@/components/funil/FunnelCardActionBar'
 import { FunnelCardContextMenuWrapper } from '@/components/funil/FunnelCardContextMenuWrapper'
 import { QuickCallDialog } from '@/components/funil/QuickCallDialog'
+import { FilterMultiSelect } from '@/components/funil/FilterMultiSelect'
 
 const STAGES: FunnelStage[] = [
   'Lead',
@@ -72,8 +66,8 @@ export default function Funil() {
   const [reviewMode, setReviewMode] = useState(false)
   const [salesOwnerFilter, setSalesOwnerFilter] = useState('all')
   const [vendedorOptions, setVendedorOptions] = useState<UnifiedVendedorOption[]>([])
-  const [stateFilter, setStateFilter] = useState('all')
-  const [speciesSegmentFilter, setSpeciesSegmentFilter] = useState('all')
+  const [selectedStates, setSelectedStates] = useState<string[]>([])
+  const [selectedSpeciesSegments, setSelectedSpeciesSegments] = useState<string[]>([])
   const [overdueOnlyFilter, setOverdueOnlyFilter] = useState(false)
 
   const { toast } = useToast()
@@ -115,17 +109,45 @@ export default function Funil() {
 
   const speciesSegmentOptions = buildSpeciesSegmentOptions(allFactories)
 
-  const factories = allFactories.filter(
-    (f) =>
-      (salesOwnerFilter === 'all' ||
-        factoryMatchesVendedor(f, salesOwnerFilter, vendedorOptions)) &&
-      (stateFilter === 'all' || f.state === stateFilter) &&
-      (speciesSegmentFilter === 'all' || factoryMatchesSpeciesSegment(f, speciesSegmentFilter)) &&
-      (!overdueOnlyFilter || overdueClientIds.has(f.id)),
-  )
+  // Conjunto de estados únicos presentes nos clientes com formatação maiúscula padronizada
   const uniqueStates = Array.from(
     new Set(allFactories.map((f) => f.state).filter(Boolean) as string[]),
-  ).sort()
+  ).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+
+  const factories = allFactories.filter((f) => {
+    // 1. Filtro de Vendedor / Gestor
+    if (
+      salesOwnerFilter !== 'all' &&
+      !factoryMatchesVendedor(f, salesOwnerFilter, vendedorOptions)
+    ) {
+      return false
+    }
+
+    // 2. Filtro de Estados (Múltipla Seleção com lógica OR)
+    // Sem seleção (= vazio) mostra todos os estados; com uma ou mais, aceita correspondência com qualquer um escolhido
+    if (selectedStates.length > 0) {
+      const fState = f.state?.trim().toUpperCase() || ''
+      const matchesState = selectedStates.some((st) => st.trim().toUpperCase() === fState)
+      if (!matchesState) {
+        return false
+      }
+    }
+
+    // 3. Filtro de Espécie/Segmento (Múltipla Seleção com lógica OR e preservação de equivalências)
+    // Sem seleção (= vazio) mostra todas as espécies; com uma ou mais, aceita qualquer uma selecionada
+    if (selectedSpeciesSegments.length > 0) {
+      if (!factoryMatchesSpeciesSegment(f, selectedSpeciesSegments)) {
+        return false
+      }
+    }
+
+    // 4. Filtro de Follow-ups atrasados
+    if (overdueOnlyFilter && !overdueClientIds.has(f.id)) {
+      return false
+    }
+
+    return true
+  })
 
   const handleExport = () => {
     exportExecutiveMacroReport(factories)
@@ -434,32 +456,28 @@ export default function Funil() {
             onOptionsLoaded={setVendedorOptions}
             className="w-[180px] h-9"
           />
-          <Select value={stateFilter} onValueChange={setStateFilter}>
-            <SelectTrigger className="w-[150px] h-9">
-              <SelectValue placeholder="Estado" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os Estados</SelectItem>
-              {uniqueStates.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={speciesSegmentFilter} onValueChange={setSpeciesSegmentFilter}>
-            <SelectTrigger className="w-[170px] h-9" aria-label="Espécie ou Segmento">
-              <SelectValue placeholder="Espécie / Segmento" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as Espécies / Segmentos</SelectItem>
-              {speciesSegmentOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FilterMultiSelect
+            label="Estados"
+            allLabel="Todos os Estados"
+            placeholder="Estados"
+            searchPlaceholder="Buscar estado..."
+            options={uniqueStates}
+            selected={selectedStates}
+            onChange={setSelectedStates}
+            triggerClassName="w-[160px]"
+            aria-label="Filtro de Estados"
+          />
+          <FilterMultiSelect
+            label="Espécie / Segmento"
+            allLabel="Todas as Espécies / Segmentos"
+            placeholder="Espécie / Segmento"
+            searchPlaceholder="Buscar espécie ou segmento..."
+            options={speciesSegmentOptions}
+            selected={selectedSpeciesSegments}
+            onChange={setSelectedSpeciesSegments}
+            triggerClassName="w-[200px]"
+            aria-label="Filtro de Espécie e Segmento"
+          />
           <Button
             variant={overdueOnlyFilter ? 'default' : 'outline'}
             size="sm"

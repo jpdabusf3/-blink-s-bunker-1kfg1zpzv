@@ -258,8 +258,30 @@ export function getFactorySpeciesSegmentCategories(factory: Factory): Set<string
  * Caso contrário, retorna verdadeiro se a espécie OU o segmento do cliente
  * pertencer à categoria selecionada (com unificação de Ruminantes/Bovinos).
  */
-export function factoryMatchesSpeciesSegment(factory: Factory, targetCategory: string): boolean {
-  if (!targetCategory || targetCategory === 'all' || targetCategory === 'Todos') {
+export function factoryMatchesSpeciesSegment(
+  factory: Factory,
+  targetCategory: string | string[],
+): boolean {
+  if (!targetCategory) return true
+
+  // Suporte a seleção múltipla (array de categorias ou 'all')
+  if (Array.isArray(targetCategory)) {
+    if (
+      targetCategory.length === 0 ||
+      targetCategory.includes('all') ||
+      targetCategory.includes('Todos')
+    ) {
+      return true
+    }
+    const normalizedTargets = targetCategory.map(canonicalSpeciesSegmentCategory).filter(Boolean)
+    if (normalizedTargets.length === 0) return true
+
+    const factoryCategories = getFactorySpeciesSegmentCategories(factory)
+    // Lógica OR: corresponde se o cliente pertencer a QUALQUER uma das opções escolhidas
+    return normalizedTargets.some((target) => factoryCategories.has(target))
+  }
+
+  if (targetCategory === 'all' || targetCategory === 'Todos') {
     return true
   }
 

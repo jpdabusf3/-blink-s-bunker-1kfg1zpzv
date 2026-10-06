@@ -280,5 +280,43 @@ describe('funnelSpeciesSegmentFilter', () => {
       expect(factoryMatchesSpeciesSegment(onlySegPet, 'Aves')).toBe(true)
       expect(factoryMatchesSpeciesSegment(onlySegPet, 'Ruminantes')).toBe(false)
     })
+
+    it('suporta seleção múltipla (array) com lógica OR e preserva equivalências', () => {
+      const aveFactory: Factory = {
+        ...baseFactory,
+        animalSpecies: 'Aves',
+        carteira: undefined,
+      }
+      const suinoFactory: Factory = {
+        ...baseFactory,
+        animalSpecies: 'Suínos',
+        carteira: undefined,
+      }
+      const ruminanteFactory: Factory = {
+        ...baseFactory,
+        animalSpecies: 'Bovinos',
+        carteira: undefined,
+      }
+      const petFactory: Factory = {
+        ...baseFactory,
+        animalSpecies: 'Pet',
+        carteira: undefined,
+      }
+
+      // Vazio ou ['all'] aceita qualquer
+      expect(factoryMatchesSpeciesSegment(aveFactory, [])).toBe(true)
+      expect(factoryMatchesSpeciesSegment(aveFactory, ['all'])).toBe(true)
+
+      // Seleção múltipla ['AVES', 'SUINOS']
+      expect(factoryMatchesSpeciesSegment(aveFactory, ['AVES', 'SUINOS'])).toBe(true)
+      expect(factoryMatchesSpeciesSegment(suinoFactory, ['AVES', 'SUINOS'])).toBe(true)
+      expect(factoryMatchesSpeciesSegment(ruminanteFactory, ['AVES', 'SUINOS'])).toBe(false)
+      expect(factoryMatchesSpeciesSegment(petFactory, ['AVES', 'SUINOS'])).toBe(false)
+
+      // Seleção múltipla com 'Ruminantes' (equivalência Bovinos) e 'Pets'
+      expect(factoryMatchesSpeciesSegment(ruminanteFactory, ['RUMINANTES', 'PETS'])).toBe(true)
+      expect(factoryMatchesSpeciesSegment(petFactory, ['Ruminantes', 'Pets'])).toBe(true)
+      expect(factoryMatchesSpeciesSegment(aveFactory, ['Ruminantes', 'Pets'])).toBe(false)
+    })
   })
 })
