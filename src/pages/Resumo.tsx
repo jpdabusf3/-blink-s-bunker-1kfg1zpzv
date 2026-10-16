@@ -391,11 +391,7 @@ export default function Resumo() {
           </div>
 
           {/* Seção Adicional: Metas por Vendedor e Segmento (anexada ao final sem alterar seções anteriores) */}
-          <MetasVendedorSegmentoSection
-            faturamentos={faturamentos}
-            factoryMap={factoryMap}
-            factories={factories}
-          />
+          <MetasVendedorSegmentoSection />
         </div>
       )}
 

@@ -66,13 +66,13 @@ migrate(
         )
       }
 
-      // 3. Atualizar regras de acesso para restringir operações ao usuário autenticado dono
-      // (preservando retrocompatibilidade para registros onde user_id ainda seja vazio)
-      metasCol.listRule = "@request.auth.id != '' && (user_id = '' || user_id = @request.auth.id)"
-      metasCol.viewRule = "@request.auth.id != '' && (user_id = '' || user_id = @request.auth.id)"
+      // 3. Atualizar regras de acesso para permitir qualquer usuário autenticado
+      // (shared team dataset com visão global liberada)
+      metasCol.listRule = "@request.auth.id != ''"
+      metasCol.viewRule = "@request.auth.id != ''"
       metasCol.createRule = "@request.auth.id != ''"
-      metasCol.updateRule = "@request.auth.id != '' && (user_id = '' || user_id = @request.auth.id)"
-      metasCol.deleteRule = "@request.auth.id != '' && (user_id = '' || user_id = @request.auth.id)"
+      metasCol.updateRule = "@request.auth.id != ''"
+      metasCol.deleteRule = "@request.auth.id != ''"
 
       // 4. Salvar coleção
       app.save(metasCol)

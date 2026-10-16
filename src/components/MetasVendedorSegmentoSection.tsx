@@ -45,6 +45,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
+import { useRealtime } from '@/hooks/use-realtime'
 import {
   getMetasPorPeriodo,
   saveMetaVendedorSegmento,
@@ -57,7 +58,8 @@ import { getHistoricoVendas, type HistoricoVenda } from '@/services/historico-ve
 import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { type FaturamentoRecord } from '@/services/resumo-vendas'
 import { type Factory } from '@/types'
-import { normalizeStr, canonicalSellerName } from '@/lib/vendedorFilterHelper'
+import { normalizeStr, normalizeSellerName } from '@/lib/vendedorFilterHelper'
+import { canonicalSpeciesSegmentCategory } from '@/lib/funnelSpeciesSegmentFilter'
 import { cn } from '@/lib/utils'
 
 export const MESES_PT = [
@@ -118,32 +120,30 @@ function formatCurrencyInput(val: number): string {
 }
 
 /**
- * Normaliza o segmento/espécie vindo dos dados de vendas para os 5 segmentos padrão:
- * AVES, PETS, RUMINANTES, SUINOS, AQUA
+ * Normaliza o segmento/espécie vindo dos dados de vendas para os 5 segmentos canônicos da Blink:
+ * AVES, PETS, RUMINANTES, SUINOS, AQUA.
+ * Reutiliza canonicalSpeciesSegmentCategory do projeto (unifica Bovinos e Ruminantes como RUMINANTES).
  */
 function normalizarSegmento(seg?: string | null): SegmentoMeta | 'OUTROS' {
   if (!seg) return 'OUTROS'
+  const canon = canonicalSpeciesSegmentCategory(seg)
+  if (
+    canon === 'AVES' ||
+    canon === 'PETS' ||
+    canon === 'RUMINANTES' ||
+    canon === 'SUINOS' ||
+    canon === 'AQUA'
+  ) {
+    return canon as SegmentoMeta
+  }
+  // Mapeamentos específicos de códigos de produto ou termos
   const u = String(seg).trim().toUpperCase()
-  if (u.includes('AVE') || u.includes('FRANGO') || u === 'MO-BE') return 'AVES'
-  if (
-    u.includes('PET') ||
-    u.includes('CÃO') ||
-    u.includes('CAO') ||
-    u.includes('GATO') ||
-    u === 'MI-XS'
-  )
-    return 'PETS'
-  if (
-    u.includes('RUMINANTE') ||
-    u.includes('BOVIN') ||
-    u.includes('GADO') ||
-    u.includes('LEITE') ||
-    u.includes('CORTE') ||
-    u === 'MI-OR'
-  )
+  if (u === 'MO-BE' || u.includes('FRANGO')) return 'AVES'
+  if (u === 'MI-XS' || u.includes('CÃO') || u.includes('CAO') || u.includes('GATO')) return 'PETS'
+  if (u === 'MI-OR' || u.includes('GADO') || u.includes('LEITE') || u.includes('CORTE'))
     return 'RUMINANTES'
-  if (u.includes('SUIN') || u.includes('PORCO') || u === 'MY-CO') return 'SUINOS'
-  if (u.includes('AQUA') || u.includes('PEIXE') || u.includes('TILAPIA')) return 'AQUA'
+  if (u === 'MY-CO' || u.includes('PORCO')) return 'SUINOS'
+  if (u.includes('PEIXE') || u.includes('TILAPIA')) return 'AQUA'
   return 'OUTROS'
 }
 
@@ -213,6 +213,14 @@ export function MetasVendedorSegmentoSection({
     void carregarDados()
   }, [carregarDados])
 
+  // Assinatura nativa PocketBase em tempo real para metas e vendas
+  useRealtime('metas', () => {
+    void carregarDados()
+  })
+  useRealtime('historico_vendas', () => {
+    void carregarDados()
+  })
+
   // Lista de vendedores distintos já presentes nos dados de vendas / CRM
   const vendedoresDisponiveis = useMemo(() => {
     const nomesSet = new Set<string>()
@@ -220,33 +228,34 @@ export function MetasVendedorSegmentoSection({
     // 1. De gestao_tecnica (vendedores ou gestores)
     gestaoVendedores.forEach((g) => {
       const raw = (g.nome || '').trim()
-      const n = raw ? canonicalSellerName(raw) : ''
+      const n = raw ? normalizeSellerName(raw) : ''
       if (n) nomesSet.add(n)
     })
 
     // 2. De historico_vendas
     historicoVendas.forEach((v) => {
       const raw = (v.vendedor || v.expand?.vendedor_id?.nome || '').trim()
-      const n = raw && raw !== '-' ? canonicalSellerName(raw) : ''
+      const n = raw && raw !== '-' ? normalizeSellerName(raw) : ''
       if (n) nomesSet.add(n)
     })
 
     // 3. De faturamentos
     faturamentos.forEach((f) => {
       const raw = (f.vendedor || '').trim()
-      const n = raw && raw !== '-' ? canonicalSellerName(raw) : ''
+      const n = raw && raw !== '-' ? normalizeSellerName(raw) : ''
       if (n) nomesSet.add(n)
     })
 
     // 4. De factories (vendedor_name ou salesOwnerName)
     factories.forEach((fac) => {
       const raw = (fac.vendedor_name || fac.salesOwnerName || '').trim()
-      const n = raw ? canonicalSellerName(raw) : ''
+      const n = raw ? normalizeSellerName(raw) : ''
       if (n) nomesSet.add(n)
     })
 
-    // Garantir Rodrigo Gardinal como fallback se não houver vendedores
-    if (nomesSet.size === 0) {
+    // Garantir vendedor canônico e fallbacks caso o dataset esteja vazio
+    nomesSet.add('João Figueiredo')
+    if (nomesSet.size === 1) {
       nomesSet.add('Rodrigo Gardinal')
     }
 
@@ -262,7 +271,7 @@ export function MetasVendedorSegmentoSection({
         meta.expand?.vendedor_id?.nome ||
         ''
       ).trim()
-      const vendNome = rawVendNome ? canonicalSellerName(rawVendNome) : 'Vendedor não informado'
+      const vendNome = rawVendNome ? normalizeSellerName(rawVendNome) : 'Vendedor não informado'
       const segAlvo = normalizarSegmento(meta.segmento || meta.especie)
       const valorMeta = Number(meta.valor_meta || meta.meta_valor) || 0
 
@@ -295,9 +304,9 @@ export function MetasVendedorSegmentoSection({
         }
 
         if (vAno === selectedAno && vMesNum === selectedMes) {
-          // Verificar vendedor (usando canonicalSellerName)
+          // Verificar vendedor (usando normalizeSellerName para unificar João Pedro/João Figueiredo)
           const rawV = (v.vendedor || v.expand?.vendedor_id?.nome || '').trim()
-          const vVend = rawV ? canonicalSellerName(rawV) : ''
+          const vVend = rawV ? normalizeSellerName(rawV) : ''
           const vMatch =
             normalizeStr(vVend) === normMetaVend ||
             (meta.vendedor_id && v.vendedor_id === meta.vendedor_id)
@@ -320,7 +329,7 @@ export function MetasVendedorSegmentoSection({
 
         if (fAno === selectedAno && fMes === selectedMes) {
           const rawFVend = (f.vendedor || '').trim()
-          const fVend = rawFVend ? canonicalSellerName(rawFVend) : ''
+          const fVend = rawFVend ? normalizeSellerName(rawFVend) : ''
           let isVend = false
           if (fVend && normalizeStr(fVend) === normMetaVend) {
             isVend = true
@@ -340,7 +349,7 @@ export function MetasVendedorSegmentoSection({
             })
             if (matchFac) {
               const rawFcVend = (matchFac.vendedor_name || matchFac.salesOwnerName || '').trim()
-              const fcVend = rawFcVend ? canonicalSellerName(rawFcVend) : ''
+              const fcVend = rawFcVend ? normalizeSellerName(rawFcVend) : ''
               if (fcVend && normalizeStr(fcVend) === normMetaVend) {
                 isVend = true
               }
@@ -400,7 +409,7 @@ export function MetasVendedorSegmentoSection({
   const handleOpenNovaMeta = () => {
     setEditingMeta(null)
     setFormVendedor(
-      vendedoresDisponiveis[0] ? canonicalSellerName(vendedoresDisponiveis[0]) : 'Rodrigo Gardinal',
+      vendedoresDisponiveis[0] ? normalizeSellerName(vendedoresDisponiveis[0]) : 'João Figueiredo',
     )
     setFormSegmento('RUMINANTES')
     setFormMes(selectedMes)
@@ -412,7 +421,7 @@ export function MetasVendedorSegmentoSection({
 
   const handleOpenEditar = (linha: MetaProgressoLinha) => {
     setEditingMeta(linha.meta)
-    setFormVendedor(canonicalSellerName(linha.vendedor))
+    setFormVendedor(normalizeSellerName(linha.vendedor))
     setFormSegmento(
       (SEGMENTOS_METAS.find((s) => s === linha.segmento) as SegmentoMeta) || 'RUMINANTES',
     )
@@ -461,7 +470,7 @@ export function MetasVendedorSegmentoSection({
 
       await saveMetaVendedorSegmento(
         {
-          vendedor: canonicalSellerName(formVendedor.trim()),
+          vendedor: normalizeSellerName(formVendedor.trim()),
           segmento: formSegmento,
           mes: formMes,
           ano: formAno,
