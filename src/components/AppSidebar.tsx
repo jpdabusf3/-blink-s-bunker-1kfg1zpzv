@@ -48,6 +48,7 @@ export function AppSidebar() {
     { name: 'Mensagens', path: '/mensagens', icon: MessageSquare },
     { name: 'Maestro', path: '/maestro', icon: Sparkles, badge: 'IA' },
     { name: t('nav.cadastro'), path: '/cadastro', icon: Building2 },
+    { name: 'Distribuidores', path: '/distribuidores', icon: Building2 },
     { name: 'Mapa de Clientes', path: '/mapa', icon: MapPin },
     { name: 'Importar Faturamento', path: '/importar-faturamento', icon: Layers },
     { name: t('nav.funil'), path: '/funil', icon: BarChart2 },

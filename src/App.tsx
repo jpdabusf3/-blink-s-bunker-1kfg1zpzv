@@ -50,6 +50,8 @@ const Maestro = lazy(() => import('./pages/Maestro'))
 const AgendaSemanal = lazy(() => import('./pages/AgendaSemanal'))
 const Migracao = lazy(() => import('./pages/Migracao'))
 const Mensagens = lazy(() => import('./pages/Mensagens'))
+const Distribuidores = lazy(() => import('./pages/Distribuidores'))
+const DistribuidorDetalhe = lazy(() => import('./pages/DistribuidorDetalhe'))
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -153,6 +155,22 @@ const App = () => (
                           element={
                             <Suspense fallback={<PageSkeleton />}>
                               <Maestro />
+                            </Suspense>
+                          }
+                        />
+                        <Route
+                          path="/distribuidores"
+                          element={
+                            <Suspense fallback={<PageSkeleton />}>
+                              <Distribuidores />
+                            </Suspense>
+                          }
+                        />
+                        <Route
+                          path="/distribuidores/:id"
+                          element={
+                            <Suspense fallback={<PageSkeleton />}>
+                              <DistribuidorDetalhe />
                             </Suspense>
                           }
                         />

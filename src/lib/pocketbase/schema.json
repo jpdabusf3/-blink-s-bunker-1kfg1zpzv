@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T18:37:12.402Z",
+  "generatedAt": "2026-10-16T18:50:07.401Z",
   "collections": [
     {
       "name": "users",
@@ -5513,6 +5513,274 @@
       "indexes": [
         "CREATE UNIQUE INDEX idx_leituras_msg_user ON leituras_mensagens (mensagem_id, user_id)",
         "CREATE INDEX idx_leituras_conversa_user ON leituras_mensagens (conversa_id, user_id)"
+      ]
+    },
+    {
+      "name": "distribuidores",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "nome",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "cnpj",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "contato_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "contato_email",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "contato_telefone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ufs_atuacao",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "contrato_inicio",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "contrato_fim",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["ativo", "inativo"]
+        },
+        {
+          "name": "observacoes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_distribuidores_nome ON distribuidores (nome)",
+        "CREATE INDEX idx_distribuidores_status ON distribuidores (status)"
+      ]
+    },
+    {
+      "name": "compras_distribuidor",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "distribuidor_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "distribuidores"
+        },
+        {
+          "name": "data",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "produto",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "linha_produto",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["MY-CO", "MO-BE", "MI-OR", "MY-ST", "MI-XS", "Outros"]
+        },
+        {
+          "name": "toneladas",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_brl",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_usd",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "nf",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "observacoes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "origem",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "faturamento_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_compras_dist_id ON compras_distribuidor (distribuidor_id)",
+        "CREATE INDEX idx_compras_data ON compras_distribuidor (data)",
+        "CREATE INDEX idx_compras_linha ON compras_distribuidor (linha_produto)"
+      ]
+    },
+    {
+      "name": "clientes_distribuidor",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "distribuidor_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "distribuidores"
+        },
+        {
+          "name": "nome_cliente",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "uf",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "municipio",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["ativo", "inativo", "prospeccao"]
+        },
+        {
+          "name": "observacoes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "factory_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_clientes_dist_id ON clientes_distribuidor (distribuidor_id)",
+        "CREATE INDEX idx_clientes_dist_uf ON clientes_distribuidor (uf)",
+        "CREATE INDEX idx_clientes_dist_nome ON clientes_distribuidor (nome_cliente)"
       ]
     }
   ]
