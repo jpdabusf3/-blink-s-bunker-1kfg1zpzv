@@ -57,7 +57,7 @@ import { getHistoricoVendas, type HistoricoVenda } from '@/services/historico-ve
 import { getGestaoTecnica, type GestaoTecnica } from '@/services/gestao-tecnica'
 import { type FaturamentoRecord } from '@/services/resumo-vendas'
 import { type Factory } from '@/types'
-import { normalizeStr } from '@/lib/vendedorFilterHelper'
+import { normalizeStr, canonicalSellerName } from '@/lib/vendedorFilterHelper'
 import { cn } from '@/lib/utils'
 
 export const MESES_PT = [
@@ -219,26 +219,30 @@ export function MetasVendedorSegmentoSection({
 
     // 1. De gestao_tecnica (vendedores ou gestores)
     gestaoVendedores.forEach((g) => {
-      const n = (g.nome || '').trim()
+      const raw = (g.nome || '').trim()
+      const n = raw ? canonicalSellerName(raw) : ''
       if (n) nomesSet.add(n)
     })
 
     // 2. De historico_vendas
     historicoVendas.forEach((v) => {
-      const n = (v.vendedor || v.expand?.vendedor_id?.nome || '').trim()
-      if (n && n !== '-') nomesSet.add(n)
+      const raw = (v.vendedor || v.expand?.vendedor_id?.nome || '').trim()
+      const n = raw && raw !== '-' ? canonicalSellerName(raw) : ''
+      if (n) nomesSet.add(n)
     })
 
     // 3. De faturamentos
     faturamentos.forEach((f) => {
-      const n = (f.vendedor || '').trim()
-      if (n && n !== '-') nomesSet.add(n)
+      const raw = (f.vendedor || '').trim()
+      const n = raw && raw !== '-' ? canonicalSellerName(raw) : ''
+      if (n) nomesSet.add(n)
     })
 
     // 4. De factories (vendedor_name ou salesOwnerName)
     factories.forEach((fac) => {
-      const vn = (fac.vendedor_name || fac.salesOwnerName || '').trim()
-      if (vn) nomesSet.add(vn)
+      const raw = (fac.vendedor_name || fac.salesOwnerName || '').trim()
+      const n = raw ? canonicalSellerName(raw) : ''
+      if (n) nomesSet.add(n)
     })
 
     // Garantir Rodrigo Gardinal como fallback se não houver vendedores
@@ -252,12 +256,13 @@ export function MetasVendedorSegmentoSection({
   // Calcular o realizado do mês para cada meta (filtrando por vendedor, segmento, mês e ano)
   const linhasProgresso = useMemo<MetaProgressoLinha[]>(() => {
     return metas.map((meta) => {
-      const vendNome = (
+      const rawVendNome = (
         meta.vendedor ||
         meta.vendedor_nome ||
         meta.expand?.vendedor_id?.nome ||
         ''
       ).trim()
+      const vendNome = rawVendNome ? canonicalSellerName(rawVendNome) : 'Vendedor não informado'
       const segAlvo = normalizarSegmento(meta.segmento || meta.especie)
       const valorMeta = Number(meta.valor_meta || meta.meta_valor) || 0
 
@@ -290,8 +295,9 @@ export function MetasVendedorSegmentoSection({
         }
 
         if (vAno === selectedAno && vMesNum === selectedMes) {
-          // Verificar vendedor
-          const vVend = (v.vendedor || v.expand?.vendedor_id?.nome || '').trim()
+          // Verificar vendedor (usando canonicalSellerName)
+          const rawV = (v.vendedor || v.expand?.vendedor_id?.nome || '').trim()
+          const vVend = rawV ? canonicalSellerName(rawV) : ''
           const vMatch =
             normalizeStr(vVend) === normMetaVend ||
             (meta.vendedor_id && v.vendedor_id === meta.vendedor_id)
@@ -313,7 +319,8 @@ export function MetasVendedorSegmentoSection({
         const fMes = f.mes || (f.data_documento ? parseInt(f.data_documento.slice(5, 7), 10) : 0)
 
         if (fAno === selectedAno && fMes === selectedMes) {
-          const fVend = (f.vendedor || '').trim()
+          const rawFVend = (f.vendedor || '').trim()
+          const fVend = rawFVend ? canonicalSellerName(rawFVend) : ''
           let isVend = false
           if (fVend && normalizeStr(fVend) === normMetaVend) {
             isVend = true
@@ -332,7 +339,8 @@ export function MetasVendedorSegmentoSection({
               return nameMatch || codMatch
             })
             if (matchFac) {
-              const fcVend = (matchFac.vendedor_name || matchFac.salesOwnerName || '').trim()
+              const rawFcVend = (matchFac.vendedor_name || matchFac.salesOwnerName || '').trim()
+              const fcVend = rawFcVend ? canonicalSellerName(rawFcVend) : ''
               if (fcVend && normalizeStr(fcVend) === normMetaVend) {
                 isVend = true
               }
@@ -379,7 +387,7 @@ export function MetasVendedorSegmentoSection({
 
       return {
         meta,
-        vendedor: vendNome || 'Vendedor não informado',
+        vendedor: vendNome,
         segmento: meta.segmento || meta.especie || 'RUMINANTES',
         valorMeta,
         valorRealizado: realizadoTotal,
@@ -391,7 +399,9 @@ export function MetasVendedorSegmentoSection({
   // Handlers para Modal Criar / Editar
   const handleOpenNovaMeta = () => {
     setEditingMeta(null)
-    setFormVendedor(vendedoresDisponiveis[0] || 'Rodrigo Gardinal')
+    setFormVendedor(
+      vendedoresDisponiveis[0] ? canonicalSellerName(vendedoresDisponiveis[0]) : 'Rodrigo Gardinal',
+    )
     setFormSegmento('RUMINANTES')
     setFormMes(selectedMes)
     setFormAno(selectedAno)
@@ -402,7 +412,7 @@ export function MetasVendedorSegmentoSection({
 
   const handleOpenEditar = (linha: MetaProgressoLinha) => {
     setEditingMeta(linha.meta)
-    setFormVendedor(linha.vendedor)
+    setFormVendedor(canonicalSellerName(linha.vendedor))
     setFormSegmento(
       (SEGMENTOS_METAS.find((s) => s === linha.segmento) as SegmentoMeta) || 'RUMINANTES',
     )
@@ -451,7 +461,7 @@ export function MetasVendedorSegmentoSection({
 
       await saveMetaVendedorSegmento(
         {
-          vendedor: formVendedor.trim(),
+          vendedor: canonicalSellerName(formVendedor.trim()),
           segmento: formSegmento,
           mes: formMes,
           ano: formAno,

@@ -46,6 +46,7 @@ import {
   Calendar,
 } from 'lucide-react'
 import { MaestroChatPanel } from '@/components/MaestroChatPanel'
+import { MetasVendedorSegmentoSection } from '@/components/MetasVendedorSegmentoSection'
 import { formatCurrency, cn } from '@/lib/utils'
 import {
   fetchResumoVendas,
@@ -388,6 +389,13 @@ export default function Resumo() {
             {/* Gráfico: Evolução Mensal (últimos 12 meses) */}
             <SectionEvolucaoMensal evolucao={data.evolucao_mensal || []} />
           </div>
+
+          {/* Seção Adicional: Metas por Vendedor e Segmento (anexada ao final sem alterar seções anteriores) */}
+          <MetasVendedorSegmentoSection
+            faturamentos={faturamentos}
+            factoryMap={factoryMap}
+            factories={factories}
+          />
         </div>
       )}
 

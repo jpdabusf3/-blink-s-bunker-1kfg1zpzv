@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-06T18:47:43.651Z",
+  "generatedAt": "2026-10-16T18:26:08.796Z",
   "collections": [
     {
       "name": "users",
@@ -1385,11 +1385,11 @@
       "name": "metas",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
+        "list": "@request.auth.id != '' && (user_id = '' || user_id = @request.auth.id)",
+        "view": "@request.auth.id != '' && (user_id = '' || user_id = @request.auth.id)",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "update": "@request.auth.id != '' && (user_id = '' || user_id = @request.auth.id)",
+        "delete": "@request.auth.id != '' && (user_id = '' || user_id = @request.auth.id)"
       },
       "fields": [
         {
@@ -1524,6 +1524,13 @@
           "type": "number",
           "required": false,
           "system": false
+        },
+        {
+          "name": "user_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
         }
       ],
       "indexes": [
@@ -1533,6 +1540,7 @@
         "CREATE INDEX `idx_metas_especie` ON `metas` (especie)",
         "CREATE INDEX `idx_metas_periodo` ON `metas` (periodo)",
         "CREATE INDEX `idx_metas_canal_vendas` ON `metas` (canal_vendas)",
+        "CREATE INDEX `idx_metas_user_id` ON `metas` (user_id)",
         "CREATE INDEX `idx_metas_mes_ano` ON `metas` (mes, ano)",
         "CREATE UNIQUE INDEX `idx_metas_vendedor_segmento_mes_ano` ON `metas` (vendedor, segmento, mes, ano)"
       ]

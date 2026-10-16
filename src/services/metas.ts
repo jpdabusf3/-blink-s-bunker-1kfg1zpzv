@@ -16,6 +16,7 @@ export type SegmentoMeta = (typeof SEGMENTOS_METAS)[number]
 
 export interface Meta {
   id: string
+  user_id?: string
   vendedor_id?: string
   gestor_tecnico_id?: string
   especie?: string
@@ -38,6 +39,7 @@ export interface Meta {
   expand?: {
     vendedor_id?: { id: string; nome: string; funcao: string; regiao: string }
     gestor_tecnico_id?: { id: string; nome: string; funcao: string; regiao: string }
+    user_id?: { id: string; name: string; email: string }
   }
 }
 
@@ -123,8 +125,9 @@ export const saveMetaVendedorSegmento = async (
   input: MetaVendedorSegmentoInput,
   id?: string,
 ): Promise<Meta> => {
+  const currentUserId = pb.authStore.record?.id || pb.authStore.model?.id
   const periodoStr = `${input.ano}-${String(input.mes).padStart(2, '0')}`
-  const payload = {
+  const payload: Record<string, unknown> = {
     vendedor: input.vendedor.trim(),
     segmento: input.segmento.trim().toUpperCase(),
     mes: input.mes,
@@ -137,29 +140,38 @@ export const saveMetaVendedorSegmento = async (
     atualizado_em: new Date().toISOString(),
   }
 
-  if (id) {
-    const updated = await pb.collection('metas').update<Meta>(id, payload)
-    notifyDataChanged('metas')
-    return updated
+  if (currentUserId) {
+    payload.user_id = currentUserId
   }
 
-  // Se não tiver id, verificar se já existe meta para essa chave antes de criar (para evitar violação da constraint única)
   try {
-    const existing = await pb
-      .collection('metas')
-      .getFirstListItem<Meta>(
-        `vendedor = "${payload.vendedor}" && segmento = "${payload.segmento}" && mes = ${payload.mes} && ano = ${payload.ano}`,
-      )
-    if (existing) {
-      const updated = await pb.collection('metas').update<Meta>(existing.id, payload)
+    if (id) {
+      const updated = await pb.collection('metas').update<Meta>(id, payload)
       notifyDataChanged('metas')
       return updated
     }
-  } catch {
-    // Record não encontrado, segue para create
-  }
 
-  const created = await pb.collection('metas').create<Meta>(payload)
-  notifyDataChanged('metas')
-  return created
+    const created = await pb.collection('metas').create<Meta>(payload)
+    notifyDataChanged('metas')
+    return created
+  } catch (err: unknown) {
+    // Se ocorrer violação de unicidade ou duplicidade
+    const errObj = err as { message?: string; data?: Record<string, unknown>; status?: number }
+    const isUniqueConstraint =
+      errObj?.status === 400 ||
+      errObj?.message?.toLowerCase().includes('unique') ||
+      errObj?.message?.toLowerCase().includes('constraint') ||
+      JSON.stringify(errObj?.data || {})
+        .toLowerCase()
+        .includes('unique') ||
+      JSON.stringify(errObj?.data || {})
+        .toLowerCase()
+        .includes('already exists')
+
+    if (isUniqueConstraint && !id) {
+      // Verificar se já existe e informar com mensagem amigável em português
+      throw new Error('Já existe uma meta para este vendedor, segmento e período.')
+    }
+    throw err
+  }
 }

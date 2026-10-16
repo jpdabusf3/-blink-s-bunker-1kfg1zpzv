@@ -37,6 +37,7 @@ import {
 import { familiaCompleta } from '@/constants/familiaProdutos'
 import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { SyncErrorBanner } from '@/components/SyncErrorBanner'
+import { MetasVendedorSegmentoSection } from '@/components/MetasVendedorSegmentoSection'
 
 type PeriodKey = 'week_current' | 'month_current' | 'month_previous'
 
@@ -554,6 +555,9 @@ export function ResumoVendasTab() {
               </CollapsibleContent>
             </Card>
           </Collapsible>
+
+          {/* Metas por Vendedor e Segmento (nova seção anexada ao final) */}
+          <MetasVendedorSegmentoSection />
         </div>
       )}
     </div>
