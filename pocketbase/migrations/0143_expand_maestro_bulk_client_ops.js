@@ -202,11 +202,11 @@ Sempre seja prestativo, profissional e assertivo, fornecendo resumos claros em P
     })
   },
   (app) => {
+    // Rollback no-op seguro: redefinir o agente aqui recriaria o mesmo estado,
+    // então nada é feito — o estado anterior (0125) permanece se a up for revertida
+    // manualmente pela redefinição do prompt na migration 0125.
     try {
-      const col = app.findCollectionByNameOrId('_pb_users_auth_')
-      if (col) {
-        // no-op seguro para rollback
-      }
+      app.findCollectionByNameOrId('factories')
     } catch (_) {}
   },
 )
