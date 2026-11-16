@@ -1142,7 +1142,7 @@ export function ClientDetailDrawer({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-end"
+      className="fixed inset-0 z-50 flex justify-end pt-16 max-md:pt-0"
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
@@ -1162,9 +1162,10 @@ export function ClientDetailDrawer({
         className={cn(
           'relative z-50 flex flex-col bg-card text-card-foreground shadow-2xl border-l transition-all outline-none animate-in',
           // Desktop: 40% da tela deslizando da direita
-          'w-full md:w-[40%] md:min-w-[420px] md:max-w-[640px] md:h-full md:slide-in-from-right',
+          // h-[calc(100vh-4rem)]: começa abaixo da topbar fixa (h-16) — nada do cabeçalho fica escondido
+          'w-full md:w-[40%] md:min-w-[420px] md:max-w-[640px] md:h-[calc(100vh-4rem)] md:mb-3 md:slide-in-from-right',
           // Mobile (<768px): bottom sheet tela cheia com alça de arrasto
-          'max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:h-[92vh] max-md:rounded-t-2xl max-md:border-t max-md:slide-in-from-bottom',
+          'max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:h-[92dvh] max-md:rounded-t-2xl max-md:border-t max-md:slide-in-from-bottom',
         )}
       >
         {/* Mobile Drag Handle */}
@@ -1175,7 +1176,7 @@ export function ClientDetailDrawer({
         )}
 
         {/* Header do Drawer */}
-        <div className="p-4 sm:p-5 border-b flex items-start justify-between gap-3 shrink-0 bg-card/60 backdrop-blur-sm sticky top-0 z-20">
+        <div className="p-4 sm:p-5 border-b flex items-start justify-between gap-3 shrink-0 bg-card/60 backdrop-blur-sm z-10">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="text-xs text-muted-foreground font-medium">Status no funil:</span>
@@ -1227,11 +1228,12 @@ export function ClientDetailDrawer({
 
             <h2
               id={titleId}
-              className="text-lg sm:text-xl font-bold tracking-tight text-foreground truncate"
+              title={loading ? undefined : company}
+              className="text-lg sm:text-xl font-bold tracking-tight text-foreground break-words"
             >
               {loading ? <Skeleton className="h-6 w-48 inline-block" /> : company}
             </h2>
-            <p id={descriptionId} className="text-xs text-muted-foreground truncate">
+            <p id={descriptionId} className="text-xs text-muted-foreground break-words">
               {loading ? (
                 <Skeleton className="h-4 w-32 inline-block mt-1" />
               ) : (
