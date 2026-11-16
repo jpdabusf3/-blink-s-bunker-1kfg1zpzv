@@ -357,3 +357,18 @@
     backdrop-filter: blur(8px);
   }
 }
+
+/* Modo Monitor (kiosk) do Painel */
+body.blink-monitor-mode {
+  overflow: hidden;
+}
+
+body.blink-monitor-mode [data-monitor-section] {
+  /* deixa a seção focalizada folgada da barra de relógio no scrollIntoView */
+  scroll-margin-top: 8.5rem;
+}
+@media (min-width: 768px) {
+  body.blink-monitor-mode [data-monitor-section] {
+    scroll-margin-top: 7.5rem;
+  }
+}

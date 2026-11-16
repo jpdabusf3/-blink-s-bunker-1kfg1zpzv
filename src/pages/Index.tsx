@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useAppContext } from '@/store/AppContext'
 import { useScopedFactories } from '@/hooks/use-scoped-data'
 import { useAuth } from '@/hooks/use-auth'
@@ -8,7 +8,16 @@ import { Button } from '@/components/ui/button'
 import { formatCompactCurrency, normalizeArray } from '@/lib/utils'
 import { deriveFunilVendasStatus } from '@/lib/funnel-status'
 import { matchesProfileCategory } from '@/constants/clientCategories'
-import { Download, GripVertical, Filter, Globe, MapPin, Compass, Loader2 } from 'lucide-react'
+import {
+  Download,
+  GripVertical,
+  Filter,
+  Globe,
+  MapPin,
+  Compass,
+  Loader2,
+  Monitor as MonitorIcon,
+} from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -48,6 +57,13 @@ import { factoryMatchesVendedor, type UnifiedVendedorOption } from '@/lib/vended
 import { testIntegration } from '@/services/integration-test'
 import { toast } from 'sonner'
 import { SyncErrorBanner } from '@/components/SyncErrorBanner'
+import {
+  MONITOR_SECTION_DURATION_S,
+  MonitorChrome,
+  enterMonitorMode,
+  useMonitorMode,
+  monitorSectionLabel,
+} from '@/components/dashboard/MonitorMode'
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={className} fill="currentColor">
@@ -155,6 +171,12 @@ export default function Index() {
   const [isExportingCSV, setIsExportingCSV] = useState(false)
   const [clientSearchFilter, setClientSearchFilter] = useState('')
 
+  // --- Modo Monitor (kiosk) ---
+  const monitorActive = useMonitorMode()
+  const [monitorSectionIndex, setMonitorSectionIndex] = useState(0)
+  const [monitorSectionElapsed, setMonitorSectionElapsed] = useState(0)
+  const monitorSectionsRef = useRef<HTMLDivElement | null>(null)
+
   const {
     blocks,
     setBlocks,
@@ -165,6 +187,60 @@ export default function Index() {
     lastAutomationPeriod,
     refreshPreferences,
   } = useDashboardPreferences()
+
+  // Seções visíveis no monitor: as blocos ativos do painel (ou todos os
+  // padrões, enquanto as preferências carregam).
+  const monitorSections = useMemo(() => (blocks.length > 0 ? blocks : DEFAULT_BLOCKS), [blocks])
+
+  // A cada 1s, avança o relógio interno da seção; ao completar a duração,
+  // passa para a próxima seção e faz scroll suave até ela.
+  useEffect(() => {
+    if (!monitorActive) return
+    setMonitorSectionElapsed(0)
+    setMonitorSectionIndex((i) => Math.min(i, monitorSections.length - 1))
+  }, [monitorActive, monitorSections.length])
+
+  useEffect(() => {
+    if (!monitorActive || monitorSections.length === 0) return
+    const interval = window.setInterval(() => {
+      setMonitorSectionElapsed((elapsed) => {
+        if (elapsed + 1 >= MONITOR_SECTION_DURATION_S) {
+          setMonitorSectionIndex((i) => (i + 1) % monitorSections.length)
+          return 0
+        }
+        return elapsed + 1
+      })
+    }, 1000)
+    return () => window.clearInterval(interval)
+  }, [monitorActive, monitorSections.length])
+
+  // Scroll suave até a seção ativa (e realinhamento ao recuperar foco da aba).
+  useEffect(() => {
+    if (!monitorActive) return
+    const scrollToSection = () => {
+      const container = monitorSectionsRef.current
+      if (!container) return
+      const sectionId = monitorSections[monitorSectionIndex]
+      const el = container.querySelector<HTMLElement>(`[data-monitor-section="${sectionId}"]`)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+    scrollToSection()
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') scrollToSection()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [monitorActive, monitorSectionIndex, monitorSections])
+
+  // Título da aba enquanto o modo monitor está ativo.
+  useEffect(() => {
+    if (!monitorActive) return
+    const originalTitle = document.title
+    document.title = 'Blink Biotech — Inteligência Comercial (Monitor)'
+    return () => {
+      document.title = originalTitle
+    }
+  }, [monitorActive])
 
   useRealtimeData('dashboard_preferences', refreshPreferences)
 
@@ -520,6 +596,33 @@ export default function Index() {
 
   const isExportDisabled = exportableRows.length === 0 || isExportingCSV
 
+  if (monitorActive) {
+    return (
+      <div className="dashboard-blink-theme space-y-4 animate-fade-in p-1 rounded-[12px]">
+        <MonitorChrome
+          sections={monitorSections}
+          sectionIndex={monitorSectionIndex}
+          sectionProgress={monitorSectionElapsed / MONITOR_SECTION_DURATION_S}
+        >
+          {isSyncError && (
+            <SyncErrorBanner message="Falha ao atualizar os dados." onRetry={refetchSync} />
+          )}
+          {viewMode === 'geographic' ? (
+            <GeographicOverview />
+          ) : (
+            <div ref={monitorSectionsRef} className="flex flex-col gap-6">
+              {monitorSections.map((blockId) => (
+                <div key={blockId} data-monitor-section={blockId}>
+                  {renderBlock(blockId)}
+                </div>
+              ))}
+            </div>
+          )}
+        </MonitorChrome>
+      </div>
+    )
+  }
+
   return (
     <div className="dashboard-blink-theme space-y-4 animate-fade-in pb-10 p-4 md:p-6 rounded-[12px] print:m-0 print:p-0 print:space-y-8">
       {/* Banner de erro padronizado para refreshes */}
@@ -674,6 +777,13 @@ export default function Index() {
             className="gap-2 shadow-sm h-9 px-3 text-xs bg-[#232329] border-[#3A3A42] text-white hover:bg-[#3A3A42] rounded-[12px]"
           >
             {integrationLoading ? 'Testando...' : 'Testar'}
+          </Button>
+
+          <Button
+            onClick={enterMonitorMode}
+            className="gap-2 shadow-sm h-9 px-3 text-xs rounded-[12px] bg-[#E5B64E] hover:bg-[#d4a643] text-[#1F1F1F] font-semibold"
+          >
+            <MonitorIcon className="w-4 h-4" /> Modo Monitor
           </Button>
         </div>
       </div>
