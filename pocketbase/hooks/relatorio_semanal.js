@@ -2,7 +2,7 @@
 // Rota de leitura para automação externa: GET /backend/v1/relatorio-semanal
 // Autenticação: header X-Report-Secret comparado a $secrets.get('RELATORIO_SEMANAL_SECRET').
 // Falha fechada: sem segredo configurado, a rota responde 500 e não entrega nada.
-// Não altera dados: apenas lê faturamento, metas e pedidos_carteira.
+// Não altera dados: apenas lê faturamento, metas, pedidos_carteira e equipe.
 // IMPORTANTE: todo o código vive DENTRO do callback — o JSVM do PocketBase não
 // compartilha funções de topo com os callbacks.
 routerAdd('GET', '/backend/v1/relatorio-semanal', (e) => {
@@ -338,7 +338,34 @@ routerAdd('GET', '/backend/v1/relatorio-semanal', (e) => {
     destaques.push('Família líder: ' + familias[0].familia + ' (R$ ' + familias[0].valor_brl + ').')
   }
 
+  // Diagnóstico de dados: distingue "sem movimento no período" de "base vazia".
+  var diagnostico = {
+    faturamento_total: 0,
+    metas_total: 0,
+    carteira_total: 0,
+    equipe_total: 0,
+    ultimo_periodo: null,
+  }
+  try {
+    diagnostico.faturamento_total = $app.countRecords('faturamento')
+    diagnostico.metas_total = $app.countRecords('metas')
+    diagnostico.carteira_total = $app.countRecords('pedidos_carteira')
+    diagnostico.equipe_total = $app.countRecords('equipe')
+  } catch (err) {}
+  try {
+    var ultimos = $app.findRecordsByFilter('faturamento', '1=1', '-data_documento', 1, 0)
+    if (ultimos.length > 0) {
+      diagnostico.ultimo_periodo = {
+        ano: num(ultimos[0], 'ano'),
+        mes: num(ultimos[0], 'mes'),
+        semana_iso: num(ultimos[0], 'semana_iso'),
+        data_documento: str(ultimos[0], 'data_documento'),
+      }
+    }
+  } catch (err) {}
+
   return e.json(200, {
+    diagnostico: diagnostico,
     periodo: {
       ano: alvo.ano,
       semana_iso: alvo.semana,
