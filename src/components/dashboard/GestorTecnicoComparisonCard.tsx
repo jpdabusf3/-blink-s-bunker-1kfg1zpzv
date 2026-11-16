@@ -24,6 +24,8 @@ export function GestorTecnicoComparisonCard() {
   }, [loadData])
   useRealtimeData('metas', loadData)
   useRealtimeData('historico_vendas', loadData)
+  useRealtimeData('gestao_tecnica', loadData)
+  useRealtimeData('factories', loadData)
 
   if (loading)
     return (

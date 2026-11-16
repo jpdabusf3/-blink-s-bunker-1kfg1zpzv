@@ -34,7 +34,15 @@ export function ConsolidatedDashboard({
     isError,
     refetch: loadData,
   } = useRealtimeData<ConsolidatedData>({
-    entities: ['metas', 'historico_vendas', 'factories', 'faturamento'],
+    entities: [
+      'metas',
+      'historico_vendas',
+      'factories',
+      'faturamento',
+      'gestao_tecnica',
+      'notas_fiscais',
+      'nf_itens',
+    ],
     fetcher: async () => await fetchConsolidatedData(),
   })
 

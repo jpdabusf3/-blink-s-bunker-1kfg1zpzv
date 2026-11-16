@@ -42,6 +42,9 @@ export function ExecutiveDashboardCard() {
   useRealtimeData('factories', () => {
     loadData()
   })
+  useRealtimeData('gestao_tecnica', () => {
+    loadData()
+  })
 
   const kpis = useMemo(() => {
     const funnelFactories = factories.filter((f) => FUNNEL_STAGES_PERMITIDOS.has(f.funnelStage))

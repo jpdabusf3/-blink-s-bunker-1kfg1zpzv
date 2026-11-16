@@ -444,9 +444,22 @@ export function RealtimeDataProvider({ children }: { children: ReactNode }) {
       })
     }
 
+    // Revalidação ao retornar o foco para a aba (garante dados frescos mesmo sem SSE)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && isAuthenticated && !authLoading) {
+        emitRealtimeEvent({
+          collection: 'all',
+          action: 'sync',
+          source: 'manual',
+          timestamp: Date.now(),
+        })
+      }
+    }
+
     if (typeof window !== 'undefined') {
       window.addEventListener('online', handleOnline)
       window.addEventListener('offline', handleOffline)
+      window.addEventListener('visibilitychange', handleVisibility)
       window.addEventListener('blink:datasync', handleLocalSyncEvent)
     }
 
@@ -472,6 +485,7 @@ export function RealtimeDataProvider({ children }: { children: ReactNode }) {
       if (typeof window !== 'undefined') {
         window.removeEventListener('online', handleOnline)
         window.removeEventListener('offline', handleOffline)
+        window.removeEventListener('visibilitychange', handleVisibility)
         window.removeEventListener('blink:datasync', handleLocalSyncEvent)
       }
     }
