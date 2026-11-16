@@ -1,5 +1,20 @@
 migrate(
   (app) => {
+    // Idempotência: a collection `notifications` já existe nesta base (criada fora do
+    // controle de migrações). Recriá-la faz o lote inteiro falhar com
+    // "Collection name must be unique". Se já existe, nada a fazer.
+    let existsByName = false
+    try {
+      app.findCollectionByNameOrId('notifications')
+      existsByName = true
+    } catch (_) {
+      existsByName = false
+    }
+    if (existsByName) {
+      console.log('[0006] collection notifications já existe — nada a criar.')
+      return
+    }
+
     const targetsCollection = app.findCollectionByNameOrId('targets')
 
     const collection = new Collection({
@@ -48,7 +63,9 @@ migrate(
     app.save(collection)
   },
   (app) => {
-    const collection = app.findCollectionByNameOrId('notifications')
-    app.delete(collection)
+    // No-op de propósito: esta migração agora apenas garante a existência da collection
+    // quando ela ainda não existe. Apagar `notifications` no rollback destruiria dados
+    // reais da aplicação.
+    console.log('[0006] rollback ignorado (collection gerenciada fora desta migração).')
   },
 )

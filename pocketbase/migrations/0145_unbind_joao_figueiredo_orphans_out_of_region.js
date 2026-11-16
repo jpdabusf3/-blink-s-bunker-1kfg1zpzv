@@ -1,36 +1,37 @@
 /// <reference path="../pb_data/types.d.ts" />
 
 /**
- * Migração 0145: Desvincula de João Figueiredo os clientes SEM VENDEDOR ATRIBUÍDO
- * localizados no Sudeste/Sul.
+ * Migração 0145: Remove da carteira de João Figueiredo os clientes SEM VENDEDOR ATRIBUÍDO
+ * que estão FORA da região de atuação dele.
  *
- * Contexto (o que as 0142 e 0144 não resolveram):
- * - A tela Cadastro exibe "Não atribuído" quando `vendedor_id` está vazio (o campo
- *   `vendedor_name` nem existe na collection).
- * - MAS o filtro de vendedor (src/lib/vendedorFilterHelper.ts) casa por QUALQUER um dos
- *   campos: vendedor_id, salesOwner, gestor_tecnico_id e suas expansões. Como `salesOwner`
- *   ainda aponta para o usuário do João (xhl48ye8ayb8fbu), o cliente aparece na lista dele.
- * - A 0144 limpou `salesOwner` apenas quando a UF era determinável. Os registros sem
- *   `state` E sem `city` ficaram "indeterminados" e mantiveram o vínculo — eram eles que
- *   continuavam aparecendo.
+ * Diagnóstico (por que as 0142/0144 não bastaram):
+ * - A tela Cadastro mostra "Não atribuído" quando `vendedor_id` está vazio. Só que essa
+ *   collection NÃO tem campo `vendedor_name` — o rótulo vem de `vendedor_id`/expansões.
+ * - O filtro de vendedor (src/lib/vendedorFilterHelper.ts) casa por QUALQUER um destes:
+ *   vendedor_id, salesOwner, gestor_tecnico_id e suas expansões. Como `salesOwner` seguia
+ *   apontando para o usuário do João (xhl48ye8ayb8fbu), o cliente continuava listado nele.
+ * - A 0144 limpou `salesOwner` apenas quando a UF era determinável por state/city/endereço.
+ *   Os registros sem `state`, sem `city` e com endereço vazio ficaram "indeterminados" e
+ *   mantiveram o vínculo. Além disso ela cobria só a UF, não o DDD.
  *
  * Regras desta migração:
- * - Alvo: `factories` não deletadas, com `salesOwner` de João (usuário xhl48ye8ayb8fbu),
- *   `vendedor_id` VAZIO (ou seja, "Não atribuído" na tela) e UF no Sudeste/Sul.
- * - UF deduzida em cascata: state (sigla ou nome) → city → DDD do telefone/contato.
- * - UF indeterminada: NADA é alterado (o registro é mantido, apenas contado).
- * - UF fora do Sudeste/Sul: nada é alterado.
- * - Limpa SOMENTE `salesOwner`, com auditoria em `entity_change_logs`.
+ * - Alvo: `factories` não deletadas, `salesOwner` = usuário do João E `vendedor_id` vazio
+ *   ("Não atribuído" na tela).
+ * - UF deduzida em cascata: state (sigla ou nome) → city → standardized_address →
+ *   DDD do telefone/contato.
+ * - UF fora da região [MT, PA, RO, AC, AM, TO, MA, AP, RR]: limpa SOMENTE `salesOwner`,
+ *   com auditoria em `entity_change_logs`.
+ * - UF dentro da região: intacto. UF indeterminada: intacto (apenas contado).
  * - Idempotente.
  */
 
 migrate(
   (app) => {
-    var SE_SUL = ['SP', 'PR', 'RS', 'SC', 'MG', 'ES', 'RJ']
-    var SE_SUL_INDEX = {}
-    for (var si = 0; si < SE_SUL.length; si++) SE_SUL_INDEX[SE_SUL[si]] = true
+    var KEEP_UFS = ['MT', 'PA', 'RO', 'AC', 'AM', 'TO', 'MA', 'AP', 'RR']
+    var KEEP_INDEX = {}
+    for (var ki = 0; ki < KEEP_UFS.length; ki++) KEEP_INDEX[KEEP_UFS[ki]] = true
 
-    var SALES_OWNER_ID = 'xhl48ye8ayb8fbu' // usuário login do João (João Pedro / João Figueiredo)
+    var SALES_OWNER_ID = 'xhl48ye8ayb8fbu' // login do João (João Pedro / João Figueiredo)
     var SALES_OWNER_LABEL = 'xhl48ye8ayb8fbu (João Figueiredo)'
 
     var STATE_NAME_TO_UF = {
@@ -126,7 +127,7 @@ migrate(
       return ''
     }
 
-    // DDD -> UF (apenas para o Sudeste/Sul, que é o escopo desta migração)
+    // DDD -> UF (cobre todo o país; a região de manutenção é decidida depois)
     var DDD_TO_UF = {
       11: 'SP',
       12: 'SP',
@@ -162,6 +163,39 @@ migrate(
       53: 'RS',
       54: 'RS',
       55: 'RS',
+      61: 'DF',
+      62: 'GO',
+      63: 'TO',
+      64: 'GO',
+      65: 'MT',
+      66: 'MT',
+      67: 'MS',
+      68: 'AC',
+      69: 'RO',
+      71: 'BA',
+      73: 'BA',
+      74: 'BA',
+      75: 'BA',
+      77: 'BA',
+      79: 'SE',
+      81: 'PE',
+      82: 'AL',
+      83: 'PB',
+      84: 'RN',
+      85: 'CE',
+      86: 'PI',
+      87: 'PE',
+      88: 'CE',
+      89: 'PI',
+      91: 'PA',
+      92: 'AM',
+      93: 'PA',
+      94: 'PA',
+      95: 'RR',
+      96: 'AP',
+      97: 'AM',
+      98: 'MA',
+      99: 'MA',
     }
 
     function digitsOnly(v) {
@@ -176,11 +210,10 @@ migrate(
 
     function ufFromPhone(rec) {
       var fields = ['contato', 'contactPhone', 'telefone', 'contactName']
-      for (var i = 0; i < fields.length; i++) {
-        var raw = String(rec.getString(fields[i]) || '')
+      for (var f = 0; f < fields.length; f++) {
+        var raw = String(rec.getString(fields[f]) || '')
         if (!raw || raw.indexOf('@') !== -1) continue
         var d = digitsOnly(raw)
-        // Remove código do país quando presente
         if ((d.length === 12 || d.length === 13) && d.substring(0, 2) === '55') d = d.substring(2)
         if (d.length < 10) continue
         var ddd = parseInt(d.substring(0, 2), 10)
@@ -193,7 +226,7 @@ migrate(
       var st = String(rec.getString('state') || '').trim()
       if (st) {
         var up = st.toUpperCase()
-        if (SE_SUL_INDEX[up]) return up
+        if (KEEP_INDEX[up]) return up
         var byName = STATE_NAME_TO_UF[stripAccents(st)]
         if (byName) return byName
         var found = ufFromText(st)
@@ -204,6 +237,25 @@ migrate(
       var byAddr = ufFromText(rec.getString('standardized_address'))
       if (byAddr) return byAddr
       return ufFromPhone(rec)
+    }
+
+    // Relação pode vir como string ou array; normaliza para o primeiro id.
+    function relFirst(v) {
+      if (v === null || v === undefined) return ''
+      if (typeof v === 'string') return v
+      try {
+        if (typeof v.length === 'number') return v.length > 0 ? String(v[0]) : ''
+      } catch (_) {}
+      return String(v)
+    }
+
+    function hasVendedor(rec) {
+      var a = relFirst(rec.get('vendedor_id'))
+      if (a) return true
+      try {
+        if (String(rec.getString('vendedor_id') || '')) return true
+      } catch (_) {}
+      return false
     }
 
     var logCol = null
@@ -225,7 +277,7 @@ migrate(
     var totalScanned = 0
     var alreadyAssigned = 0
     var unbound = 0
-    var keptOutside = 0
+    var keptInRegion = 0
     var indeterminate = 0
     var unboundByUf = {}
     var keptByUf = {}
@@ -233,8 +285,7 @@ migrate(
     records.forEach((rec) => {
       totalScanned++
 
-      // Só mexe em quem está "Não atribuído" (sem vendedor_id)
-      if (String(rec.getString('vendedor_id') || '').trim() !== '') {
+      if (hasVendedor(rec)) {
         alreadyAssigned++
         return
       }
@@ -246,8 +297,8 @@ migrate(
         return
       }
 
-      if (!SE_SUL_INDEX[uf]) {
-        keptOutside++
+      if (KEEP_INDEX[uf]) {
+        keptInRegion++
         keptByUf[uf] = (keptByUf[uf] || 0) + 1
         return
       }
@@ -272,7 +323,7 @@ migrate(
             'change_summary',
             'Desvinculação automática: cliente SEM vendedor atribuído, UF ' +
               ufFinal +
-              ' (Sudeste/Sul), removido da carteira de João Figueiredo.',
+              ' fora da região de manutenção [MT, PA, RO, AC, AM, TO, MA, AP, RR].',
           )
           txApp.save(log)
         }
@@ -287,10 +338,10 @@ migrate(
         totalScanned +
         ' desvinculados=' +
         unbound +
-        ' (já tinham vendedor=' +
+        ' (com vendedor=' +
         alreadyAssigned +
-        ', fora do SE/Sul=' +
-        keptOutside +
+        ', na região=' +
+        keptInRegion +
         ', UF indeterminada=' +
         indeterminate +
         ')',
@@ -299,7 +350,7 @@ migrate(
     )
   },
   (app) => {
-    // Rollback no-op: a lista completa dos registros alterados está em entity_change_logs
+    // Rollback no-op: os registros alterados estão em entity_change_logs
     // (user_name = "Sistema (Migração 0145)").
   },
 )
