@@ -50,6 +50,17 @@ routerAdd('GET', '/backend/v1/relatorio-semanal', (e) => {
     return v == null ? '' : String(v)
   }
 
+  // Valores que o CRM usa como "não informado" — não viram grupo nem destaque.
+  function ehPlaceholder(v) {
+    var s = String(v == null ? '' : v)
+      .trim()
+      .toLowerCase()
+    if (s === '') return true
+    if (s === '—' || s === '-' || s === 'n/d' || s === 'na' || s === 'null') return true
+    if (s === 'não atribuído' || s === 'nao atribuido' || s === 'sem vendedor') return true
+    return false
+  }
+
   function ordenarMapa(mapa, rotulo) {
     var arr = []
     for (var k in mapa) {
@@ -95,6 +106,7 @@ routerAdd('GET', '/backend/v1/relatorio-semanal', (e) => {
     var porFamilia = {}
     var porVendedor = {}
     var notas = {}
+    var vendedorAtribuido = false
 
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i]
@@ -105,11 +117,14 @@ routerAdd('GET', '/backend/v1/relatorio-semanal', (e) => {
       var cliente = str(r, 'cliente_nome') || str(r, 'cliente_codigo') || 'Outros'
       porCliente[cliente] = (porCliente[cliente] || 0) + brl
 
-      var familia = str(r, 'familia_produto') || 'Outros'
-      porFamilia[familia] = (porFamilia[familia] || 0) + brl
+      var familia = str(r, 'familia_produto').trim()
+      if (!ehPlaceholder(familia)) porFamilia[familia] = (porFamilia[familia] || 0) + brl
 
-      var vendedor = str(r, 'vendedor') || 'Não atribuído'
-      porVendedor[vendedor] = (porVendedor[vendedor] || 0) + brl
+      var vendedor = str(r, 'vendedor').trim()
+      if (!ehPlaceholder(vendedor)) {
+        porVendedor[vendedor] = (porVendedor[vendedor] || 0) + brl
+        vendedorAtribuido = true
+      }
 
       notas[str(r, 'data_documento') + '_' + str(r, 'cliente_codigo')] = true
     }
@@ -123,6 +138,7 @@ routerAdd('GET', '/backend/v1/relatorio-semanal', (e) => {
       porCliente: porCliente,
       porFamilia: porFamilia,
       porVendedor: porVendedor,
+      vendedorAtribuido: vendedorAtribuido,
     }
   }
 
@@ -155,11 +171,10 @@ routerAdd('GET', '/backend/v1/relatorio-semanal', (e) => {
   var atual = lerSemana(alvo.ano, alvo.semana)
   var anteriorDados = lerSemana(prevAno, prevSemana)
 
-  var variacao = 0
+  // Sem base de comparação não existe variação: null, nunca "100%" inventado.
+  var variacao = null
   if (anteriorDados.totalBrl > 0) {
     variacao = round2(((atual.totalBrl - anteriorDados.totalBrl) / anteriorDados.totalBrl) * 100)
-  } else if (atual.totalBrl > 0) {
-    variacao = 100
   }
 
   // Meta do mês corrente da semana alvo.
@@ -184,11 +199,19 @@ routerAdd('GET', '/backend/v1/relatorio-semanal', (e) => {
     metaMes = 0
   }
 
+  // Realizado do mês: ano/mes do faturamento não são confiáveis (há registros com
+  // mês errado), então usa a janela de datas do mês.
+  var inicioMes = new Date(Date.UTC(anoRef, mesRef - 1, 1))
+  var fimMes = new Date(Date.UTC(anoRef, mesRef, 1))
   var realizadoMes = 0
   try {
     var mesRows = $app.findRecordsByFilter(
       'faturamento',
-      'ano = ' + anoRef + ' && mes = ' + mesRef,
+      "data_documento >= '" +
+        fmtDateUTC(inicioMes) +
+        " 00:00:00' && data_documento < '" +
+        fmtDateUTC(fimMes) +
+        " 00:00:00'",
       '',
       20000,
       0,
@@ -236,7 +259,7 @@ routerAdd('GET', '/backend/v1/relatorio-semanal', (e) => {
     if (!Object.prototype.hasOwnProperty.call(nomesVendedores, nome)) continue
     var hoje = atual.porVendedor[nome] || 0
     var antes = anteriorDados.porVendedor[nome] || 0
-    var varVend = antes > 0 ? round2(((hoje - antes) / antes) * 100) : hoje > 0 ? 100 : 0
+    var varVend = antes > 0 ? round2(((hoje - antes) / antes) * 100) : null
     vendedores.push({
       vendedor: nome,
       valor_brl: round2(hoje),
@@ -250,6 +273,18 @@ routerAdd('GET', '/backend/v1/relatorio-semanal', (e) => {
 
   // Alertas
   var alertas = []
+  if (atual.linhas > 0 && anteriorDados.linhas === 0) {
+    alertas.push({
+      tipo: 'sem_base_comparacao',
+      gravidade: 'baixa',
+      mensagem:
+        'A semana anterior (' +
+        prevAno +
+        '-W' +
+        pad2(prevSemana) +
+        ') não tem faturamento registrado, então não há comparativo.',
+    })
+  }
   if (atual.linhas === 0) {
     alertas.push({
       tipo: 'sem_dados',
@@ -258,7 +293,7 @@ routerAdd('GET', '/backend/v1/relatorio-semanal', (e) => {
         'Nenhum faturamento registrado na semana ' + alvo.ano + '-W' + pad2(alvo.semana) + '.',
     })
   }
-  if (anteriorDados.totalBrl > 0 && variacao <= -10) {
+  if (variacao !== null && variacao <= -10) {
     alertas.push({
       tipo: 'queda_semana',
       gravidade: variacao <= -25 ? 'alta' : 'media',
@@ -284,7 +319,11 @@ routerAdd('GET', '/backend/v1/relatorio-semanal', (e) => {
           vd.semana_anterior_brl +
           ').',
       })
-    } else if (vd.variacao_percentual <= -30 && vd.semana_anterior_brl > 0) {
+    } else if (
+      vd.variacao_percentual !== null &&
+      vd.variacao_percentual <= -30 &&
+      vd.semana_anterior_brl > 0
+    ) {
       alertas.push({
         tipo: 'vendedor_queda',
         gravidade: 'media',
@@ -320,7 +359,7 @@ routerAdd('GET', '/backend/v1/relatorio-semanal', (e) => {
 
   // Destaques
   var destaques = []
-  if (variacao > 0 && anteriorDados.totalBrl > 0) {
+  if (variacao !== null && variacao > 0) {
     destaques.push('Semana cresceu ' + variacao + '% contra a anterior.')
   }
   if (topClientes.length > 0) {
@@ -328,7 +367,7 @@ routerAdd('GET', '/backend/v1/relatorio-semanal', (e) => {
       'Maior cliente: ' + topClientes[0].cliente + ' (R$ ' + topClientes[0].valor_brl + ').',
     )
   }
-  if (vendedores.length > 0 && vendedores[0].valor_brl > 0) {
+  if (atual.vendedorAtribuido && vendedores.length > 0 && vendedores[0].valor_brl > 0) {
     destaques.push(
       'Destaque do time: ' + vendedores[0].vendedor + ' (R$ ' + vendedores[0].valor_brl + ').',
     )
