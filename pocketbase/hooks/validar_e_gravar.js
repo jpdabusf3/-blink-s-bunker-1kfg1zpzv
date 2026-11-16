@@ -4,20 +4,26 @@ routerAdd(
   (e) => {
     try {
       var userId = e.auth && e.auth.id
-      if (!userId) return e.unauthorizedError('auth required')
+      var isInternal = false
+      try {
+        isInternal = e.hasSuperuserAuth() === true
+      } catch (_) {
+        isInternal = false
+      }
 
       var body = e.requestInfo().body || {}
 
+      // De onde vem a mensagem: "texto" = digitada no WhatsApp (áudio segue como "audio")
       var VALID_TIPOS = ['visita', 'ligacao', 'proposta', 'follow_up', 'reuniao', 'pedido', 'outro']
       var VALID_ETAPAS = ['prospeccao', 'qualificacao', 'proposta', 'fechamento', 'pos_venda']
-      var VALID_ORIGENS = ['audio', 'manual', 'excel']
+      var VALID_ORIGENS = ['audio', 'manual', 'excel', 'texto']
 
       var origem = body.origem || ''
       if (VALID_ORIGENS.indexOf(origem) === -1)
         throw new BadRequestError('origem invalido', {
           origem: new ValidationError(
             'validation_invalid_value',
-            'origem deve ser: audio, manual ou excel',
+            'origem deve ser: audio, texto, manual ou excel',
           ),
         })
 
@@ -86,6 +92,30 @@ routerAdd(
             ),
           })
         }
+      }
+
+      // Caminho interno (robô de WhatsApp): a requisição é feita pelo próprio backend com
+      // token de superusuário e traz o vendedor_id resolvido pelo telefone do remetente.
+      // Sem usuário autenticado, valida o id informado e usa a identidade dele.
+      if (!userId || !e.auth) {
+        if (!isInternal) return e.unauthorizedError('auth required')
+        if (!vendedorId) {
+          throw new BadRequestError('vendedor_id obrigatorio na chamada interna', {
+            vendedor_id: new ValidationError('validation_required', 'vendedor_id obrigatorio'),
+          })
+        }
+        try {
+          var vendedorRec = $app.findRecordById('users', vendedorId)
+          vendedorNome = vendedorNome || vendedorRec.getString('name')
+        } catch (_) {
+          throw new BadRequestError('vendedor nao encontrado', {
+            vendedor_id: new ValidationError(
+              'validation_not_found',
+              'Vendedor inexistente: ' + vendedorId,
+            ),
+          })
+        }
+        userId = vendedorId
       }
 
       var valorEstimado = typeof body.valor_estimado === 'number' ? body.valor_estimado : 0
