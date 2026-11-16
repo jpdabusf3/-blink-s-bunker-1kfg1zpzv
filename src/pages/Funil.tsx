@@ -39,6 +39,7 @@ import { FunnelCardActionBar } from '@/components/funil/FunnelCardActionBar'
 import { FunnelCardContextMenuWrapper } from '@/components/funil/FunnelCardContextMenuWrapper'
 import { QuickCallDialog } from '@/components/funil/QuickCallDialog'
 import { FilterMultiSelect } from '@/components/funil/FilterMultiSelect'
+import { getStageTheme } from '@/components/funil/stageTheme'
 
 const STAGES: FunnelStage[] = [
   'Lead',
@@ -527,6 +528,7 @@ export default function Funil() {
         <div className="flex-1 overflow-x-auto pb-4 custom-scrollbar">
           <div className="flex gap-4 min-w-max h-full items-stretch">
             {STAGES.map((stage) => {
+              const stageTheme = getStageTheme(stage)
               const items = factories.filter((f) => f.funnelStage === stage)
               const totalStageValue = items.reduce((s, f) => s + f.potentialValue, 0)
 
@@ -555,21 +557,34 @@ export default function Funil() {
                     e.preventDefault()
                     void handleDropOnStage(stage)
                   }}
-                  className={`w-80 bg-muted/40 border rounded-xl flex flex-col max-h-full transition-all duration-200 ${
+                  className={`w-[19rem] sm:w-80 bg-muted/40 border rounded-xl flex flex-col max-h-full overflow-hidden transition-all duration-200 ${
                     isTargetColumn
                       ? 'border-primary ring-2 ring-primary/30 bg-primary/5 shadow-md'
                       : 'border-border'
                   }`}
                 >
-                  <div className="p-3 border-b bg-card/50 rounded-t-xl sticky top-0 z-10">
-                    <div className="flex justify-between items-center mb-1">
-                      <h3 className="font-semibold text-sm text-foreground">{stage}</h3>
-                      <Badge variant="secondary" className="font-mono">
+                  {/* Faixa de identidade do estágio (apenas apresentação) */}
+                  <div className={`h-1 w-full shrink-0 rounded-t-xl ${stageTheme.topBar}`} />
+                  <div className="p-3 border-b bg-card/60 sticky top-0 z-10">
+                    <div className="flex justify-between items-center gap-2">
+                      <h3 className="font-semibold text-[13px] tracking-tight text-foreground flex items-center gap-1.5 min-w-0">
+                        <span
+                          className={`inline-block w-2 h-2 rounded-full shrink-0 ${stageTheme.dot}`}
+                          aria-hidden="true"
+                        />
+                        <span className="truncate">{stage}</span>
+                      </h3>
+                      <Badge variant="secondary" className="font-mono shrink-0">
                         {items.length}
                       </Badge>
                     </div>
-                    <div className="text-xs text-muted-foreground font-medium">
-                      {formatCurrency(totalStageValue)}
+                    <div className="mt-1.5 flex items-baseline justify-between gap-2">
+                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground/80 font-medium">
+                        Potencial
+                      </span>
+                      <span className="text-sm font-bold tabular-nums" style={{ color: '#E5B64E' }}>
+                        {formatCurrency(totalStageValue)}
+                      </span>
                     </div>
                   </div>
 
@@ -581,6 +596,20 @@ export default function Funil() {
                       const nextStep = f.suggested_approach || f.notes
                       const isBeingDragged = draggingFactoryId === f.id
                       const isUpdating = updatingFactoryIds.has(f.id)
+                      // Apresentação: dias desde a última interação (dado já carregado)
+                      const daysSinceInteraction = (() => {
+                        const t = new Date(f.lastInteraction).getTime()
+                        if (isNaN(t)) return null
+                        return Math.floor((Date.now() - t) / 86400000)
+                      })()
+                      const daysSinceLabel =
+                        daysSinceInteraction === null
+                          ? null
+                          : daysSinceInteraction <= 0
+                            ? 'hoje'
+                            : daysSinceInteraction === 1
+                              ? '1 dia'
+                              : `${daysSinceInteraction} dias`
 
                       return (
                         <FunnelCardContextMenuWrapper
@@ -635,20 +664,23 @@ export default function Funil() {
                                 openDrawer(f.id, e.currentTarget)
                               }
                             }}
-                            className={`relative group p-3 shadow-subtle hover:shadow-md transition-all duration-300 ease-in-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary border-l-4 ${
+                            className={`relative group p-3 shadow-subtle hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-in-out cursor-grab active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary hover:ring-1 hover:ring-[#E5B64E]/40 rounded-lg ${stageTheme.cardRing} ${
                               f.priority === 'High'
-                                ? 'border-l-emerald-500'
+                                ? 'border-l-4 border-l-emerald-500'
                                 : f.priority === 'Low'
-                                  ? 'border-l-destructive'
-                                  : 'border-l-amber-500'
+                                  ? 'border-l-4 border-l-destructive'
+                                  : 'border-l-4 border-l-amber-500'
                             } ${isBeingDragged ? 'opacity-40 scale-[0.98]' : ''} ${
                               isUpdating ? 'opacity-70 pointer-events-none cursor-wait' : ''
-                            }`}
+                            } ${isBeingDragged ? 'shadow-lg ring-2 ring-[#E5B64E]/50' : ''}`}
                           >
                             <div className="flex justify-between items-start gap-1">
                               <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="font-bold text-sm leading-tight line-clamp-2">
+                                <div className="flex items-start gap-1.5">
+                                  <span
+                                    className="font-bold text-[13px] leading-snug line-clamp-2"
+                                    title={f.name}
+                                  >
                                     {f.name}
                                   </span>
                                   {isUpdating && (
@@ -666,7 +698,10 @@ export default function Funil() {
                                     />
                                   )}
                                 </div>
-                                <div className="text-[11px] text-muted-foreground mt-0.5">
+                                <div
+                                  className="text-[11px] text-muted-foreground mt-1 truncate"
+                                  title={[f.city, f.profile_type].filter(Boolean).join(' • ')}
+                                >
                                   {[f.city, f.profile_type].filter(Boolean).join(' • ')}
                                 </div>
                               </div>
@@ -678,8 +713,8 @@ export default function Funil() {
                             </div>
 
                             <div className="flex items-center justify-between mt-2 pt-2 border-t text-xs">
-                              <span className="text-muted-foreground">Potencial:</span>
-                              <span className="text-primary font-bold">
+                              <span className="text-muted-foreground">Potencial</span>
+                              <span className="text-primary font-bold tabular-nums">
                                 {formatCurrency(f.potentialValue)}
                               </span>
                             </div>
@@ -695,7 +730,9 @@ export default function Funil() {
                             {f.salesOwnerName && (
                               <div className="mt-2 text-[10px] text-muted-foreground flex items-center gap-1">
                                 <User className="w-3 h-3 text-primary" />
-                                <span className="truncate">Gestor: {f.salesOwnerName}</span>
+                                <span className="truncate" title={f.salesOwnerName}>
+                                  {f.salesOwnerName}
+                                </span>
                               </div>
                             )}
 
@@ -709,11 +746,24 @@ export default function Funil() {
                             )}
 
                             <div className="mt-2 pt-2 border-t space-y-1">
-                              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                                <Clock className="w-3 h-3" />
-                                <span>
-                                  Contato: {new Date(f.lastInteraction).toLocaleDateString('pt-BR')}
+                              <div className="flex items-center justify-between gap-1 text-[10px] text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  <span>
+                                    Contato:{' '}
+                                    {new Date(f.lastInteraction).toLocaleDateString('pt-BR')}
+                                  </span>
                                 </span>
+                                {daysSinceLabel && (
+                                  <span
+                                    className={`font-medium tabular-nums ${
+                                      stale ? 'text-amber-500' : ''
+                                    }`}
+                                    title="Dias desde a última interação"
+                                  >
+                                    {daysSinceLabel}
+                                  </span>
+                                )}
                               </div>
                               {f.deadline && (
                                 <div

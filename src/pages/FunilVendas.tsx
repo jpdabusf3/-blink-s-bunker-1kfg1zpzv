@@ -633,15 +633,22 @@ export default function FunilVendas() {
                   key={status}
                   className="w-80 bg-muted/40 border rounded-xl flex flex-col max-h-full"
                 >
-                  <div className="p-3 border-b bg-card/50 rounded-t-xl sticky top-0 z-10">
-                    <div className="flex justify-between items-center mb-1">
-                      <h3 className="font-semibold text-sm text-foreground">{status}</h3>
-                      <Badge variant="secondary" className="font-mono">
+                  <div className="p-3 border-b bg-card/60 sticky top-0 z-10">
+                    <div className="flex justify-between items-center gap-2">
+                      <h3 className="font-semibold text-[13px] tracking-tight text-foreground truncate">
+                        {status}
+                      </h3>
+                      <Badge variant="secondary" className="font-mono shrink-0">
                         {items.length}
                       </Badge>
                     </div>
-                    <div className="text-xs text-muted-foreground font-medium">
-                      {formatCurrency(totalValue)}
+                    <div className="mt-1.5 flex items-baseline justify-between gap-2">
+                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground/80 font-medium">
+                        Valor médio
+                      </span>
+                      <span className="text-sm font-bold tabular-nums" style={{ color: '#E5B64E' }}>
+                        {formatCurrency(totalValue)}
+                      </span>
                     </div>
                   </div>
 
@@ -681,24 +688,30 @@ export default function FunilVendas() {
                             />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="font-bold text-sm leading-tight line-clamp-2">
+                            <div
+                              className="font-bold text-[13px] leading-snug line-clamp-2"
+                              title={f.name}
+                            >
                               {f.name}
                             </div>
                           </div>
                         </div>
-                        <div className="text-[11px] text-muted-foreground mt-0.5">
+                        <div
+                          className="text-[11px] text-muted-foreground mt-1 truncate"
+                          title={[f.city, f.animalSpecies].filter(Boolean).join(' • ')}
+                        >
                           {[f.city, f.animalSpecies].filter(Boolean).join(' • ')}
                         </div>
 
                         <div className="flex items-center justify-between mt-2 pt-2 border-t text-xs">
-                          <span className="text-muted-foreground">Valor Médio:</span>
-                          <span className="text-primary font-bold">
+                          <span className="text-muted-foreground">Valor Médio</span>
+                          <span className="text-primary font-bold tabular-nums">
                             {formatCurrency(f.valor_medio || 0)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between mt-1 text-xs">
-                          <span className="text-muted-foreground">Valor Atual:</span>
-                          <span className="font-semibold">
+                          <span className="text-muted-foreground">Valor Atual</span>
+                          <span className="font-semibold tabular-nums">
                             {formatCurrency(f.valor_atual || 0)}
                           </span>
                         </div>
