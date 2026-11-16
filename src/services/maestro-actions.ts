@@ -36,6 +36,7 @@ export type MaestroActionType =
   | 'create_task'
   | 'create_order'
   | 'generate_report'
+  | 'bulk_client_op'
 
 export interface MaestroActionDefinition {
   type: MaestroActionType
@@ -250,6 +251,38 @@ export const MAESTRO_ACTION_CATALOG: Record<MaestroActionType, MaestroActionDefi
       return `Gerar relatório comercial oficial da Blink para o período ${periodo}.`
     },
   },
+  bulk_client_op: {
+    type: 'bulk_client_op',
+    label: 'Operação em Lote sobre Clientes',
+    description:
+      'Atribui, desatribui ou transfere vendedor de um conjunto de clientes com filtro de UF ou segmento. Executada no backend, com confirmação prévia do usuário.',
+    requiredFields: ['op'],
+    optionalFields: [
+      'vendedor_id',
+      'vendedor_name',
+      'from_vendedor_id',
+      'states',
+      'exclude_states',
+      'segment',
+    ],
+    formatConfirmation: (payload) => {
+      const op = String(payload.op || '')
+      const opLabel =
+        op === 'unassign'
+          ? 'desvincular vendedor (ficar sem vendedor)'
+          : op === 'assign'
+            ? `atribuir vendedor ${payload.vendedor_name || payload.vendedor_id}`
+            : `transferir para o vendedor ${payload.vendedor_name || payload.vendedor_id}`
+      const estados =
+        Array.isArray(payload.states) && payload.states.length
+          ? `clientes nos estados ${payload.states.join(', ')}`
+          : Array.isArray(payload.exclude_states) && payload.exclude_states.length
+            ? `clientes FORA dos estados ${payload.exclude_states.join(', ')}`
+            : 'clientes filtrados'
+      const segmento = payload.segment ? ` do segmento ${payload.segment}` : ''
+      return `Operação em lote: ${opLabel} de ${estados}${segmento}.`
+    },
+  },
 }
 
 // ==========================================
@@ -373,6 +406,21 @@ function extractIntentFromObject(obj: Record<string, unknown>): MaestroActionInt
     }
   }
 
+  // Caso B2: Operação em lote sobre clientes (backend via pb_hooks)
+  if (
+    obj.tipo === 'bulk_client_op' ||
+    (obj.op && ['unassign', 'assign', 'transfer'].includes(String(obj.op)))
+  ) {
+    return {
+      action: 'bulk_client_op',
+      payload: obj,
+      summary:
+        typeof obj.summary === 'string'
+          ? obj.summary
+          : 'Operação em lote sobre clientes (atribuição/transferência de vendedor).',
+    }
+  }
+
   // Caso C: Reconhecimento por campos característicos
   if (
     obj.tipo === 'novo_cliente' ||
@@ -470,8 +518,87 @@ export async function executeMaestroAction(
       return await executeCreateOrderAction(payload)
     case 'generate_report':
       return await executeGenerateReportAction(payload)
+    case 'bulk_client_op':
+      return await executeBulkClientOpAction(payload)
     default:
       throw new Error(`Ação não reconhecida pelo sistema: ${(intent as any).action}`)
+  }
+}
+
+// ------------------------------------------
+// 4.10 Operação em Lote sobre Clientes (backend pb_hooks)
+// ------------------------------------------
+async function executeBulkClientOpAction(
+  payload: Record<string, unknown>,
+): Promise<MaestroActionResult> {
+  const op = String(payload.op || '').trim()
+  if (!['unassign', 'assign', 'transfer'].includes(op)) {
+    throw new Error(
+      `Tipo de operação em lote inválido: "${op}". Use "unassign", "assign" ou "transfer".`,
+    )
+  }
+
+  const body: Record<string, unknown> = { op }
+  if (Array.isArray(payload.states))
+    body.states = payload.states.map((s) => String(s).toUpperCase())
+  if (Array.isArray(payload.exclude_states))
+    body.exclude_states = payload.exclude_states.map((s) => String(s).toUpperCase())
+  if (payload.segment) body.segment = String(payload.segment)
+  if (payload.vendedor_id) body.vendedor_id = String(payload.vendedor_id)
+  if (payload.vendedor_name) body.vendedor_name = normalizeSellerName(String(payload.vendedor_name))
+  if (payload.from_vendedor_id) body.from_vendedor_id = String(payload.from_vendedor_id)
+  if (payload.confirm !== undefined) body.confirm = payload.confirm === true
+
+  const res = await pb.send<{
+    success: boolean
+    op: string
+    matched: number
+    affected: number
+    indeterminate_uf: number
+    per_uf: Record<string, number>
+    audit_written: number
+    dry_run?: boolean
+    needs_confirmation?: boolean
+    summary?: string
+    preview?: Array<{ id: string; name: string; uf: string }>
+    error?: string
+  }>('/backend/v1/maestro-bulk-client-op', {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+  if (!res.success) {
+    throw new Error(res.error || 'A operação em lote falhou no backend.')
+  }
+
+  notifyDataChanged('factories')
+  notifyDataChanged('factory_change_logs')
+
+  const opLabel =
+    op === 'unassign' ? 'Desvinculação' : op === 'assign' ? 'Atribuição' : 'Transferência'
+  const ufSummary = Object.keys(res.per_uf || {})
+    .sort()
+    .map((uf) => `${uf}: ${res.per_uf[uf]}`)
+    .join(', ')
+
+  let message = `${opLabel} em lote concluída: ${res.affected} cliente(s) afetado(s)`
+  if (res.indeterminate_uf > 0)
+    message += `, ${res.indeterminate_uf} com UF indeterminada (mantidos/ignorados)`
+  if (ufSummary) message += `. Por UF: ${ufSummary}`
+  message += '.'
+
+  return {
+    success: true,
+    message,
+    createdCount: op === 'assign' || op === 'transfer' ? res.affected : 0,
+    updatedCount: res.affected,
+    skippedCount: res.indeterminate_uf,
+    errorsCount: 0,
+    errors: [],
+    affectedCollection: 'factories',
+    navigationTab: '/cadastro',
+    navigationLabel: 'Ver Cadastro de Clientes',
   }
 }
 
