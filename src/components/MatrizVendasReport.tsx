@@ -141,7 +141,7 @@ export function MatrizVendasReport() {
   return (
     <div className="space-y-4">
       <Card className="shadow-subtle">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-primary" />
             Matriz de Vendas — Realizado 2026

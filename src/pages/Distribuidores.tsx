@@ -361,7 +361,7 @@ export default function DistribuidoresPage() {
           </Card>
 
           {/* Faturamento US$ */}
-          <Card className="border border-border/60 shadow-sm bg-card col-span-2 sm:col-span-1 hover:border-primary/40 transition-colors">
+          <Card className="border border-border/60 shadow-sm bg-card hover:border-primary/40 transition-colors">
             <CardContent className="p-4 space-y-1">
               <div className="flex items-center justify-between text-muted-foreground">
                 <span className="text-xs font-medium">Faturamento US$</span>

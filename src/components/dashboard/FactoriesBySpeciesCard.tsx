@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { normalizeArray } from '@/lib/utils'
-import { PieChart, Pie, Cell, Tooltip } from 'recharts'
+import { PieChart, Pie, Cell, Tooltip, Legend } from 'recharts'
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'
 import { useAppContext } from '@/store/AppContext'
 
@@ -59,22 +59,31 @@ export function FactoriesBySpeciesCard({
           config={{ value: { label: 'Fábricas', color: 'hsl(var(--primary))' } }}
           className="h-full w-full"
         >
-          <PieChart>
+          <PieChart margin={{ top: 4, right: 8, bottom: 4, left: 8 }}>
             <Pie
               data={data}
               cx="50%"
-              cy="50%"
-              innerRadius={60}
-              outerRadius={90}
+              cy="45%"
+              innerRadius={48}
+              outerRadius={72}
               dataKey="value"
               nameKey="name"
-              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
             >
               {data.map((_, idx) => (
                 <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
               ))}
             </Pie>
             <Tooltip content={<ChartTooltipContent />} />
+            <Legend
+              iconType="circle"
+              wrapperStyle={{ fontSize: '11px', lineHeight: '18px' }}
+              payload={data.map((d, idx) => ({
+                value: `${d.name} (${d.value})`,
+                type: 'circle',
+                color: COLORS[idx % COLORS.length],
+                id: `${d.name}-${idx}`,
+              }))}
+            />
           </PieChart>
         </ChartContainer>
       </CardContent>

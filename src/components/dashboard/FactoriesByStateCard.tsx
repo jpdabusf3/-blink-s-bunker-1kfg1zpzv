@@ -51,7 +51,7 @@ export function FactoriesByStateCard({
             <YAxis
               dataKey="name"
               type="category"
-              width={60}
+              width={90}
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}

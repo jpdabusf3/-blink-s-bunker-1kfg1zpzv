@@ -263,7 +263,7 @@ export default function Pedidos() {
           <TabsTrigger value="revisao" className="gap-2 relative">
             <Layers className="w-4 h-4" /> Fila de Revisão de NFs
             {pendentesCount > 0 && (
-              <span className="ml-1.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white">
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white">
                 {pendentesCount}
               </span>
             )}
@@ -275,7 +275,7 @@ export default function Pedidos() {
         </TabsContent>
 
         <TabsContent value="implantados" className="space-y-6 pt-2">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="shadow-subtle">
               <CardContent className="p-4">
                 <p className="text-xs text-muted-foreground mb-1">Pedidos</p>

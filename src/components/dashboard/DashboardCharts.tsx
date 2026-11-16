@@ -304,16 +304,15 @@ export function DashboardCharts({ regionFilter = 'Todas as Regiões' }: { region
             config={{ value: { label: 'Valor', color: '#E5B64E' } }}
             className="h-full w-full"
           >
-            <PieChart>
+            <PieChart margin={{ top: 4, right: 8, bottom: 4, left: 8 }}>
               <Pie
                 data={regionData}
                 cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={90}
+                cy="42%"
+                innerRadius={48}
+                outerRadius={72}
                 dataKey="value"
                 nameKey="name"
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
               >
                 {regionData.map((_, idx) => (
                   <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
@@ -323,6 +322,16 @@ export function DashboardCharts({ regionFilter = 'Todas as Regiões' }: { region
                 content={
                   <ChartTooltipContent className="bg-[#2A2A31] border-[#3A3A42] text-white" />
                 }
+              />
+              <Legend
+                iconType="circle"
+                wrapperStyle={{ fontSize: '11px', lineHeight: '18px', color: '#A1A1AA' }}
+                payload={regionData.map((d, idx) => ({
+                  value: `${d.name} (${d.value})`,
+                  type: 'circle',
+                  color: COLORS[idx % COLORS.length],
+                  id: `${d.name}-${idx}`,
+                }))}
               />
             </PieChart>
           </ChartContainer>
@@ -348,7 +357,7 @@ export function DashboardCharts({ regionFilter = 'Todas as Regiões' }: { region
               <YAxis
                 dataKey="name"
                 type="category"
-                width={100}
+                width={140}
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 11, fill: '#A1A1AA' }}

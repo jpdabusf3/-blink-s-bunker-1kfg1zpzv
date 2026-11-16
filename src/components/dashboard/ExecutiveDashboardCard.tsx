@@ -144,7 +144,7 @@ export function ExecutiveDashboardCard() {
         <CardTitle>Dashboard Executivo Consolidado</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {kpiCards.map((k, i) => (
             <div key={i} className="text-center p-3 bg-muted/40 rounded-lg">
               <p className="text-[11px] text-muted-foreground mb-1 leading-tight">{k.label}</p>
