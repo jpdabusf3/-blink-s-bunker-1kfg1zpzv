@@ -90,7 +90,7 @@ export function DailySalesLogCard({
             {formatCurrency(todayTotal)}
           </span>
         </div>
-        <div className="max-h-[200px] overflow-y-auto blink-table">
+        <div className="max-h-[200px] overflow-auto blink-table">
           <Table>
             <TableHeader>
               <TableRow className="border-b border-[#3A3A42] bg-[#32343A]">

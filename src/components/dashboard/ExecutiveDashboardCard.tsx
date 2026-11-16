@@ -200,7 +200,9 @@ export function ExecutiveDashboardCard() {
                 >
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-muted-foreground w-5">{i + 1}º</span>
-                    <span className="font-medium truncate max-w-[120px]">{v.nome}</span>
+                    <span className="font-medium truncate max-w-[120px]" title={v.nome}>
+                      {v.nome}
+                    </span>
                   </div>
                   <div className="text-right">
                     <div className="font-bold text-primary">{formatCurrency(v.valor)}</div>

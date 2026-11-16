@@ -280,7 +280,7 @@ export function GeographicOverview() {
                   <Globe2 className="w-5 h-5 text-[#E5B64E]" />
                   {continent.name}
                 </span>
-                <div className="flex gap-4 text-xs font-normal text-[#A1A1AA]">
+                <div className="flex gap-2 sm:gap-4 text-xs font-normal text-[#A1A1AA] flex-wrap justify-end sm:justify-normal ml-auto">
                   <span>{continent.countries.length} países</span>
                   <span>{continent.factories.length} fábricas</span>
                   <span className="text-[#E5B64E] font-bold">

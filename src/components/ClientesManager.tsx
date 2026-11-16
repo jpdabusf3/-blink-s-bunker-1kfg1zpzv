@@ -537,9 +537,9 @@ export function ClientesManager() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3">
             {/* Input de busca por nome ou CNPJ com debounce */}
-            <div className="md:col-span-3 relative">
+            <div className="sm:col-span-2 md:col-span-3 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por Razão Social ou CNPJ..."
@@ -634,7 +634,7 @@ export function ClientesManager() {
 
             {/* Painel de Atribuição em Lote quando há órfãos selecionados */}
             {selectedOrphanIds.length > 0 && (
-              <div className="flex items-center gap-2 bg-muted/40 p-1.5 rounded-md border border-border">
+              <div className="flex flex-wrap items-center gap-2 bg-muted/40 p-1.5 rounded-md border border-border">
                 <span className="text-xs font-medium text-foreground">
                   {selectedOrphanIds.length} selecionado(s):
                 </span>
@@ -919,7 +919,7 @@ export function ClientesManager() {
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {isOrphan ? (
-                              <div className="flex items-center gap-1.5 min-w-[210px]">
+                              <div className="flex items-center gap-1.5 w-56 max-w-full">
                                 <Select
                                   value={c.vendedor_id || 'none'}
                                   onValueChange={(val) => handleAssignSingleSeller(c.id, val)}

@@ -750,7 +750,7 @@ export function MetasVendedorSegmentoSection({
               </div>
 
               {/* Totalizadores resumidos da seção */}
-              <div className="flex items-center gap-4 text-xs">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                 <div>
                   <span className="text-muted-foreground">Meta Total: </span>
                   <strong className="font-mono text-foreground">

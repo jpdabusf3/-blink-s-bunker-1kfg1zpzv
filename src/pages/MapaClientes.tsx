@@ -868,8 +868,8 @@ export default function MapaClientes() {
           </CardContent>
         </Card>
         <Card className="shadow-subtle">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
+          <CardContent className="p-4 flex items-center justify-between gap-3">
+            <div className="min-w-0">
               <p className="text-xs font-medium text-muted-foreground">Sem Localização</p>
               <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
                 {clientsWithoutCoords.length}
