@@ -21,10 +21,15 @@
  *  - exclude_states: UFs a EXCLUIR (ex: tudo fora de MT, PA, RO, AC, AM, TO, MA, AP, RR)
  *  - segment: carteira/segmento (AVES, PETS, RUMINANTES, SUINOS, AQUA)
  *  - from_vendedor_id / vendedor_id: restringe aos clientes já vinculados a este vendedor
+ *    (para "unassign", "vendedor_id" é aceito como alias de "from_vendedor_id")
  *
  * Regra de segurança: clientes com UF INDETERMINADA nunca são afetados por
  * filtros de UF — permanecem intactos e são reportados separadamente.
- * Cada alteração é registrada em factory_change_logs (auditoria).
+ * Cada alteração é registrada em entity_change_logs (auditoria, action "update").
+ *
+ * IMPORTANTE (JSVM do PocketBase): callbacks rodam num pool de VMs separado.
+ * Toda a lógica (constantes e helpers) vive DENTRO do corpo do callback —
+ * nenhuma declaração de nível superior é referenciada dentro dos callbacks.
  */
 
 routerAdd(
@@ -32,7 +37,7 @@ routerAdd(
   '/backend/v1/maestro-bulk-client-op',
   (e) => {
     const userId = e.auth?.id
-    if (!userId) return e.unauthorizedError('auth required')
+    if (!userId) return e.json(401, { success: false, error: 'autenticação obrigatória' })
 
     const body = e.requestInfo().body || {}
     const op = String(body.op || '')
@@ -76,6 +81,167 @@ routerAdd(
     if (segment) filterParts.push('carteira = "' + segment + '"')
     const baseFilter = filterParts.join(' && ')
 
+    // ---- Constantes e helpers, TUDO DENTRO do callback (escopo seguro na JSVM) ----
+
+    const UF_SET = {}
+    const UF_LIST = [
+      'AC',
+      'AL',
+      'AP',
+      'AM',
+      'BA',
+      'CE',
+      'DF',
+      'ES',
+      'GO',
+      'MA',
+      'MT',
+      'MS',
+      'MG',
+      'PA',
+      'PB',
+      'PR',
+      'PE',
+      'PI',
+      'RJ',
+      'RN',
+      'RS',
+      'RO',
+      'RR',
+      'SC',
+      'SP',
+      'SE',
+      'TO',
+    ]
+    for (let i = 0; i < UF_LIST.length; i++) UF_SET[UF_LIST[i]] = true
+
+    const STATE_NAMES = {
+      acre: 'AC',
+      alagoas: 'AL',
+      amapá: 'AP',
+      amapa: 'AP',
+      amazonas: 'AM',
+      bahia: 'BA',
+      ceará: 'CE',
+      ceara: 'CE',
+      'distrito federal': 'DF',
+      'espírito santo': 'ES',
+      'espirito santo': 'ES',
+      goiás: 'GO',
+      goias: 'GO',
+      maranhão: 'MA',
+      maranhao: 'MA',
+      'mato grosso': 'MT',
+      'mato grosso do sul': 'MS',
+      'minas gerais': 'MG',
+      pará: 'PA',
+      para: 'PA',
+      paraíba: 'PB',
+      paraiba: 'PB',
+      paraná: 'PR',
+      parana: 'PR',
+      pernambuco: 'PE',
+      piauí: 'PI',
+      piaui: 'PI',
+      'rio de janeiro': 'RJ',
+      'rio grande do norte': 'RN',
+      'rio grande do sul': 'RS',
+      rondônia: 'RO',
+      rondonia: 'RO',
+      roraima: 'RR',
+      'santa catarina': 'SC',
+      'são paulo': 'SP',
+      'sao paulo': 'SP',
+      sergipe: 'SE',
+      tocantins: 'TO',
+    }
+
+    const CITY_UF = {
+      sinop: 'MT',
+      'tangará da serra': 'MT',
+      'tangara da serra': 'MT',
+      cuiabá: 'MT',
+      cuiaba: 'MT',
+      'várzea grande': 'MT',
+      'varzea grande': 'MT',
+      rondonópolis: 'RO', // ATENÇÃO: mantido propositalmente incorreto — corrigido abaixo
+      rondonopolis: 'RO', // ATENÇÃO: mantido propositalmente incorreto — corrigido abaixo
+      sorriso: 'MT',
+      'lucas do rio verde': 'MT',
+      altamira: 'PA',
+      belém: 'PA',
+      belem: 'PA',
+      paragominas: 'PA',
+      marabá: 'PA',
+      maraba: 'PA',
+      'porto velho': 'RO',
+      vilhena: 'RO',
+      ariquemes: 'RO',
+      'ji-paraná': 'RO',
+      'rio branco': 'AC',
+      manaus: 'AM',
+      parintins: 'AM',
+      palmas: 'TO',
+      araguaína: 'TO',
+      araguaina: 'TO',
+      'são luís': 'MA',
+      'sao luis': 'MA',
+      imperatriz: 'MA',
+      macapá: 'AP',
+      macapa: 'AP',
+      'boa vista': 'RR',
+      campinas: 'SP',
+      'são paulo': 'SP',
+      'sao paulo': 'SP',
+      mirassol: 'SP',
+      'são josé do rio preto': 'SP',
+      'sao jose do rio preto': 'SP',
+      'ribeirão preto': 'SP',
+      'ribeirao preto': 'SP',
+      uberlândia: 'MG',
+      uberlandia: 'MG',
+      londrina: 'PR',
+      curitiba: 'PR',
+      'porto alegre': 'RS',
+      salvador: 'BA',
+      recife: 'PE',
+      fortaleza: 'CE',
+      goiânia: 'GO',
+      goiania: 'GO',
+      brasília: 'DF',
+      brasilia: 'DF',
+      vitória: 'ES',
+      vitoria: 'ES',
+    }
+    // Correção: Rondonópolis é MT, não RO.
+    CITY_UF['rondonópolis'] = 'MT'
+    CITY_UF['rondonopolis'] = 'MT'
+
+    // Bounding boxes aproximados (latMin, lngMin, latMax, lngMax) por UF — só p/ MANTER vínculo
+    const KEEP_BOXES = {
+      MT: [-19.6, -60.8, -7.9, -41.7],
+      PA: [-10.0, -59.0, -0.7, -46.0],
+      RO: [-13.8, -66.9, -7.9, -59.7],
+      AC: [-11.3, -74.6, -6.9, -66.5],
+      AM: [-10.1, -73.9, 2.1, -55.9],
+      TO: [-18.3, -50.9, -5.2, -45.8],
+      MA: [-10.4, -48.7, -1.4, -41.7],
+      AP: [-0.1, -55.0, 4.6, -49.5],
+      RR: [-1.7, -64.5, 5.4, -58.8],
+    }
+
+    function normText(s) {
+      return String(s || '')
+        .toLowerCase()
+        .replace(/ç/g, 'c')
+        .replace(/[áàâã]/g, 'a')
+        .replace(/[éèê]/g, 'e')
+        .replace(/[íì]/g, 'i')
+        .replace(/[óòôõ]/g, 'o')
+        .replace(/[úù]/g, 'u')
+        .trim()
+    }
+
     // Dedução de UF: state → city/standardized_address → coordenadas.
     function extractUf(record) {
       // 1. Campo state
@@ -116,7 +282,31 @@ routerAdd(
           if (lat >= b[0] && lng >= b[1] && lat <= b[2] && lng <= b[3]) return uf
         }
       }
-      return '' // UF indeterminada — nunca desvincular por estado
+      return '' // UF indeterminada — nunca afetar
+    }
+
+    // Auditoria em entity_change_logs. Retorna true em caso de sucesso.
+    function logChange(entityId, entityName, userName, field, oldValue, newValue, summary) {
+      try {
+        const col = $app.findCollectionByNameOrId('entity_change_logs')
+        const rec = new Record(col)
+        rec.set('entity_type', 'factories')
+        rec.set('entity_id', entityId)
+        rec.set('entity_name', entityName)
+        rec.set('user_name', userName)
+        rec.set('field', field)
+        rec.set('old_value', oldValue)
+        rec.set('new_value', newValue)
+        rec.set('action', 'update')
+        rec.set('change_summary', summary)
+        $app.save(rec)
+        return true
+      } catch (err) {
+        $app
+          .logger()
+          .warn('maestro_bulk_ops: falha ao gravar log de auditoria', 'error', String(err))
+        return false
+      }
     }
 
     if (!confirm) {
@@ -209,6 +399,7 @@ routerAdd(
             ? vendedorName + ' (' + sourceSeller + ')'
             : 'vendedor ' + (oldValue || '(sem vendedor)')
         }
+        const clienteNome = String(factory.get('name') || factory.get('id'))
         factory.set('vendedor_id', newValue)
         $app.save(factory)
         affected++
@@ -217,11 +408,12 @@ routerAdd(
         if (
           logChange(
             factory.get('id'),
+            clienteNome,
             'Sistema (Maestro)',
             'vendedor_id',
             oldLabel,
             newValue,
-            'Maestro: ' + op + ' — UF ' + uf,
+            'Maestro: ' + op + ' — UF ' + uf + ' afetada pela operação em lote.',
           )
         ) {
           auditWritten++
@@ -264,182 +456,3 @@ routerAdd(
   },
   $apis.requireAuth(),
 )
-
-// ---------- Helpers (definidos neste mesmo arquivo, escopo do hook) ----------
-
-const UF_SET = {}
-const UF_LIST = [
-  'AC',
-  'AL',
-  'AP',
-  'AM',
-  'BA',
-  'CE',
-  'DF',
-  'ES',
-  'GO',
-  'MA',
-  'MT',
-  'MS',
-  'MG',
-  'PA',
-  'PB',
-  'PR',
-  'PE',
-  'PI',
-  'RJ',
-  'RN',
-  'RS',
-  'RO',
-  'RR',
-  'SC',
-  'SP',
-  'SE',
-  'TO',
-]
-for (let i = 0; i < UF_LIST.length; i++) UF_SET[UF_LIST[i]] = true
-
-const STATE_NAMES = {
-  acre: 'AC',
-  alagoas: 'AL',
-  amapá: 'AP',
-  amapa: 'AP',
-  amazonas: 'AM',
-  bahia: 'BA',
-  ceará: 'CE',
-  ceara: 'CE',
-  'distrito federal': 'DF',
-  'espírito santo': 'ES',
-  'espirito santo': 'ES',
-  goiás: 'GO',
-  goias: 'GO',
-  maranhão: 'MA',
-  maranhao: 'MA',
-  'mato grosso': 'MT',
-  'mato grosso do sul': 'MS',
-  'minas gerais': 'MG',
-  pará: 'PA',
-  para: 'PA',
-  paraíba: 'PB',
-  paraiba: 'PB',
-  paraná: 'PR',
-  parana: 'PR',
-  pernambuco: 'PE',
-  piauí: 'PI',
-  piaui: 'PI',
-  'rio de janeiro': 'RJ',
-  'rio grande do norte': 'RN',
-  'rio grande do sul': 'RS',
-  rondônia: 'RO',
-  rondonia: 'RO',
-  roraima: 'RR',
-  'santa catarina': 'SC',
-  'são paulo': 'SP',
-  'sao paulo': 'SP',
-  sergipe: 'SE',
-  tocantins: 'TO',
-}
-
-const CITY_UF = {
-  sinop: 'MT',
-  'tangará da serra': 'MT',
-  'tangara da serra': 'MT',
-  cuiabá: 'MT',
-  cuiaba: 'MT',
-  'várzea grande': 'MT',
-  'varzea grande': 'MT',
-  rondonópolis: 'MT',
-  rondonopolis: 'MT',
-  sorriso: 'MT',
-  'lucas do rio verde': 'MT',
-  altamira: 'PA',
-  belém: 'PA',
-  belem: 'PA',
-  paragominas: 'PA',
-  marabá: 'PA',
-  maraba: 'PA',
-  'porto velho': 'RO',
-  vilhena: 'RO',
-  ariquemes: 'RO',
-  'ji-paraná': 'RO',
-  'rio branco': 'AC',
-  manaus: 'AM',
-  parintins: 'AM',
-  palmas: 'TO',
-  araguaína: 'TO',
-  araguaina: 'TO',
-  'são luís': 'MA',
-  'sao luis': 'MA',
-  imperatriz: 'MA',
-  macapá: 'AP',
-  macapa: 'AP',
-  'boa vista': 'RR',
-  campinas: 'SP',
-  'são paulo': 'SP',
-  'sao paulo': 'SP',
-  mirassol: 'SP',
-  'são josé do rio preto': 'SP',
-  'sao jose do rio preto': 'SP',
-  'ribeirão preto': 'SP',
-  'ribeirao preto': 'SP',
-  uberlândia: 'MG',
-  uberlandia: 'MG',
-  londrina: 'PR',
-  curitiba: 'PR',
-  'porto alegre': 'RS',
-  salvador: 'BA',
-  recife: 'PE',
-  fortaleza: 'CE',
-  goiânia: 'GO',
-  goiania: 'GO',
-  brasília: 'DF',
-  brasilia: 'DF',
-  vitória: 'ES',
-  vitoria: 'ES',
-}
-
-// Bounding boxes aproximados (latMin, lngMin, latMax, lngMax) por UF — só p/ manter vínculo
-const KEEP_BOXES = {
-  MT: [-19.6, -60.8, -7.9, -41.7],
-  PA: [-10.0, -59.0, -0.7, -46.0],
-  RO: [-13.8, -66.9, -7.9, -59.7],
-  AC: [-11.3, -74.6, -6.9, -66.5],
-  AM: [-10.1, -73.9, 2.1, -55.9],
-  TO: [-18.3, -50.9, -5.2, -45.8],
-  MA: [-10.4, -48.7, -1.4, -41.7],
-  AP: [-0.1, -55.0, 4.6, -49.5],
-  RR: [-1.7, -64.5, 5.4, -58.8],
-}
-
-function normText(s) {
-  return String(s || '')
-    .toLowerCase()
-    .replace(/ç/g, 'c')
-    .replace(/[áàâã]/g, 'a')
-    .replace(/[éèê]/g, 'e')
-    .replace(/[íì]/g, 'i')
-    .replace(/[óòôõ]/g, 'o')
-    .replace(/[úù]/g, 'u')
-    .trim()
-}
-
-/**
- * Grava o registro de auditoria em factory_change_logs. Retorna true em caso de sucesso.
- */
-function logChange(factoryId, userName, field, oldValue, newValue, summary) {
-  try {
-    const col = $app.findCollectionByNameOrId('factory_change_logs')
-    const rec = new Record(col)
-    rec.set('factory_id', factoryId)
-    rec.set('user_name', userName)
-    rec.set('field', field)
-    rec.set('old_value', oldValue)
-    rec.set('new_value', newValue)
-    rec.set('change_summary', summary)
-    $app.save(rec)
-    return true
-  } catch (err) {
-    $app.logger().warn('maestro_bulk_ops: falha ao gravar log de auditoria', 'error', String(err))
-    return false
-  }
-}
