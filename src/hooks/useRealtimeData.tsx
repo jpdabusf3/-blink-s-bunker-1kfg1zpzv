@@ -69,12 +69,16 @@ export type RealtimeCollection =
   | 'conversas'
   | 'mensagens'
   | 'leituras_mensagens'
+  | 'distribuidores'
+  | 'compras_distribuidor'
+  | 'clientes_distribuidor'
   | 'all'
 
 /**
  * Normaliza aliases de coleções para o nome real da coleção no PocketBase
  */
 export function normalizeCollectionName(name: string): string {
+  if (name === 'distribuidor') return 'distribuidores'
   if (name === 'clientes') return 'factories'
   if (name === 'invoices') return 'notas_fiscais'
   if (name === 'reports' || name === 'report_data') return 'historico_vendas'
@@ -134,6 +138,9 @@ export const WATCHED_COLLECTIONS: string[] = [
   'conversas',
   'mensagens',
   'leituras_mensagens',
+  'distribuidores',
+  'compras_distribuidor',
+  'clientes_distribuidor',
 ]
 
 /**
