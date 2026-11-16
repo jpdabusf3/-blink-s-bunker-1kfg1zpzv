@@ -3,128 +3,129 @@
 // Autenticação: header X-Report-Secret comparado a $secrets.get('RELATORIO_SEMANAL_SECRET').
 // Falha fechada: sem segredo configurado, a rota responde 500 e não entrega nada.
 // Não altera dados: apenas lê faturamento, metas e pedidos_carteira.
-
-function pad2(n) {
-  return (n < 10 ? '0' : '') + n
-}
-
-function fmtDateUTC(d) {
-  return d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate())
-}
-
-function isoWeekOf(dateObj) {
-  var d = new Date(Date.UTC(dateObj.getUTCFullYear(), dateObj.getUTCMonth(), dateObj.getUTCDate()))
-  var dayNum = d.getUTCDay() || 7
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
-  var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
-  return {
-    ano: d.getUTCFullYear(),
-    semana: Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7),
-  }
-}
-
-// Segunda-feira da semana ISO informada.
-function isoWeekMonday(ano, semana) {
-  var jan4 = new Date(Date.UTC(ano, 0, 4))
-  var dayNum = jan4.getUTCDay() || 7
-  var week1Monday = new Date(jan4.getTime() - (dayNum - 1) * 86400000)
-  return new Date(week1Monday.getTime() + (semana - 1) * 7 * 86400000)
-}
-
-function round2(n) {
-  return Math.round(n * 100) / 100
-}
-
-function num(rec, field) {
-  var v = rec.get ? rec.get(field) : rec[field]
-  var f = Number(v)
-  return isFinite(f) ? f : 0
-}
-
-function str(rec, field) {
-  var v = rec.get ? rec.get(field) : rec[field]
-  return v == null ? '' : String(v)
-}
-
-var MESES = [
-  '',
-  'janeiro',
-  'fevereiro',
-  'março',
-  'abril',
-  'maio',
-  'junho',
-  'julho',
-  'agosto',
-  'setembro',
-  'outubro',
-  'novembro',
-  'dezembro',
-]
-
-function lerSemana(ano, semana) {
-  var filtro = 'ano = ' + ano + ' && semana_iso = ' + semana
-  var rows = []
-  try {
-    rows = $app.findRecordsByFilter('faturamento', filtro, '-valor_brl', 5000, 0)
-  } catch (err) {
-    rows = []
-  }
-
-  var totalBrl = 0
-  var totalUsd = 0
-  var porCliente = {}
-  var porFamilia = {}
-  var porVendedor = {}
-  var notas = {}
-
-  for (var i = 0; i < rows.length; i++) {
-    var r = rows[i]
-    var brl = num(r, 'valor_brl')
-    var usd = num(r, 'valor_usd')
-    totalBrl += brl
-    totalUsd += usd
-
-    var cliente = str(r, 'cliente_nome') || str(r, 'cliente_codigo') || 'Outros'
-    porCliente[cliente] = (porCliente[cliente] || 0) + brl
-
-    var familia = str(r, 'familia_produto') || 'Outros'
-    porFamilia[familia] = (porFamilia[familia] || 0) + brl
-
-    var vendedor = str(r, 'vendedor') || 'Não atribuído'
-    porVendedor[vendedor] = (porVendedor[vendedor] || 0) + brl
-
-    var docKey = str(r, 'data_documento') + '_' + str(r, 'cliente_codigo')
-    notas[docKey] = true
-  }
-
-  return {
-    linhas: rows.length,
-    totalBrl: round2(totalBrl),
-    totalUsd: round2(totalUsd),
-    notas: Object.keys(notas).length,
-    clientes: Object.keys(porCliente).length,
-    porCliente: porCliente,
-    porFamilia: porFamilia,
-    porVendedor: porVendedor,
-  }
-}
-
-function ordenarMapa(mapa, rotulo) {
-  var arr = []
-  for (var k in mapa) {
-    if (!Object.prototype.hasOwnProperty.call(mapa, k)) continue
-    var item = { valor_brl: round2(mapa[k]) }
-    item[rotulo] = k
-    arr.push(item)
-  }
-  arr.sort(function (a, b) {
-    return b.valor_brl - a.valor_brl
-  })
-  return arr
-}
-
+// IMPORTANTE: todo o código vive DENTRO do callback — o JSVM do PocketBase não
+// compartilha funções de topo com os callbacks.
 routerAdd('GET', '/backend/v1/relatorio-semanal', (e) => {
+  function pad2(n) {
+    return (n < 10 ? '0' : '') + n
+  }
+
+  function fmtDateUTC(d) {
+    return d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate())
+  }
+
+  function isoWeekOf(dateObj) {
+    var d = new Date(
+      Date.UTC(dateObj.getUTCFullYear(), dateObj.getUTCMonth(), dateObj.getUTCDate()),
+    )
+    var dayNum = d.getUTCDay() || 7
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+    var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+    return {
+      ano: d.getUTCFullYear(),
+      semana: Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7),
+    }
+  }
+
+  // Segunda-feira da semana ISO informada.
+  function isoWeekMonday(ano, semana) {
+    var jan4 = new Date(Date.UTC(ano, 0, 4))
+    var dayNum = jan4.getUTCDay() || 7
+    var week1Monday = new Date(jan4.getTime() - (dayNum - 1) * 86400000)
+    return new Date(week1Monday.getTime() + (semana - 1) * 7 * 86400000)
+  }
+
+  function round2(n) {
+    return Math.round(n * 100) / 100
+  }
+
+  function num(rec, field) {
+    var v = rec.get ? rec.get(field) : rec[field]
+    var f = Number(v)
+    return isFinite(f) ? f : 0
+  }
+
+  function str(rec, field) {
+    var v = rec.get ? rec.get(field) : rec[field]
+    return v == null ? '' : String(v)
+  }
+
+  function ordenarMapa(mapa, rotulo) {
+    var arr = []
+    for (var k in mapa) {
+      if (!Object.prototype.hasOwnProperty.call(mapa, k)) continue
+      var item = { valor_brl: round2(mapa[k]) }
+      item[rotulo] = k
+      arr.push(item)
+    }
+    arr.sort(function (a, b) {
+      return b.valor_brl - a.valor_brl
+    })
+    return arr
+  }
+
+  var MESES = [
+    '',
+    'janeiro',
+    'fevereiro',
+    'março',
+    'abril',
+    'maio',
+    'junho',
+    'julho',
+    'agosto',
+    'setembro',
+    'outubro',
+    'novembro',
+    'dezembro',
+  ]
+
+  function lerSemana(ano, semana) {
+    var filtro = 'ano = ' + ano + ' && semana_iso = ' + semana
+    var rows = []
+    try {
+      rows = $app.findRecordsByFilter('faturamento', filtro, '-valor_brl', 5000, 0)
+    } catch (err) {
+      rows = []
+    }
+
+    var totalBrl = 0
+    var totalUsd = 0
+    var porCliente = {}
+    var porFamilia = {}
+    var porVendedor = {}
+    var notas = {}
+
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i]
+      var brl = num(r, 'valor_brl')
+      totalBrl += brl
+      totalUsd += num(r, 'valor_usd')
+
+      var cliente = str(r, 'cliente_nome') || str(r, 'cliente_codigo') || 'Outros'
+      porCliente[cliente] = (porCliente[cliente] || 0) + brl
+
+      var familia = str(r, 'familia_produto') || 'Outros'
+      porFamilia[familia] = (porFamilia[familia] || 0) + brl
+
+      var vendedor = str(r, 'vendedor') || 'Não atribuído'
+      porVendedor[vendedor] = (porVendedor[vendedor] || 0) + brl
+
+      notas[str(r, 'data_documento') + '_' + str(r, 'cliente_codigo')] = true
+    }
+
+    return {
+      linhas: rows.length,
+      totalBrl: round2(totalBrl),
+      totalUsd: round2(totalUsd),
+      notas: Object.keys(notas).length,
+      clientes: Object.keys(porCliente).length,
+      porCliente: porCliente,
+      porFamilia: porFamilia,
+      porVendedor: porVendedor,
+    }
+  }
+
   var segredo = $secrets.get('RELATORIO_SEMANAL_SECRET')
   if (!segredo) return e.json(500, { error: 'RELATORIO_SEMANAL_SECRET not set' })
 
