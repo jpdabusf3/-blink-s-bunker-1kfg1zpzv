@@ -15,6 +15,9 @@ const BLOCK_LABELS: Record<string, string> = {
   charts: 'Gráficos',
   historical: 'Comparativo Histórico',
   list: 'Lista de Fábricas',
+  'monitor-funil': 'Monitor — Funil',
+  'monitor-metas': 'Monitor — Resumo / Metas',
+  'monitor-distribuidores': 'Monitor — Distribuidores',
 }
 
 export function DashboardCustomizer({

@@ -64,6 +64,12 @@ import {
   useMonitorMode,
   monitorSectionLabel,
 } from '@/components/dashboard/MonitorMode'
+import {
+  MonitorFunilSection,
+  MonitorMetasSection,
+  MonitorDistribuidoresSection,
+} from '@/components/dashboard/MonitorExtraSections'
+import { MONITOR_EXTRA_BLOCK_IDS } from '@/services/dashboard-preferences'
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={className} fill="currentColor">
@@ -83,6 +89,9 @@ const DEFAULT_BLOCKS = [
   'historical',
   'list',
   'gestor-comparison',
+  'monitor-funil',
+  'monitor-metas',
+  'monitor-distribuidores',
 ]
 
 function DraggableBlock({
@@ -186,6 +195,7 @@ export default function Index() {
     setPeriodView,
     lastAutomationPeriod,
     refreshPreferences,
+    loading,
   } = useDashboardPreferences()
 
   // Seções visíveis no monitor: as blocos ativos do painel (ou todos os
@@ -243,6 +253,21 @@ export default function Index() {
   }, [monitorActive])
 
   useRealtimeData('dashboard_preferences', refreshPreferences)
+
+  // Merge de preferências: usuários com prefs salvas de antes das seções
+  // extras do monitor ganham os ids novos (no fim), sem perder as escolhas
+  // antigas — e podem desativá-los depois pelo personalizador.
+  const prefsMergedRef = useRef(false)
+  useEffect(() => {
+    if (loading || prefsMergedRef.current || !user) return
+    prefsMergedRef.current = true
+    const missing = MONITOR_EXTRA_BLOCK_IDS.filter((id) => !blocks.includes(id))
+    if (missing.length > 0) {
+      setBlocks([...blocks, ...missing])
+    }
+    // Depende apenas do carregamento inicial das preferências salvas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user])
 
   const moveBlock = useCallback(
     (fromIndex: number, toIndex: number) => {
@@ -589,6 +614,12 @@ export default function Index() {
             <TimelineSummaryCard regionFilter={effectiveRegionFilter} />
           </div>
         )
+      case 'monitor-funil':
+        return <MonitorFunilSection />
+      case 'monitor-metas':
+        return <MonitorMetasSection />
+      case 'monitor-distribuidores':
+        return <MonitorDistribuidoresSection />
       default:
         return null
     }

@@ -23,7 +23,18 @@ export const DEFAULT_DASHBOARD_BLOCKS = [
   'historical',
   'list',
   'gestor-comparison',
+  // Seções extras do Modo Monitor (entram após os blocos existentes)
+  'monitor-funil',
+  'monitor-metas',
+  'monitor-distribuidores',
 ]
+
+/** Ids das seções extras do Modo Monitor — usados no merge de preferências. */
+export const MONITOR_EXTRA_BLOCK_IDS = [
+  'monitor-funil',
+  'monitor-metas',
+  'monitor-distribuidores',
+] as const
 
 export async function getDashboardPreferences(): Promise<DashboardPreferences | null> {
   try {

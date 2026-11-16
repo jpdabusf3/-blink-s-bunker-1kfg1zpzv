@@ -125,6 +125,9 @@ const SECTION_LABELS: Record<string, string> = {
   list: 'Carteira de Clientes',
   'gestor-comparison': 'Gestão Técnica',
   geographic: 'Visão Geográfica',
+  'monitor-funil': 'Funil',
+  'monitor-metas': 'Resumo / Metas',
+  'monitor-distribuidores': 'Distribuidores',
 }
 
 export function monitorSectionLabel(id: string) {
