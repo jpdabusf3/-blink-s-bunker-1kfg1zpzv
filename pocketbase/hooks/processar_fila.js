@@ -86,14 +86,27 @@ cronAdd('processar_fila_audio', '* * * * *', () => {
     $app.save(item)
 
     try {
-      var payloadRaw = item.get('payload')
+      // O campo `payload` é json: a leitura confiável é pela string serializada.
+      // `get()` pode devolver um wrapper em que o acesso a propriedades não funciona.
       var payload = {}
-      if (typeof payloadRaw === 'string') {
+      var payloadStr = ''
+      try {
+        payloadStr = item.getString('payload') || ''
+      } catch (_) {
+        payloadStr = ''
+      }
+      if (payloadStr) {
         try {
-          payload = JSON.parse(payloadRaw)
-        } catch (_) {}
-      } else if (payloadRaw && typeof payloadRaw === 'object') {
-        payload = payloadRaw
+          payload = JSON.parse(payloadStr)
+        } catch (parseErr) {
+          $app
+            .logger()
+            .warn('processar_fila: payload invalido', 'id', itemId, 'error', String(parseErr))
+        }
+      }
+      if ((!payload || !payload.vendedor_id) && !payloadStr) {
+        var payloadRaw = item.get('payload')
+        if (payloadRaw && typeof payloadRaw === 'object') payload = payloadRaw
       }
 
       var mediaUrl = payload.mediaUrl || ''
