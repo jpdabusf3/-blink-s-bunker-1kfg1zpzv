@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { X } from 'lucide-react'
+import { Settings2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 /**
@@ -103,7 +103,13 @@ export function useMonitorMode() {
   useEffect(() => {
     if (!isActive) return
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') exitMonitorMode()
+      // Com o painel de personalização aberto, Esc fecha só o painel (o Dialog
+      // consome o evento antes — este handler ignora nesse caso).
+      if (e.key === 'Escape') {
+        const openDialog = document.querySelector('[data-state="open"][role="dialog"]')
+        if (openDialog) return
+        exitMonitorMode()
+      }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
@@ -139,6 +145,8 @@ interface MonitorChromeProps {
   sectionIndex: number
   /** 0..1 — progresso do tempo da seção atual */
   sectionProgress: number
+  /** Abre o painel de personalização do monitor (engrenagem). */
+  onOpenCustomizer?: () => void
   children: React.ReactNode
 }
 
@@ -151,6 +159,7 @@ export function MonitorChrome({
   sections,
   sectionIndex,
   sectionProgress,
+  onOpenCustomizer,
   children,
 }: MonitorChromeProps) {
   const [now, setNow] = useState(() => new Date())
@@ -244,16 +253,29 @@ export function MonitorChrome({
 
       {children}
 
-      <button
-        type="button"
-        onClick={exitMonitorMode}
+      <div
         className={cn(
-          'fixed bottom-6 right-6 z-[80] flex items-center gap-2 h-10 px-4 rounded-[12px] text-xs font-semibold bg-[#232329] border border-[#3A3A42] text-white shadow-lg transition-opacity duration-500 hover:bg-[#3A3A42]',
+          'fixed bottom-6 right-6 z-[80] flex items-center gap-2 transition-opacity duration-500',
           showExit ? 'opacity-100' : 'opacity-0 pointer-events-none',
         )}
       >
-        <X className="w-4 h-4" /> Sair do modo monitor
-      </button>
+        {onOpenCustomizer && (
+          <button
+            type="button"
+            onClick={onOpenCustomizer}
+            className="flex items-center gap-2 h-10 px-4 rounded-[12px] text-xs font-semibold bg-[#232329] border border-[#3A3A42] text-white shadow-lg hover:bg-[#3A3A42]"
+          >
+            <Settings2 className="w-4 h-4 text-[#E5B64E]" /> Personalizar
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={exitMonitorMode}
+          className="flex items-center gap-2 h-10 px-4 rounded-[12px] text-xs font-semibold bg-[#232329] border border-[#3A3A42] text-white shadow-lg hover:bg-[#3A3A42]"
+        >
+          <X className="w-4 h-4" /> Sair do modo monitor
+        </button>
+      </div>
     </div>
   )
 }

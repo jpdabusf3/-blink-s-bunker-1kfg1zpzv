@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-16T20:01:16.786Z",
+  "generatedAt": "2026-11-16T20:30:09.027Z",
   "collections": [
     {
       "name": "users",
@@ -2327,6 +2327,12 @@
         {
           "name": "last_automation_period",
           "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "monitor_prefs",
+          "type": "json",
           "required": false,
           "system": false
         }

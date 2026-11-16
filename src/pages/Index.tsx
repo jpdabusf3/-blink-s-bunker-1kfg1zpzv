@@ -58,12 +58,14 @@ import { testIntegration } from '@/services/integration-test'
 import { toast } from 'sonner'
 import { SyncErrorBanner } from '@/components/SyncErrorBanner'
 import {
-  MONITOR_SECTION_DURATION_S,
   MonitorChrome,
   enterMonitorMode,
   useMonitorMode,
   monitorSectionLabel,
 } from '@/components/dashboard/MonitorMode'
+import { MonitorCustomizer } from '@/components/dashboard/MonitorCustomizer'
+import { useMonitorPreferences, resolveMonitorSections } from '@/hooks/use-monitor-preferences'
+import { sectionDuration } from '@/services/monitor-preferences'
 import {
   MonitorFunilSection,
   MonitorMetasSection,
@@ -185,6 +187,16 @@ export default function Index() {
   const [monitorSectionIndex, setMonitorSectionIndex] = useState(0)
   const [monitorSectionElapsed, setMonitorSectionElapsed] = useState(0)
   const monitorSectionsRef = useRef<HTMLDivElement | null>(null)
+  const [monitorCustomizerOpen, setMonitorCustomizerOpen] = useState(false)
+
+  // Preferências do monitor: ordem, visibilidade e duração por seção.
+  const {
+    prefs: monitorPrefs,
+    setSectionVisible,
+    setSectionDuration,
+    moveSection,
+    resetMonitorPreferences,
+  } = useMonitorPreferences()
 
   const {
     blocks,
@@ -198,12 +210,21 @@ export default function Index() {
     loading,
   } = useDashboardPreferences()
 
-  // Seções visíveis no monitor: as blocos ativos do painel (ou todos os
-  // padrões, enquanto as preferências carregam).
-  const monitorSections = useMemo(() => (blocks.length > 0 ? blocks : DEFAULT_BLOCKS), [blocks])
+  // Seções visíveis no monitor: interseção dos blocos ativos do painel com as
+  // preferências do monitor (ordem configurada, apenas as visíveis). Enquanto
+  // as preferências do monitor carregam, usa os blocos do painel.
+  const monitorSections = useMemo(
+    () => resolveMonitorSections(monitorPrefs, blocks.length > 0 ? blocks : DEFAULT_BLOCKS),
+    [monitorPrefs, blocks],
+  )
+  const currentMonitorDurationS = useMemo(() => {
+    const id = monitorSections[monitorSectionIndex]
+    return id ? sectionDuration(monitorPrefs, id) : 30
+  }, [monitorPrefs, monitorSections, monitorSectionIndex])
 
-  // A cada 1s, avança o relógio interno da seção; ao completar a duração,
-  // passa para a próxima seção e faz scroll suave até ela.
+  // A cada 1s, avança o relógio interno da seção; ao completar a duração da
+  // seção atual, passa para a próxima e faz scroll suave até ela. A rotação
+  // PAUSA com o painel de personalização aberto.
   useEffect(() => {
     if (!monitorActive) return
     setMonitorSectionElapsed(0)
@@ -211,10 +232,11 @@ export default function Index() {
   }, [monitorActive, monitorSections.length])
 
   useEffect(() => {
-    if (!monitorActive || monitorSections.length === 0) return
+    if (!monitorActive || monitorSections.length === 0 || monitorCustomizerOpen) return
+    const durationS = currentMonitorDurationS
     const interval = window.setInterval(() => {
       setMonitorSectionElapsed((elapsed) => {
-        if (elapsed + 1 >= MONITOR_SECTION_DURATION_S) {
+        if (elapsed + 1 >= durationS) {
           setMonitorSectionIndex((i) => (i + 1) % monitorSections.length)
           return 0
         }
@@ -222,7 +244,7 @@ export default function Index() {
       })
     }, 1000)
     return () => window.clearInterval(interval)
-  }, [monitorActive, monitorSections.length])
+  }, [monitorActive, monitorSections.length, monitorCustomizerOpen, currentMonitorDurationS])
 
   // Scroll suave até a seção ativa (e realinhamento ao recuperar foco da aba).
   useEffect(() => {
@@ -633,7 +655,8 @@ export default function Index() {
         <MonitorChrome
           sections={monitorSections}
           sectionIndex={monitorSectionIndex}
-          sectionProgress={monitorSectionElapsed / MONITOR_SECTION_DURATION_S}
+          sectionProgress={monitorSectionElapsed / currentMonitorDurationS}
+          onOpenCustomizer={() => setMonitorCustomizerOpen(true)}
         >
           {isSyncError && (
             <SyncErrorBanner message="Falha ao atualizar os dados." onRetry={refetchSync} />
@@ -650,6 +673,15 @@ export default function Index() {
             </div>
           )}
         </MonitorChrome>
+        <MonitorCustomizer
+          open={monitorCustomizerOpen}
+          onOpenChange={setMonitorCustomizerOpen}
+          prefs={monitorPrefs}
+          onToggle={setSectionVisible}
+          onMove={moveSection}
+          onDuration={setSectionDuration}
+          onReset={resetMonitorPreferences}
+        />
       </div>
     )
   }
