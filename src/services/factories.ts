@@ -252,11 +252,16 @@ export function mapRecordToFactory(record: any): Factory {
   }
 }
 
+// Expand só com campos que EXISTEM na coleção factories. "vendedor" e
+// "gestor_tecnico" não são campos da coleção — pedi-los no expand fazia o
+// PocketBase rejeitar TODA a consulta com 400 e o cadastro carregava vazio.
+const FACTORY_EXPAND =
+  'salesOwner,salesOwner.gestao_tecnica_id,technicalManager,gestor_tecnico_id,vendedor_id'
+
 export async function getFactoryById(id: string): Promise<Factory | null> {
   try {
     const record = await pb.collection('factories').getOne(id, {
-      expand:
-        'salesOwner,salesOwner.gestao_tecnica_id,technicalManager,gestor_tecnico,vendedor,gestor_tecnico_id,vendedor_id',
+      expand: FACTORY_EXPAND,
     })
     return mapRecordToFactory(record)
   } catch {
@@ -264,14 +269,42 @@ export async function getFactoryById(id: string): Promise<Factory | null> {
   }
 }
 
+// Cache curto + dedup de requisições em voo: evita a tempestade de chamadas
+// simultâneas a /factories (AppContext, Cadastro, ClientesManager, realtime,
+// foco da aba, polling) que estourava o rate limit do backend (HTTP 429) e
+// deixava o Cadastro carregando com lista vazia e erro silencioso.
+const FACTORIES_CACHE_TTL_MS = 10_000
+let factoriesCache: { data: Factory[]; at: number } | null = null
+let factoriesInFlight: Promise<Factory[]> | null = null
+
+export function invalidateFactoriesCache() {
+  factoriesCache = null
+  factoriesInFlight = null
+}
+
 export async function getAllFactories(): Promise<Factory[]> {
-  const records = await pb.collection('factories').getFullList({
-    filter: 'is_deleted != true',
-    sort: '-created',
-    expand:
-      'salesOwner,salesOwner.gestao_tecnica_id,technicalManager,gestor_tecnico,vendedor,gestor_tecnico_id,vendedor_id',
-  })
-  return records.map(mapRecordToFactory)
+  if (factoriesCache && Date.now() - factoriesCache.at < FACTORIES_CACHE_TTL_MS) {
+    return factoriesCache.data
+  }
+  if (factoriesInFlight) return factoriesInFlight
+
+  factoriesInFlight = pb
+    .collection('factories')
+    .getFullList({
+      filter: 'is_deleted != true',
+      sort: '-created',
+      expand: FACTORY_EXPAND,
+    })
+    .then((records) => {
+      const mapped = records.map(mapRecordToFactory)
+      factoriesCache = { data: mapped, at: Date.now() }
+      return mapped
+    })
+    .finally(() => {
+      factoriesInFlight = null
+    })
+
+  return factoriesInFlight
 }
 
 import { recordFactoryChangeLog, diffAndRecordFactoryChanges } from './factory-change-logs'
@@ -289,6 +322,7 @@ export async function updateFactoryPB(id: string, data: Partial<Factory>) {
 
   const pbData = toPBData(data)
   const result = await pb.collection('factories').update(id, pbData as any)
+  invalidateFactoriesCache()
 
   if (beforeRecord) {
     // Gravação assíncrona do diff sem bloquear ou falhar a operação principal
@@ -304,6 +338,7 @@ export async function updateFactoryPB(id: string, data: Partial<Factory>) {
 export async function createFactoryPB(data: Partial<Factory>) {
   const pbData = toPBData(data)
   const result = await pb.collection('factories').create(pbData as any)
+  invalidateFactoriesCache()
 
   // Gravar registro inicial "Cliente criado"
   recordFactoryChangeLog({
@@ -323,6 +358,7 @@ export async function softDeleteFactoryPB(id: string, name?: string) {
     is_deleted: true,
     deleted_at: new Date().toISOString(),
   })
+  invalidateFactoriesCache()
   try {
     const { recordFactoryChangeLog } = await import('./factory-change-logs')
     await recordFactoryChangeLog({
@@ -363,4 +399,10 @@ export async function deactivateFactoryPB(id: string, name?: string) {
 
 export async function deleteFactoryPB(id: string, name?: string) {
   return softDeleteFactoryPB(id, name)
+}
+
+// Enriquecimento server-side (ViaCEP/Nominatim) atualiza endereço/geo dos clientes:
+// invalida o cache para o próximo getAllFactories refletir os dados novos.
+export async function enrichFactoriesAndInvalidateCache() {
+  invalidateFactoriesCache()
 }

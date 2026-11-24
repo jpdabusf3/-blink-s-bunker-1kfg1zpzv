@@ -36,6 +36,7 @@ routerAdd(
 
       var mode = body.mode || 'single'
       var clientId = body.client_id || body.clientId || ''
+      var force = body.force === true
 
       if (mode === 'single' && !clientId) {
         return e.json(400, { error: 'client_id é obrigatório para mode "single"' })
@@ -377,7 +378,11 @@ routerAdd(
         }
       } else {
         try {
-          records = $app.findRecordsByFilter('factories', '', '-created', 1000, 0)
+          // Modo "all": processa apenas clientes ainda NÃO enriquecidos (a menos que
+          // force=true). Sem isso, cada reexecução refazia os 1000 registros com
+          // sleeps, travando a JSVM por minutos e desencadeando rajadas de updates.
+          var filter = force ? '' : "(address_status = '' || address_status == null)"
+          records = $app.findRecordsByFilter('factories', filter, '-created', 1000, 0)
         } catch (findErr) {
           $app.logger().error('enrich-client-data: findRecords error', 'error', String(findErr))
           return e.json(500, { error: 'Erro ao processar enriquecimento de dados' })
@@ -488,10 +493,12 @@ routerAdd(
           }
 
           // Step 3: Standardization
-          var finalLogradouro =
-            standardizeStreet(logradouro) || (recName ? standardizeStreet(recName) : 'Endereco')
-          var finalNumero = numero ? numero.trim() : 'S/N'
-          var finalBairro = bairro ? capitalizeWords(bairro) : 'Centro'
+          // NÃO fabricar dados: sem logradouro/bairro reais, o campo fica vazio
+          // (antes o hook inventava "Endereco"/"Centro" ou usava o nome do cliente
+          // como logradouro, corrompendo o cadastro).
+          var finalLogradouro = standardizeStreet(logradouro) || ''
+          var finalNumero = numero ? numero.trim() : ''
+          var finalBairro = bairro ? capitalizeWords(bairro) : ''
           var finalCidade = cidade ? capitalizeWords(cidade) : ''
           var finalEstado = estado ? estado.toUpperCase().trim() : ''
           var finalCep = cep ? formatCep(cep) : ''
@@ -578,7 +585,8 @@ routerAdd(
             }
           }
 
-          // Step 6: Persist
+          // Step 6: Persist — grava TAMBÉM os campos de endereço calculados
+          // (antes só lat/lng/status eram salvos e cidade/UF/CEP ficavam vazios).
           var nowIso = new Date().toISOString()
           rec.set('lat', lat)
           rec.set('lng', lng)
@@ -586,6 +594,24 @@ routerAdd(
           rec.set('address_status', addressStatus)
           rec.set('enriched_at', nowIso)
           rec.set('standardized_address', standardizedAddress)
+          if (finalCep && !rec.getString('cep')) {
+            rec.set('cep', finalCep)
+          }
+          if (finalLogradouro && !rec.getString('logradouro')) {
+            rec.set('logradouro', finalLogradouro)
+          }
+          if (finalNumero && !rec.getString('numero')) {
+            rec.set('numero', finalNumero)
+          }
+          if (finalBairro && !rec.getString('bairro')) {
+            rec.set('bairro', finalBairro)
+          }
+          if (finalCidade && !rec.getString('city')) {
+            rec.set('city', finalCidade)
+          }
+          if (finalEstado && !rec.getString('state')) {
+            rec.set('state', finalEstado)
+          }
           $app.save(rec)
 
           // Update statistics
