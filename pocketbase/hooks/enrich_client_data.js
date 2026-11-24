@@ -2,16 +2,21 @@
 // Endpoint: POST /backend/v1/enrich-client-data (+ OPTIONS)
 // Enriquecimento de endereço (ViaCEP) e geocodificação (Nominatim) para a aba Cadastro.
 //
-// Correções de runtime (bug "Erro ao processar enriquecimento"):
-// 1. O filtro antigo "(address_status = '' || address_status == null)" é INVÁLIDO no
-//    PocketBase (o parser rejeita "== null" com HTTP 400 — reproduzido via db_query).
-//    findRecordsByFilter lançava erro → o hook respondia 500 com a mesma mensagem
-//    genérica que o usuário via. Agora usa "address_status ~ ''" (aceita vazio e nulo).
-// 2. sleep() era busy-wait (gastava o tempo de execução da JSVM) e cada cliente dormia
-//    1,5–2,5s. Um lote grande estourava o timeout. Agora o processamento é dividido em
-//    CHUNKS por request (via address_status='processing'), com $os.sleep real entre
-//    chamadas HTTP (respeita rate limit de ViaCEP/Nominatim sem ocupar a JSVM).
-// 3. Nada de referências a helpers de fora do callback (regra da JSVM deste projeto).
+// Regras da JSVM do PocketBase v0.23+ respeitadas aqui:
+// - $os.sleep NÃO existe → usar a função global sleep(ms).
+// - Funções/constantes de escopo superior NÃO podem ser referenciadas dentro de
+//   callbacks de rota → todos os helpers vivem DENTRO do corpo do callback.
+// - "== null" não existe no parser de filtros → usar "~ ''" (casa vazio E nulo).
+//
+// Comportamento:
+// - Processa em CHUNKS por request (o frontend faz loop chamando de novo enquanto
+//   has_more=true), com espera real (sleep global) entre chamadas HTTP externas.
+// - Filtra SOMENTE registros ainda não enriquecidos (address_status vazio) —
+//   registros já processados recebem um status e saem do pool automaticamente.
+// - NÃO inventa endereço: se o ViaCEP não confirmar, cidade/UF/logradouro/bairro/cep
+//   ficam vazios (só grava o que veio confirmado da fonte).
+// - Progresso consultável: a resposta traz remaining/has_more e cada registro gravado
+//   fica com address_status/enriched_at — dá para consultar o estado a qualquer momento.
 
 routerAdd('OPTIONS', '/backend/v1/enrich-client-data', (e) => {
   e.response.header().set('Access-Control-Allow-Origin', '*')
@@ -47,6 +52,7 @@ routerAdd(
     var mode = body.mode || 'single'
     var clientId = body.client_id || body.clientId || ''
     var force = body.force === true
+    var forceOffset = typeof body.offset === 'number' && body.offset > 0 ? body.offset : 0
 
     if (mode === 'single' && !clientId) {
       return e.json(400, { error: 'client_id é obrigatório para o modo "single"' })
@@ -54,7 +60,18 @@ routerAdd(
 
     // ---------- Helpers (definidos DENTRO do callback, regra da JSVM) ----------
 
-    // Remove acentos/diacríticos
+    // Espera real entre chamadas externas. Usa a função global sleep(ms) da JSVM;
+    // se por algum motivo não existir, segue sem esperar (nunca lança TypeError).
+    function jsleep(ms) {
+      try {
+        if (typeof sleep === 'function' && ms > 0) {
+          sleep(ms)
+        }
+      } catch (_) {
+        // nunca quebra o enriquecimento por causa do sleep
+      }
+    }
+
     function removeAccents(str) {
       if (!str) return ''
       var s = String(str)
@@ -70,7 +87,8 @@ routerAdd(
         ë: 'e',
         í: 'i',
         ì: 'i',
-        î: 'ï',
+        î: 'i',
+        ï: 'i',
         ó: 'o',
         ò: 'o',
         õ: 'o',
@@ -115,7 +133,6 @@ routerAdd(
       return out
     }
 
-    // Extrai CEP (só dígitos) de um texto
     function extractCep(text) {
       if (!text) return ''
       var m = String(text).match(/\b(\d{2}\.?\d{3}-?\d{3}|\d{8})\b/)
@@ -126,13 +143,11 @@ routerAdd(
       return ''
     }
 
-    // Formata CEP XXXXX-XXX
     function formatCep(digits) {
       if (!digits || digits.length !== 8) return digits || ''
       return digits.substring(0, 5) + '-' + digits.substring(5)
     }
 
-    // Capitaliza palavras (regras do português)
     function capitalizeWords(str) {
       if (!str) return ''
       var lowerExceptions = [
@@ -165,7 +180,6 @@ routerAdd(
       return result.join(' ')
     }
 
-    // Padroniza prefixos de logradouro (Av. → Avenida etc.)
     function standardizeStreet(street) {
       if (!street) return ''
       var s = String(street).trim()
@@ -174,7 +188,7 @@ routerAdd(
         { regex: /\b(R\.?|Rua\.?)\b/gi, rep: 'Rua' },
         { regex: /\b(Est\.?|Estr\.?)\b/gi, rep: 'Estrada' },
         { regex: /\b(Al\.?|Alam\.?)\b/gi, rep: 'Alameda' },
-        { regex: /\b(Pca\.?|Pça\.?|Praca\.?|Praça\.?)\b/gi, rep: 'Praca' },
+        { regex: /\b(Pca\.?|Pça\.?|Praca\.?|Praça\.?)\b/gi, rep: 'Praça' },
         { regex: /\b(Tv\.?|Trav\.?)\b/gi, rep: 'Travessa' },
         { regex: /\b(Rod\.?|Rodov\.?)\b/gi, rep: 'Rodovia' },
       ]
@@ -197,7 +211,7 @@ routerAdd(
         .replace(/\b\d{2}\.?\d{3}-?\d{3}\b|\bCEP:?\s*\d{5}-?\d{3}\b|\bCEP:?\s*\d{8}\b/gi, '')
         .trim()
 
-      var parts = withoutCep.split(/[,;\-–—]/)
+      var parts = withoutCep.split(/[,;–—]/)
       var cleanParts = []
       for (var i = 0; i < parts.length; i++) {
         var p = parts[i].trim()
@@ -209,7 +223,7 @@ routerAdd(
       }
 
       var numMatch = withoutCep.match(
-        /\b(?:n[º°\.]?\s*|numero\s*|n\s+)?(\d+|S\/N|s\/n|sn|sem\s+n[uú]mero)\b/i,
+        /\b(?:n[º°.]?\s*|numero\s*|n\s+)?(\d+|S\/N|s\/n|sn|sem\s+n[uú]mero)\b/i,
       )
       if (numMatch && numMatch[1]) {
         var nStr = numMatch[1].toUpperCase()
@@ -229,7 +243,7 @@ routerAdd(
       return parsed
     }
 
-    // ViaCEP por CEP
+    // ViaCEP por CEP — só retorna dados CONFIRMADOS pela fonte
     function fetchViaCepByCep(cepDigits) {
       try {
         var url = 'https://viacep.com.br/ws/' + cepDigits + '/json/'
@@ -323,42 +337,58 @@ routerAdd(
       }
     }
 
-    // ---------- Seleção de registros ----------
+    // ---------- Seleção de registros (CHUNK) ----------
 
+    var CHUNK_SIZE = 20
     var records = []
-    var processedFilter = false
+    var poolFilter = force ? 'is_deleted != true' : "is_deleted != true && address_status ~ ''"
+    var pageOffset = 0
+    var totalPool = 0
+
+    try {
+      totalPool = $app.countRecords('factories', poolFilter)
+    } catch (countErr) {
+      console.warn('enrich-client-data: countRecords error', 'err', String(countErr))
+      totalPool = 0
+    }
+
     if (mode === 'single') {
       try {
         records.push($app.findRecordById('factories', clientId))
       } catch (_) {
         return e.notFoundError('Cliente não encontrado')
       }
+      totalPool = 1
     } else {
-      // IMPORTANTE: "== null" não existe no parser do PocketBase (HTTP 400).
-      // "~ ''" casa com valor vazio E nulo.
-      var filter = force ? '' : "address_status ~ ''"
+      // Modo force: o pool não encolhe (todos os registros são válidos), então usa
+      // offset acumulado pelo frontend. Modo normal: registros processados saem do
+      // pool (recebem status), então offset 0 a cada chunk.
+      pageOffset = force ? forceOffset : 0
+      if (pageOffset >= totalPool && totalPool > 0) {
+        // Nada restante neste pool
+        return e.json(200, {
+          total_processed: 0,
+          total_enriched: 0,
+          total_geocoded: 0,
+          total_failed: 0,
+          total_inconsistent: 0,
+          remaining: 0,
+          has_more: false,
+          total_pool: totalPool,
+          details: [],
+        })
+      }
       try {
-        records = $app.findRecordsByFilter('factories', filter, '-created', CHUNK_SIZE, 0)
+        records = $app.findRecordsByFilter(
+          'factories',
+          poolFilter,
+          '-created',
+          CHUNK_SIZE,
+          pageOffset,
+        )
       } catch (findErr) {
         console.error('enrich-client-data: findRecords error', 'err', String(findErr))
         return e.json(500, { error: 'Erro ao buscar clientes para enriquecer' })
-      }
-      if (!force) {
-        // Chunks de continuação: retoma de onde parou
-        try {
-          records = records.concat(
-            $app.findRecordsByFilter(
-              'factories',
-              "address_status = 'processing'",
-              '-created',
-              CHUNK_SIZE,
-              0,
-            ),
-          )
-        } catch (_) {
-          // sem registros 'processing' — segue
-        }
-        processedFilter = true
       }
     }
 
@@ -380,90 +410,67 @@ routerAdd(
         totalProcessed++
 
         var rawAddress = rec.getString('address') || ''
-        var cityField = rec.getString('city') || ''
-        var stateField = rec.getString('state') || ''
+        var cidade = rec.getString('city') || ''
+        var estado = rec.getString('state') || ''
 
         var parsedAddr = parseFreeTextAddress(rawAddress)
         var cep = parsedAddr.cep
         var logradouro = parsedAddr.logradouro
         var numero = parsedAddr.numero
         var bairro = parsedAddr.bairro
-        var cidade = cityField
-        var estado = stateField
 
-        // Etapa 1: status inicial
         var hasAllInitial = !!(cep && logradouro && numero && bairro && cidade && estado)
         var addressStatus = hasAllInitial ? 'complete' : 'partial'
 
         var viaCepData = null
         var wasEnrichedViaCep = false
 
-        // Etapa 2: ViaCEP
-        if (addressStatus === 'partial' || !cep) {
+        // Etapa ViaCEP: só preenche com o que a FONTE confirmar. Sem fonte, sem dado.
+        if (!hasAllInitial) {
           if (cep) {
-            $os.sleep(500)
+            jsleep(300)
             viaCepData = fetchViaCepByCep(cep)
-            if (!viaCepData) {
-              addressStatus = 'failed'
-            }
-          } else if (cidade && estado) {
-            $os.sleep(500)
-            var searchStreet = logradouro || recName
-            viaCepData = fetchViaCepByAddress(estado, cidade, searchStreet)
-            if (!viaCepData && logradouro && recName && searchStreet !== recName) {
-              $os.sleep(500)
-              viaCepData = fetchViaCepByAddress(estado, cidade, recName)
-            }
-          } else {
-            addressStatus = 'failed'
+          } else if (cidade && estado && logradouro) {
+            jsleep(300)
+            viaCepData = fetchViaCepByAddress(estado, cidade, logradouro)
           }
 
           if (viaCepData) {
             wasEnrichedViaCep = true
-            if (!cep && viaCepData.cep) {
-              cep = String(viaCepData.cep).replace(/\D/g, '')
-            }
-            if (!logradouro && viaCepData.logradouro) {
-              logradouro = viaCepData.logradouro
-            }
-            if (!bairro && viaCepData.bairro) {
-              bairro = viaCepData.bairro
-            }
-            if (!cidade && viaCepData.localidade) {
-              cidade = viaCepData.localidade
-            }
-            if (!estado && viaCepData.uf) {
-              estado = viaCepData.uf
-            }
+            if (!cep && viaCepData.cep) cep = String(viaCepData.cep).replace(/\D/g, '')
+            if (!logradouro && viaCepData.logradouro) logradouro = viaCepData.logradouro
+            if (!bairro && viaCepData.bairro) bairro = viaCepData.bairro
+            if (!cidade && viaCepData.localidade) cidade = viaCepData.localidade
+            if (!estado && viaCepData.uf) estado = viaCepData.uf
           }
         }
 
-        // Etapa 3: validação cruzada (evita gravar endereço que contradiz cidade/UF)
-        if (viaCepData && addressStatus !== 'failed') {
+        // Validação cruzada: se o CEP confirmado contradiz cidade/UF já conhecidas,
+        // marca inconsistente em vez de gravar dado contraditório.
+        if (viaCepData) {
           var viaCepUf = String(viaCepData.uf || '').trim()
           var viaCepCity = String(viaCepData.localidade || '').trim()
-
+          var prevCidade = rec.getString('city') || ''
+          var prevEstado = rec.getString('state') || ''
           var stateMatch =
-            !estado ||
+            !prevEstado ||
             !viaCepUf ||
-            removeAccents(estado).toLowerCase() === removeAccents(viaCepUf).toLowerCase()
+            removeAccents(prevEstado).toLowerCase() === removeAccents(viaCepUf).toLowerCase()
           var cityMatch =
-            !cidade ||
+            !prevCidade ||
             !viaCepCity ||
-            removeAccents(cidade).toLowerCase() === removeAccents(viaCepCity).toLowerCase()
-
+            removeAccents(prevCidade).toLowerCase() === removeAccents(viaCepCity).toLowerCase()
           if (!stateMatch || !cityMatch) {
             addressStatus = 'inconsistent'
           } else {
             addressStatus = 'enriched'
           }
-        } else if (addressStatus !== 'failed' && wasEnrichedViaCep) {
-          addressStatus = 'enriched'
+        } else if (!hasAllInitial) {
+          addressStatus = 'failed'
         }
 
-        // Etapa 4: padronização — NÃO inventar dados: sem logradouro/bairro reais,
-        // o campo fica vazio (antes o hook fabricava "Endereco"/"Centro").
-        var finalLogradouro = standardizeStreet(logradouro) || ''
+        // Padronização — NÃO inventar dados: campo sem valor confirmado fica vazio.
+        var finalLogradouro = logradouro ? standardizeStreet(logradouro) : ''
         var finalNumero = numero ? String(numero).trim() : ''
         var finalBairro = bairro ? capitalizeWords(bairro) : ''
         var finalCidade = cidade ? capitalizeWords(cidade) : ''
@@ -472,88 +479,67 @@ routerAdd(
 
         var standardizedAddress = ''
         if (finalLogradouro || finalCidade) {
-          standardizedAddress =
-            finalLogradouro +
-            ', ' +
-            finalNumero +
-            ' - ' +
-            finalBairro +
-            ', ' +
-            finalCidade +
-            ' - ' +
-            finalEstado +
-            ', CEP: ' +
-            finalCep
+          var parts = []
+          if (finalLogradouro) {
+            var line = finalLogradouro + (finalNumero ? ' ' + finalNumero : '')
+            parts.push(line)
+          }
+          if (finalBairro) parts.push(finalBairro)
+          if (finalCidade || finalEstado) {
+            parts.push(finalCidade + (finalEstado ? ' - ' + finalEstado : ''))
+          }
+          if (finalCep) parts.push('CEP: ' + finalCep)
+          standardizedAddress = parts.join(', ')
         }
 
-        // Etapa 5: geocodificação Nominatim
+        // Geocodificação — só quando há cidade+UF confirmadas; sem dado, sem coordenada.
         var geocodePrecision = 'failed'
         var lat = 0
         var lng = 0
+        var hasExistingCoords = (rec.getFloat('lat') || 0) !== 0 || (rec.getFloat('lng') || 0) !== 0
 
-        var geoQuery = ''
-        if (cep && finalNumero !== 'S/N' && logradouro) {
-          geocodePrecision = 'exact'
-          geoQuery =
-            (finalCep ? finalCep + ' ' : '') +
-            finalNumero +
-            ' ' +
-            finalLogradouro +
-            ' ' +
-            finalBairro +
-            ' ' +
+        if (finalCidade && finalEstado) {
+          var geoQuery =
+            (finalLogradouro
+              ? finalLogradouro + (finalNumero ? ' ' + finalNumero : '') + ' '
+              : '') +
             finalCidade +
             ' ' +
             finalEstado +
             ' Brasil'
-        } else if (cep) {
-          geocodePrecision = 'street'
-          geoQuery =
-            (finalCep ? finalCep + ' ' : '') +
-            finalLogradouro +
-            ' ' +
-            finalBairro +
-            ' ' +
-            finalCidade +
-            ' ' +
-            finalEstado +
-            ' Brasil'
-        } else if (finalCidade && finalEstado) {
-          geocodePrecision = 'city'
-          geoQuery = finalCidade + ' ' + finalEstado + ' Brasil'
-        } else {
-          geocodePrecision = 'failed'
-        }
-
-        if (geoQuery && geocodePrecision !== 'failed') {
-          $os.sleep(1000) // rate limit obrigatório do Nominatim (sem busy-wait)
+          jsleep(1100) // rate limit obrigatório do Nominatim
           var geoResult = fetchNominatimGeocode(geoQuery)
           if (geoResult && geoResult.lat && geoResult.lng) {
             lat = geoResult.lat
             lng = geoResult.lng
-          } else if (finalCidade && finalEstado && geocodePrecision !== 'city') {
-            $os.sleep(1000)
+            geocodePrecision = finalLogradouro ? 'street' : 'city'
+          } else if (!finalLogradouro) {
+            geocodePrecision = 'failed'
+          } else {
+            // fallback: geocodificar só a cidade
+            jsleep(1100)
             var cityGeoResult = fetchNominatimGeocode(finalCidade + ' ' + finalEstado + ' Brasil')
             if (cityGeoResult && cityGeoResult.lat && cityGeoResult.lng) {
               lat = cityGeoResult.lat
               lng = cityGeoResult.lng
               geocodePrecision = 'city'
-            } else {
-              geocodePrecision = 'failed'
             }
-          } else {
-            geocodePrecision = 'failed'
           }
         }
 
-        // Etapa 6: persistência — grava também cidade/UF/CEP/logradouro/bairro.
+        // Persistência — grava só campos confirmados; preserva coordenadas já existentes
+        // quando a nova geocodificação falha (não zera o que o usuário já tem).
         var nowIso = new Date().toISOString()
-        rec.set('lat', lat)
-        rec.set('lng', lng)
-        rec.set('geocode_precision', geocodePrecision)
         rec.set('address_status', addressStatus)
         rec.set('enriched_at', nowIso)
-        rec.set('standardized_address', standardizedAddress)
+        rec.set('geocode_precision', geocodePrecision)
+        if (lat !== 0 || lng !== 0) {
+          rec.set('lat', lat)
+          rec.set('lng', lng)
+          rec.set('latitude', lat)
+          rec.set('longitude', lng)
+        }
+        if (standardizedAddress) rec.set('standardized_address', standardizedAddress)
         if (finalCep && !rec.getString('cep')) rec.set('cep', finalCep)
         if (finalLogradouro && !rec.getString('logradouro')) rec.set('logradouro', finalLogradouro)
         if (finalNumero && !rec.getString('numero')) rec.set('numero', finalNumero)
@@ -562,8 +548,8 @@ routerAdd(
         if (finalEstado && !rec.getString('state')) rec.set('state', finalEstado)
         $app.save(rec)
 
-        if (wasEnrichedViaCep) totalEnriched++
-        if (geocodePrecision !== 'failed' && (lat !== 0 || lng !== 0)) totalGeocoded++
+        if (wasEnrichedViaCep && addressStatus !== 'failed') totalEnriched++
+        if ((lat !== 0 || lng !== 0) && !hasExistingCoords) totalGeocoded++
         if (addressStatus === 'failed') totalFailed++
         if (addressStatus === 'inconsistent') totalInconsistent++
 
@@ -591,18 +577,23 @@ routerAdd(
       }
     }
 
-    // ---------- Próximo chunk / resumo ----------
+    // ---------- Resumo do chunk ----------
+
+    var remaining = 0
+    try {
+      remaining = $app.countRecords('factories', "is_deleted != true && address_status ~ ''")
+    } catch (_) {
+      remaining = 0
+    }
+    if (mode === 'single') remaining = 0
 
     var hasMore = false
-    var remaining = 0
-    if (processedFilter) {
-      try {
-        remaining = $app.countRecords('factories', "address_status ~ ''")
-      } catch (_) {
-        remaining = 0
+    if (mode !== 'single') {
+      if (force) {
+        hasMore = pageOffset + records.length < totalPool
+      } else {
+        hasMore = remaining > 0
       }
-      hasMore = remaining > 0
-      aveMore = false
     }
 
     console.log(
@@ -613,10 +604,12 @@ routerAdd(
       totalEnriched,
       'remaining',
       remaining,
+      'has_more',
+      hasMore,
     )
 
-    // Log consolidado de auditoria só no FIM de todo o processo
-    if (processedFilter && !hasMore && totalProcessed > 0) {
+    // Log de auditoria só no FIM de todo o processo (modo normal, sem mais chunks)
+    if (mode !== 'single' && !force && !hasMore && totalProcessed > 0 && remaining === 0) {
       try {
         var logCol = $app.findCollectionByNameOrId('activity_logs')
         var consolidatedLog = new Record(logCol)
@@ -626,7 +619,7 @@ routerAdd(
           'details',
           'Enriquecimento concluído: ' +
             totalProcessed +
-            ' processados, ' +
+            ' processados neste lote final, ' +
             totalEnriched +
             ' enriquecidos (ViaCEP), ' +
             totalGeocoded +
@@ -648,6 +641,7 @@ routerAdd(
       total_inconsistent: totalInconsistent,
       remaining: remaining,
       has_more: hasMore,
+      total_pool: totalPool,
       details: details,
     })
   },
